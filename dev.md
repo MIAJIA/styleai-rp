@@ -312,12 +312,57 @@ globals.css
 - **临时文件存储**: 上传的图片需要一个临时的公共存储。Vercel Blob Storage 或 AWS S3 是很好的选择，并且应该配置生命周期规则，在处理完成后自动删除这些临时文件。
 - **可扩展性**: 异步架构非常适合这种耗时操作，它不会阻塞服务器进程，具有很好的可扩展性。
 
-## 7. 实施计划
+## 7. 实施计划 (分阶段)
 
-1.  **配置云存储**: 设置一个对象存储服务（如Vercel Blob）用于临时存放用户上传的图片。
-2.  **创建 `/api/generate/route.ts`**: 实现任务提交逻辑。
-3.  **创建 `/api/webhook/route.ts`**: 实现接收Kling AI回调的逻辑。
-4.  **修改前端页面**:
-    -   更新 `app/page.tsx` 以调用 `/api/generate`，并在获取到 `task_id` 后处理等待逻辑。
-    -   更新 `app/results/page.tsx` 以显示最终的图片，并实现 `localStorage` 的读取和写入逻辑来管理历史记录。
-5.  **添加环境变量**: 在 `.env.local` 文件中添加 `KLING_AI_API_KEY` 和云存储相关的密钥。
+### 阶段一: 环境与后端设置
+
+1.  **环境变量配置**:
+    -   创建 `.env.local` 文件。
+    -   添加 `KLING_AI_API_KEY` 用于存放 Kling AI 的 API 密钥。
+    -   添加 Vercel Blob 云存储所需的 `BLOB_READ_WRITE_TOKEN`。
+    -   添加 Vercel KV 存储所需的 `KV_URL` 和 `KV_REST_API_TOKEN` 等变量。
+
+2.  **安装依赖**:
+    -   安装 Vercel Blob 客户端: `pnpm install @vercel/blob`。
+    -   安装 Vercel KV 客户端: `pnpm install @vercel/kv`。
+
+3.  **任务状态管理方案**:
+    -   由于生成是异步的，我们需要一个地方来存储从"任务提交"到"Webhook 回调"之间的状态。
+    -   我们将使用 Vercel KV (一个无服务器的键值数据库) 来存储 `taskId` 与其对应的生成状态和最终图片 URL 的映射。这比使用数据库更轻量，非常适合此场景。
+
+### 阶段二: 后端 API 实现
+
+4.  **实现 `POST /api/generate/route.ts` (任务提交)**:
+    -   接收前端上传的 `human_image` 和 `garment_image` 两个文件。
+    -   将这两个文件上传到 Vercel Blob，获取它们各自的公开 URL。
+    -   调用 Kling AI API，请求体中包含两个图片的 URL 和一个指向我们 `/api/webhook` 的 `webhook_url`。
+    -   从 Kling AI 获得 `task_id` 后，在 Vercel KV 中创建一个记录，例如 `kv.set(taskId, { status: 'processing' })`。
+    -   将 `task_id` 返回给前端。
+
+5.  **实现 `POST /api/webhook/route.ts` (接收回调)**:
+    -   接收来自 Kling AI 的 POST 请求。
+    -   (可选但推荐) 通过比对共享密钥来验证请求的合法性。
+    -   从请求体中获取 `task_id` 和最终的 `image_url`。
+    -   在 Vercel KV 中更新对应的记录，例如 `kv.set(taskId, { status: 'succeeded', imageUrl: ... })`。
+
+6.  **实现 `GET /api/results/[taskId]/route.ts` (前端轮询)**:
+    -   前端在拿到 `task_id` 后，会每隔几秒钟调用一次这个接口。
+    -   此接口根据 `taskId` 从 Vercel KV 中查询任务状态。
+    -   如果状态是 "succeeded"，则返回包含 `imageUrl` 的 JSON。
+    -   如果状态仍是 "processing"，则返回相应的状态信息，让前端继续等待和轮询。
+
+### 阶段三: 前端实现
+
+7.  **实现 `app/page.tsx` 中的生成流程**:
+    -   在用户点击"生成"按钮后，调用我们创建的 `POST /api/generate` 接口。
+    -   收到 `task_id` 后，UI 进入加载状态。
+    -   启动一个定时器，周期性地（例如每3秒）轮询 `GET /api/results/[taskId]` 接口。
+    -   当轮询结果返回成功和 `imageUrl` 后，停止轮询，并使用 Next.js 的 `router` 将用户带到结果页，并将图片URL作为参数传递，例如 `router.push(\`/results?imageUrl=\${imageUrl}\`)`。
+
+8.  **实现 `app/results/page.tsx` 中的结果展示与存储**:
+    -   页面加载时，从 URL 参数中获取最新的 `imageUrl`。
+    -   实现 `localStorage` 存储逻辑：
+        -   从 `localStorage` 中读取 `generatedLooks` 历史记录数组。
+        -   将新的 `imageUrl` 添加到数组中（如果不存在）。
+        -   将更新后的数组写回 `localStorage`。
+    -   渲染 `localStorage` 中的所有图片，向用户展示完整的生成历史。
