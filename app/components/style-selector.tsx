@@ -18,39 +18,49 @@ interface StyleSelectorProps {
 
 export default function StyleSelector({ selectedStyle, onStyleSelect, className }: StyleSelectorProps) {
   return (
-    <div className={cn("space-y-2", className)}>
-      <label className="text-sm font-medium text-neutral-700">Choose Your Style</label>
+    <div className={cn("space-y-3", className)}>
+      <div>
+        <label className="text-sm font-medium text-neutral-700">Style (Optional)</label>
+        <p className="text-xs text-neutral-500 mt-1">Default: Keep your original background</p>
+      </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
         {styles.map((style) => {
           const isSelected = selectedStyle === style.id
 
           return (
             <button
               key={style.id}
-              onClick={() => onStyleSelect(style.id)}
+              onClick={() => onStyleSelect(isSelected ? null : style.id)}
               className={cn(
-                "relative rounded-xl p-3 text-left ios-btn transition-all duration-200",
+                "flex-shrink-0 relative rounded-xl p-3 text-center ios-btn transition-all duration-200 min-w-[80px]",
                 style.color,
-                isSelected ? "ring-2 ring-primary ring-offset-2" : "",
+                isSelected ? "ring-2 ring-primary ring-offset-2 scale-105" : "hover:scale-102",
               )}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-2xl block mb-1">{style.emoji}</span>
-                  <span className="text-sm font-medium">{style.name}</span>
-                </div>
-
-                {isSelected && (
-                  <span className="bg-white rounded-full p-0.5 shadow-sm">
-                    <Check size={14} className="text-primary" />
-                  </span>
-                )}
+              <div className="flex flex-col items-center">
+                <span className="text-xl block mb-1">{style.emoji}</span>
+                <span className="text-xs font-medium leading-tight">{style.name}</span>
               </div>
+
+              {isSelected && (
+                <span className="absolute -top-1 -right-1 bg-primary rounded-full p-1 shadow-sm">
+                  <Check size={10} className="text-white" />
+                </span>
+              )}
             </button>
           )
         })}
       </div>
+
+      {selectedStyle && (
+        <div className="flex items-center justify-between bg-neutral-50 rounded-lg p-2">
+          <span className="text-xs text-neutral-600">Selected: {styles.find((s) => s.id === selectedStyle)?.name}</span>
+          <button onClick={() => onStyleSelect(null)} className="text-xs text-primary font-medium ios-btn">
+            Use Original
+          </button>
+        </div>
+      )}
     </div>
   )
 }

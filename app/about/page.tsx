@@ -39,7 +39,7 @@ export default function AboutPage() {
     <div className="min-h-full pb-20">
       <IOSHeader
         title="How It Works"
-        subtitle="Discover the magic behind Ensemble"
+        subtitle="Discover the magic behind StyleAI"
         className="bg-white sticky top-0 z-10 border-b border-neutral-100"
       />
 
@@ -50,7 +50,7 @@ export default function AboutPage() {
         </div>
         <h2 className="text-xl font-bold mb-2 animate-fade-up">Your Personal AI Stylist</h2>
         <p className="text-sm text-neutral-600 max-w-xs mx-auto animate-fade-up" style={{ animationDelay: "0.1s" }}>
-          Ensemble uses advanced AI to help you discover your perfect style
+          StyleAI uses advanced AI to help you discover your perfect style
         </p>
       </div>
 

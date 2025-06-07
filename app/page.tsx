@@ -43,6 +43,9 @@ export default function HomePage() {
 
     setIsGenerating(true)
     // Simulate AI processing
+    // If no style is selected, use original background
+    const processingMessage = selectedStyle ? "Creating Your Look..." : "Processing with Original Background..."
+
     await new Promise((resolve) => setTimeout(resolve, 2000))
     setIsGenerating(false)
     router.push("/results")
@@ -52,40 +55,31 @@ export default function HomePage() {
     <div className="min-h-full pb-20">
       {/* iOS-style header */}
       <IOSHeader
-        title="Ensemble"
-        subtitle="Discover your perfect style with AI"
+        title="StyleAI"
+        subtitle="Your Style Journey Starts here"
         className="bg-white sticky top-0 z-10 border-b border-neutral-100"
       />
-
-      {/* Welcome message for iOS users */}
-      <div className="px-5 py-4 animate-fade-in">
-        <div className="ios-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-              <Sparkles className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-sm font-medium text-neutral-900">Welcome to Ensemble</h2>
-              <p className="text-xs text-neutral-500 mt-0.5">Upload a selfie to see yourself in stunning new outfits</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Main content */}
       <div className="px-5 space-y-6">
         {/* Upload section */}
         <div className="ios-card p-5 animate-fade-up" style={{ animationDelay: "0.1s" }}>
-          <h2 className="text-lg font-semibold text-center mb-5">Try On a Look</h2>
-
           <div className="space-y-5">
-            <IOSUpload label="Your Selfie" onImageSelect={handleSelfieUpload} preview={selfiePreview} required />
-
-            <IOSUpload
-              label="Clothing Item (Optional)"
-              onImageSelect={handleClothingUpload}
-              preview={clothingPreview}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <IOSUpload
+                label="Portrait"
+                onImageSelect={handleSelfieUpload}
+                preview={selfiePreview}
+                required
+                helpText="For best results, upload a front-facing, full-length image in clear lighting."
+              />
+              <IOSUpload
+                label="Garment"
+                onImageSelect={handleClothingUpload}
+                preview={clothingPreview}
+                helpText="Upload a clear image of the garment you'd like to try on — ideally laid flat or worn"
+              />
+            </div>
 
             <StyleSelector selectedStyle={selectedStyle} onStyleSelect={setSelectedStyle} />
           </div>
@@ -101,7 +95,7 @@ export default function HomePage() {
             {isGenerating ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Creating Your Look...</span>
+                <span>{selectedStyle ? "Creating Your Look..." : "Processing with Original Background..."}</span>
               </div>
             ) : (
               <span>Generate My Look</span>

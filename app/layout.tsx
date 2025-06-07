@@ -7,13 +7,13 @@ import { ThemeProvider } from "@/components/theme-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Ensemble - AI Fashion Try-On",
+  title: "StyleAI - AI Fashion Try-On",
   description: "Visualize yourself in stunning outfits with AI-powered virtual try-on",
   viewport: "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Ensemble",
+    title: "StyleAI",
   },
     generator: 'v0.dev'
 }

@@ -36,7 +36,7 @@ export default function ResultsPage() {
     if (navigator.share) {
       navigator.share({
         title: "Check out my AI-generated look!",
-        text: "I just tried on this amazing outfit using Ensemble",
+        text: "I just tried on this amazing outfit using StyleAI",
         url: window.location.href,
       })
     }
