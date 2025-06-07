@@ -289,17 +289,35 @@ globals.css
     - (可选) 如果使用了WebSocket，服务器会通过它将 `image_url` 直接推送给对应的客户端。
 6.  **前端获取结果**: 前端通过轮询或WebSocket接收到 `image_url` 后，更新UI，将用户重定向到结果页并显示图片。
 
-## 5. 安全性与可扩展性
+## 5. 前端持久化方案 (无数据库)
+
+为了在不使用后端数据库的情况下保存用户生成的历史记录，我们将采用浏览器的 `localStorage` 技术。
+
+-   **技术选型**: `localStorage`
+-   **存储内容**: 一个JSON字符串化的数组，包含所有生成图片的URL。
+-   **键 (Key)**: `generatedLooks`
+
+### 工作流程:
+
+1.  **结果页加载**: 当 `/results` 页面加载时，它首先会从 `localStorage` 中读取 `generatedLooks` 键，并将其解析为图片URL数组，用于展示历史记录。
+2.  **新图片抵达**: 当一个新的 `imageUrl` 通过URL参数传递到结果页时，该URL会被添加到现有图片数组的末尾。
+3.  **更新存储**: 更新后的数组被再次JSON字符串化，并保存回 `localStorage` 的 `generatedLooks` 键中，从而实现持久化。
+
+此方案确保了即使用户刷新页面或关闭浏览器，其生成历史也能被保留在当前设备和浏览器上。
+
+## 6. 安全性与可扩展性
 
 - **API 密钥管理**: 所有用于外部服务的密钥（特别是 `KLING_AI_API_KEY`）**必须**存储在环境变量中（例如，在根目录的 `.env.local` 文件中），并通过 `process.env` 访问。
 - **Webhook安全**: `/api/webhook` 端点必须被保护，以防止恶意调用。可以通过在Kling AI请求中设置一个共享密钥（`webhook_secret`）并在收到回调时进行验证来实现。
 - **临时文件存储**: 上传的图片需要一个临时的公共存储。Vercel Blob Storage 或 AWS S3 是很好的选择，并且应该配置生命周期规则，在处理完成后自动删除这些临时文件。
 - **可扩展性**: 异步架构非常适合这种耗时操作，它不会阻塞服务器进程，具有很好的可扩展性。
 
-## 6. 实施计划
+## 7. 实施计划
 
 1.  **配置云存储**: 设置一个对象存储服务（如Vercel Blob）用于临时存放用户上传的图片。
 2.  **创建 `/api/generate/route.ts`**: 实现任务提交逻辑。
 3.  **创建 `/api/webhook/route.ts`**: 实现接收Kling AI回调的逻辑。
-4.  **修改前端页面**: 更新 `app/page.tsx` 以调用 `/api/generate`，并在获取到 `task_id` 后处理等待逻辑。更新 `app/results/page.tsx` 以显示最终的图片。
+4.  **修改前端页面**:
+    -   更新 `app/page.tsx` 以调用 `/api/generate`，并在获取到 `task_id` 后处理等待逻辑。
+    -   更新 `app/results/page.tsx` 以显示最终的图片，并实现 `localStorage` 的读取和写入逻辑来管理历史记录。
 5.  **添加环境变量**: 在 `.env.local` 文件中添加 `KLING_AI_API_KEY` 和云存储相关的密钥。
