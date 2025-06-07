@@ -225,59 +225,81 @@ globals.css
 
 前端将发送一个 `FormData` 对象，其中包含：
 
-| 字段    | 类型   | 描述                           | 是否必须 |
-|---------|--------|--------------------------------|----------|
-| `image` | File   | 用户上传的图片。               | 是       |
-| `style` | string | 用户选择的风格 (例如, "casual")。 | 是       |
+| 字段            | 类型   | 描述                               | 是否必须 |
+|-----------------|--------|------------------------------------|----------|
+| `human_image` | File   | 用户的肖像图片 (全身、正面)。      | 是       |
+| `garment_image`  | File   | 要试穿的服装图片 (平铺或上身图)。  | 是       |
 
 #### 成功响应 (200 OK)
 
-后端将返回一个包含新生成图片 URL 的 JSON 对象。
+后端将 **立即** 返回一个包含任务ID的JSON对象，表示生成任务已成功提交。
 
 ```json
 {
-  "imageUrl": "https://path.to/generated-image.png"
+  "taskId": "some-unique-task-id-from-kling"
 }
 ```
 
 #### 错误响应
 
-- **400 Bad Request**: 如果请求中缺少 `image` 或 `style` 字段。
+- **400 Bad Request**: 如果请求中缺少 `human_image` 或 `garment_image` 字段。
   ```json
   {
-    "error": "缺少图片或风格参数"
+    "error": "缺少肖像或服装图片"
   }
   ```
-- **500 Internal Server Error**: 如果服务器发生任何意外错误，包括与外部 AI 服务通信失败。
+- **500 Internal Server Error**: 如果向Kling AI提交任务时发生错误。
   ```json
   {
-    "error": "生成图片失败"
+    "error": "提交生成任务失败"
   }
   ```
 
-## 4. 逻辑与数据流
+### 新增端点: `POST /api/webhook`
+
+这个端点用于接收来自Kling AI服务的回调。
+
+- **方法**: `POST`
+- **验证**: 需要验证请求是否真的来自Kling AI（例如，通过一个共享的密钥）。
+
+#### 请求体 (由Kling AI发送)
+
+```json
+{
+  "task_id": "some-unique-task-id-from-kling",
+  "status": "succeeded",
+  "image_url": "https://path.to/generated-image.png"
+}
+```
+
+## 4. 逻辑与数据流 (异步模型)
 
 1.  **请求发起**: 用户在前端点击"生成我的造型"按钮。客户端代码构建一个 `FormData` 对象，并向 `/api/generate` 发起一个 `POST` 请求。
-2.  **请求处理**: 位于 `app/api/generate/route.ts` 的 Next.js API Route 接收到该请求。
-3.  **输入验证**: 处理函数首先验证 `FormData`，确保 `image` 和 `style` 都存在。如果不存在，则返回 400 错误。
-4.  **与外部 AI 服务通信**:
-    - 处理函数准备一个新的请求，用于发送给外部的 AI 图像生成服务（例如 Replicate, Midjourney 或自定义模型）。
-    - 用户的图片被附加到这个新请求中。
-    - 用于外部服务的 API 密钥从环境变量 (`process.env.AI_SERVICE_API_KEY`) 中检索，以确保它不会在客户端暴露。
-5.  **响应转发**:
-    - 从 AI 服务收到成功响应后，处理函数会提取生成的图片 URL。
-    - 然后，它向前端发送一个 200 OK 的 JSON 响应，其中包含此 URL。
-6.  **错误处理**: 如果与 AI 服务的通信失败或发生任何其他服务器端错误，处理函数会捕获异常，记录错误以供调试，并向前端返回 500 错误。
+2.  **任务提交 (`/api/generate`)**:
+    - `/api/generate` 端点接收到前端的图片。
+    - 它将这些图片上传到一个临时的公共可访问地址（例如，AWS S3或Vercel Blob Storage），因为Kling AI需要URL作为输入。
+    - 它调用 Kling AI 的 `kolors-virtual-try-on` API，请求体中包含两个图片的URL和一个 `webhook_url` (指向我们自己的 `/api/webhook`)。
+    - Kling AI 接收任务并立即返回一个 `task_id`。
+    - `/api/generate` 将这个 `task_id` 返回给前端。
+3.  **前端等待**: 前端收到 `task_id` 后，进入等待状态。它可以开始轮询（Polling）一个用于获取结果的API，或者通过WebSocket等待服务器的推送。
+4.  **AI处理与回调**: Kling AI 在后台完成图像生成。完成后，它会向我们在步骤2中提供的 `/api/webhook` 地址发送一个`POST`请求，其中包含了 `task_id` 和最终的 `image_url`。
+5.  **结果处理 (`/api/webhook`)**:
+    - `/api/webhook` 端点接收到回调。
+    - 它将 `task_id` 和 `image_url` 存入数据库或缓存中，以便前端可以查询。
+    - (可选) 如果使用了WebSocket，服务器会通过它将 `image_url` 直接推送给对应的客户端。
+6.  **前端获取结果**: 前端通过轮询或WebSocket接收到 `image_url` 后，更新UI，将用户重定向到结果页并显示图片。
 
 ## 5. 安全性与可扩展性
 
-- **API 密钥管理**: 所有用于外部服务的密钥**必须**存储在环境变量中（例如，在根目录的 `.env.local` 文件中），并通过 `process.env` 访问。它们绝不能被硬编码或暴露给客户端。
-- **可扩展性**: 由于 Next.js API Routes 是作为无服务器函数运行的（在 Vercel 等平台上），后端将根据需求自动扩展。无需管理服务器。
-- **数据传输**: 使用 `FormData` 是处理从客户端到服务器文件传输的一种高效方式。
+- **API 密钥管理**: 所有用于外部服务的密钥（特别是 `KLING_AI_API_KEY`）**必须**存储在环境变量中（例如，在根目录的 `.env.local` 文件中），并通过 `process.env` 访问。
+- **Webhook安全**: `/api/webhook` 端点必须被保护，以防止恶意调用。可以通过在Kling AI请求中设置一个共享密钥（`webhook_secret`）并在收到回调时进行验证来实现。
+- **临时文件存储**: 上传的图片需要一个临时的公共存储。Vercel Blob Storage 或 AWS S3 是很好的选择，并且应该配置生命周期规则，在处理完成后自动删除这些临时文件。
+- **可扩展性**: 异步架构非常适合这种耗时操作，它不会阻塞服务器进程，具有很好的可扩展性。
 
 ## 6. 实施计划
 
-1.  创建一个新文件: `app/api/generate/route.ts`。
-2.  在此文件中，根据上述逻辑实现 `POST` 处理函数。
-3.  在项目根目录添加一个 `.env.local` 文件，用于存储 AI 服务的 API 密钥。
-4.  更新前端组件（`app/page.tsx` 或其子组件），使其能够调用新的 API 端点。
+1.  **配置云存储**: 设置一个对象存储服务（如Vercel Blob）用于临时存放用户上传的图片。
+2.  **创建 `/api/generate/route.ts`**: 实现任务提交逻辑。
+3.  **创建 `/api/webhook/route.ts`**: 实现接收Kling AI回调的逻辑。
+4.  **修改前端页面**: 更新 `app/page.tsx` 以调用 `/api/generate`，并在获取到 `task_id` 后处理等待逻辑。更新 `app/results/page.tsx` 以显示最终的图片。
+5.  **添加环境变量**: 在 `.env.local` 文件中添加 `KLING_AI_API_KEY` 和云存储相关的密钥。
