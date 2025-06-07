@@ -216,78 +216,45 @@ globals.css
 
 ### 端点: `POST /api/generate`
 
-这是该功能所需的唯一端点。
+这是该功能所需的**唯一**后端端点。它将作为一个长轮询（long-polling）函数工作。
 
 - **方法**: `POST`
-- **内容类型 (Content-Type)**: `multipart/form-data` (用于处理文件上传)
+- **内容类型**: `multipart/form-data`
 
-#### 请求体
+#### 请求体 (由前端发送)
 
-前端将发送一个 `FormData` 对象，其中包含：
-
-| 字段            | 类型   | 描述                               | 是否必须 |
-|-----------------|--------|------------------------------------|----------|
-| `human_image` | File   | 用户的肖像图片 (全身、正面)。      | 是       |
-| `garment_image`  | File   | 要试穿的服装图片 (平铺或上身图)。  | 是       |
+| 字段            | 类型   | 描述                         | 是否必须 |
+|-----------------|--------|------------------------------|----------|
+| `human_image`   | File   | 用户的肖像图片。             | 是       |
+| `garment_image` | File   | 要试穿的服装图片。           | 是       |
 
 #### 成功响应 (200 OK)
 
-后端将 **立即** 返回一个包含任务ID的JSON对象，表示生成任务已成功提交。
+后端在完成所有处理和轮询后，将 **直接** 返回一个包含最终图片URL的JSON对象。
 
 ```json
 {
-  "taskId": "some-unique-task-id-from-kling"
+  "imageUrl": "https://path.to/generated-image.png"
 }
 ```
 
 #### 错误响应
 
-- **400 Bad Request**: 如果请求中缺少 `human_image` 或 `garment_image` 字段。
-  ```json
-  {
-    "error": "缺少肖像或服装图片"
-  }
-  ```
-- **500 Internal Server Error**: 如果向Kling AI提交任务时发生错误。
-  ```json
-  {
-    "error": "提交生成任务失败"
-  }
-  ```
+- **400 Bad Request**: 如果请求中缺少图片。
+- **500 Internal Server Error**: 如果处理过程中发生任何错误（包括AI生成超时）。
 
-### 新增端点: `POST /api/webhook`
+## 4. 逻辑与数据流 (简化同步模型)
 
-这个端点用于接收来自Kling AI服务的回调。
-
-- **方法**: `POST`
-- **验证**: 需要验证请求是否真的来自Kling AI（例如，通过一个共享的密钥）。
-
-#### 请求体 (由Kling AI发送)
-
-```json
-{
-  "task_id": "some-unique-task-id-from-kling",
-  "status": "succeeded",
-  "image_url": "https://path.to/generated-image.png"
-}
-```
-
-## 4. 逻辑与数据流 (异步模型)
-
-1.  **请求发起**: 用户在前端点击"生成我的造型"按钮。客户端代码构建一个 `FormData` 对象，并向 `/api/generate` 发起一个 `POST` 请求。
-2.  **任务提交 (`/api/generate`)**:
-    - `/api/generate` 端点接收到前端的图片。
-    - 它将这些图片上传到一个临时的公共可访问地址（例如，AWS S3或Vercel Blob Storage），因为Kling AI需要URL作为输入。
-    - 它调用 Kling AI 的 `kolors-virtual-try-on` API，请求体中包含两个图片的URL和一个 `webhook_url` (指向我们自己的 `/api/webhook`)。
-    - Kling AI 接收任务并立即返回一个 `task_id`。
-    - `/api/generate` 将这个 `task_id` 返回给前端。
-3.  **前端等待**: 前端收到 `task_id` 后，进入等待状态。它可以开始轮询（Polling）一个用于获取结果的API，或者通过WebSocket等待服务器的推送。
-4.  **AI处理与回调**: Kling AI 在后台完成图像生成。完成后，它会向我们在步骤2中提供的 `/api/webhook` 地址发送一个`POST`请求，其中包含了 `task_id` 和最终的 `image_url`。
-5.  **结果处理 (`/api/webhook`)**:
-    - `/api/webhook` 端点接收到回调。
-    - 它将 `task_id` 和 `image_url` 存入数据库或缓存中，以便前端可以查询。
-    - (可选) 如果使用了WebSocket，服务器会通过它将 `image_url` 直接推送给对应的客户端。
-6.  **前端获取结果**: 前端通过轮询或WebSocket接收到 `image_url` 后，更新UI，将用户重定向到结果页并显示图片。
+1.  **请求发起**: 用户在前端点击"生成"按钮，将两张图片文件通过 `FormData` 发送到 `/api/generate`。
+2.  **后端处理 (`/api/generate`)**:
+    a. **接收与转换**: 后端接收图片文件，读取其内容并转换为 **Base64** 编码的字符串。
+    b. **提交任务**: 调用 Kling AI API 提交生成任务，请求体中包含图片的Base64数据。Kling AI 立即返回一个 `task_id`。
+    c. **后端轮询**: 后端服务进入一个循环，**代替前端进行轮询**。它会每隔几秒钟使用 `task_id` 调用 Kling AI 的状态查询接口。
+    d. **获取结果**: 当状态查询接口返回"成功"时，后端从响应中提取最终的 `imageUrl`。
+    e. **直接返回**: 后端将这个 `imageUrl` 作为对前端最初请求的响应，直接返回给前端。
+3.  **前端等待与渲染**:
+    -   前端在这整个过程中，只需要等待 `/api/generate` 这一个API请求返回结果。
+    -   收到包含 `imageUrl` 的响应后，将其作为URL参数传递给结果页进行展示和 `localStorage` 存储。
 
 ## 5. 前端持久化方案 (无数据库)
 
@@ -305,64 +272,23 @@ globals.css
 
 此方案确保了即使用户刷新页面或关闭浏览器，其生成历史也能被保留在当前设备和浏览器上。
 
-## 6. 安全性与可扩展性
+## 6. 安全性与可扩展性 (简化版)
 
-- **API 密钥管理**: 所有用于外部服务的密钥（特别是 `KLING_AI_API_KEY`）**必须**存储在环境变量中（例如，在根目录的 `.env.local` 文件中），并通过 `process.env` 访问。
-- **Webhook安全**: `/api/webhook` 端点必须被保护，以防止恶意调用。可以通过在Kling AI请求中设置一个共享密钥（`webhook_secret`）并在收到回调时进行验证来实现。
-- **临时文件存储**: 上传的图片需要一个临时的公共存储。Vercel Blob Storage 或 AWS S3 是很好的选择，并且应该配置生命周期规则，在处理完成后自动删除这些临时文件。
-- **可扩展性**: 异步架构非常适合这种耗时操作，它不会阻塞服务器进程，具有很好的可扩展性。
+-   **API 密钥管理**: `KLING_AI_API_KEY` 依然必须存储在环境变量中。
+-   **风险**: 此简化方案的主要风险在于 **服务器函数超时**。如果AI生成+后端轮询的总时长超过了平台限制（如Vercel免费版为10-15秒），请求将失败。**此风险在Demo阶段被认为是可接受的。**
+-   **此方案不推荐用于生产环境**，生产环境应采用我们之前设计的、包含Webhook和独立存储的健壮异步架构。
 
-## 7. 实施计划 (分阶段)
-
-### 阶段一: 环境与后端设置
+## 7. 实施计划 (最简化Demo版)
 
 1.  **环境变量配置**:
     -   创建 `.env.local` 文件。
     -   添加 `KLING_AI_API_KEY` 用于存放 Kling AI 的 API 密钥。
-    -   添加 Vercel Blob 云存储所需的 `BLOB_READ_WRITE_TOKEN`。
-    -   添加 Vercel KV 存储所需的 `KV_URL` 和 `KV_REST_API_TOKEN` 等变量。
 
-2.  **安装依赖**:
-    -   安装 Vercel Blob 客户端: `pnpm install @vercel/blob`。
-    -   安装 Vercel KV 客户端: `pnpm install @vercel/kv`。
+2.  **后端API实现**:
+    -   创建并实现**唯一**的后端接口 `POST /api/generate/route.ts`。
+    -   在该接口内完成接收文件、转换为Base64、提交任务给Kling AI、获取`task_id`、循环轮询任务状态、直到获取最终`imageUrl`并返回的全部逻辑。
 
-3.  **任务状态管理方案**:
-    -   由于生成是异步的，我们需要一个地方来存储从"任务提交"到"Webhook 回调"之间的状态。
-    -   我们将使用 Vercel KV (一个无服务器的键值数据库) 来存储 `taskId` 与其对应的生成状态和最终图片 URL 的映射。这比使用数据库更轻量，非常适合此场景。
-
-### 阶段二: 后端 API 实现
-
-4.  **实现 `POST /api/generate/route.ts` (任务提交)**:
-    -   接收前端上传的 `human_image` 和 `garment_image` 两个文件。
-    -   将这两个文件上传到 Vercel Blob，获取它们各自的公开 URL。
-    -   调用 Kling AI API，请求体中包含两个图片的 URL 和一个指向我们 `/api/webhook` 的 `webhook_url`。
-    -   从 Kling AI 获得 `task_id` 后，在 Vercel KV 中创建一个记录，例如 `kv.set(taskId, { status: 'processing' })`。
-    -   将 `task_id` 返回给前端。
-
-5.  **实现 `POST /api/webhook/route.ts` (接收回调)**:
-    -   接收来自 Kling AI 的 POST 请求。
-    -   (可选但推荐) 通过比对共享密钥来验证请求的合法性。
-    -   从请求体中获取 `task_id` 和最终的 `image_url`。
-    -   在 Vercel KV 中更新对应的记录，例如 `kv.set(taskId, { status: 'succeeded', imageUrl: ... })`。
-
-6.  **实现 `GET /api/results/[taskId]/route.ts` (前端轮询)**:
-    -   前端在拿到 `task_id` 后，会每隔几秒钟调用一次这个接口。
-    -   此接口根据 `taskId` 从 Vercel KV 中查询任务状态。
-    -   如果状态是 "succeeded"，则返回包含 `imageUrl` 的 JSON。
-    -   如果状态仍是 "processing"，则返回相应的状态信息，让前端继续等待和轮询。
-
-### 阶段三: 前端实现
-
-7.  **实现 `app/page.tsx` 中的生成流程**:
-    -   在用户点击"生成"按钮后，调用我们创建的 `POST /api/generate` 接口。
-    -   收到 `task_id` 后，UI 进入加载状态。
-    -   启动一个定时器，周期性地（例如每3秒）轮询 `GET /api/results/[taskId]` 接口。
-    -   当轮询结果返回成功和 `imageUrl` 后，停止轮询，并使用 Next.js 的 `router` 将用户带到结果页，并将图片URL作为参数传递，例如 `router.push(\`/results?imageUrl=\${imageUrl}\`)`。
-
-8.  **实现 `app/results/page.tsx` 中的结果展示与存储**:
-    -   页面加载时，从 URL 参数中获取最新的 `imageUrl`。
-    -   实现 `localStorage` 存储逻辑：
-        -   从 `localStorage` 中读取 `generatedLooks` 历史记录数组。
-        -   将新的 `imageUrl` 添加到数组中（如果不存在）。
-        -   将更新后的数组写回 `localStorage`。
-    -   渲染 `localStorage` 中的所有图片，向用户展示完整的生成历史。
+3.  **前端实现**:
+    -   更新 `app/page.tsx`，使其调用 `/api/generate` 接口，并耐心等待其返回最终结果。
+    -   收到结果后，通过URL参数 `router.push(\`/results?imageUrl=\${imageUrl}\`)` 跳转。
+    -   `app/results/page.tsx` 的逻辑保持不变：从URL参数读取`imageUrl`，并使用 `localStorage` 进行历史记录的存取和展示。
