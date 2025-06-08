@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -9,13 +9,19 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "StyleAI - AI Fashion Try-On",
   description: "Visualize yourself in stunning outfits with AI-powered virtual try-on",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "StyleAI",
   },
   generator: 'v0.dev'
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
 }
 
 export default function RootLayout({

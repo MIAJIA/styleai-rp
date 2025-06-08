@@ -292,3 +292,19 @@ globals.css
     -   更新 `app/page.tsx`，使其调用 `/api/generate` 接口，并耐心等待其返回最终结果。
     -   收到结果后，通过URL参数 `router.push(\`/results?imageUrl=\${imageUrl}\`)` 跳转。
     -   `app/results/page.tsx` 的逻辑保持不变：从URL参数读取`imageUrl`，并使用 `localStorage` 进行历史记录的存取和展示。
+
+
+# 计划
+1 修改主页 (app/page.tsx)，实现生成逻辑
+找到页面上的“生成”按钮。
+为其绑定一个新的 onClick 事件处理函数。
+在该函数中，实现一个加载状态 (Loading State)，例如点击后按钮变为“生成中...”并禁用，同时可以在界面上显示一个加载指示器。
+调用 fetch 函数向我们的后端端点 /api/generate 发送一个 POST 请求。
+获取到后端返回的包含 Base64 图片数据的 JSON 响应。
+2 实现生成结果的传递与展示
+获取到 API 响应后，使用 Next.js 的 useRouter hook，将用户重定向到结果页 (/results)。
+在重定向时，将获取到的 Base64 图片字符串作为URL查询参数（Query Parameter）传递过去。
+修改结果页 (app/results/page.tsx)，使其不再使用硬编码的图片，而是从 URL 的查询参数中读取 Base64 数据，并将其作为 src 展示出来。
+3 实现本地历史记录功能 (localStorage)
+在成功获取并展示图片后（可以在结果页完成），将这张图片的 Base64 数据存入浏览器的 localStorage 中。
+在主页 (app/page.tsx) 上，添加一小块UI，用于读取 localStorage 中的历史记录并将其展示为一个图片列表。

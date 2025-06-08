@@ -42,13 +42,44 @@ export default function HomePage() {
     if (!selfieFile) return
 
     setIsGenerating(true)
-    // Simulate AI processing
-    // If no style is selected, use original background
-    const processingMessage = selectedStyle ? "Creating Your Look..." : "Processing with Original Background..."
+    try {
+      const formData = new FormData();
+      formData.append("human_image", selfieFile);
+      if (clothingFile) {
+        formData.append("garment_image", clothingFile);
+      }
 
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setIsGenerating(false)
-    router.push("/results")
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        body: formData,
+        // Do NOT set Content-Type header, browser does it automatically for FormData
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to generate image: ${errorText}`);
+      }
+
+      const data = await response.json();
+
+      // For now, just log the data to the console to verify
+      console.log('Generated data:', data);
+
+      // We will handle the redirect in the next step
+      if (data.imageUrl) {
+        router.push(`/results?imageUrl=${encodeURIComponent(data.imageUrl)}`);
+      }
+
+    } catch (error) {
+      console.error(error);
+      // Here you could show an error message to the user
+      // It's good practice to show the actual error from the server
+      if (error instanceof Error) {
+        alert(error.message);
+      }
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
