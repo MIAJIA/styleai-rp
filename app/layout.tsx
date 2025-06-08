@@ -2,7 +2,6 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -32,9 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body className={`${inter.className} h-full bg-neutral-50 overflow-x-hidden`}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          <main className="h-full pb-safe">{children}</main>
-        </ThemeProvider>
+        <main className="h-full pb-safe">{children}</main>
       </body>
     </html>
   )
