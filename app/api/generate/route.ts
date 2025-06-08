@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as jwt from "jsonwebtoken";
 
 // Helper function to convert a file to a Base64 string
 const fileToBase64 = async (file: File): Promise<string> => {
@@ -11,15 +12,29 @@ const fileToBase64 = async (file: File): Promise<string> => {
 // Helper function for delaying execution, to be used in polling
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const KLING_API_KEY = process.env.KLING_AI_API_KEY;
+// --- Kling AI JWT Authentication ---
+const getApiToken = (accessKey: string, secretKey: string): string => {
+  const payload = {
+    iss: accessKey,
+    exp: Math.floor(Date.now() / 1000) + 1800, // 30 minutes expiration
+    nbf: Math.floor(Date.now() / 1000) - 5, // 5 seconds tolerance
+  };
+  const token = jwt.sign(payload, secretKey, { algorithm: 'HS256', header: { alg: "HS256", typ: "JWT" } });
+  return token;
+}
 
-// IMPORTANT: Please replace these with the actual URLs from your Kling AI documentation
-const KILNG_API_SUBMIT_URL = "https://api.klingai.com/v1/virtual-tryon/submit"; // Placeholder
-const KILNG_API_STATUS_BASE_URL = "https://api.klingai.com/v1/tasks/status/"; // Placeholder, e.g., "https://api.kling.com/tasks/"
+// --- Kling AI API Configuration ---
+const KLING_ACCESS_KEY = process.env.KLING_AI_ACCESS_KEY;
+const KLING_SECRET_KEY = process.env.KLING_AI_SECRET_KEY;
+
+// Corrected API endpoints based on the official documentation
+const KLING_API_BASE_URL = "https://api-beijing.klingai.com";
+const VIRTUAL_TRYON_SUBMIT_PATH = "/v1/images/kolors-virtual-try-on";
+const VIRTUAL_TRYON_STATUS_PATH = "/v1/images/kolors-virtual-try-on/"; // Note the trailing slash for appending task_id
 
 export async function POST(request: Request) {
-  if (!KLING_API_KEY) {
-    return NextResponse.json({ error: "API key is not configured." }, { status: 500 });
+  if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
+    return NextResponse.json({ error: "AccessKey or SecretKey is not configured." }, { status: 500 });
   }
 
   try {
@@ -34,22 +49,25 @@ export async function POST(request: Request) {
       );
     }
 
+    // Step 0: Get the dynamic API Token
+    const apiToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
+
     // Step 1 - Convert images to Base64
     const humanImageBase64 = await fileToBase64(humanImageFile);
     const garmentImageBase64 = await fileToBase64(garmentImageFile);
 
     // Step 2 - Call Kling AI to submit the task
     console.log("Submitting task to Kling AI...");
-    const submitResponse = await fetch(KILNG_API_SUBMIT_URL, {
+    const submitResponse = await fetch(`${KLING_API_BASE_URL}${VIRTUAL_TRYON_SUBMIT_PATH}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${KLING_API_KEY}`,
+        'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        // Corrected parameters based on documentation
         human_image: humanImageBase64,
-        garment_image: garmentImageBase64,
-        // Add other parameters like 'style' if the API supports it
+        cloth_image: garmentImageBase64,
       }),
     });
 
@@ -59,41 +77,45 @@ export async function POST(request: Request) {
     }
 
     const submitResult = await submitResponse.json();
-    const taskId = submitResult.task_id;
+    // According to the doc, the task_id is inside the data object
+    const taskId = submitResult.data.task_id;
     console.log(`Task submitted successfully. Task ID: ${taskId}`);
-
 
     // Step 3 - Poll for the result
     let attempts = 0;
-    const maxAttempts = 40; // e.g., 40 attempts * 3 seconds = 2 minute timeout
+    const maxAttempts = 40;
     let finalImageUrl = "";
 
     while (attempts < maxAttempts) {
         console.log(`Polling attempt #${attempts + 1} for task: ${taskId}`);
 
-        const statusCheckResponse = await fetch(`${KILNG_API_STATUS_BASE_URL}${taskId}`, {
+        // Regenerate token for each poll request to ensure it's not expired
+        const pollingToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
+
+        const statusCheckResponse = await fetch(`${KLING_API_BASE_URL}${VIRTUAL_TRYON_STATUS_PATH}${taskId}`, {
           headers: {
-            'Authorization': `Bearer ${KLING_API_KEY}`,
+            'Authorization': `Bearer ${pollingToken}`,
           },
         });
 
         if (!statusCheckResponse.ok) {
-            throw new Error(`API Error on status check: ${statusCheckResponse.status}`);
+            const errorBody = await statusCheckResponse.text();
+            throw new Error(`API Error on status check: ${statusCheckResponse.status} ${errorBody}`);
         }
 
         const statusResult = await statusCheckResponse.json();
+        const taskData = statusResult.data; // Data is nested
 
-        if (statusResult.task_status === "succeed") {
-            // NOTE: Adjust the path based on the actual API response structure
-            finalImageUrl = statusResult.task_result.images[0].url;
+        if (taskData.task_status === "succeed") {
+            finalImageUrl = taskData.task_result.images[0].url;
             console.log("Task succeeded! Image URL:", finalImageUrl);
             break;
-        } else if (statusResult.task_status === "failed") {
-            throw new Error(`AI generation failed. Reason: ${statusResult.task_result?.error || 'Unknown'}`);
+        } else if (taskData.task_status === "failed") {
+            throw new Error(`AI generation failed. Reason: ${taskData.task_status_msg || 'Unknown'}`);
         }
 
         attempts++;
-        await sleep(3000); // Wait for 3 seconds before the next poll
+        await sleep(3000);
     }
 
     if (!finalImageUrl) {

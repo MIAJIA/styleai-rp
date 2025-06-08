@@ -78,7 +78,7 @@ export default function HomePage() {
         alert(error.message);
       }
     } finally {
-      setIsGenerating(false)
+    setIsGenerating(false)
     }
   }
 
