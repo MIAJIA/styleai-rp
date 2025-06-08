@@ -1,17 +1,81 @@
 "use client"
 
-import type React from "react"
+import React, { useRef, useState, ChangeEvent } from "react"
+import { Upload, X } from "lucide-react"
 
-import { useState, useRef } from "react"
-import { Camera, Upload, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+// Helper function to process and resize the image if necessary
+const processImage = (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const { naturalWidth: width, naturalHeight: height } = img;
+        const aspectRatio = width / height;
+        const minRatio = 1 / 2.5;
+        const maxRatio = 2.5;
+
+        // If aspect ratio is valid, no need to process
+        if (aspectRatio >= minRatio && aspectRatio <= maxRatio) {
+          console.log("Image aspect ratio is valid, no processing needed.");
+          resolve(file);
+          return;
+        }
+
+        console.log("Image aspect ratio is invalid, processing with letterboxing...");
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return reject(new Error('Could not get canvas context'));
+        }
+
+        let newWidth = width;
+        let newHeight = height;
+
+        // Determine the new canvas dimensions based on the aspect ratio violation
+        if (aspectRatio < minRatio) { // Image is too tall
+          newWidth = height * minRatio;
+        } else { // Image is too wide
+          newHeight = width / maxRatio;
+        }
+
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+
+        // Fill canvas with a neutral color (e.g., white)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, newWidth, newHeight);
+
+        // Calculate the position to draw the image in the center
+        const x = (newWidth - width) / 2;
+        const y = (newHeight - height) / 2;
+
+        ctx.drawImage(img, x, y);
+
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            return reject(new Error('Canvas to Blob conversion failed'));
+          }
+          const newFile = new File([blob], file.name, { type: file.type });
+          console.log("Image processed successfully.");
+          resolve(newFile);
+        }, file.type);
+      };
+      img.onerror = reject;
+      if (e.target?.result) {
+        img.src = e.target.result as string;
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
 
 interface IOSUploadProps {
   label: string
   onImageSelect: (file: File) => void
-  preview?: string
-  className?: string
+  preview: string
   required?: boolean
   helpText?: string
 }
@@ -20,99 +84,81 @@ export default function IOSUpload({
   label,
   onImageSelect,
   preview,
-  className,
-  required = false,
+  required,
   helpText,
 }: IOSUploadProps) {
-  const [isDragging, setIsDragging] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const ref = useRef<HTMLInputElement>(null)
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
-
-  const handleDragLeave = () => {
-    setIsDragging(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-
-    const files = e.dataTransfer.files
-    if (files?.[0] && files[0].type.startsWith("image/")) {
-      onImageSelect(files[0])
+  const onFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    setError(null);
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      setIsProcessing(true);
+      try {
+        const processedFile = await processImage(file);
+        onImageSelect(processedFile);
+      } catch (err) {
+        console.error("Image processing failed:", err);
+        setError("Could not process the image. Please try another one.");
+        // Reset the input so the user can select the same file again if they wish
+        if (ref.current) {
+          ref.current.value = "";
+        }
+      } finally {
+        setIsProcessing(false);
+      }
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (files?.[0]) {
-      onImageSelect(files[0])
+  const clearImage = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (ref.current) {
+      ref.current.value = ""
     }
-  }
-
-  const handleClearImage = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
-    }
-    onImageSelect(null as unknown as File)
+    // Create a dummy file to reset the state
+    onImageSelect(new File([], ""));
   }
 
   return (
-    <div className={cn("space-y-2", className)}>
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-neutral-700">
-          {label} {required && <span className="text-primary">*</span>}
-        </label>
-        {preview && (
-          <button onClick={handleClearImage} className="text-xs text-neutral-500 flex items-center gap-1 ios-btn">
-            <X size={12} />
-            Clear
-          </button>
-        )}
-      </div>
-
-      <div
-        className={cn(
-          "border-2 border-dashed rounded-2xl transition-all duration-200 overflow-hidden",
-          isDragging ? "border-primary bg-primary/5" : "border-neutral-200",
-          preview ? "p-0" : "p-4",
-        )}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        {preview ? (
-          <div className="relative aspect-[4/3] w-full">
-            <img src={preview || "/placeholder.svg"} alt="Preview" className="w-full h-full object-cover" />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-sm ios-btn"
-            >
-              <Camera size={18} className="text-neutral-700" />
-            </button>
-          </div>
-        ) : (
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center justify-center text-center ios-btn"
+    <div
+      className="ios-uploader relative aspect-[3/4] bg-neutral-100 rounded-lg flex flex-col items-center justify-center text-center p-3 cursor-pointer"
+      onClick={() => ref.current?.click()}
+    >
+      <input type="file" accept="image/jpeg,image/png" className="hidden" ref={ref} onChange={onFileChange} />
+      {preview ? (
+        <>
+          <img src={preview} alt="Preview" className="w-full h-full object-contain rounded-md" />
+          <button
+            onClick={clearImage}
+            className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1"
           >
-            <div className="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center mb-2">
-              <Upload className="h-4 w-4 text-neutral-500" />
-            </div>
-            <p className="text-xs font-medium text-neutral-700 mb-1">Upload a photo</p>
-            <p className="text-xs text-neutral-500 mb-2">Tap to browse</p>
-            {helpText && <p className="text-xs text-neutral-500 mb-3 leading-relaxed text-center">{helpText}</p>}
-            <Button variant="outline" size="sm" className="ios-btn-outline text-xs h-8 px-3">
-              Choose File
-            </Button>
+            <X size={14} />
+          </button>
+        </>
+      ) : (
+        <div className="flex flex-col items-center justify-center gap-1">
+          <div className="w-10 h-10 bg-neutral-200 rounded-full flex items-center justify-center">
+            <Upload size={20} className="text-neutral-500" />
           </div>
-        )}
-
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-      </div>
+          <span className="text-xs font-medium">
+            {label}
+            {required && <span className="text-red-500">*</span>}
+          </span>
+        </div>
+      )}
+      {isProcessing && (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+          <div className="text-white">Processing...</div>
+        </div>
+      )}
+      {helpText && (
+        <p className="absolute bottom-2 text-neutral-400 text-[10px] leading-tight px-2">{helpText}</p>
+      )}
+      {error && (
+        <div className="absolute bottom-2 text-red-500 text-[10px] leading-tight px-2">{error}</div>
+      )}
     </div>
   )
 }

@@ -58,7 +58,7 @@ export default function ResultsPage() {
                 <img
                   src={imageUrl}
                   alt="Generated fashion look"
-                  className="w-full aspect-[3/4] object-cover"
+                  className="w-full aspect-[3/4] object-contain bg-gray-100"
                 />
               ) : (
                 <div className="w-full aspect-[3/4] bg-neutral-100 flex items-center justify-center">

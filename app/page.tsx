@@ -8,6 +8,7 @@ import IOSTabBar from "./components/ios-tab-bar"
 import IOSHeader from "./components/ios-header"
 import IOSUpload from "./components/ios-upload"
 import StyleSelector from "./components/style-selector"
+import Link from 'next/link'
 
 export default function HomePage() {
   const [selfieFile, setSelfieFile] = useState<File | null>(null)
@@ -78,12 +79,20 @@ export default function HomePage() {
         alert(error.message);
       }
     } finally {
-    setIsGenerating(false)
+      setIsGenerating(false)
     }
   }
 
   return (
     <div className="min-h-full pb-20">
+      <header className="px-8 py-4 border-b">
+        <div className="flex justify-between items-center">
+          <h1 className="font-bold text-xl">StyleAI</h1>
+          <Link href="/account" className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+            Check Account Balance
+          </Link>
+        </div>
+      </header>
       {/* iOS-style header */}
       <IOSHeader
         title="StyleAI"
