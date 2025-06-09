@@ -25,8 +25,8 @@ interface MyWardrobeProps {
 
 const STORAGE_KEY = 'styleai_wardrobe';
 
-// --- Start: New default photos logic ---
-const getInitialPhotos = (): Wardrobe => ({
+// --- Define Default Photos ---
+const DEFAULT_PHOTOS: Wardrobe = {
   tops: [
     { id: 'default-top-1', imageSrc: '/cloth/green-top.png' },
     { id: 'default-top-2', imageSrc: '/cloth/yellow-shirt.png' },
@@ -43,7 +43,7 @@ const getInitialPhotos = (): Wardrobe => ({
     { id: 'default-outerwear-1', imageSrc: '/cloth/whiteblazer.png' },
     { id: 'default-outerwear-2', imageSrc: '/cloth/黑皮衣.png' },
   ],
-});
+};
 
 const INITIAL_WARDROBE: Wardrobe = {
   tops: [],
@@ -52,38 +52,32 @@ const INITIAL_WARDROBE: Wardrobe = {
   outerwear: [],
 };
 
-// Helper function to read from localStorage safely
-const getInitialState = (): Wardrobe => {
-  if (typeof window === "undefined") {
-    return getInitialPhotos(); // Return default photos on server
-  }
-  try {
-    const storedItem = window.localStorage.getItem(STORAGE_KEY);
-    if (storedItem) {
-      const parsed = JSON.parse(storedItem);
-      // Basic validation to check if it's not an empty object from a previous bug
-      if (Object.values(parsed).some(arr => Array.isArray(arr) && arr.length > 0)) {
-        return parsed;
-      }
-    }
-  } catch (error) {
-    console.error("Failed to parse wardrobe from localStorage", error);
-  }
-  // If localStorage is empty or invalid, return the default photos
-  return getInitialPhotos();
-};
-
 export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
-  const [wardrobe, setWardrobe] = useState<Wardrobe>(getInitialState);
+  const [wardrobe, setWardrobe] = useState<Wardrobe>(INITIAL_WARDROBE);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentCategoryRef = useRef<WardrobeCategory | null>(null);
 
-  // Effect to persist wardrobe changes to localStorage
+  // Effect to load from localStorage on mount
   useEffect(() => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(wardrobe));
+      const storedItem = window.localStorage.getItem(STORAGE_KEY);
+      if (storedItem) {
+        setWardrobe(JSON.parse(storedItem));
+      }
     } catch (error) {
-      console.error("Failed to save wardrobe to localStorage", error);
+      console.error("Failed to parse wardrobe from localStorage", error);
+    }
+  }, []);
+
+  // Effect to persist wardrobe changes to localStorage
+  useEffect(() => {
+    // Only save if the wardrobe is not the initial empty state.
+    if (JSON.stringify(wardrobe) !== JSON.stringify(INITIAL_WARDROBE)) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(wardrobe));
+      } catch (error) {
+        console.error("Failed to save wardrobe to localStorage", error);
+      }
     }
   }, [wardrobe]);
 
@@ -169,10 +163,14 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
           id: `item-${Date.now()}`,
           imageSrc,
         };
-        setWardrobe(prev => ({
-          ...prev,
-          [category]: [...prev[category], newItem],
-        }));
+        setWardrobe(prev => {
+          // Filter out default items before adding the new one
+          const userItems = prev[category].filter(item => !item.id.startsWith('default-'));
+          return {
+            ...prev,
+            [category]: [newItem, ...userItems],
+          }
+        });
       }
     }
 
@@ -205,42 +203,54 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
   // This is a simplified render function for one category.
   // We will build this out with proper styling.
   const renderCategory = (category: WardrobeCategory, name: string, emoji: string, colorClass: string) => {
-    const items = wardrobe[category];
-    const totalSlots = 3; // Let's show 3 slots per category for now
+    const userItems = wardrobe[category];
+    const defaultItems = DEFAULT_PHOTOS[category];
+    const itemsToDisplay = [...userItems, ...defaultItems.filter(
+      dItem => !userItems.some(uItem => uItem.imageSrc === dItem.imageSrc)
+    )];
 
     return (
-      <div className={`flex-1 bg-gradient-to-br ${colorClass} rounded-xl p-3 border border-pink-100`}>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-pink-700">{name}</span>
-          <span className="text-xs text-pink-500">{items.length}</span>
+      <div className={`${colorClass} rounded-3xl p-4 shadow-lg`}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <span className="text-lg">{emoji}</span>
+            </div>
+            <span className="font-playfair text-base font-bold text-white">{name}</span>
+          </div>
+          <span className="bg-white/30 px-2 py-0.5 rounded-full text-xs font-sans font-medium text-white">
+            {itemsToDisplay.length}
+          </span>
         </div>
-        <div className="grid grid-cols-3 gap-1">
-          {items.slice(0, totalSlots).map((item) => (
+        <div className="grid grid-cols-4 gap-2">
+          {/* Add Button */}
+          <div
+            onClick={() => handleAddClick(category)}
+            className="aspect-square bg-white/30 rounded-xl shadow-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white/40 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full bg-white/50 flex items-center justify-center mb-1">
+              <span className="text-xl text-white">+</span>
+            </div>
+            <p className="text-xs text-white font-medium">Add</p>
+          </div>
+          {/* Item List */}
+          {itemsToDisplay.slice(0, 3).map((item) => (
             <div
               key={item.id}
               onClick={() => onGarmentSelect(item.imageSrc)}
-              className="relative group aspect-square bg-white rounded-md shadow-sm cursor-pointer"
+              className="relative group aspect-square bg-white rounded-xl shadow-sm cursor-pointer overflow-hidden"
             >
-              <img src={item.imageSrc} alt="wardrobe item" className="w-full h-full object-cover rounded-md" />
+              <img src={item.imageSrc} alt="wardrobe item" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
               <button
                 onClick={(e) => {
                   e.stopPropagation(); // Prevent the main card's click event
                   handleDeleteItem(category, item.id);
                 }}
-                className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-all z-10 hover:bg-red-500"
                 aria-label="Delete item"
               >
                 ✕
               </button>
-            </div>
-          ))}
-          {Array.from({ length: Math.max(0, totalSlots - items.length) }).map((_, index) => (
-            <div
-              key={`add-${category}-${index}`}
-              onClick={() => handleAddClick(category)}
-              className="aspect-square bg-white/50 rounded-md shadow-sm flex items-center justify-center cursor-pointer hover:bg-white/70"
-            >
-              <span className="text-lg text-black/50">{emoji}</span>
             </div>
           ))}
         </div>
@@ -249,40 +259,21 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
   }
 
   return (
-    <>
-      {/* Hidden file input to be triggered programmatically */}
+    <div className="w-full">
       <input
-        type="file"
         ref={fileInputRef}
-        onChange={handleFileChange}
+        type="file"
         accept="image/jpeg, image/png"
-        style={{ display: 'none' }}
+        onChange={handleFileChange}
+        className="hidden"
       />
-
-      <div className="ios-card p-5 animate-fade-up" style={{ animationDelay: "0.3s" }}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center">
-              <span className="text-white text-xs">👗</span>
-            </div>
-            <h3 className="text-sm font-medium">My Wardrobe</h3>
-          </div>
-          <Link href="/wardrobe" className="text-xs text-primary font-medium ios-btn">
-            Manage
-          </Link>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex gap-3">
-            {renderCategory("tops", "Tops", "👕", "from-pink-50 to-rose-50")}
-            {renderCategory("bottoms", "Bottoms", "👖", "from-blue-50 to-indigo-50")}
-          </div>
-          <div className="flex gap-3">
-            {renderCategory("dresses", "Dresses", "👗", "from-purple-50 to-violet-50")}
-            {renderCategory("outerwear", "Outerwear", "🧥", "from-emerald-50 to-green-50")}
-          </div>
-        </div>
+      {/* Container to ensure vertical stacking */}
+      <div className="flex flex-col gap-y-4">
+        {renderCategory("tops", "Tops", "👕", "bg-pink-200")}
+        {renderCategory("bottoms", "Bottoms", "👖", "bg-blue-200")}
+        {renderCategory("dresses", "Dresses", "👗", "bg-purple-200")}
+        {renderCategory("outerwear", "Outerwear", "🧥", "bg-yellow-200")}
       </div>
-    </>
+    </div>
   );
 }
