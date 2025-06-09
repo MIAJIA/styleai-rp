@@ -92,20 +92,19 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
 
         // Create canvas for resizing
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 256;
-        const MAX_HEIGHT = 256;
+        const MAX_DIMENSION = 1024; // Increased from 512 to 1024 for higher quality
         let width = img.width;
         let height = img.height;
 
         if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+          if (width > MAX_DIMENSION) {
+            height *= MAX_DIMENSION / width;
+            width = MAX_DIMENSION;
           }
         } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
+          if (height > MAX_DIMENSION) {
+            width *= MAX_DIMENSION / height;
+            height = MAX_DIMENSION;
           }
         }
         canvas.width = width;
@@ -164,6 +163,19 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
     fileInputRef.current?.click();
   };
 
+  const handleDeleteItem = (category: WardrobeCategory, itemId: string) => {
+    // Add a confirmation dialog to prevent accidental deletion
+    if (window.confirm("Are you sure you want to delete this item?")) {
+      setWardrobe(prev => {
+        const updatedItems = prev[category].filter(item => item.id !== itemId);
+        return {
+          ...prev,
+          [category]: updatedItems,
+        };
+      });
+    }
+  };
+
   // This is a simplified render function for one category.
   // We will build this out with proper styling.
   const renderCategory = (category: WardrobeCategory, name: string, emoji: string, colorClass: string) => {
@@ -181,9 +193,19 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
             <div
               key={item.id}
               onClick={() => onGarmentSelect(item.imageSrc)}
-              className="aspect-square bg-white rounded-md shadow-sm cursor-pointer"
+              className="relative group aspect-square bg-white rounded-md shadow-sm cursor-pointer"
             >
               <img src={item.imageSrc} alt="wardrobe item" className="w-full h-full object-cover rounded-md" />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent the main card's click event
+                  handleDeleteItem(category, item.id);
+                }}
+                className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                aria-label="Delete item"
+              >
+                ✕
+              </button>
             </div>
           ))}
           {Array.from({ length: Math.max(0, totalSlots - items.length) }).map((_, index) => (
