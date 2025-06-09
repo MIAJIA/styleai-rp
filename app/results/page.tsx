@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
-import { Share2, Download, RefreshCw, Heart, Lock, ArrowLeft, Sparkles } from "lucide-react"
+import { Share2, Download, RefreshCw, Heart, Lock, ArrowLeft, Sparkles, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import IOSTabBar from "../components/ios-tab-bar"
 import StyleSelector from "../components/style-selector"
@@ -53,6 +53,8 @@ export default function ResultsPage() {
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null)
   const [pastLooks, setPastLooks] = useState<PastLook[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isRecentLooksExpanded, setIsRecentLooksExpanded] = useState(false)
 
   // Load recent looks from localStorage on mount
   useEffect(() => {
@@ -65,7 +67,7 @@ export default function ResultsPage() {
     if (initialImageUrl) {
       const storedLooks = getRecentLooks()
       const isExistingLook = storedLooks.some(look => look.imageUrl === initialImageUrl)
-      
+
       if (!isExistingLook) {
         const newLook: PastLook = {
           id: Date.now().toString(),
@@ -86,6 +88,11 @@ export default function ResultsPage() {
       saveRecentLooks(pastLooks)
     }
   }, [pastLooks])
+
+  const handleDeleteLook = (lookIdToDelete: string) => {
+    const updatedLooks = pastLooks.filter((look) => look.id !== lookIdToDelete)
+    setPastLooks(updatedLooks)
+  }
 
   const handleShare = () => {
     if (navigator.share && currentImageUrl) {
@@ -110,10 +117,15 @@ export default function ResultsPage() {
     }
   }
 
-  const handleTryAnotherLook = async () => {
-    if (!currentImageUrl || !selectedStyle) return
+  const handleGenerateNewStyle = async (styleId: string) => {
+    if (!currentImageUrl || isGenerating) return;
 
-    setIsGenerating(true)
+    setSelectedStyle(styleId);
+    setIsGenerating(true);
+    setError(null);
+
+    const garmentSrc = searchParams.get("garmentSrc");
+
     try {
       const response = await fetch('/api/generate-style', {
         method: 'POST',
@@ -122,65 +134,47 @@ export default function ResultsPage() {
         },
         body: JSON.stringify({
           imageUrl: currentImageUrl,
-          style: selectedStyle,
+          style: styleId,
+          garmentSrc: garmentSrc,
         }),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to generate styled image: ${errorText}`);
+        const errorData = await response.json();
+        const errorText = errorData.error || "An error occurred";
+        throw new Error(errorText);
       }
 
       const data = await response.json();
 
       if (data.imageUrl) {
-        // Add current image to past looks before replacing it
-        const newPastLook: PastLook = {
+        const newStyledLook: PastLook = {
           id: Date.now().toString(),
-          imageUrl: currentImageUrl,
-          style: null, // Current image has no style applied initially
+          imageUrl: data.imageUrl,
+          style: styleId,
           timestamp: Date.now(),
         };
-        const updatedPastLooks = [newPastLook, ...pastLooks];
-        setPastLooks(updatedPastLooks);
+
+        // Add the new look to the front of the list
+        setPastLooks(prev => [newStyledLook, ...prev]);
 
         // Update current image
         setCurrentImageUrl(data.imageUrl);
-        setSelectedStyle(null); // Reset style selection
-
-        // Save the new styled image to recent looks
-        const newStyledLook: PastLook = {
-          id: (Date.now() + 1).toString(),
-          imageUrl: data.imageUrl,
-          style: selectedStyle, // Store which style was applied
-          timestamp: Date.now() + 1,
-        };
-        const finalUpdatedLooks = [newStyledLook, ...updatedPastLooks];
-        setPastLooks(finalUpdatedLooks);
       }
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {
-        alert(error.message);
+        setError(error.message);
       }
     } finally {
       setIsGenerating(false);
+      setSelectedStyle(null);
     }
   }
 
   const handlePastLookClick = (pastLook: PastLook) => {
-    // Add current image to past looks
-    if (currentImageUrl) {
-      const currentLook: PastLook = {
-        id: Date.now().toString(),
-        imageUrl: currentImageUrl,
-        style: null,
-        timestamp: Date.now(),
-      };
-      setPastLooks(prev => [currentLook, ...prev.filter(look => look.id !== pastLook.id)]);
-    }
-
-    // Set the selected past look as current
+    // When clicking a past look, simply set it as the current one.
+    // No need to add the previously viewed image to the history again.
     setCurrentImageUrl(pastLook.imageUrl);
   }
 
@@ -188,6 +182,8 @@ export default function ResultsPage() {
     setPastLooks([])
     saveRecentLooks([])
   }
+
+  const displayedLooks = isRecentLooksExpanded ? pastLooks : pastLooks.slice(0, 6)
 
   return (
     <div className="min-h-full pb-20">
@@ -202,22 +198,30 @@ export default function ResultsPage() {
         </div>
       </div>
 
-      {/* Main result display */}
-      <div className="px-5 py-4">
-        <div
-          className="w-full animate-fade-in"
-        >
+      <div className="px-5 py-4 space-y-4">
+        {/* Main result display */}
+        <div className="w-full animate-fade-in">
           <div className="bg-white rounded-xl shadow-sm">
             {/* TODO: The current `object-contain` is a good defensive measure. If the root
                 image generation issue is fixed and results have a consistent aspect ratio,
                 we can re-evaluate this container's styling. See OPEN_ISSUES.md. */}
-            <div className="relative w-full aspect-[3/4] bg-neutral-100 rounded-t-xl">
+            <div className="relative w-full aspect-[3/4] bg-neutral-100 rounded-xl">
               {currentImageUrl ? (
-                <img
-                  src={currentImageUrl}
-                  alt="Generated fashion look"
-                  className="w-full h-full object-contain"
-                />
+                <>
+                  <img
+                    src={currentImageUrl}
+                    alt="Generated fashion look"
+                    className="w-full h-full object-contain rounded-xl"
+                  />
+                  <div className="absolute top-3 right-3 flex flex-col gap-3">
+                    <button onClick={handleShare} className="h-10 w-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center ios-btn shadow-md">
+                      <Share2 size={20} />
+                    </button>
+                    <button onClick={handleDownload} className="h-10 w-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center ios-btn shadow-md">
+                      <Download size={20} />
+                    </button>
+                  </div>
+                </>
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <div className="text-center text-neutral-500">
@@ -227,72 +231,27 @@ export default function ResultsPage() {
                 </div>
               )}
             </div>
-
-            <div className="p-4">
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleShare}
-                  className="border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 rounded-xl h-12 font-medium"
-                  disabled={!currentImageUrl}
-                >
-                  <Share2 size={16} className="mr-2" />
-                  Share
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownload}
-                  className="border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 rounded-xl h-12 font-medium"
-                  disabled={!currentImageUrl}
-                >
-                  <Download size={16} className="mr-2" />
-                  Save
-                </Button>
-              </div>
-            </div>
           </div>
         </div>
 
         {/* Style selector section */}
-        <div className="ios-card p-5 animate-fade-up mt-6">
+        <div className="ios-card p-5 animate-fade-up">
           <div className="mb-4">
-            <h3 className="text-sm font-medium text-neutral-700 mb-2">Choose a New Style</h3>
-            <p className="text-xs text-neutral-500">
-              Select a style below and click "Try Another Look" to transform your image with AI
-            </p>
+            <h3 className="text-sm font-medium text-neutral-700 mb-2">Transform with a New Style</h3>
           </div>
-          <StyleSelector selectedStyle={selectedStyle} onStyleSelect={setSelectedStyle} />
+          <StyleSelector
+            selectedStyle={selectedStyle}
+            isGenerating={isGenerating}
+            onStyleSelect={handleGenerateNewStyle}
+          />
         </div>
-      </div>
-
-      {/* Action buttons */}
-      <div className="px-5 space-y-4">
-        <Button
-          className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-medium"
-          onClick={handleTryAnotherLook}
-          disabled={!currentImageUrl || !selectedStyle || isGenerating}
-        >
-          {isGenerating ? (
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Creating Your New Look...</span>
-            </div>
-          ) : (
-            <>
-              <RefreshCw size={16} className="mr-2" />
-              Try Another Look
-            </>
-          )}
-        </Button>
 
         {/* Recent Looks Section */}
         <div className="ios-card p-5 animate-fade-up">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium">Recent Looks</h3>
             {pastLooks.length > 0 && (
-              <button 
+              <button
                 onClick={handleClearRecentLooks}
                 className="text-xs text-primary font-medium ios-btn"
               >
@@ -303,18 +262,29 @@ export default function ResultsPage() {
 
           <div className="grid grid-cols-3 gap-3">
             {pastLooks.length > 0 ? (
-              pastLooks.slice(0, 6).map((pastLook) => (
-                <button
-                  key={pastLook.id}
-                  onClick={() => handlePastLookClick(pastLook)}
-                  className="aspect-[3/4] bg-neutral-100 rounded-lg overflow-hidden ios-btn hover:scale-105 transition-transform"
-                >
-                  <img
-                    src={pastLook.imageUrl}
-                    alt="Past look"
-                    className="w-full h-full object-cover"
-                  />
-                </button>
+              displayedLooks.map((pastLook) => (
+                <div key={pastLook.id} className="relative group aspect-[3/4]">
+                  <button
+                    onClick={() => handlePastLookClick(pastLook)}
+                    className="w-full h-full bg-neutral-100 rounded-lg overflow-hidden ios-btn hover:scale-105 transition-transform"
+                  >
+                    <img
+                      src={pastLook.imageUrl}
+                      alt="Past look"
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation() // Prevent click from bubbling to the main card
+                      handleDeleteLook(pastLook.id)
+                    }}
+                    className="absolute top-0 right-0 z-10 p-2 text-white bg-black/40 rounded-bl-lg rounded-tr-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 ios-btn"
+                    aria-label="Delete look"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               ))
             ) : (
               // Empty placeholder boxes
@@ -335,9 +305,12 @@ export default function ResultsPage() {
           </div>
 
           {pastLooks.length > 6 && (
-            <p className="text-xs text-neutral-500 text-center mt-3">
-              And {pastLooks.length - 6} more...
-            </p>
+            <button
+              onClick={() => setIsRecentLooksExpanded(!isRecentLooksExpanded)}
+              className="w-full text-xs text-center text-primary font-medium p-2 mt-2 rounded-lg ios-btn bg-primary/10"
+            >
+              {isRecentLooksExpanded ? 'Show Less' : `Show ${pastLooks.length - 6} More Looks...`}
+            </button>
           )}
 
           {pastLooks.length === 0 && (

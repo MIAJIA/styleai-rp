@@ -3,15 +3,16 @@
 import type React from "react"
 
 import { useState, useRef } from "react"
-import { Upload, X, Camera } from "lucide-react"
+import { Upload, X, Camera, UploadCloud, Image as ImageIcon, Shirt } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface CompactUploadProps {
-  label: string
+  label?: string
   onImageSelect?: (file: File) => void
   preview: string
   required?: boolean
   helpText?: string
-  variant?: "portrait" | "garment"
+  variant?: "portrait" | "garment" | "garment-square"
   isTrigger?: boolean
 }
 
@@ -29,26 +30,27 @@ export default function CompactUpload({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      onImageSelect?.(file)
+    if (file && onImageSelect) {
+      onImageSelect(file)
     }
   }
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
-    setIsDragging(true)
+    if (!isTrigger) setIsDragging(true)
   }
 
   const handleDragLeave = () => {
-    setIsDragging(false)
+    if (!isTrigger) setIsDragging(false)
   }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
+    if (isTrigger) return
     setIsDragging(false)
     const file = e.dataTransfer.files?.[0]
-    if (file) {
-      onImageSelect?.(file)
+    if (file && onImageSelect) {
+      onImageSelect(file)
     }
   }
 
@@ -56,10 +58,13 @@ export default function CompactUpload({
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
-    onImageSelect?.(new File([], ""))
+    if (onImageSelect) {
+      onImageSelect(new File([], ""))
+    }
   }
 
   const bgColor = variant === "portrait" ? "bg-[#FF6EC7]" : "bg-[#00C2FF]"
+  const Icon = variant === 'portrait' ? ImageIcon : Shirt;
 
   return (
     <div className="relative w-full">
@@ -77,18 +82,14 @@ export default function CompactUpload({
           {preview ? (
             <>
               <img
-                src={preview || "/placeholder.svg"}
-                alt={`${label} preview`}
+                src={preview}
+                alt={`${label || 'Upload'} preview`}
                 className="w-full h-full object-cover"
               />
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleClear()
-                }}
-                className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-black/80 transition-colors"
-                aria-label="Clear image"
+                onClick={handleClear}
+                className="absolute top-2 right-2 p-1 bg-white rounded-full"
               >
                 <X size={16} />
               </button>
@@ -102,7 +103,7 @@ export default function CompactUpload({
                   <Upload size={24} className="text-black" />
                 )}
               </div>
-              <h3 className="font-playfair text-lg font-bold text-neutral-800 mb-1">{label}</h3>
+              {label && <h3 className="font-playfair text-lg font-bold text-neutral-800 mb-1">{label}</h3>}
               {helpText && <p className="text-xs text-neutral-500 font-inter">{helpText}</p>}
             </div>
           )}

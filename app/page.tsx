@@ -168,8 +168,15 @@ export default function HomePage() {
 
   const handleAnimationComplete = () => {
     if (generatedImageUrl) {
-      router.push(`/results?imageUrl=${encodeURIComponent(generatedImageUrl)}`)
+      const params = new URLSearchParams();
+      params.set('imageUrl', generatedImageUrl);
+      // Pass the original garment source URL if it's a default item
+      if (clothingPreview && clothingPreview.startsWith('/cloth/')) {
+        params.set('garmentSrc', clothingPreview);
+      }
+      router.push(`/results?${params.toString()}`);
     }
+    // Reset states
     setShowAnimation(false)
     setIsApiFinished(false)
     setGeneratedImageUrl(null)
@@ -197,27 +204,39 @@ export default function HomePage() {
 
         {/* Main content */}
         <div className="px-5 space-y-8">
-          {/* Upload section */}
+          {/* Guided upload section */}
           <div className="space-y-6">
-            <div className="flex gap-4">
-              <div onClick={() => setIsPortraitSheetOpen(true)} className="w-full">
-                <CompactUpload
-                  label="Portrait"
-                  preview={selfiePreview}
-                  required
-                  helpText="Full-body photo"
-                  variant="portrait"
-                  isTrigger
-                />
+
+            <div className="flex w-full gap-4">
+              {/* --- Step 1: Portrait --- */}
+              <div className="w-full space-y-2">
+                <h2 className="text-base font-semibold tracking-tight text-center">
+                  <span className="text-primary font-bold">Step 1:</span> Portrait
+                </h2>
+                <div onClick={() => setIsPortraitSheetOpen(true)} className="w-full">
+                  <CompactUpload
+                    preview={selfiePreview}
+                    required
+                    helpText="Full-body photo"
+                    variant="portrait"
+                    isTrigger
+                  />
+                </div>
               </div>
-              <div onClick={() => setIsWardrobeOpen(true)} className="w-full">
-                <CompactUpload
-                  label="Garment"
-                  preview={clothingPreview}
-                  helpText="Clothing to try on"
-                  variant="garment"
-                  isTrigger
-                />
+
+              {/* --- Step 2: Garment --- */}
+              <div className="w-full space-y-2">
+                <h2 className="text-base font-semibold tracking-tight text-center">
+                  <span className="text-primary font-bold">Step 2:</span> Garment
+                </h2>
+                <div onClick={() => setIsWardrobeOpen(true)} className="w-full">
+                  <CompactUpload
+                    preview={clothingPreview}
+                    helpText="Item to try on"
+                    variant="garment"
+                    isTrigger
+                  />
+                </div>
               </div>
             </div>
 
