@@ -9,6 +9,7 @@ import StylishWardrobe from "./components/stylish-wardrobe"
 import IOSTabBar from "./components/ios-tab-bar"
 import { Drawer } from "vaul"
 import PortraitSelectionSheet from "./components/portrait-selection-sheet"
+import GenerationAnimation from "./components/generation-animation"
 
 function dataURLtoFile(dataurl: string, filename: string): File | null {
   if (!dataurl) return null
@@ -36,6 +37,7 @@ export default function HomePage() {
   const [selfiePreview, setSelfiePreview] = useState<string>("")
   const [clothingPreview, setClothingPreview] = useState<string>("")
   const [isGenerating, setIsGenerating] = useState(false)
+  const [showAnimation, setShowAnimation] = useState(false)
   const [isWardrobeOpen, setIsWardrobeOpen] = useState(false)
   const [isPortraitSheetOpen, setIsPortraitSheetOpen] = useState(false)
   const router = useRouter()
@@ -77,8 +79,13 @@ export default function HomePage() {
       alert("Please select a portrait.")
       return
     }
+    if (!clothingPreview) {
+      alert("Please select a garment.")
+      return
+    }
 
     setIsGenerating(true)
+    setShowAnimation(true)
     try {
       const formData = new FormData()
 
@@ -131,12 +138,15 @@ export default function HomePage() {
       const data = await response.json()
       if (data.imageUrl) {
         router.push(`/results?imageUrl=${encodeURIComponent(data.imageUrl)}`)
+      } else {
+        throw new Error("Generation succeeded but no image URL was returned.")
       }
     } catch (error) {
       console.error(error)
       if (error instanceof Error) {
         alert(error.message)
       }
+      setShowAnimation(false) // Hide animation on error
     } finally {
       setIsGenerating(false)
     }
@@ -146,6 +156,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-full pb-20 relative overflow-hidden">
+      <GenerationAnimation isVisible={showAnimation} />
       {/* Gradient background elements */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-[#D5F500] rounded-full opacity-50 blur-xl -translate-y-1/2 translate-x-1/2"></div>
       <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#FF6EC7] rounded-full opacity-50 blur-xl translate-y-1/2 -translate-x-1/2"></div>

@@ -1,3 +1,8 @@
+1. 改成carousel
+2. 衣服上传default
+
+
+
 # Open Issue: Generated Images are Cropped (Missing Head/Face)
 
 **Last Updated:** 2024-07-26
