@@ -163,9 +163,6 @@ export default function HomePage() {
 
           {/* Stylish wardrobe */}
           <StylishWardrobe onGarmentSelect={handleGarmentSelect} />
-
-          {/* Previous looks carousel */}
-          <LookCarousel />
         </div>
       </div>
 
