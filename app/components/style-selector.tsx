@@ -1,13 +1,14 @@
 "use client"
-import { Check } from "lucide-react"
+import { Check, Footprints, Heart, Palmtree, Briefcase, Sparkles, PartyPopper } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const styles = [
-  { id: "date-night", name: "Date Night", emoji: "🌹", color: "bg-rose-100 text-rose-900" },
-  { id: "beach-day", name: "Beach Day", emoji: "🏖️", color: "bg-sky-100 text-sky-900" },
-  { id: "work-interview", name: "Work Interview", emoji: "💼", color: "bg-slate-100 text-slate-900" },
-  { id: "casual-chic", name: "Casual Chic", emoji: "✨", color: "bg-violet-100 text-violet-900" },
-  { id: "party-glam", name: "Party Glam", emoji: "🎉", color: "bg-amber-100 text-amber-900" },
+  { id: "running-outdoors", name: "Running Outdoors", icon: Footprints, color: "bg-emerald-100 text-emerald-900" },
+  { id: "date-night", name: "Date Night", icon: Heart, color: "bg-rose-100 text-rose-900" },
+  { id: "beach-day", name: "Beach Day", icon: Palmtree, color: "bg-sky-100 text-sky-900" },
+  { id: "work-interview", name: "Work Interview", icon: Briefcase, color: "bg-slate-100 text-slate-900" },
+  { id: "casual-chic", name: "Casual Chic", icon: Sparkles, color: "bg-violet-100 text-violet-900" },
+  { id: "party-glam", name: "Party Glam", icon: PartyPopper, color: "bg-amber-100 text-amber-900" },
 ]
 
 interface StyleSelectorProps {
@@ -22,6 +23,7 @@ export default function StyleSelector({ selectedStyle, onStyleSelect, className 
       <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
         {styles.map((style) => {
           const isSelected = selectedStyle === style.id
+          const Icon = style.icon
 
           return (
             <button
@@ -33,8 +35,8 @@ export default function StyleSelector({ selectedStyle, onStyleSelect, className 
                 isSelected ? "ring-2 ring-primary ring-offset-2 scale-105" : "hover:scale-102",
               )}
             >
-              <div className="flex flex-col items-center">
-                <span className="text-xl block mb-1">{style.emoji}</span>
+              <div className="flex flex-col items-center justify-center h-full gap-1">
+                <Icon size={24} />
                 <span className="text-xs font-medium leading-tight">{style.name}</span>
               </div>
 

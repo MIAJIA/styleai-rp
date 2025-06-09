@@ -38,8 +38,22 @@ const KLING_API_BASE_URL = "https://api-beijing.klingai.com";
 const IMAGE_GENERATION_SUBMIT_PATH = "/v1/images/generations";
 const IMAGE_GENERATION_STATUS_PATH = "/v1/images/generations/";
 
+// --- Start: New garment description mapping ---
+const garmentDescriptions = new Map<string, string>([
+  ['/cloth/green-top.png', 'A vibrant green casual knit top, perfect for a fresh, lively look.'],
+  ['/cloth/yellow-shirt.png', 'A bright yellow short-sleeve button-up shirt with a relaxed fit.'],
+  ['/cloth/jean.png', 'Classic blue denim jeans with a straight-leg cut.'],
+  ['/cloth/LEIVs-jean-short.png', 'Light-wash denim cutoff shorts, ideal for a summer day.'],
+  ['/cloth/blue-dress.png', 'An elegant, flowing light blue maxi dress with a simple silhouette.'],
+  ['/cloth/yellow-dress.png', 'A cheerful yellow sundress with a fitted bodice and flared skirt.'],
+  ['/cloth/whiteblazer.png', 'A sharp, tailored white blazer that adds sophistication to any outfit.'],
+  ['/cloth/黑皮衣.png', 'A classic black leather biker jacket, adding an edgy and cool vibe.']
+]);
+// --- End: New garment description mapping ---
+
 // Style prompts mapping
 const stylePrompts = {
+  "running-outdoors": "A vibrant, sun-drenched hillside with lush greenery under a clear blue sky, capturing an adventure lifestyle mood. The scene is bathed in soft, natural light, creating a sense of cinematic realism. Shot with the professional quality of a Canon EOS R5, emphasizing realistic textures and high definition.",
   "date-night": "sultry romantic evening scene, luxurious candlelit restaurant with velvet textures, golden hour lighting casting warm shadows, sophisticated Parisian bistro atmosphere, elegant wine glasses and fresh roses, cinematic romantic lighting, high-end fashion photography style",
   "beach-day": "stunning tropical paradise, pristine turquoise waters with gentle waves, white sand beach with palm trees swaying, golden sunset lighting, vibrant coral reef colors, magazine-quality beach photography, luxurious resort setting with crystal-clear water reflections",
   "work-interview": "sleek modern corporate headquarters, floor-to-ceiling glass windows with city skyline views, contemporary minimalist office design, professional studio lighting, executive boardroom with marble accents, prestigious business district atmosphere, high-end architectural photography style",
@@ -78,7 +92,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { imageUrl, style, modelVersion = 'kling-v2' } = body; // Default to v2
+    const { imageUrl, style, modelVersion = 'kling-v2', garmentSrc } = body; // Default to v2
 
     if (!imageUrl) {
       return NextResponse.json(
@@ -95,9 +109,17 @@ export async function POST(request: Request) {
 
     // Step 2 - Prepare the prompt based on style
     const stylePrompt = style ? stylePrompts[style as keyof typeof stylePrompts] : "";
-    const prompt = stylePrompt ?
-      `Extremely important: The person's face, body, pose, and clothing must be identical to the original image. Only change the background to: ${stylePrompt}. Do not alter the person or their attire in any way.` :
-      "Extremely important: The person's face, body, pose, and clothing must be identical to the original image. Only change the background to a beautiful setting. Do not alter the person or their attire in any way.";
+    const garmentDescription = garmentSrc ? garmentDescriptions.get(garmentSrc) : null;
+
+    let prompt = `Extremely important: The person's face, body, and pose must be identical to the original image.`;
+
+    if (garmentDescription) {
+      prompt += ` The clothing is a ${garmentDescription} and it must also remain identical.`;
+    } else {
+      prompt += ` The clothing must also remain identical.`;
+    }
+
+    prompt += ` Only change the background to: ${stylePrompt || 'a beautiful setting'}. Do not alter the person or their attire in any way.`;
 
     // Step 3 - Call Kling AI to submit the image generation task
     console.log(`Submitting image generation task to Kling AI using model: ${modelVersion}...`);
@@ -113,6 +135,8 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
+      // @ts-ignore
+      timeout: 60000, // 60-second timeout
     });
 
     if (!submitResponse.ok) {
@@ -139,6 +163,8 @@ export async function POST(request: Request) {
           headers: {
             'Authorization': `Bearer ${pollingToken}`,
           },
+          // @ts-ignore
+          timeout: 60000, // 60-second timeout
         });
 
         if (!statusCheckResponse.ok) {
