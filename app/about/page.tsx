@@ -9,14 +9,14 @@ export default function AboutPage() {
   const steps = [
     {
       icon: Camera,
-      title: "Take a Selfie",
-      description: "Upload your photo or take a new one",
+      title: "Personal Color Analysis",
+      description: "Personal color analyst helping you find your best colors",
       color: "bg-sky-100 text-sky-900",
     },
     {
       icon: Sparkles,
-      title: "AI Magic",
-      description: "Our AI creates personalized looks just for you",
+      title: "AI Stylist",
+      description: "Our AI Stylist personalized looks just for you",
       color: "bg-violet-100 text-violet-900",
     },
     {

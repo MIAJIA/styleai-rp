@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
+import { Plus, X } from "lucide-react"
 
 // Props for the component
 interface PortraitSelectionSheetProps {
@@ -22,13 +23,14 @@ const EXAMPLE_PHOTOS: Portrait[] = [
 ];
 
 // Using the real idol images now located in /public/idols
-const IDOLS: Portrait[] = [
+const DEFAULT_IDOLS: Portrait[] = [
   { id: "idol-1", imageSrc: "/idols/idol_肖战.jpg" },
   { id: "idol-2", imageSrc: "/idols/idol_彭于晏全身.png" },
   { id: "idol-3", imageSrc: "/idols/idol_刘亦菲_牛仔.jpg" },
 ]
 
-const STORAGE_KEY = "styleai_portraits"
+const MY_PHOTOS_STORAGE_KEY = "styleai_portraits"
+const IDOLS_STORAGE_KEY = "styleai_idols"
 
 // New constant for the visual styles of the portrait categories
 const PORTRAIT_CATEGORY_STYLES = {
@@ -44,32 +46,46 @@ const PORTRAIT_CATEGORY_STYLES = {
   },
 }
 
-// Helper to read from localStorage safely
-const getInitialPhotos = (): Portrait[] => {
-  if (typeof window === "undefined") return []
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    // If localStorage has photos, use them. Otherwise, show the examples.
-    return stored && JSON.parse(stored).length > 0 ? JSON.parse(stored) : EXAMPLE_PHOTOS
-  } catch (error) {
-    console.error("Failed to parse portraits from localStorage", error)
-    // Fallback to examples if parsing fails
-    return EXAMPLE_PHOTOS
-  }
-}
-
 export default function PortraitSelectionSheet({ onPortraitSelect }: PortraitSelectionSheetProps) {
-  const [myPhotos, setMyPhotos] = useState<Portrait[]>(getInitialPhotos)
+  const [myPhotos, setMyPhotos] = useState<Portrait[]>([])
+  const [idols, setIdols] = useState<Portrait[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [activeCategory, setActiveCategory] = useState<"myPhotos" | "idols" | null>(null)
 
-  // Effect to save photos to localStorage whenever they change
+  // Load photos from localStorage on mount
   useEffect(() => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(myPhotos))
+      const storedMyPhotos = window.localStorage.getItem(MY_PHOTOS_STORAGE_KEY)
+      if (storedMyPhotos) setMyPhotos(JSON.parse(storedMyPhotos))
+
+      const storedIdols = window.localStorage.getItem(IDOLS_STORAGE_KEY)
+      if (storedIdols) setIdols(JSON.parse(storedIdols))
     } catch (error) {
-      console.error("Failed to save portraits to localStorage", error)
+      console.error("Failed to parse photos from localStorage", error)
+    }
+  }, [])
+
+  // Save myPhotos to localStorage when they change
+  useEffect(() => {
+    if (myPhotos.length > 0 && !myPhotos.every(p => p.id.startsWith('example-'))) {
+      try {
+        window.localStorage.setItem(MY_PHOTOS_STORAGE_KEY, JSON.stringify(myPhotos));
+      } catch (error) {
+        console.error("Failed to save my photos to localStorage", error);
+      }
     }
   }, [myPhotos])
+
+  // Save idols to localStorage when they change
+  useEffect(() => {
+    if (idols.length > 0 && !idols.every(p => p.id.startsWith('idol-'))) {
+      try {
+        window.localStorage.setItem(IDOLS_STORAGE_KEY, JSON.stringify(idols));
+      } catch (error) {
+        console.error("Failed to save idols to localStorage", error);
+      }
+    }
+  }, [idols])
 
   const processAndResizeImage = async (file: File): Promise<string | null> => {
     // This is the same battle-tested image resizing logic from the wardrobe
@@ -116,75 +132,78 @@ export default function PortraitSelectionSheet({ onPortraitSelect }: PortraitSel
     })
   }
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
+    if (file && activeCategory) {
       const imageSrc = await processAndResizeImage(file)
       if (imageSrc) {
         const newPortrait: Portrait = { id: `portrait-${Date.now()}`, imageSrc }
-        // If the current photos are the examples, replace them. Otherwise, add to them.
-        const isExampleState = myPhotos.some(p => p.id.startsWith('example-'))
-        setMyPhotos(isExampleState ? [newPortrait] : (prev) => [newPortrait, ...prev])
+        if (activeCategory === 'myPhotos') {
+          setMyPhotos((prev) => [newPortrait, ...prev.filter(p => !p.id.startsWith('example-'))])
+        } else if (activeCategory === 'idols') {
+          setIdols((prev) => [newPortrait, ...prev.filter(p => !p.id.startsWith('idol-'))])
+        }
       }
     }
     if (event.target) event.target.value = ""
+    setActiveCategory(null)
   }
 
-  const handleAddClick = () => {
-    fileInputRef.current?.click()
-  }
-
-  const handleDelete = (portraitId: string) => {
-    if (window.confirm("Are you sure you want to delete this photo?")) {
-      setMyPhotos((prev) => {
-        const newPhotos = prev.filter((p) => p.id !== portraitId);
-        // If the last photo is deleted, ensure we have an empty array, not the examples.
-        if (newPhotos.length === 0) {
-          // Setting an empty array to local storage.
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-          return [];
-        }
-        return newPhotos;
-      })
+  const handleDelete = (portraitId: string, category: 'myPhotos' | 'idols') => {
+    const confirmation = window.confirm("Are you sure you want to delete this photo?")
+    if (confirmation) {
+      if (category === 'myPhotos') {
+        setMyPhotos((prev) => prev.filter((p) => p.id !== portraitId));
+      } else {
+        setIdols((prev) => prev.filter((p) => p.id !== portraitId));
+      }
     }
   }
 
-  const renderPhotoGrid = (photos: Portrait[], isIdol = false) => (
+  const handleAddClick = (category: 'myPhotos' | 'idols') => {
+    setActiveCategory(category)
+    fileInputRef.current?.click()
+  }
+
+  const renderPhotoGrid = (
+    photos: Portrait[],
+    category: 'myPhotos' | 'idols'
+  ) => (
     <div className="grid grid-cols-3 gap-3">
-      {!isIdol && (
-        <div
-          onClick={handleAddClick}
-          className="aspect-square bg-white/30 rounded-xl shadow-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white/40 transition-colors"
-        >
-          <div className="w-10 h-10 rounded-full bg-white/50 flex items-center justify-center mb-1">
-            <span className="text-2xl text-white">+</span>
-          </div>
-          <p className="text-xs text-white font-medium">Add Photo</p>
+      <div
+        onClick={() => handleAddClick(category)}
+        className="aspect-square bg-white/30 rounded-xl shadow-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white/40 transition-colors"
+      >
+        <div className="w-10 h-10 rounded-full bg-white/50 flex items-center justify-center mb-1">
+          <span className="text-2xl text-white">+</span>
         </div>
-      )}
-      {photos.map((photo) => (
+        <p className="text-xs text-white font-medium">Add Photo</p>
+      </div>
+      {photos.map((photo, index) => (
         <div
-          key={photo.id}
-          onClick={() => onPortraitSelect(photo.imageSrc)}
+          key={photo.id + index}
           className="relative group aspect-square bg-white rounded-xl shadow-sm cursor-pointer overflow-hidden"
         >
-          <img
-            src={photo.imageSrc}
-            alt="Portrait"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-          />
-          {!isIdol && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                handleDelete(photo.id)
-              }}
-              className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-all z-10 hover:bg-red-500"
-              aria-label="Delete photo"
-            >
-              ✕
-            </button>
-          )}
+          <button
+            onClick={() => onPortraitSelect(photo.imageSrc)}
+            className="w-full h-full bg-white rounded-lg overflow-hidden"
+          >
+            <img
+              src={photo.imageSrc}
+              alt="Portrait"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+            />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              handleDelete(photo.id, category)
+            }}
+            className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-all z-10 hover:bg-red-500"
+            aria-label="Delete photo"
+          >
+            ✕
+          </button>
         </div>
       ))}
     </div>
@@ -193,7 +212,11 @@ export default function PortraitSelectionSheet({ onPortraitSelect }: PortraitSel
   // New function to render a styled category block, similar to the wardrobe
   const renderCategory = (type: "myPhotos" | "idols") => {
     const isIdol = type === "idols"
-    const photos = isIdol ? IDOLS : myPhotos
+
+    const userPhotos = isIdol ? idols : myPhotos;
+    const defaultPhotos = isIdol ? DEFAULT_IDOLS : EXAMPLE_PHOTOS;
+
+    const photosToDisplay = [...userPhotos, ...defaultPhotos.filter(ex => !userPhotos.some(p => p.imageSrc === ex.imageSrc))];
     const { bg, emoji, label } = PORTRAIT_CATEGORY_STYLES[type]
 
     return (
@@ -206,10 +229,10 @@ export default function PortraitSelectionSheet({ onPortraitSelect }: PortraitSel
             <span className="font-playfair text-base font-bold text-white">{label}</span>
           </div>
           <span className="bg-white/30 px-2 py-0.5 rounded-full text-xs font-sans font-medium text-white">
-            {photos.length}
+            {photosToDisplay.length}
           </span>
         </div>
-        {renderPhotoGrid(photos, isIdol)}
+        {renderPhotoGrid(photosToDisplay, type)}
       </div>
     )
   }
@@ -220,7 +243,7 @@ export default function PortraitSelectionSheet({ onPortraitSelect }: PortraitSel
         ref={fileInputRef}
         type="file"
         accept="image/jpeg, image/png"
-        onChange={handleFileChange}
+        onChange={handlePhotoUpload}
         className="hidden"
       />
       {/* Container to ensure vertical stacking */}

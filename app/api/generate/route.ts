@@ -88,6 +88,8 @@ export async function POST(request: Request) {
         human_image: humanImageBase64,
         cloth_image: garmentImageBase64,
       }),
+      // @ts-ignore
+      timeout: 60000, // 60-second timeout
     });
 
     if (!submitResponse.ok) {
@@ -115,6 +117,8 @@ export async function POST(request: Request) {
           headers: {
             'Authorization': `Bearer ${pollingToken}`,
           },
+          // @ts-ignore
+          timeout: 60000, // 60-second timeout for status check
         });
 
         if (!statusCheckResponse.ok) {
