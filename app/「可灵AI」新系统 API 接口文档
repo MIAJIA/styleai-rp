@@ -93,7 +93,7 @@ https://api-beijing.klingai.com
 	○ 加密方法：遵循JWT（Json Web Token, RFC 7519）标准
 	○ JWT由三个部分组成：Header、Payload、Signature
 	○ 示例代码（Python）：
-```
+\`\`\`
 import time
 import jwt
 
@@ -115,9 +115,9 @@ def encode_jwt_token(ak, sk):
 
 api_token = encode_jwt_token(ak, sk)
 print(api_token) # 打印生成的API_TOKEN
-```
+\`\`\`
 ● 示例代码（Java）：
-```
+\`\`\`
 package test;
 
 import com.auth0.jwt.JWT;
@@ -155,7 +155,7 @@ public class JWTDemo {
         }
     }
 }
-```
+\`\`\`
 
 ● Step-3：用第二步生成的API Token组装成Authorization，填写到 Request Header 里
 	○ 组装方式：Authorization = "Bearer XXX"， 其中XXX填写第二步生成的API Token（注意Bearer跟XXX之间有空格）
@@ -1777,5 +1777,3 @@ resource_pack_name	string	否	无	资源包名称，用于精准指定查询某�
     ]
   }
 }
-
-

@@ -33,4 +33,4 @@ export async function POST(req: NextRequest) {
   // Forward the response from the external API
   const result = await apiRes.json();
   return NextResponse.json(result);
-} 
+}

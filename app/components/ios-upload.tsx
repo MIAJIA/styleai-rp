@@ -12,7 +12,7 @@ const processImage = (file: File): Promise<File> => {
       img.onload = () => {
         const { naturalWidth: width, naturalHeight: height } = img;
         const aspectRatio = width / height;
-        const minRatio = 1 / 2.5;
+        const minRatio = 1 / 2.5; //  0.4
         const maxRatio = 2.5;
 
         // If aspect ratio is valid, no need to process
@@ -22,7 +22,7 @@ const processImage = (file: File): Promise<File> => {
           return;
         }
 
-        console.log("Image aspect ratio is invalid, processing with letterboxing...");
+        console.log("Image aspect ratio is invalid, processing with intelligent cropping...");
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -30,35 +30,29 @@ const processImage = (file: File): Promise<File> => {
           return reject(new Error('Could not get canvas context'));
         }
 
-        let newWidth = width;
-        let newHeight = height;
+        let sx = 0, sy = 0, sWidth = width, sHeight = height;
 
-        // Determine the new canvas dimensions based on the aspect ratio violation
-        if (aspectRatio < minRatio) { // Image is too tall
-          newWidth = height * minRatio;
-        } else { // Image is too wide
-          newHeight = width / maxRatio;
+        if (aspectRatio < minRatio) { // Image is too tall, crop from the top
+          sHeight = width / minRatio; // New height that fits the min ratio
+          canvas.width = width;
+          canvas.height = sHeight;
+          // sx, sy remain 0, sWidth remains width
+        } else { // Image is too wide, crop from the center
+          sWidth = height * maxRatio; // New width that fits the max ratio
+          sx = (width - sWidth) / 2; // Start cropping from the horizontal center
+          canvas.width = sWidth;
+          canvas.height = height;
+          // sy remains 0, sHeight remains height
         }
 
-        canvas.width = newWidth;
-        canvas.height = newHeight;
-
-        // Fill canvas with a neutral color (e.g., white)
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, newWidth, newHeight);
-
-        // Calculate the position to draw the image in the center
-        const x = (newWidth - width) / 2;
-        const y = (newHeight - height) / 2;
-
-        ctx.drawImage(img, x, y);
+        ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
 
         canvas.toBlob((blob) => {
           if (!blob) {
             return reject(new Error('Canvas to Blob conversion failed'));
           }
           const newFile = new File([blob], file.name, { type: file.type });
-          console.log("Image processed successfully.");
+          console.log(`Image processed successfully. Original: ${width}x${height}, New: ${canvas.width}x${canvas.height}`);
           resolve(newFile);
         }, file.type);
       };
