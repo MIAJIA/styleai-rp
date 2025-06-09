@@ -40,11 +40,11 @@ const IMAGE_GENERATION_STATUS_PATH = "/v1/images/generations/";
 
 // Style prompts mapping
 const stylePrompts = {
-  "date-night": "romantic evening setting, elegant restaurant or cozy cafe background, warm ambient lighting, sophisticated atmosphere",
-  "beach-day": "beautiful beach background, ocean waves, sandy shore, bright sunny day, tropical paradise setting",
-  "work-interview": "professional office environment, clean modern workspace, corporate setting, business atmosphere",
-  "casual-chic": "trendy urban setting, modern city background, stylish street scene, contemporary lifestyle",
-  "party-glam": "glamorous party venue, elegant ballroom or upscale nightclub, festive lighting, celebration atmosphere"
+  "date-night": "sultry romantic evening scene, luxurious candlelit restaurant with velvet textures, golden hour lighting casting warm shadows, sophisticated Parisian bistro atmosphere, elegant wine glasses and fresh roses, cinematic romantic lighting, high-end fashion photography style",
+  "beach-day": "stunning tropical paradise, pristine turquoise waters with gentle waves, white sand beach with palm trees swaying, golden sunset lighting, vibrant coral reef colors, magazine-quality beach photography, luxurious resort setting with crystal-clear water reflections",
+  "work-interview": "sleek modern corporate headquarters, floor-to-ceiling glass windows with city skyline views, contemporary minimalist office design, professional studio lighting, executive boardroom with marble accents, prestigious business district atmosphere, high-end architectural photography style",
+  "casual-chic": "trendy Brooklyn street with colorful murals, chic coffee shop with exposed brick walls, urban rooftop garden with city views, stylish boutique district, contemporary art gallery setting, natural daylight with artistic shadows, street style fashion photography",
+  "party-glam": "opulent ballroom with crystal chandeliers, luxurious velvet curtains and gold accents, dramatic spotlight effects with rich jewel tones, champagne bar with marble countertops, exclusive VIP lounge atmosphere, professional event photography with glamorous lighting"
 };
 
 export async function POST(request: Request) {
@@ -72,8 +72,8 @@ export async function POST(request: Request) {
     // Step 2 - Prepare the prompt based on style
     const stylePrompt = style ? stylePrompts[style as keyof typeof stylePrompts] : "";
     const prompt = stylePrompt ? 
-      `A person in ${stylePrompt}, professional photo, high quality, well-lit` :
-      "A person in a beautiful setting, professional photo, high quality, well-lit";
+      `The exact same person with identical facial features, face, and appearance in ${stylePrompt}, keep the person's face exactly the same, preserve all facial characteristics, professional photo, high quality, well-lit, same identity` :
+      "The exact same person with identical facial features and appearance in a beautiful setting, keep the person's face exactly the same, professional photo, high quality, well-lit";
 
     // Step 3 - Call Kling AI to submit the image generation task
     console.log("Submitting image generation task to Kling AI...");
