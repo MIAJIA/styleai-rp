@@ -209,20 +209,22 @@ export default function ResultsPage() {
         </Button>
 
         {/* Recent Looks Section */}
-        {pastLooks.length > 0 && (
-          <div className="ios-card p-5 animate-fade-up">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium">Recent Looks</h3>
+        <div className="ios-card p-5 animate-fade-up">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium">Recent Looks</h3>
+            {pastLooks.length > 0 && (
               <button 
                 onClick={() => setPastLooks([])}
                 className="text-xs text-primary font-medium ios-btn"
               >
                 Clear All
               </button>
-            </div>
+            )}
+          </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              {pastLooks.slice(0, 6).map((pastLook) => (
+          <div className="grid grid-cols-3 gap-3">
+            {pastLooks.length > 0 ? (
+              pastLooks.slice(0, 6).map((pastLook) => (
                 <button
                   key={pastLook.id}
                   onClick={() => handlePastLookClick(pastLook)}
@@ -234,16 +236,37 @@ export default function ResultsPage() {
                     className="w-full h-full object-cover"
                   />
                 </button>
-              ))}
-            </div>
-
-            {pastLooks.length > 6 && (
-              <p className="text-xs text-neutral-500 text-center mt-3">
-                And {pastLooks.length - 6} more...
-              </p>
+              ))
+            ) : (
+              // Empty placeholder boxes
+              Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={`placeholder-${index}`}
+                  className="aspect-[3/4] bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-lg flex items-center justify-center"
+                >
+                  <div className="text-center text-neutral-400">
+                    <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-neutral-200 flex items-center justify-center">
+                      <span className="text-xs">👗</span>
+                    </div>
+                    <p className="text-xs">New Look</p>
+                  </div>
+                </div>
+              ))
             )}
           </div>
-        )}
+
+          {pastLooks.length > 6 && (
+            <p className="text-xs text-neutral-500 text-center mt-3">
+              And {pastLooks.length - 6} more...
+            </p>
+          )}
+
+          {pastLooks.length === 0 && (
+            <p className="text-xs text-neutral-500 text-center mt-3">
+              Try different styles to build your outfit collection
+            </p>
+          )}
+        </div>
       </div>
 
       <IOSTabBar />
