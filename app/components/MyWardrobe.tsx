@@ -256,16 +256,6 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
             {renderCategory("outerwear", "Outerwear", "🧥", "from-emerald-50 to-green-50")}
           </div>
         </div>
-
-        <div className="mt-4 pt-3 border-t border-neutral-100">
-          <button
-            onClick={() => handleAddClick('tops')} // Default to adding a top or have a dedicated button
-            className="flex items-center justify-center gap-2 py-2 px-4 bg-neutral-50 hover:bg-neutral-100 rounded-lg transition-colors ios-btn w-full"
-          >
-            <span className="text-lg">➕</span>
-            <span className="text-xs font-medium text-neutral-600">Add New Item</span>
-          </button>
-        </div>
       </div>
     </>
   );
