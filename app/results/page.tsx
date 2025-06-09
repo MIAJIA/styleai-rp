@@ -118,7 +118,7 @@ export default function ResultsPage() {
           <button onClick={() => router.back()} className="w-10 h-10 flex items-center justify-center -ml-2 ios-btn">
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-semibold flex-1 text-center">Your New Look</h1>
+          <h1 className="text-lg font-semibold flex-1 text-center">Your Outfit Gallery</h1>
           <div className="w-10"></div>
         </div>
       </div>
@@ -208,11 +208,11 @@ export default function ResultsPage() {
           )}
         </Button>
 
-        {/* Past Looks Section */}
+        {/* Recent Looks Section */}
         {pastLooks.length > 0 && (
           <div className="ios-card p-5 animate-fade-up">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium">Past Looks</h3>
+              <h3 className="text-sm font-medium">Recent Looks</h3>
               <button 
                 onClick={() => setPastLooks([])}
                 className="text-xs text-primary font-medium ios-btn"
