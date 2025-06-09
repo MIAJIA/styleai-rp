@@ -52,16 +52,19 @@ export default function ResultsPage() {
         <div
           className="w-full animate-fade-in"
         >
-          <div className="ios-card overflow-hidden">
-            <div className="relative">
+          <div className="bg-white rounded-xl shadow-sm">
+            {/* TODO: The current `object-contain` is a good defensive measure. If the root
+                image generation issue is fixed and results have a consistent aspect ratio,
+                we can re-evaluate this container's styling. See OPEN_ISSUES.md. */}
+            <div className="relative w-full aspect-[3/4] bg-neutral-100 rounded-t-xl">
               {imageUrl ? (
                 <img
                   src={imageUrl}
                   alt="Generated fashion look"
-                  className="w-full aspect-[3/4] object-contain bg-gray-100"
+                  className="w-full h-full object-contain"
                 />
               ) : (
-                <div className="w-full aspect-[3/4] bg-neutral-100 flex items-center justify-center">
+                <div className="w-full h-full flex items-center justify-center">
                   <div className="text-center text-neutral-500">
                     <p>Generating your look...</p>
                     <p className="text-xs">If this takes too long, please go back and try again.</p>

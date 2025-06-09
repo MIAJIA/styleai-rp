@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import * as jwt from "jsonwebtoken";
 
+// TODO: The client-side image pre-processing is causing the AI to return cropped images.
+// As an alternative, investigate implementing server-side image processing here using a
+// library like `sharp`. This could provide more robust and consistent results.
+// See OPEN_ISSUES.md for full context.
+
 // Helper function to convert a file to a Base64 string
 const fileToBase64 = async (file: File): Promise<string> => {
   const bytes = await file.arrayBuffer();
@@ -39,6 +44,20 @@ export async function POST(request: Request) {
 
   try {
     const formData = await request.formData();
+    // ● 支持上传服饰商品图或服饰白底图，支持上装upper、下装lower、与连体装dress
+    // ● 支持传入图片Base64编码或图片URL（确保可访问）
+    // ● 图片格式支持.jpg / .jpeg / .png
+    // ● 图片文件大小不能超过10MB，图片宽高尺寸不小于300px
+    // ● 其中 kolors - virtual -try-on - v1 - 5 模型不仅支持单个服装输入，还支持"上装 + 下装"形式服装组合输入，即：
+    // 	○ 输入单个服饰图片（上装 or 下装 or 连体装）-> 生成试穿的单品图片
+    // 	○ 输入组合服饰图片（您可以将多个单品服饰白底图拼接到同一张图片）
+    // 		■ 模型检测为"上装 + 下装" -> 生成试穿的"上装 + 下装"图片
+    // 		■ 模型检测为"上装 + 上装" -> 生成失败
+    // 		■ 模型检测为"下装 + 下装" -> 生成失败
+    // 		■ 模型检测为"连体装 + 连体装" -> 生成失败
+    // 		■ 模型检测为"上装 + 连体装" -> 生成失败
+    // 		■ 模型检测为"下装 + 连体装" -> 生成失败
+
     const humanImageFile = formData.get("human_image") as File | null;
     const garmentImageFile = formData.get("garment_image") as File | null;
 
