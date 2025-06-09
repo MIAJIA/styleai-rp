@@ -216,8 +216,8 @@ export default function StylishWardrobe({ onGarmentSelect }: StylishWardrobeProp
             {items.length}
           </span>
         </div>
-        {/* Responsive Grid: 2 cols on mobile, 3 on sm screens, 4 on lg screens */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {/* Fixed 3-column grid for items within the category */}
+        <div className="grid grid-cols-3 gap-3">
           {items.map((item) => (
             <div
               key={item.id}
@@ -257,35 +257,23 @@ export default function StylishWardrobe({ onGarmentSelect }: StylishWardrobeProp
     )
   }
 
+  // The main render function of the component
   return (
-    <>
-      {/* Hidden file input to be triggered programmatically */}
+    <div className="w-full">
       <input
-        type="file"
         ref={fileInputRef}
+        type="file"
+        accept="image/*"
         onChange={handleFileChange}
-        accept="image/jpeg, image/png"
-        style={{ display: "none" }}
+        className="hidden"
       />
-
-      <div className="rounded-3xl p-6 bg-white shadow-lg">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="font-playfair text-xl font-bold text-neutral-900">My Wardrobe</h2>
-          <Link
-            href="/wardrobe"
-            className="px-4 py-1.5 bg-[#D5F500] rounded-full text-sm font-inter font-medium text-black"
-          >
-            Manage
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          {renderCategory("tops")}
-          {renderCategory("bottoms")}
-          {renderCategory("dresses")}
-          {renderCategory("outerwear")}
-        </div>
+      {/* Container to ensure vertical stacking */}
+      <div className="flex flex-col gap-y-4">
+        {renderCategory("tops")}
+        {renderCategory("bottoms")}
+        {renderCategory("dresses")}
+        {renderCategory("outerwear")}
       </div>
-    </>
+    </div>
   )
 }
