@@ -15,6 +15,36 @@ interface PastLook {
   timestamp: number
 }
 
+const RECENT_LOOKS_STORAGE_KEY = "styleai_recent_looks"
+
+// Helper function to read from localStorage safely
+const getRecentLooks = (): PastLook[] => {
+  if (typeof window === "undefined") {
+    return []
+  }
+  try {
+    const storedLooks = window.localStorage.getItem(RECENT_LOOKS_STORAGE_KEY)
+    if (storedLooks) {
+      return JSON.parse(storedLooks)
+    }
+  } catch (error) {
+    console.error("Failed to parse recent looks from localStorage", error)
+  }
+  return []
+}
+
+// Helper function to save to localStorage safely
+const saveRecentLooks = (looks: PastLook[]) => {
+  if (typeof window === "undefined") {
+    return
+  }
+  try {
+    window.localStorage.setItem(RECENT_LOOKS_STORAGE_KEY, JSON.stringify(looks))
+  } catch (error) {
+    console.error("Failed to save recent looks to localStorage", error)
+  }
+}
+
 export default function ResultsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -23,6 +53,39 @@ export default function ResultsPage() {
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null)
   const [pastLooks, setPastLooks] = useState<PastLook[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
+
+  // Load recent looks from localStorage on mount
+  useEffect(() => {
+    const storedLooks = getRecentLooks()
+    setPastLooks(storedLooks)
+  }, [])
+
+  // Save the initial look to recent looks if it's new
+  useEffect(() => {
+    if (initialImageUrl) {
+      const storedLooks = getRecentLooks()
+      const isExistingLook = storedLooks.some(look => look.imageUrl === initialImageUrl)
+      
+      if (!isExistingLook) {
+        const newLook: PastLook = {
+          id: Date.now().toString(),
+          imageUrl: initialImageUrl,
+          style: null, // Original generated look has no style transformation
+          timestamp: Date.now(),
+        }
+        const updatedLooks = [newLook, ...storedLooks]
+        setPastLooks(updatedLooks)
+        saveRecentLooks(updatedLooks)
+      }
+    }
+  }, [initialImageUrl])
+
+  // Save pastLooks to localStorage whenever it changes
+  useEffect(() => {
+    if (pastLooks.length > 0) {
+      saveRecentLooks(pastLooks)
+    }
+  }, [pastLooks])
 
   const handleShare = () => {
     if (navigator.share && currentImageUrl) {
@@ -78,11 +141,22 @@ export default function ResultsPage() {
           style: null, // Current image has no style applied initially
           timestamp: Date.now(),
         };
-        setPastLooks(prev => [newPastLook, ...prev]);
+        const updatedPastLooks = [newPastLook, ...pastLooks];
+        setPastLooks(updatedPastLooks);
 
         // Update current image
         setCurrentImageUrl(data.imageUrl);
         setSelectedStyle(null); // Reset style selection
+
+        // Save the new styled image to recent looks
+        const newStyledLook: PastLook = {
+          id: (Date.now() + 1).toString(),
+          imageUrl: data.imageUrl,
+          style: selectedStyle, // Store which style was applied
+          timestamp: Date.now() + 1,
+        };
+        const finalUpdatedLooks = [newStyledLook, ...updatedPastLooks];
+        setPastLooks(finalUpdatedLooks);
       }
     } catch (error) {
       console.error(error);
@@ -108,6 +182,11 @@ export default function ResultsPage() {
 
     // Set the selected past look as current
     setCurrentImageUrl(pastLook.imageUrl);
+  }
+
+  const handleClearRecentLooks = () => {
+    setPastLooks([])
+    saveRecentLooks([])
   }
 
   return (
@@ -214,7 +293,7 @@ export default function ResultsPage() {
             <h3 className="text-sm font-medium">Recent Looks</h3>
             {pastLooks.length > 0 && (
               <button 
-                onClick={() => setPastLooks([])}
+                onClick={handleClearRecentLooks}
                 className="text-xs text-primary font-medium ios-btn"
               >
                 Clear All
