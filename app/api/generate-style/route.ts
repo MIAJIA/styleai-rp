@@ -44,8 +44,32 @@ const stylePrompts = {
   "beach-day": "stunning tropical paradise, pristine turquoise waters with gentle waves, white sand beach with palm trees swaying, golden sunset lighting, vibrant coral reef colors, magazine-quality beach photography, luxurious resort setting with crystal-clear water reflections",
   "work-interview": "sleek modern corporate headquarters, floor-to-ceiling glass windows with city skyline views, contemporary minimalist office design, professional studio lighting, executive boardroom with marble accents, prestigious business district atmosphere, high-end architectural photography style",
   "casual-chic": "trendy Brooklyn street with colorful murals, chic coffee shop with exposed brick walls, urban rooftop garden with city views, stylish boutique district, contemporary art gallery setting, natural daylight with artistic shadows, street style fashion photography",
-  "party-glam": "opulent ballroom with crystal chandeliers, luxurious velvet curtains and gold accents, dramatic spotlight effects with rich jewel tones, champagne bar with marble countertops, exclusive VIP lounge atmosphere, professional event photography with glamorous lighting"
+  "party-glam": "opulent ballroom with crystal chandeliers, luxurious velvet curtains and gold accents, dramatic spotlight effects with rich jewel tones, champagne bar with marble countertops, exclusive VIP lounge atmosphere, professional event photography with glamorous lighting",
 };
+
+// --- Start: New dynamic request body builder ---
+const buildRequestBody = (modelVersion: string, prompt: string, imageBase64: string): object => {
+  switch (modelVersion) {
+    case 'kling-v2':
+      return {
+        model_name: "kling-v2",
+        prompt: prompt,
+        image: imageBase64,
+        cfg_scale: 4,
+        aspect_ratio: "3:4",
+      };
+    case 'kling-v1':
+    default: // Default to v1 if version is unknown or not provided
+      return {
+        prompt: prompt,
+        image: imageBase64,
+        cfg_scale: 4,
+        aspect_ratio: "3:4",
+      };
+    // Add more cases here for future model versions
+  }
+};
+// --- End: New dynamic request body builder ---
 
 export async function POST(request: Request) {
   if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
@@ -54,7 +78,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { imageUrl, style } = body;
+    const { imageUrl, style, modelVersion = 'kling-v2' } = body; // Default to v2
 
     if (!imageUrl) {
       return NextResponse.json(
@@ -71,35 +95,18 @@ export async function POST(request: Request) {
 
     // Step 2 - Prepare the prompt based on style
     const stylePrompt = style ? stylePrompts[style as keyof typeof stylePrompts] : "";
-    const prompt = stylePrompt ? 
+    const prompt = stylePrompt ?
       `Extremely important: The person's face, body, pose, and clothing must be identical to the original image. Only change the background to: ${stylePrompt}. Do not alter the person or their attire in any way.` :
       "Extremely important: The person's face, body, pose, and clothing must be identical to the original image. Only change the background to a beautiful setting. Do not alter the person or their attire in any way.";
 
     // Step 3 - Call Kling AI to submit the image generation task
-    console.log("Submitting image generation task to Kling AI...");
-    
-    const requestBody = {
-      model_name: "kling-v2",
-      prompt: prompt,
-      image: imageBase64,
-    //   image_reference: "face",
-    //   human_fidelity: 0.95,
-    //   image_fidelity: 0.9,
-      cfg_scale: 4,
-      aspect_ratio: "3:4",
-    };
-    
-    // Fallback body for V1 model if V1.5 fails
-    const fallbackRequestBody = {
-      prompt: prompt,
-      image: imageBase64,
-      cfg_scale: 4,
-      aspect_ratio: "3:4",
-    };
-    
+    console.log(`Submitting image generation task to Kling AI using model: ${modelVersion}...`);
+
+    const requestBody = buildRequestBody(modelVersion, prompt, imageBase64);
+
     console.log("Request body structure:", JSON.stringify(requestBody, null, 2).substring(0, 500) + "...");
-    
-    let submitResponse = await fetch(`${KLING_API_BASE_URL}${IMAGE_GENERATION_SUBMIT_PATH}`, {
+
+    const submitResponse = await fetch(`${KLING_API_BASE_URL}${IMAGE_GENERATION_SUBMIT_PATH}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiToken}`,
@@ -108,26 +115,9 @@ export async function POST(request: Request) {
       body: JSON.stringify(requestBody),
     });
 
-    // If V1.5 fails, try with V1 model (fallback)
-    if (!submitResponse.ok) {
-      const v15ErrorBody = await submitResponse.text();
-      console.log(`V1.5 failed with status ${submitResponse.status}:`, v15ErrorBody);
-      console.log("Trying with V1 model as fallback...");
-      
-      const fallbackToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
-      submitResponse = await fetch(`${KLING_API_BASE_URL}${IMAGE_GENERATION_SUBMIT_PATH}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${fallbackToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(fallbackRequestBody),
-      });
-    }
-
     if (!submitResponse.ok) {
       const errorBody = await submitResponse.text();
-      throw new Error(`API Error on submit: ${submitResponse.status} ${errorBody}`);
+      throw new Error(`API Error on submit (model: ${modelVersion}): ${submitResponse.status} ${errorBody}`);
     }
 
     const submitResult = await submitResponse.json();
@@ -183,4 +173,4 @@ export async function POST(request: Request) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
-} 
+}

@@ -1,5 +1,5 @@
-1. 改成carousel
-2. 衣服上传default
+P1. 改成carousel
+
 
 
 
