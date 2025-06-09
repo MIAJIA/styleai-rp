@@ -1,10 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Sparkles, Shirt, Heart, Star, Camera, Palette, Wand2, PenTool, MapPin, Eye } from "lucide-react"
 
 interface GenerationAnimationProps {
   isVisible: boolean
+  isComplete?: boolean
+  onComplete?: () => void
 }
 
 interface StylerCard {
@@ -16,17 +18,19 @@ interface StylerCard {
   delay: number
 }
 
-export default function GenerationAnimation({ isVisible }: GenerationAnimationProps) {
+export default function GenerationAnimation({ isVisible, isComplete, onComplete }: GenerationAnimationProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [progress, setProgress] = useState(0)
   const [visibleCards, setVisibleCards] = useState<string[]>([])
+  const stepTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const steps = [
     { text: "Analyzing your photo...", subText: "Understanding your style", icon: Camera, duration: 2000 },
     { text: "Processing garment details...", subText: "Identifying fabric and fit", icon: Shirt, duration: 2500 },
     { text: "AI magic in progress...", subText: "Creating your perfect look", icon: Wand2, duration: 3000 },
     { text: "Adding style touches...", subText: "Perfecting the details", icon: Palette, duration: 2000 },
-    { text: "Almost ready...", subText: "Finalizing your transformation", icon: Sparkles, duration: 1500 },
+    { text: "Almost ready...", subText: "Finalizing your transformation", icon: Sparkles, duration: 4000 },
   ]
 
   // Generate personalized stylist cards based on the current step
@@ -109,8 +113,10 @@ export default function GenerationAnimation({ isVisible }: GenerationAnimationPr
 
     const runStep = (stepIndex: number) => {
       if (stepIndex >= steps.length) {
-        // Loop the last step to keep the animation alive until navigation
-        runStep(steps.length - 1)
+        // Loop the last step to keep the animation alive until isComplete is true
+        const lastStepIndex = steps.length - 1
+        setCurrentStep(lastStepIndex)
+        setProgress(99) // Hold at 99%
         return
       }
 
@@ -119,7 +125,7 @@ export default function GenerationAnimation({ isVisible }: GenerationAnimationPr
       const progressIncrement = (100 / stepDuration) * 50
 
       let currentProgress = (stepIndex / steps.length) * 100
-      setProgress(currentProgress)
+      setProgress(Math.min(currentProgress, 99)) // Cap progress at 99 before completion
 
       // Show cards with staggered animation
       const cards = getStylerCards()
@@ -137,7 +143,7 @@ export default function GenerationAnimation({ isVisible }: GenerationAnimationPr
           currentProgress = maxProgress
           clearInterval(progressTimer)
         }
-        setProgress(Math.min(currentProgress, 100))
+        setProgress(Math.min(currentProgress, 99)) // Cap progress at 99 before completion
       }, 50)
 
       stepTimer = setTimeout(() => {
@@ -153,6 +159,19 @@ export default function GenerationAnimation({ isVisible }: GenerationAnimationPr
       clearInterval(progressTimer)
     }
   }, [isVisible])
+
+  useEffect(() => {
+    if (isComplete) {
+      if (stepTimerRef.current) clearTimeout(stepTimerRef.current)
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current)
+
+      setProgress(100)
+
+      setTimeout(() => {
+        onComplete?.()
+      }, 500) // Wait 500ms after hitting 100% to navigate
+    }
+  }, [isComplete, onComplete])
 
   useEffect(() => {
     // Update visible cards when step changes

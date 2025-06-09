@@ -38,6 +38,8 @@ export default function HomePage() {
   const [clothingPreview, setClothingPreview] = useState<string>("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [showAnimation, setShowAnimation] = useState(false)
+  const [isApiFinished, setIsApiFinished] = useState(false)
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null)
   const [isWardrobeOpen, setIsWardrobeOpen] = useState(false)
   const [isPortraitSheetOpen, setIsPortraitSheetOpen] = useState(false)
   const router = useRouter()
@@ -86,6 +88,9 @@ export default function HomePage() {
 
     setIsGenerating(true)
     setShowAnimation(true)
+    setIsApiFinished(false)
+    setGeneratedImageUrl(null)
+
     try {
       const formData = new FormData()
 
@@ -111,10 +116,18 @@ export default function HomePage() {
         return
       }
 
-      // --- Smartly handle the garment image source (already robust) ---
+      // --- Smartly handle the garment image source (now fully robust) ---
       let finalGarmentFile = clothingFile
+      // Scenario 1: Garment is a Data URL from localStorage (custom items)
       if (!finalGarmentFile && clothingPreview && clothingPreview.startsWith("data:image")) {
         finalGarmentFile = dataURLtoFile(clothingPreview, `wardrobe-item-${Date.now()}.png`)
+      }
+      // Scenario 2: Garment is a local URL from /public (default items)
+      else if (!finalGarmentFile && clothingPreview.startsWith("/")) {
+        const response = await fetch(clothingPreview);
+        const blob = await response.blob();
+        const fileName = clothingPreview.split('/').pop() || `default-garment-${Date.now()}.png`;
+        finalGarmentFile = new File([blob], fileName, { type: blob.type });
       }
 
       if (finalGarmentFile) {
@@ -137,7 +150,8 @@ export default function HomePage() {
 
       const data = await response.json()
       if (data.imageUrl) {
-        router.push(`/results?imageUrl=${encodeURIComponent(data.imageUrl)}`)
+        setGeneratedImageUrl(data.imageUrl)
+        setIsApiFinished(true)
       } else {
         throw new Error("Generation succeeded but no image URL was returned.")
       }
@@ -146,17 +160,30 @@ export default function HomePage() {
       if (error instanceof Error) {
         alert(error.message)
       }
-      setShowAnimation(false) // Hide animation on error
+      setShowAnimation(false)
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  const handleAnimationComplete = () => {
+    if (generatedImageUrl) {
+      router.push(`/results?imageUrl=${encodeURIComponent(generatedImageUrl)}`)
+    }
+    setShowAnimation(false)
+    setIsApiFinished(false)
+    setGeneratedImageUrl(null)
   }
 
   const hasRequiredImages = selfiePreview && clothingPreview
 
   return (
     <div className="min-h-full pb-20 relative overflow-hidden">
-      <GenerationAnimation isVisible={showAnimation} />
+      <GenerationAnimation
+        isVisible={showAnimation}
+        isComplete={isApiFinished}
+        onComplete={handleAnimationComplete}
+      />
       {/* Gradient background elements */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-[#D5F500] rounded-full opacity-50 blur-xl -translate-y-1/2 translate-x-1/2"></div>
       <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#FF6EC7] rounded-full opacity-50 blur-xl translate-y-1/2 -translate-x-1/2"></div>
