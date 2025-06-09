@@ -72,22 +72,21 @@ export async function POST(request: Request) {
     // Step 2 - Prepare the prompt based on style
     const stylePrompt = style ? stylePrompts[style as keyof typeof stylePrompts] : "";
     const prompt = stylePrompt ? 
-      `The exact same person with identical facial features, face, and complete outfit in ${stylePrompt}, keep the person's face exactly the same, preserve all facial characteristics, keep all clothing and garments exactly identical, same outfit, same clothes, same style of dress, do not change any clothing items, only change the background and atmosphere, professional photo, high quality, well-lit, same identity` :
-      "The exact same person with identical facial features and complete outfit in a beautiful setting, keep the person's face exactly the same, keep all clothing exactly identical, professional photo, high quality, well-lit";
+      `Extremely important: The person's face, body, pose, and clothing must be identical to the original image. Only change the background to: ${stylePrompt}. Do not alter the person or their attire in any way.` :
+      "Extremely important: The person's face, body, pose, and clothing must be identical to the original image. Only change the background to a beautiful setting. Do not alter the person or their attire in any way.";
 
     // Step 3 - Call Kling AI to submit the image generation task
     console.log("Submitting image generation task to Kling AI...");
     
     const requestBody = {
-      model_name: "kling-v1-5",
+      model_name: "kling-v2",
       prompt: prompt,
       image: imageBase64,
-      image_reference: {
-        mode: "character_reference"
-      },
+    //   image_reference: "face",
+    //   human_fidelity: 0.95,
+    //   image_fidelity: 0.9,
       cfg_scale: 4,
       aspect_ratio: "3:4",
-      negative_prompt: "blurry, low quality, distorted face, deformed, extra limbs, different person"
     };
     
     // Fallback body for V1 model if V1.5 fails
@@ -96,7 +95,6 @@ export async function POST(request: Request) {
       image: imageBase64,
       cfg_scale: 4,
       aspect_ratio: "3:4",
-      negative_prompt: "blurry, low quality, distorted face, deformed, extra limbs, different person"
     };
     
     console.log("Request body structure:", JSON.stringify(requestBody, null, 2).substring(0, 500) + "...");
@@ -112,7 +110,10 @@ export async function POST(request: Request) {
 
     // If V1.5 fails, try with V1 model (fallback)
     if (!submitResponse.ok) {
-      console.log("V1.5 failed, trying with V1 model...");
+      const v15ErrorBody = await submitResponse.text();
+      console.log(`V1.5 failed with status ${submitResponse.status}:`, v15ErrorBody);
+      console.log("Trying with V1 model as fallback...");
+      
       const fallbackToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
       submitResponse = await fetch(`${KLING_API_BASE_URL}${IMAGE_GENERATION_SUBMIT_PATH}`, {
         method: 'POST',
