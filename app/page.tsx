@@ -9,6 +9,27 @@ import IOSHeader from "./components/ios-header"
 import IOSUpload from "./components/ios-upload"
 import StyleSelector from "./components/style-selector"
 import Link from 'next/link'
+import MyWardrobe from "./components/MyWardrobe"
+
+function dataURLtoFile(dataurl: string, filename: string): File | null {
+  if (!dataurl) return null;
+  const arr = dataurl.split(',');
+  if (arr.length < 2) return null;
+
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  if (!mimeMatch) return null;
+
+  const mime = mimeMatch[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+
+  return new File([u8arr], filename, { type: mime });
+}
 
 export default function HomePage() {
   const [selfieFile, setSelfieFile] = useState<File | null>(null)
@@ -39,6 +60,11 @@ export default function HomePage() {
     }
   }
 
+  const handleGarmentSelect = (imageSrc: string) => {
+    setClothingPreview(imageSrc);
+    setClothingFile(null);
+  };
+
   const handleGenerate = async () => {
     if (!selfieFile) return
 
@@ -46,8 +72,18 @@ export default function HomePage() {
     try {
       const formData = new FormData();
       formData.append("human_image", selfieFile);
-      if (clothingFile) {
-        formData.append("garment_image", clothingFile);
+
+      let finalGarmentFile = clothingFile;
+      if (!finalGarmentFile && clothingPreview && clothingPreview.startsWith('data:image')) {
+        finalGarmentFile = dataURLtoFile(clothingPreview, `wardrobe-item-${Date.now()}.png`);
+      }
+
+      if (finalGarmentFile) {
+        formData.append("garment_image", finalGarmentFile);
+      } else {
+        alert("Please select a garment to try on.");
+        setIsGenerating(false);
+        return;
       }
 
       const response = await fetch('/api/generate', {
@@ -62,19 +98,12 @@ export default function HomePage() {
       }
 
       const data = await response.json();
-
-      // For now, just log the data to the console to verify
-      console.log('Generated data:', data);
-
-      // We will handle the redirect in the next step
       if (data.imageUrl) {
         router.push(`/results?imageUrl=${encodeURIComponent(data.imageUrl)}`);
       }
 
     } catch (error) {
       console.error(error);
-      // Here you could show an error message to the user
-      // It's good practice to show the actual error from the server
       if (error instanceof Error) {
         alert(error.message);
       }
@@ -143,29 +172,8 @@ export default function HomePage() {
           </Button>
         </div>
 
-        {/* Previous looks */}
-        <div className="ios-card p-5 animate-fade-up" style={{ animationDelay: "0.3s" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium">Recent Looks</h3>
-            <button className="text-xs text-primary font-medium ios-btn">View All</button>
-          </div>
+        <MyWardrobe onGarmentSelect={handleGarmentSelect} />
 
-          <div className="grid grid-cols-3 gap-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="aspect-[3/4] bg-neutral-100 rounded-lg flex items-center justify-center">
-                {selfiePreview ? (
-                  <img
-                    src={`/fashion-model-outfit.png?height=120&width=90&query=fashion model outfit ${i}`}
-                    alt={`Look ${i}`}
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                ) : (
-                  <Sparkles className="text-neutral-300" size={18} />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       <IOSTabBar />
