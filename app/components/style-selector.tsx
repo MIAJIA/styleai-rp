@@ -1,9 +1,12 @@
 "use client"
-import { Check, Footprints, Heart, Palmtree, Briefcase, Sparkles, PartyPopper } from "lucide-react"
+import { Check, Footprints, Heart, Palmtree, Briefcase, Sparkles, PartyPopper, BookOpen, Coffee, Mic } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const styles = [
+  { id: "fashion-magazine", name: "Magazine", icon: BookOpen, color: "bg-pink-100 text-pink-900" },
   { id: "running-outdoors", name: "Running Outdoors", icon: Footprints, color: "bg-emerald-100 text-emerald-900" },
+  { id: "coffee-shop", name: "Coffee Shop", icon: Coffee, color: "bg-amber-100 text-amber-900" },
+  { id: "music-show", name: "Music Show", icon: Mic, color: "bg-purple-100 text-purple-900" },
   { id: "date-night", name: "Date Night", icon: Heart, color: "bg-rose-100 text-rose-900" },
   { id: "beach-day", name: "Beach Day", icon: Palmtree, color: "bg-sky-100 text-sky-900" },
   { id: "work-interview", name: "Work Interview", icon: Briefcase, color: "bg-slate-100 text-slate-900" },

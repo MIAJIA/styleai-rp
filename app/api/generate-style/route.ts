@@ -53,11 +53,14 @@ const garmentDescriptions = new Map<string, string>([
 
 // Style prompts mapping
 const stylePrompts = {
+  "fashion-magazine": "standing in a semi-surreal environment blending organic shapes and architectural elements. The background features dreamlike washes of indigo and burnt orange, with subtle floating geometric motifs inspired by Ukiyo-e clouds. Lighting combines soft studio strobes with atmospheric glow, creating dimensional shadows. Composition balances realistic human proportions with slightly exaggerated fabric movement, evoking a living oil painting. Texture details: fine wool fibers visible, slight film grain. Style fusion: Richard Avedon's fashion realism + Egon Schiele's expressive lines + niji's color vibrancy (but photorealistic).",
   "running-outdoors": "A vibrant, sun-drenched hillside with lush greenery under a clear blue sky, capturing an adventure lifestyle mood. The scene is bathed in soft, natural light, creating a sense of cinematic realism. Shot with the professional quality of a Canon EOS R5, emphasizing realistic textures and high definition.",
-  "date-night": "sultry romantic evening scene, luxurious candlelit restaurant with velvet textures, golden hour lighting casting warm shadows, sophisticated Parisian bistro atmosphere, elegant wine glasses and fresh roses, cinematic romantic lighting, high-end fashion photography style",
+  "coffee-shop": "A cozy, sunlit coffee shop with the warm aroma of freshly ground beans. The person is sitting at a rustic wooden table by a large window, holding a ceramic mug. The background shows soft, blurred details of a barista and an espresso machine. The style should be intimate and warm, with natural light creating soft shadows, reminiscent of a lifestyle magazine photograph.",
+  "casual-chic": "trendy Brooklyn street with colorful murals, chic coffee shop with exposed brick walls, urban rooftop garden with city views, stylish boutique district, contemporary art gallery setting, natural daylight with artistic shadows, street style fashion photography",
+  "music-show": "Group idol style, performing on stage, spotlight and dreamy lighting, high-definition portrait, soft glow and bokeh, dynamic hair movement, glamorous makeup, K-pop inspired outfit (shiny, fashionable), expressive pose, cinematic stage background, lens flare, fantasy concert vibe, ethereal lighting.",
+  "date-night": "A realistic romantic evening on a backyard patio--string lights overhead, wine glasses, laughing mid-conversation with friend. Subtle body language, soft bokeh lights, hint of connection. Created using: Sony Alpha A7R IV, cinematic lighting, shallow depth of field, natural expressions, sunset color grading Shot in kodak gold 200 with a canon EOS R6.",
   "beach-day": "stunning tropical paradise, pristine turquoise waters with gentle waves, white sand beach with palm trees swaying, golden sunset lighting, vibrant coral reef colors, magazine-quality beach photography, luxurious resort setting with crystal-clear water reflections",
   "work-interview": "sleek modern corporate headquarters, floor-to-ceiling glass windows with city skyline views, contemporary minimalist office design, professional studio lighting, executive boardroom with marble accents, prestigious business district atmosphere, high-end architectural photography style",
-  "casual-chic": "trendy Brooklyn street with colorful murals, chic coffee shop with exposed brick walls, urban rooftop garden with city views, stylish boutique district, contemporary art gallery setting, natural daylight with artistic shadows, street style fashion photography",
   "party-glam": "opulent ballroom with crystal chandeliers, luxurious velvet curtains and gold accents, dramatic spotlight effects with rich jewel tones, champagne bar with marble countertops, exclusive VIP lounge atmosphere, professional event photography with glamorous lighting",
 };
 
@@ -111,8 +114,8 @@ export async function POST(request: Request) {
     const stylePrompt = style ? stylePrompts[style as keyof typeof stylePrompts] : "";
     const garmentDescription = garmentSrc ? garmentDescriptions.get(garmentSrc) : null;
 
-    let prompt = `Extremely important: The person's face, body, and pose must be identical to the original image.`;
-
+    let prompt = `Extremely important: The person's face must be identical to the original image.`;
+    // TODO: add body and pose
     if (garmentDescription) {
       prompt += ` The clothing is a ${garmentDescription} and it must also remain identical.`;
     } else {
@@ -121,6 +124,7 @@ export async function POST(request: Request) {
 
     prompt += ` Only change the background to: ${stylePrompt || 'a beautiful setting'}. Do not alter the person or their attire in any way.`;
 
+    console.log("～～～Prompt:", prompt);
     // Step 3 - Call Kling AI to submit the image generation task
     console.log(`Submitting image generation task to Kling AI using model: ${modelVersion}...`);
 
