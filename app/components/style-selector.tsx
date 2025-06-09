@@ -12,18 +12,13 @@ const styles = [
 
 interface StyleSelectorProps {
   selectedStyle: string | null
-  onStyleSelect: (styleId: string) => void
+  onStyleSelect: (styleId: string | null) => void
   className?: string
 }
 
 export default function StyleSelector({ selectedStyle, onStyleSelect, className }: StyleSelectorProps) {
   return (
     <div className={cn("space-y-3", className)}>
-      <div>
-        <label className="text-sm font-medium text-neutral-700">Style (Optional)</label>
-        <p className="text-xs text-neutral-500 mt-1">Default: Keep your original background</p>
-      </div>
-
       <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
         {styles.map((style) => {
           const isSelected = selectedStyle === style.id

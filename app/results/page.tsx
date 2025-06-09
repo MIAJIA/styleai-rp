@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
 import { Share2, Download, RefreshCw, Heart, Lock, ArrowLeft, Sparkles } from "lucide-react"
@@ -8,14 +8,24 @@ import { Button } from "@/components/ui/button"
 import IOSTabBar from "../components/ios-tab-bar"
 import StyleSelector from "../components/style-selector"
 
+interface PastLook {
+  id: string
+  imageUrl: string
+  style: string | null
+  timestamp: number
+}
+
 export default function ResultsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const imageUrl = searchParams.get("imageUrl")
+  const initialImageUrl = searchParams.get("imageUrl")
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(initialImageUrl)
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null)
+  const [pastLooks, setPastLooks] = useState<PastLook[]>([])
+  const [isGenerating, setIsGenerating] = useState(false)
 
   const handleShare = () => {
-    if (navigator.share && imageUrl) {
+    if (navigator.share && currentImageUrl) {
       navigator.share({
         title: "Check out my AI-generated look!",
         text: "I just tried on this amazing outfit using StyleAI",
@@ -26,15 +36,78 @@ export default function ResultsPage() {
 
   // A simple function to trigger browser download
   const handleDownload = () => {
-    if (imageUrl) {
+    if (currentImageUrl) {
       const link = document.createElement('a');
-      link.href = imageUrl;
+      link.href = currentImageUrl;
       // You might want to give a more descriptive name
       link.download = `styleai-look-${Date.now()}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     }
+  }
+
+  const handleTryAnotherLook = async () => {
+    if (!currentImageUrl || !selectedStyle) return
+
+    setIsGenerating(true)
+    try {
+      const response = await fetch('/api/generate-style', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageUrl: currentImageUrl,
+          style: selectedStyle,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to generate styled image: ${errorText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.imageUrl) {
+        // Add current image to past looks before replacing it
+        const newPastLook: PastLook = {
+          id: Date.now().toString(),
+          imageUrl: currentImageUrl,
+          style: null, // Current image has no style applied initially
+          timestamp: Date.now(),
+        };
+        setPastLooks(prev => [newPastLook, ...prev]);
+
+        // Update current image
+        setCurrentImageUrl(data.imageUrl);
+        setSelectedStyle(null); // Reset style selection
+      }
+    } catch (error) {
+      console.error(error);
+      if (error instanceof Error) {
+        alert(error.message);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  const handlePastLookClick = (pastLook: PastLook) => {
+    // Add current image to past looks
+    if (currentImageUrl) {
+      const currentLook: PastLook = {
+        id: Date.now().toString(),
+        imageUrl: currentImageUrl,
+        style: null,
+        timestamp: Date.now(),
+      };
+      setPastLooks(prev => [currentLook, ...prev.filter(look => look.id !== pastLook.id)]);
+    }
+
+    // Set the selected past look as current
+    setCurrentImageUrl(pastLook.imageUrl);
   }
 
   return (
@@ -57,9 +130,9 @@ export default function ResultsPage() {
         >
           <div className="ios-card overflow-hidden">
             <div className="relative">
-              {imageUrl ? (
+              {currentImageUrl ? (
                 <img
-                  src={imageUrl}
+                  src={currentImageUrl}
                   alt="Generated fashion look"
                   className="w-full aspect-[3/4] object-contain bg-gray-100"
                 />
@@ -80,7 +153,7 @@ export default function ResultsPage() {
                   size="sm"
                   onClick={handleShare}
                   className="border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 rounded-xl h-12 font-medium"
-                  disabled={!imageUrl}
+                  disabled={!currentImageUrl}
                 >
                   <Share2 size={16} className="mr-2" />
                   Share
@@ -90,7 +163,7 @@ export default function ResultsPage() {
                   size="sm"
                   onClick={handleDownload}
                   className="border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 rounded-xl h-12 font-medium"
-                  disabled={!imageUrl}
+                  disabled={!currentImageUrl}
                 >
                   <Download size={16} className="mr-2" />
                   Save
@@ -102,6 +175,12 @@ export default function ResultsPage() {
 
         {/* Style selector section */}
         <div className="ios-card p-5 animate-fade-up mt-6">
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-neutral-700 mb-2">Choose a New Style</h3>
+            <p className="text-xs text-neutral-500">
+              Select a style below and click "Try Another Look" to transform your image with AI
+            </p>
+          </div>
           <StyleSelector selectedStyle={selectedStyle} onStyleSelect={setSelectedStyle} />
         </div>
       </div>
@@ -110,11 +189,58 @@ export default function ResultsPage() {
       <div className="px-5 space-y-4">
         <Button
           className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-medium"
-          onClick={() => router.push("/")}
+          onClick={handleTryAnotherLook}
+          disabled={!currentImageUrl || !selectedStyle || isGenerating}
         >
-          <RefreshCw size={16} className="mr-2" />
-          Try Another Look
+          {isGenerating ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>Creating Your New Look...</span>
+            </div>
+          ) : (
+            <>
+              <RefreshCw size={16} className="mr-2" />
+              Try Another Look
+            </>
+          )}
         </Button>
+
+        {/* Past Looks Section */}
+        {pastLooks.length > 0 && (
+          <div className="ios-card p-5 animate-fade-up">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium">Past Looks</h3>
+              <button 
+                onClick={() => setPastLooks([])}
+                className="text-xs text-primary font-medium ios-btn"
+              >
+                Clear All
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              {pastLooks.slice(0, 6).map((pastLook) => (
+                <button
+                  key={pastLook.id}
+                  onClick={() => handlePastLookClick(pastLook)}
+                  className="aspect-[3/4] bg-neutral-100 rounded-lg overflow-hidden ios-btn hover:scale-105 transition-transform"
+                >
+                  <img
+                    src={pastLook.imageUrl}
+                    alt="Past look"
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+
+            {pastLooks.length > 6 && (
+              <p className="text-xs text-neutral-500 text-center mt-3">
+                And {pastLooks.length - 6} more...
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <IOSTabBar />
