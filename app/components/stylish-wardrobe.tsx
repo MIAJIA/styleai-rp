@@ -202,7 +202,6 @@ export default function StylishWardrobe({ onGarmentSelect }: StylishWardrobeProp
   const renderCategory = (category: WardrobeCategory) => {
     const items = wardrobe[category]
     const { bg, emoji, label } = CATEGORY_STYLES[category]
-    const totalSlots = 3 // Let's show 3 slots per category for now
 
     return (
       <div className={`${bg} rounded-3xl p-4 shadow-lg`}>
@@ -217,8 +216,9 @@ export default function StylishWardrobe({ onGarmentSelect }: StylishWardrobeProp
             {items.length}
           </span>
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          {items.slice(0, totalSlots).map((item) => (
+        {/* Responsive Grid: 2 cols on mobile, 3 on sm screens, 4 on lg screens */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {items.map((item) => (
             <div
               key={item.id}
               onClick={() => onGarmentSelect(item.imageSrc)}
@@ -227,29 +227,31 @@ export default function StylishWardrobe({ onGarmentSelect }: StylishWardrobeProp
               <img
                 src={item.imageSrc || "/placeholder.svg"}
                 alt="wardrobe item"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
               <button
                 onClick={(e) => {
                   e.stopPropagation() // Prevent the main card's click event
                   handleDeleteItem(category, item.id)
                 }}
-                className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-all z-10 hover:bg-red-500 transform hover:scale-110"
                 aria-label="Delete item"
               >
                 ✕
               </button>
             </div>
           ))}
-          {Array.from({ length: Math.max(0, totalSlots - items.length) }).map((_, index) => (
-            <div
-              key={`add-${category}-${index}`}
-              onClick={() => handleAddClick(category)}
-              className="aspect-square bg-white/30 rounded-xl shadow-sm flex items-center justify-center cursor-pointer hover:bg-white/40 transition-colors"
-            >
-              <span className="text-lg text-white">+</span>
+          {/* A single, clear "Add" button at the end of the list */}
+          <div
+            onClick={() => handleAddClick(category)}
+            className="aspect-square bg-white/30 rounded-xl shadow-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white/40 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full bg-white/50 flex items-center justify-center mb-1">
+              <span className="text-2xl text-white">+</span>
             </div>
-          ))}
+            <p className="text-xs text-white font-medium">Add New</p>
+          </div>
         </div>
       </div>
     )

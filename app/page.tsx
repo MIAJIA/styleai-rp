@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import CompactUpload from "./components/compact-upload"
 import FashionHeader from "./components/fashion-header"
-import LookCarousel from "./components/look-carousel"
 import StylishWardrobe from "./components/stylish-wardrobe"
 import IOSTabBar from "./components/ios-tab-bar"
+import { Drawer } from "vaul"
 
 function dataURLtoFile(dataurl: string, filename: string): File | null {
   if (!dataurl) return null
@@ -35,6 +35,7 @@ export default function HomePage() {
   const [selfiePreview, setSelfiePreview] = useState<string>("")
   const [clothingPreview, setClothingPreview] = useState<string>("")
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isWardrobeOpen, setIsWardrobeOpen] = useState(false)
   const router = useRouter()
 
   const handleSelfieUpload = (file: File) => {
@@ -60,6 +61,7 @@ export default function HomePage() {
   const handleGarmentSelect = (imageSrc: string) => {
     setClothingPreview(imageSrc)
     setClothingFile(null)
+    setIsWardrobeOpen(false)
   }
 
   const handleGenerate = async () => {
@@ -135,13 +137,15 @@ export default function HomePage() {
                 helpText="Full-body photo"
                 variant="portrait"
               />
-              <CompactUpload
-                label="Garment"
-                onImageSelect={handleClothingUpload}
-                preview={clothingPreview}
-                helpText="Clothing to try on"
-                variant="garment"
-              />
+              <div onClick={() => setIsWardrobeOpen(true)} className="w-full">
+                <CompactUpload
+                  label="Garment"
+                  preview={clothingPreview}
+                  helpText="Clothing to try on"
+                  variant="garment"
+                  isTrigger
+                />
+              </div>
             </div>
 
             {/* Generate button */}
@@ -161,8 +165,22 @@ export default function HomePage() {
             </Button>
           </div>
 
-          {/* Stylish wardrobe */}
-          <StylishWardrobe onGarmentSelect={handleGarmentSelect} />
+          <Drawer.Root open={isWardrobeOpen} onOpenChange={setIsWardrobeOpen}>
+            <Drawer.Portal>
+              <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
+              <Drawer.Content className="bg-zinc-100 flex flex-col rounded-t-[10px] h-[90%] fixed bottom-0 left-0 right-0 z-50">
+                <div className="p-4 bg-white rounded-t-[10px] flex-1 overflow-y-auto">
+                  <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-zinc-300 mb-4" />
+                  <div className="max-w-md mx-auto">
+                    <Drawer.Title className="font-medium mb-4 text-center">
+                      Select from My Wardrobe
+                    </Drawer.Title>
+                    <StylishWardrobe onGarmentSelect={handleGarmentSelect} />
+                  </div>
+                </div>
+              </Drawer.Content>
+            </Drawer.Portal>
+          </Drawer.Root>
         </div>
       </div>
 

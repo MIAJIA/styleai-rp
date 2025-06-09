@@ -7,11 +7,12 @@ import { Upload, X, Camera } from "lucide-react"
 
 interface CompactUploadProps {
   label: string
-  onImageSelect: (file: File) => void
+  onImageSelect?: (file: File) => void
   preview: string
   required?: boolean
   helpText?: string
   variant?: "portrait" | "garment"
+  isTrigger?: boolean
 }
 
 export default function CompactUpload({
@@ -21,6 +22,7 @@ export default function CompactUpload({
   required = false,
   helpText,
   variant = "portrait",
+  isTrigger = false,
 }: CompactUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -28,7 +30,7 @@ export default function CompactUpload({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      onImageSelect(file)
+      onImageSelect?.(file)
     }
   }
 
@@ -46,7 +48,7 @@ export default function CompactUpload({
     setIsDragging(false)
     const file = e.dataTransfer.files?.[0]
     if (file) {
-      onImageSelect(file)
+      onImageSelect?.(file)
     }
   }
 
@@ -54,7 +56,7 @@ export default function CompactUpload({
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
-    onImageSelect(new File([], ""))
+    onImageSelect?.(new File([], ""))
   }
 
   const bgColor = variant === "portrait" ? "bg-[#FF6EC7]" : "bg-[#00C2FF]"
@@ -62,13 +64,12 @@ export default function CompactUpload({
   return (
     <div className="relative w-full">
       <div
-        className={`${bgColor} rounded-[32px] p-3 shadow-lg transform transition-transform hover:scale-[1.02] ${
-          isDragging ? "ring-2 ring-white" : ""
-        }`}
+        className={`${bgColor} rounded-[32px] p-3 shadow-lg transform transition-transform hover:scale-[1.02] ${isDragging ? "ring-2 ring-white" : ""
+          }`}
       >
         <div
           className="aspect-square relative overflow-hidden rounded-[24px] bg-white cursor-pointer"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => !isTrigger && fileInputRef.current?.click()}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
