@@ -8,6 +8,7 @@ import FashionHeader from "./components/fashion-header"
 import StylishWardrobe from "./components/stylish-wardrobe"
 import IOSTabBar from "./components/ios-tab-bar"
 import { Drawer } from "vaul"
+import PortraitSelectionSheet from "./components/portrait-selection-sheet"
 
 function dataURLtoFile(dataurl: string, filename: string): File | null {
   if (!dataurl) return null
@@ -36,6 +37,7 @@ export default function HomePage() {
   const [clothingPreview, setClothingPreview] = useState<string>("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [isWardrobeOpen, setIsWardrobeOpen] = useState(false)
+  const [isPortraitSheetOpen, setIsPortraitSheetOpen] = useState(false)
   const router = useRouter()
 
   const handleSelfieUpload = (file: File) => {
@@ -64,14 +66,45 @@ export default function HomePage() {
     setIsWardrobeOpen(false)
   }
 
+  const handlePortraitSelect = (imageSrc: string) => {
+    setSelfiePreview(imageSrc)
+    setSelfieFile(null)
+    setIsPortraitSheetOpen(false)
+  }
+
   const handleGenerate = async () => {
-    if (!selfieFile) return
+    if (!selfiePreview) {
+      alert("Please select a portrait.")
+      return
+    }
 
     setIsGenerating(true)
     try {
       const formData = new FormData()
-      formData.append("human_image", selfieFile)
 
+      // --- Smartly handle the selfie image source ---
+      let finalSelfieFile = selfieFile;
+
+      // Scenario 1: Selfie is a Data URL from localStorage (My Photos)
+      if (!finalSelfieFile && selfiePreview.startsWith("data:image")) {
+        finalSelfieFile = dataURLtoFile(selfiePreview, `selfie-${Date.now()}.png`);
+      }
+      // Scenario 2: Selfie is a local URL from /public (Idols)
+      else if (!finalSelfieFile && selfiePreview.startsWith("/")) {
+        const response = await fetch(selfiePreview);
+        const blob = await response.blob();
+        finalSelfieFile = new File([blob], `idol-${Date.now()}.jpg`, { type: blob.type });
+      }
+
+      if (finalSelfieFile) {
+        formData.append("human_image", finalSelfieFile)
+      } else {
+        alert("Could not process the selected portrait. Please try again.")
+        setIsGenerating(false)
+        return
+      }
+
+      // --- Smartly handle the garment image source (already robust) ---
       let finalGarmentFile = clothingFile
       if (!finalGarmentFile && clothingPreview && clothingPreview.startsWith("data:image")) {
         finalGarmentFile = dataURLtoFile(clothingPreview, `wardrobe-item-${Date.now()}.png`)
@@ -109,7 +142,7 @@ export default function HomePage() {
     }
   }
 
-  const hasRequiredImages = selfieFile && (clothingFile || clothingPreview)
+  const hasRequiredImages = selfiePreview && clothingPreview
 
   return (
     <div className="min-h-full pb-20 relative overflow-hidden">
@@ -129,14 +162,16 @@ export default function HomePage() {
           {/* Upload section */}
           <div className="space-y-6">
             <div className="flex gap-4">
-              <CompactUpload
-                label="Portrait"
-                onImageSelect={handleSelfieUpload}
-                preview={selfiePreview}
-                required
-                helpText="Full-body photo"
-                variant="portrait"
-              />
+              <div onClick={() => setIsPortraitSheetOpen(true)} className="w-full">
+                <CompactUpload
+                  label="Portrait"
+                  preview={selfiePreview}
+                  required
+                  helpText="Full-body photo"
+                  variant="portrait"
+                  isTrigger
+                />
+              </div>
               <div onClick={() => setIsWardrobeOpen(true)} className="w-full">
                 <CompactUpload
                   label="Garment"
@@ -165,7 +200,9 @@ export default function HomePage() {
             </Button>
           </div>
 
+          {/* Wardrobe Drawer */}
           <Drawer.Root open={isWardrobeOpen} onOpenChange={setIsWardrobeOpen}>
+            {/* @ts-ignore */}
             <Drawer.Portal>
               <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
               <Drawer.Content className="bg-zinc-100 flex flex-col rounded-t-[10px] h-[90%] fixed bottom-0 left-0 right-0 z-50">
@@ -177,6 +214,21 @@ export default function HomePage() {
                     </Drawer.Title>
                     <StylishWardrobe onGarmentSelect={handleGarmentSelect} />
                   </div>
+                </div>
+              </Drawer.Content>
+            </Drawer.Portal>
+          </Drawer.Root>
+
+          {/* Portrait Selection Drawer */}
+          <Drawer.Root open={isPortraitSheetOpen} onOpenChange={setIsPortraitSheetOpen}>
+            {/* @ts-ignore */}
+            <Drawer.Portal>
+              <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
+              <Drawer.Content className="bg-zinc-100 flex flex-col rounded-t-[10px] h-[90%] fixed bottom-0 left-0 right-0 z-50">
+                <div className="p-4 bg-white rounded-t-[10px] flex-1 overflow-y-auto">
+                  <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-zinc-300 mb-4" />
+                  <Drawer.Title className="sr-only">Select a Portrait</Drawer.Title>
+                  <PortraitSelectionSheet onPortraitSelect={handlePortraitSelect} />
                 </div>
               </Drawer.Content>
             </Drawer.Portal>
