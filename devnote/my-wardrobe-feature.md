@@ -18,7 +18,7 @@
 
 为了结构化地存储不同类别的衣物，我们将在 `localStorage` 中使用一个顶层键，例如 `styleai_wardrobe`。其对应的值是一个 JSON 字符串，当被解析成 JavaScript 对象后，其结构如下：
 
-```json
+\`\`\`json
 {
   "tops": [
     { "id": "1721980800000", "imageSrc": "data:image/png;base64,iVBORw0KGgo..." }
@@ -29,7 +29,7 @@
   "dresses": [],
   "outerwear": []
 }
-```
+\`\`\`
 
 -   **分类键名 (`tops`, `bottoms`等)**: 代表衣物的四个主要分类。
 -   **衣物数组**: 每个分类下是一个数组，存储该分类的所有衣物对象。
@@ -77,22 +77,22 @@
 #### 步骤 2: `HomePage` (`app/page.tsx`) 组件改造
 - **状态提升**: `HomePage` 将成为“当前选中衣物”状态的唯一管理者。
 - **定义回调函数**:
-  ```typescript
+  \`\`\`typescript
   const handleGarmentSelect = (imageSrc: string) => {
     // 使用从衣橱选择的图片更新预览
     setClothingPreview(imageSrc);
     // 清空文件上传状态，因为来源不是<input>，避免冲突
     setClothingFile(null);
   };
-  ```
+  \`\`\`
 - **传递Prop**: 在渲染组件时，将此函数传递下去。
-  ```jsx
+  \`\`\`jsx
   <MyWardrobe onGarmentSelect={handleGarmentSelect} />
-  ```
+  \`\`\`
 - **修改API调用 `handleGenerate`**:
   - **挑战**: `FormData` API需要一个 `File` 对象，但从衣橱选择的衣物是一个Base64字符串。
   - **解决方案**: 在 `handleGenerate` 内部，我们需要一个辅助函数，可以在需要时将Base64 Data URL转换回 `File` 对象。
-  ```typescript
+  \`\`\`typescript
   // 辅助函数: 将Base64 Data URL转换为File对象
   function dataURLtoFile(dataurl, filename) {
       const arr = dataurl.split(','),
@@ -123,4 +123,4 @@
     }
     // ... 发起 fetch 请求
   };
-  ```
+  \`\`\`

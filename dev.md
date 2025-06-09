@@ -232,11 +232,11 @@ globals.css
 
 后端在完成所有处理和轮询后，将 **直接** 返回一个包含最终图片URL的JSON对象。
 
-```json
+\`\`\`json
 {
   "imageUrl": "https://path.to/generated-image.png"
 }
-```
+\`\`\`
 
 #### 错误响应
 

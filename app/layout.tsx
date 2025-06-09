@@ -1,19 +1,31 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter } from "next/font/google"
+import { Inter, Playfair_Display } from "next/font/google"
 import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"] })
+// Load Inter font
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+})
+
+// Load Playfair Display font
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  display: "swap",
+})
 
 export const metadata: Metadata = {
-  title: "StyleAI - AI Fashion Try-On",
-  description: "Visualize yourself in stunning outfits with AI-powered virtual try-on",
+  title: "StyleMe - Virtual Try-On",
+  description: "Create your perfect look with our AI-powered virtual try-on",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "StyleAI",
+    title: "StyleMe",
   },
-  generator: 'v0.dev'
+  generator: "v0.dev",
 }
 
 export const viewport: Viewport = {
@@ -29,8 +41,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="h-full" suppressHydrationWarning>
-      <body className={`${inter.className} h-full bg-neutral-50 overflow-x-hidden`}>
+    <html lang="en" className={`h-full ${inter.variable} ${playfair.variable}`} suppressHydrationWarning>
+      <body className="h-full overflow-x-hidden">
         <main className="h-full pb-safe">{children}</main>
       </body>
     </html>
