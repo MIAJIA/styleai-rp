@@ -72,8 +72,8 @@ export async function POST(request: Request) {
     // Step 2 - Prepare the prompt based on style
     const stylePrompt = style ? stylePrompts[style as keyof typeof stylePrompts] : "";
     const prompt = stylePrompt ? 
-      `The exact same person with identical facial features, face, and appearance in ${stylePrompt}, keep the person's face exactly the same, preserve all facial characteristics, professional photo, high quality, well-lit, same identity` :
-      "The exact same person with identical facial features and appearance in a beautiful setting, keep the person's face exactly the same, professional photo, high quality, well-lit";
+      `The exact same person with identical facial features, face, and complete outfit in ${stylePrompt}, keep the person's face exactly the same, preserve all facial characteristics, keep all clothing and garments exactly identical, same outfit, same clothes, same style of dress, do not change any clothing items, only change the background and atmosphere, professional photo, high quality, well-lit, same identity` :
+      "The exact same person with identical facial features and complete outfit in a beautiful setting, keep the person's face exactly the same, keep all clothing exactly identical, professional photo, high quality, well-lit";
 
     // Step 3 - Call Kling AI to submit the image generation task
     console.log("Submitting image generation task to Kling AI...");
