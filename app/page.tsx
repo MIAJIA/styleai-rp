@@ -7,13 +7,11 @@ import { Button } from "@/components/ui/button"
 import IOSTabBar from "./components/ios-tab-bar"
 import IOSHeader from "./components/ios-header"
 import IOSUpload from "./components/ios-upload"
-import StyleSelector from "./components/style-selector"
 import Link from 'next/link'
 
 export default function HomePage() {
   const [selfieFile, setSelfieFile] = useState<File | null>(null)
   const [clothingFile, setClothingFile] = useState<File | null>(null)
-  const [selectedStyle, setSelectedStyle] = useState<string | null>(null)
   const [selfiePreview, setSelfiePreview] = useState<string>("")
   const [clothingPreview, setClothingPreview] = useState<string>("")
   const [isGenerating, setIsGenerating] = useState(false)
@@ -120,8 +118,6 @@ export default function HomePage() {
                 helpText="Upload a clear image of the garment you'd like to try on — ideally laid flat or worn"
               />
             </div>
-
-            <StyleSelector selectedStyle={selectedStyle} onStyleSelect={setSelectedStyle} />
           </div>
         </div>
 
@@ -135,7 +131,7 @@ export default function HomePage() {
             {isGenerating ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>{selectedStyle ? "Creating Your Look..." : "Processing with Original Background..."}</span>
+                <span>Creating Your Look...</span>
               </div>
             ) : (
               <span>Generate My Look</span>

@@ -1,15 +1,18 @@
 "use client"
 
+import { useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
 import { Share2, Download, RefreshCw, Heart, Lock, ArrowLeft, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import IOSTabBar from "../components/ios-tab-bar"
+import StyleSelector from "../components/style-selector"
 
 export default function ResultsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const imageUrl = searchParams.get("imageUrl")
+  const [selectedStyle, setSelectedStyle] = useState<string | null>(null)
 
   const handleShare = () => {
     if (navigator.share && imageUrl) {
@@ -95,6 +98,11 @@ export default function ResultsPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Style selector section */}
+        <div className="ios-card p-5 animate-fade-up mt-6">
+          <StyleSelector selectedStyle={selectedStyle} onStyleSelect={setSelectedStyle} />
         </div>
       </div>
 
