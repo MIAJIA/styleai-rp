@@ -132,6 +132,10 @@ export default function HomePage() {
 
       if (finalGarmentFile) {
         formData.append("garment_image", finalGarmentFile)
+        // Also send the original source path, which is the key for the description map
+        if (clothingPreview) {
+          formData.append("garment_src", clothingPreview);
+        }
       } else {
         alert("Please select a garment to try on.")
         setIsGenerating(false)
@@ -151,7 +155,8 @@ export default function HomePage() {
       const data = await response.json()
       if (data.imageUrl) {
         setGeneratedImageUrl(data.imageUrl)
-        setIsApiFinished(true)
+        // Pass the garment description from the API to the animation component
+        handleAnimationComplete(data.imageUrl, data.garmentDescription)
       } else {
         throw new Error("Generation succeeded but no image URL was returned.")
       }
@@ -166,10 +171,10 @@ export default function HomePage() {
     }
   }
 
-  const handleAnimationComplete = () => {
-    if (generatedImageUrl) {
+  const handleAnimationComplete = (finalImageUrl: string, garmentDescription?: string) => {
+    if (finalImageUrl) {
       const params = new URLSearchParams();
-      params.set('imageUrl', generatedImageUrl);
+      params.set('imageUrl', finalImageUrl);
 
       // Pass both the human and garment source URLs to the results page
       if (selfiePreview) {
@@ -177,6 +182,10 @@ export default function HomePage() {
       }
       if (clothingPreview) {
         params.set('garmentSrc', clothingPreview);
+      }
+      // Pass the garment description if it exists
+      if (garmentDescription) {
+        params.set('garmentDescription', garmentDescription);
       }
 
       router.push(`/results?${params.toString()}`);
@@ -194,7 +203,7 @@ export default function HomePage() {
       <GenerationAnimation
         isVisible={showAnimation}
         isComplete={isApiFinished}
-        onComplete={handleAnimationComplete}
+        onComplete={() => handleAnimationComplete(generatedImageUrl!)}
       />
       {/* Gradient background elements */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-[#D5F500] rounded-full opacity-50 blur-xl -translate-y-1/2 translate-x-1/2"></div>

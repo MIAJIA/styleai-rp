@@ -1,6 +1,18 @@
 import { NextResponse } from "next/server";
 import * as jwt from "jsonwebtoken";
 
+// This map is now defined directly in the file to avoid import issues.
+const garmentDescriptions = new Map<string, string>([
+  ['/cloth/green-top.png', 'A vibrant green casual knit top, perfect for a fresh, lively look.'],
+  ['/cloth/yellow-shirt.png', 'A bright yellow short-sleeve button-up shirt with a relaxed fit.'],
+  ['/cloth/jean.png', 'Classic blue denim jeans with a straight-leg cut.'],
+  ['/cloth/LEIVs-jean-short.png', 'Light-wash denim cutoff shorts, ideal for a summer day.'],
+  ['/cloth/blue-dress.png', 'An elegant, flowing light blue maxi dress with a simple silhouette.'],
+  ['/cloth/yellow-dress.png', 'A cheerful yellow sundress with a fitted bodice and flared skirt.'],
+  ['/cloth/whiteblazer.png', 'A sharp, tailored white blazer that adds sophistication to any outfit.'],
+  ['/cloth/黑皮衣.png', 'A classic black leather biker jacket, adding an edgy and cool vibe.']
+]);
+
 // TODO: The client-side image pre-processing is causing the AI to return cropped images.
 // As an alternative, investigate implementing server-side image processing here using a
 // library like `sharp`. This could provide more robust and consistent results.
@@ -37,6 +49,18 @@ const KLING_API_BASE_URL = "https://api-beijing.klingai.com";
 const VIRTUAL_TRYON_SUBMIT_PATH = "/v1/images/kolors-virtual-try-on";
 const VIRTUAL_TRYON_STATUS_PATH = "/v1/images/kolors-virtual-try-on/"; // Note the trailing slash for appending task_id
 
+async function fetchWithTimeout(resource: RequestInfo, options: RequestInit & { timeout: number }): Promise<Response> {
+  const { timeout } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  const response = await fetch(resource, {
+    ...options,
+    signal: controller.signal
+  });
+  clearTimeout(id);
+  return response;
+}
+
 export async function POST(request: Request) {
   if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
     return NextResponse.json({ error: "AccessKey or SecretKey is not configured." }, { status: 500 });
@@ -58,10 +82,11 @@ export async function POST(request: Request) {
     // 		■ 模型检测为"上装 + 连体装" -> 生成失败
     // 		■ 模型检测为"下装 + 连体装" -> 生成失败
 
-    const humanImageFile = formData.get("human_image") as File | null;
-    const garmentImageFile = formData.get("garment_image") as File | null;
+    const humanImageBlob = formData.get("human_image") as Blob | null;
+    const garmentImageBlob = formData.get("garment_image") as Blob | null;
+    const garmentSrc = formData.get("garment_src") as string | null;
 
-    if (!humanImageFile || !garmentImageFile) {
+    if (!humanImageBlob || !garmentImageBlob) {
       return NextResponse.json(
         { error: "Missing human_image or garment_image" },
         { status: 400 }
@@ -72,10 +97,22 @@ export async function POST(request: Request) {
     const apiToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
 
     // Step 1 - Convert images to Base64
-    const humanImageBase64 = await fileToBase64(humanImageFile);
-    const garmentImageBase64 = await fileToBase64(garmentImageFile);
+    const humanImageBase64 = await fileToBase64(new File([humanImageBlob], "human_image"));
+    const garmentImageBase64 = await fileToBase64(new File([garmentImageBlob], "garment_image"));
 
-    // Step 2 - Call Kling AI to submit the task
+    // Step 2: Look up the garment description using the source path
+    const garmentDescription = garmentSrc ? garmentDescriptions.get(garmentSrc) : null;
+    let prompt = `Fusion of a person and a garment.`;
+    if (garmentDescription) {
+      prompt += ` The clothing is a ${garmentDescription} and it must also remain identical.`
+    }
+
+    const requestBody = {
+      human_image: humanImageBase64,
+      cloth_image: garmentImageBase64,
+    };
+
+    // Step 3 - Call Kling AI to submit the task
     console.log("Submitting task to Kling AI...");
     const submitResponse = await fetch(`${KLING_API_BASE_URL}${VIRTUAL_TRYON_SUBMIT_PATH}`, {
       method: 'POST',
@@ -83,11 +120,7 @@ export async function POST(request: Request) {
         'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        // Corrected parameters based on documentation
-        human_image: humanImageBase64,
-        cloth_image: garmentImageBase64,
-      }),
+      body: JSON.stringify(requestBody),
       // @ts-ignore
       timeout: 60000, // 60-second timeout
     });
@@ -102,7 +135,7 @@ export async function POST(request: Request) {
     const taskId = submitResult.data.task_id;
     console.log(`Task submitted successfully. Task ID: ${taskId}`);
 
-    // Step 3 - Poll for the result
+    // Step 4 - Poll for the result
     let attempts = 0;
     const maxAttempts = 40;
     let finalImageUrl = "";
@@ -145,8 +178,8 @@ export async function POST(request: Request) {
         throw new Error("AI generation timed out.");
     }
 
-    // Step 4 - Return the final image URL to the frontend
-    return NextResponse.json({ imageUrl: finalImageUrl });
+    // Step 5 - Return the final image URL to the frontend
+    return NextResponse.json({ imageUrl: finalImageUrl, garmentDescription });
 
   } catch (error) {
     console.error("An error occurred in the generate API:", error);

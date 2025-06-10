@@ -15,6 +15,7 @@ interface PastLook {
   timestamp: number
   originalHumanSrc?: string
   originalGarmentSrc?: string
+  garmentDescription?: string
 }
 
 const RECENT_LOOKS_STORAGE_KEY = "styleai_recent_looks"
@@ -53,6 +54,7 @@ export default function ResultsPage() {
   const initialImageUrl = searchParams.get("imageUrl")
   const initialHumanSrc = searchParams.get("humanSrc")
   const initialGarmentSrc = searchParams.get("garmentSrc")
+  const initialGarmentDescription = searchParams.get("garmentDescription")
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(initialImageUrl)
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null)
   const [pastLooks, setPastLooks] = useState<PastLook[]>([])
@@ -78,15 +80,16 @@ export default function ResultsPage() {
           imageUrl: initialImageUrl,
           style: null, // Original generated look has no style transformation
           timestamp: Date.now(),
-          originalHumanSrc: initialHumanSrc ?? undefined, // Ensure null becomes undefined
-          originalGarmentSrc: initialGarmentSrc ?? undefined, // Ensure null becomes undefined
+          originalHumanSrc: initialHumanSrc ?? undefined,
+          originalGarmentSrc: initialGarmentSrc ?? undefined,
+          garmentDescription: initialGarmentDescription ?? undefined,
         }
         const updatedLooks = [newLook, ...storedLooks]
         setPastLooks(updatedLooks)
         saveRecentLooks(updatedLooks)
       }
     }
-  }, [initialImageUrl, initialHumanSrc, initialGarmentSrc])
+  }, [initialImageUrl, initialHumanSrc, initialGarmentSrc, initialGarmentDescription])
 
   // Save pastLooks to localStorage whenever it changes
   useEffect(() => {
@@ -136,7 +139,7 @@ export default function ResultsPage() {
       return;
     }
 
-    const { originalGarmentSrc, originalHumanSrc } = originalLook;
+    const { originalGarmentSrc, originalHumanSrc, garmentDescription } = originalLook;
 
     // The backend API requires a full URL for relative paths.
     const fullGarmentUrl = originalGarmentSrc.startsWith('/')
@@ -158,11 +161,10 @@ export default function ResultsPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // garment_image_url is no longer sent, as the backend only needs the type for the prompt.
           human_image_url: fullHumanUrl,
           style_prompt: styleId,
           garment_type: originalGarmentSrc,
-          // modelVersion: 'kling-v2' // Example of overriding the default
+          garment_description: garmentDescription,
         }),
       });
 
@@ -182,6 +184,7 @@ export default function ResultsPage() {
           timestamp: Date.now(),
           originalHumanSrc: originalHumanSrc,
           originalGarmentSrc: originalGarmentSrc,
+          garmentDescription: garmentDescription,
         };
 
         // Add the new look to the front of the list
