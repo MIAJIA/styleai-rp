@@ -10,7 +10,7 @@ const fileToBase64 = async (file: File): Promise<string> => {
 
 // Helper function to convert URL to Base64
 const urlToBase64 = async (url: string): Promise<string> => {
-  const response = await fetch(url);
+  const response = await fetchWithTimeout(url, { timeout: 60000 });
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   return buffer.toString("base64");
@@ -18,6 +18,22 @@ const urlToBase64 = async (url: string): Promise<string> => {
 
 // Helper function for delaying execution, to be used in polling
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// A robust fetch function with a timeout
+async function fetchWithTimeout(
+  resource: RequestInfo,
+  options: RequestInit & { timeout: number }
+): Promise<Response> {
+  const { timeout } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  const response = await fetch(resource, {
+    ...options,
+    signal: controller.signal,
+  });
+  clearTimeout(id);
+  return response;
+}
 
 // --- Kling AI JWT Authentication ---
 const getApiToken = (accessKey: string, secretKey: string): string => {
@@ -151,14 +167,13 @@ export async function POST(request: Request) {
 
     console.log("Request body structure:", JSON.stringify(requestBody, null, 2).substring(0, 500) + "...");
 
-    const submitResponse = await fetch(`${KLING_API_BASE_URL}${IMAGE_GENERATION_SUBMIT_PATH}`, {
+    const submitResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${IMAGE_GENERATION_SUBMIT_PATH}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
-      // @ts-ignore
       timeout: 60000, // 60-second timeout
     });
 
@@ -182,11 +197,10 @@ export async function POST(request: Request) {
         // Regenerate token for each poll request to ensure it's not expired
         const pollingToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
 
-        const statusCheckResponse = await fetch(`${KLING_API_BASE_URL}${IMAGE_GENERATION_STATUS_PATH}${taskId}`, {
+        const statusCheckResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${IMAGE_GENERATION_STATUS_PATH}${taskId}`, {
           headers: {
             'Authorization': `Bearer ${pollingToken}`,
           },
-          // @ts-ignore
           timeout: 60000, // 60-second timeout
         });
 
