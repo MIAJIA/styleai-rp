@@ -1,12 +1,13 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Camera, Info, GalleryVerticalEnd } from "lucide-react"
+import { Home, Info, GalleryVerticalEnd, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/", label: "StyleMe", icon: Home },
   { href: "/results", label: "My Looks", icon: GalleryVerticalEnd },
+  { href: "/persona", label: "Persona", icon: User },
   { href: "/about", label: "Behind", icon: Info },
 ]
 
@@ -29,7 +30,7 @@ export default function IOSTabBar() {
                 isActive ? "text-primary" : "text-neutral-400",
               )}
             >
-              <item.icon size={22} className={cn(isActive ? "text-primary" : "text-neutral-400")} />
+              <item.icon size={20} className={cn(isActive ? "text-primary" : "text-neutral-400")} />
               <span className={cn("text-xs mt-1", isActive ? "font-medium" : "font-normal")}>{item.label}</span>
             </button>
           )
