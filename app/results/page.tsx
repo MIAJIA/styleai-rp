@@ -13,6 +13,8 @@ interface PastLook {
   imageUrl: string
   style: string | null
   timestamp: number
+  originalHumanSrc?: string
+  originalGarmentSrc?: string
 }
 
 const RECENT_LOOKS_STORAGE_KEY = "styleai_recent_looks"
@@ -49,6 +51,8 @@ export default function ResultsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialImageUrl = searchParams.get("imageUrl")
+  const initialHumanSrc = searchParams.get("humanSrc")
+  const initialGarmentSrc = searchParams.get("garmentSrc")
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(initialImageUrl)
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null)
   const [pastLooks, setPastLooks] = useState<PastLook[]>([])
@@ -74,13 +78,15 @@ export default function ResultsPage() {
           imageUrl: initialImageUrl,
           style: null, // Original generated look has no style transformation
           timestamp: Date.now(),
+          originalHumanSrc: initialHumanSrc ?? undefined, // Ensure null becomes undefined
+          originalGarmentSrc: initialGarmentSrc ?? undefined, // Ensure null becomes undefined
         }
         const updatedLooks = [newLook, ...storedLooks]
         setPastLooks(updatedLooks)
         saveRecentLooks(updatedLooks)
       }
     }
-  }, [initialImageUrl])
+  }, [initialImageUrl, initialHumanSrc, initialGarmentSrc])
 
   // Save pastLooks to localStorage whenever it changes
   useEffect(() => {
@@ -118,13 +124,32 @@ export default function ResultsPage() {
   }
 
   const handleGenerateNewStyle = async (styleId: string) => {
-    if (!currentImageUrl || isGenerating) return;
+    // The source of truth for the human image is whatever is currently displayed.
+    const humanImageUrl = currentImageUrl;
+
+    // We still need the original garment's path for the prompt and type lookup.
+    // So we find the very first, un-styled look in our history.
+    const originalLook = pastLooks.find(look => look.style === null);
+
+    if (!humanImageUrl || !originalLook?.originalGarmentSrc || isGenerating) {
+      alert("Could not find the necessary image sources to generate a new style. Please try again.");
+      return;
+    }
+
+    const { originalGarmentSrc, originalHumanSrc } = originalLook;
+
+    // The backend API requires a full URL for relative paths.
+    const fullGarmentUrl = originalGarmentSrc.startsWith('/')
+      ? `${window.location.origin}${originalGarmentSrc}`
+      : originalGarmentSrc;
+
+    const fullHumanUrl = humanImageUrl.startsWith('/')
+      ? `${window.location.origin}${humanImageUrl}`
+      : humanImageUrl;
 
     setSelectedStyle(styleId);
     setIsGenerating(true);
     setError(null);
-
-    const garmentSrc = searchParams.get("garmentSrc");
 
     try {
       const response = await fetch('/api/generate-style', {
@@ -133,9 +158,11 @@ export default function ResultsPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          imageUrl: currentImageUrl,
-          style: styleId,
-          garmentSrc: garmentSrc,
+          // garment_image_url is no longer sent, as the backend only needs the type for the prompt.
+          human_image_url: fullHumanUrl,
+          style_prompt: styleId,
+          garment_type: originalGarmentSrc,
+          // modelVersion: 'kling-v2' // Example of overriding the default
         }),
       });
 
@@ -153,6 +180,8 @@ export default function ResultsPage() {
           imageUrl: data.imageUrl,
           style: styleId,
           timestamp: Date.now(),
+          originalHumanSrc: originalHumanSrc,
+          originalGarmentSrc: originalGarmentSrc,
         };
 
         // Add the new look to the front of the list

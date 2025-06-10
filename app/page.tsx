@@ -170,10 +170,15 @@ export default function HomePage() {
     if (generatedImageUrl) {
       const params = new URLSearchParams();
       params.set('imageUrl', generatedImageUrl);
-      // Pass the original garment source URL if it's a default item
-      if (clothingPreview && clothingPreview.startsWith('/cloth/')) {
+
+      // Pass both the human and garment source URLs to the results page
+      if (selfiePreview) {
+        params.set('humanSrc', selfiePreview);
+      }
+      if (clothingPreview) {
         params.set('garmentSrc', clothingPreview);
       }
+
       router.push(`/results?${params.toString()}`);
     }
     // Reset states

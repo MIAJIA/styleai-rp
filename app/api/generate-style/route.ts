@@ -65,25 +65,42 @@ const stylePrompts = {
 };
 
 // --- Start: New dynamic request body builder ---
-const buildRequestBody = (modelVersion: string, prompt: string, imageBase64: string): object => {
+const buildRequestBody = (
+  modelVersion: string,
+  prompt: string,
+  humanImageBase64: string
+): object => {
+  const baseBody = {
+    prompt: prompt,
+    cfg_scale: 4,
+    aspect_ratio: "3:4",
+    human_fidelity: 1,
+    image: humanImageBase64, // The main image is the human portrait
+    image_reference: {
+      type: "face",
+      value: humanImageBase64,
+    }
+  };
+
   switch (modelVersion) {
+    case 'kling-v1-5':
+      return {
+        ...baseBody,
+        model_name: "kling-v1-5",
+      };
     case 'kling-v2':
       return {
+        ...baseBody,
         model_name: "kling-v2",
-        prompt: prompt,
-        image: imageBase64,
-        cfg_scale: 4,
-        aspect_ratio: "3:4",
       };
     case 'kling-v1':
     default: // Default to v1 if version is unknown or not provided
       return {
         prompt: prompt,
-        image: imageBase64,
+        image: humanImageBase64, // Older models might only support the main image
         cfg_scale: 4,
         aspect_ratio: "3:4",
       };
-    // Add more cases here for future model versions
   }
 };
 // --- End: New dynamic request body builder ---
@@ -94,12 +111,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
-    const { imageUrl, style, modelVersion = 'kling-v2', garmentSrc } = body; // Default to v2
+    const {
+      human_image_url,
+      style_prompt,
+      garment_type,
+      modelVersion = 'kling-v1-5'
+    } = await request.json();
 
-    if (!imageUrl) {
+    if (!human_image_url || !style_prompt || !garment_type) {
       return NextResponse.json(
-        { error: "Missing imageUrl" },
+        { error: "Missing required parameters: human_image_url, style_prompt, garment_type" },
         { status: 400 }
       );
     }
@@ -107,12 +128,12 @@ export async function POST(request: Request) {
     // Step 0: Get the dynamic API Token
     const apiToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
 
-    // Step 1 - Convert image URL to Base64
-    const imageBase64 = await urlToBase64(imageUrl);
+    // Step 1 - Convert human image URL to Base64
+    const humanImageBase64 = await urlToBase64(human_image_url);
 
     // Step 2 - Prepare the prompt based on style
-    const stylePrompt = style ? stylePrompts[style as keyof typeof stylePrompts] : "";
-    const garmentDescription = garmentSrc ? garmentDescriptions.get(garmentSrc) : null;
+    const stylePrompt = stylePrompts[style_prompt as keyof typeof stylePrompts] || "";
+    const garmentDescription = garmentDescriptions.get(garment_type);
 
     let prompt = `Extremely important: The person's face must be identical to the original image.`;
     // TODO: add body and pose
@@ -128,7 +149,7 @@ export async function POST(request: Request) {
     // Step 3 - Call Kling AI to submit the image generation task
     console.log(`Submitting image generation task to Kling AI using model: ${modelVersion}...`);
 
-    const requestBody = buildRequestBody(modelVersion, prompt, imageBase64);
+    const requestBody = buildRequestBody(modelVersion, prompt, humanImageBase64);
 
     console.log("Request body structure:", JSON.stringify(requestBody, null, 2).substring(0, 500) + "...");
 
