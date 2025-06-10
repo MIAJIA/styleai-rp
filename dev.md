@@ -322,10 +322,10 @@ globals.css
 
 当你执行 `git push` 时，如果看到这样的错误：
 
-```
+\`\`\`
 ! [rejected]        main -> main (fetch first)
 error: failed to push some refs to '...'
-```
+\`\`\`
 
 **原因**：这几乎总是因为在你上次 `pull` 之后，有人（或者你在另一台电脑上）向远程仓库（GitHub）推送了新的提交。远程仓库的历史记录比你的本地版本要新。Git 为了防止你意外覆盖这些新的提交，会拒绝你的 `push` 请求。
 
@@ -340,19 +340,19 @@ error: failed to push some refs to '...'
 **症状**：
 *   你的命令行提示符后面会出现 `(main|MERGING)` 或类似的字样。
 *   此时你再执行 `git pull` 或 `git merge`，会收到错误：
-    ```
+    \`\`\`
     error: You have not concluded your merge (MERGE_HEAD exists).
     fatal: Exiting because of unfinished merge.
-    ```
+    \`\`\`
 
 **核心原因**：`git pull` 命令实际上是 `git fetch`（获取）和 `git merge`（合并）两个动作的组合。你的操作在 `merge` 的过程中被中断了，留下了一个 `MERGE_HEAD` 临时文件，标志着一个"未完成的合并"。
 
 **解决方案：中止合并**
 这是最关键、最安全的一步。执行以下命令可以**安全地取消**这次未完成的合并，让你的仓库回到 `pull` 之前的状态：
 
-```bash
+\`\`\`bash
 git merge --abort
-```
+\`\`\`
 
 这个命令会清理掉卡住的状态，你的 `(main|MERGING)` 提示会变回 `(main)`。
 
@@ -364,15 +364,15 @@ git merge --abort
 
 1.  **先获取，不合并 (`git fetch`)**
     这个命令只从远程仓库下载最新的历史记录和数据，但**不会**尝试修改你本地的任何文件或分支。因为它只做下载，所以网络操作更简单，更不容易失败。
-    ```bash
+    \`\`\`bash
     git fetch origin
-    ```
+    \`\`\`
 
 2.  **再合并，纯本地操作 (`git merge`)**
     当 `fetch` 成功后，所有需要的数据都已经在你的电脑上了。现在，我们把刚刚下载下来的远程分支 (`origin/main`) 合并到你当前的本地分支 (`main`)。
-    ```bash
+    \`\`\`bash
     git merge origin/main
-    ```
+    \`\`\`
     **关键点**：这一步是**纯本地操作**，不涉及任何网络请求，所以它**绝对不会**因为网络问题而中断。
 
 ---
@@ -382,10 +382,10 @@ git merge --abort
 执行 `git merge` 后，可能会出现两种情况：
 *   **自动合并成功**：Git 可能会打开一个编辑器让你输入一个"Merge Commit"信息。直接保存并关闭即可。
 *   **需要我们手动确认**：就像我们遇到的情况，`git status` 显示 `All conflicts fixed but you are still merging.`。这说明 Git 已经成功地自动合并了所有文件，它只是需要你创建一个合并提交来最终确认这个操作。
-    ```bash
+    \`\`\`bash
     # 只需执行 commit 即可，Git 会自动生成一条默认的合并信息
     git commit
-    ```
+    \`\`\`
 
 ---
 
@@ -393,6 +393,6 @@ git merge --abort
 
 现在，你的本地 `main` 分支既包含了你自己的最新提交，也包含了从远程仓库合并过来的所有提交。你的本地历史已经比远程更新了，所以现在推送就一定会成功。
 
-```bash
+\`\`\`bash
 git push
-```
+\`\`\`
