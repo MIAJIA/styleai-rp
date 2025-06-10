@@ -72,20 +72,17 @@ const buildRequestBody = (
 ): object => {
   const baseBody = {
     prompt: prompt,
-    cfg_scale: 4,
+    // cfg_scale: 4,
     aspect_ratio: "3:4",
-    human_fidelity: 1,
     image: humanImageBase64, // The main image is the human portrait
-    image_reference: {
-      type: "face",
-      value: humanImageBase64,
-    }
+    image_reference: "face",
   };
 
   switch (modelVersion) {
     case 'kling-v1-5':
       return {
         ...baseBody,
+        human_fidelity: 1,
         model_name: "kling-v1-5",
       };
     case 'kling-v2':
