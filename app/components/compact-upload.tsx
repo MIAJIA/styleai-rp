@@ -59,7 +59,7 @@ export default function CompactUpload({
       fileInputRef.current.value = ""
     }
     if (onImageSelect) {
-      onImageSelect(new File([], ""))
+    onImageSelect(new File([], ""))
     }
   }
 
@@ -70,7 +70,7 @@ export default function CompactUpload({
     <div className="relative w-full">
       <div
         className={`${bgColor} rounded-[32px] p-3 shadow-lg transform transition-transform hover:scale-[1.02] ${isDragging ? "ring-2 ring-white" : ""
-          }`}
+        }`}
       >
         <div
           className="aspect-square relative overflow-hidden rounded-[24px] bg-white cursor-pointer"

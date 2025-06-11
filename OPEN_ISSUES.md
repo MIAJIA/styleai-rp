@@ -1,7 +1,7 @@
 P1. 改成carousel
 
 
-
+generate-style 里面call kling 生成prompt的时候去掉“Overall Recommendation” 和 “Confidence note” 只把输出中的Styling tips 加入进去kling的prompt。 请注意 我还需要在其他地方用到"Overall Recommendation" 和 "Confidence note" 所以openai的output还是保持不变
 
 # Open Issue: Generated Images are Cropped (Missing Head/Face)
 

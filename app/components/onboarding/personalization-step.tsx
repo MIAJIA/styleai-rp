@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -26,11 +26,20 @@ export default function PersonalizationStep({ data, onUpdate, onValidationChange
   const [accessoryMatching, setAccessoryMatching] = useState(data.accessoryMatching || false)
   const [specificStyles, setSpecificStyles] = useState<string[]>(data.specificStyles || [])
   const [customSpecificStyle, setCustomSpecificStyle] = useState(data.customSpecificStyle || "")
+  const isInitialMount = useRef(true)
 
-  // Memoize the update function
-  const updateData = useCallback(() => {
-    // This step is completely optional
+  // This step is completely optional, so always mark as valid
+  useEffect(() => {
     onValidationChange(true)
+  }, [onValidationChange])
+
+  // Update parent data whenever relevant state changes
+  useEffect(() => {
+    // Skip the initial render to avoid immediate update on mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
 
     onUpdate({
       sustainableFashion,
@@ -38,11 +47,7 @@ export default function PersonalizationStep({ data, onUpdate, onValidationChange
       specificStyles,
       customSpecificStyle,
     })
-  }, [sustainableFashion, accessoryMatching, specificStyles, customSpecificStyle, onUpdate, onValidationChange])
-
-  useEffect(() => {
-    updateData()
-  }, [updateData])
+  }, [sustainableFashion, accessoryMatching, specificStyles, customSpecificStyle, onUpdate])
 
   const toggleSpecificStyle = (styleId: string) => {
     setSpecificStyles((prev) => (prev.includes(styleId) ? prev.filter((item) => item !== styleId) : [...prev, styleId]))
@@ -89,11 +94,10 @@ export default function PersonalizationStep({ data, onUpdate, onValidationChange
           {SPECIFIC_STYLES.map((style) => (
             <div
               key={style.id}
-              className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                specificStyles.includes(style.id)
+              className={`p-3 rounded-lg border cursor-pointer transition-all ${specificStyles.includes(style.id)
                   ? "bg-pink-50 border-pink-300"
                   : "border-gray-200 hover:border-pink-200"
-              }`}
+                }`}
               onClick={() => toggleSpecificStyle(style.id)}
             >
               <div className="flex items-center space-x-3">

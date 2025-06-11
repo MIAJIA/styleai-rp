@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -26,21 +26,26 @@ const AVOID_ELEMENTS = [
 export default function StyleBoundariesStep({ data, onUpdate, onValidationChange }: StyleBoundariesStepProps) {
   const [avoidElements, setAvoidElements] = useState<string[]>(data.avoidElements || [])
   const [customAvoid, setCustomAvoid] = useState(data.customAvoid || "")
+  const isInitialMount = useRef(true)
 
-  // Memoize the update function
-  const updateData = useCallback(() => {
-    // This step is optional, so always valid
+  // This step is optional, so always mark as valid
+  useEffect(() => {
     onValidationChange(true)
+  }, [onValidationChange])
+
+  // Update parent data whenever relevant state changes
+  useEffect(() => {
+    // Skip the initial render to avoid immediate update on mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
 
     onUpdate({
       avoidElements,
       customAvoid,
     })
-  }, [avoidElements, customAvoid, onUpdate, onValidationChange])
-
-  useEffect(() => {
-    updateData()
-  }, [updateData])
+  }, [avoidElements, customAvoid, onUpdate])
 
   const toggleAvoidElement = (element: string) => {
     setAvoidElements((prev) => (prev.includes(element) ? prev.filter((item) => item !== element) : [...prev, element]))
@@ -95,11 +100,10 @@ export default function StyleBoundariesStep({ data, onUpdate, onValidationChange
               variant="outline"
               size="sm"
               onClick={() => toggleAvoidElement(element)}
-              className={`text-sm justify-start ${
-                avoidElements.includes(element)
+              className={`text-sm justify-start ${avoidElements.includes(element)
                   ? "bg-red-100 border-red-300 text-red-700"
                   : "border-gray-200 text-gray-600"
-              }`}
+                }`}
             >
               {element}
             </Button>

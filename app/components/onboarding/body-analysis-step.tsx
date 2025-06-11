@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -35,9 +35,10 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
   const [selectedChallenges, setSelectedChallenges] = useState<string[]>(data.bodyChallenges || [])
   const [customAdvantages, setCustomAdvantages] = useState(data.customAdvantages || "")
   const [customChallenges, setCustomChallenges] = useState(data.customChallenges || "")
+  const isInitialMount = useRef(true)
 
-  // Memoize the validation check to prevent unnecessary re-renders
-  const checkValidation = useCallback(() => {
+  // Check validation whenever relevant state changes
+  useEffect(() => {
     const isValid =
       selectedAdvantages.length > 0 ||
       selectedChallenges.length > 0 ||
@@ -46,8 +47,14 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
     onValidationChange(isValid)
   }, [selectedAdvantages.length, selectedChallenges.length, customAdvantages, customChallenges, onValidationChange])
 
-  // Memoize the data update to prevent unnecessary re-renders
-  const updateData = useCallback(() => {
+  // Update parent data whenever relevant state changes
+  useEffect(() => {
+    // Skip the initial render to avoid immediate update on mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+
     onUpdate({
       bodyAdvantages: selectedAdvantages,
       bodyChallenges: selectedChallenges,
@@ -55,16 +62,6 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
       customChallenges,
     })
   }, [selectedAdvantages, selectedChallenges, customAdvantages, customChallenges, onUpdate])
-
-  // Separate useEffect for validation
-  useEffect(() => {
-    checkValidation()
-  }, [checkValidation])
-
-  // Separate useEffect for data updates
-  useEffect(() => {
-    updateData()
-  }, [updateData])
 
   const toggleAdvantage = (advantage: string) => {
     setSelectedAdvantages((prev) =>
@@ -98,11 +95,10 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
                 variant="outline"
                 size="sm"
                 onClick={() => toggleAdvantage(advantage)}
-                className={`text-xs ${
-                  selectedAdvantages.includes(advantage)
+                className={`text-xs ${selectedAdvantages.includes(advantage)
                     ? "bg-green-100 border-green-300 text-green-700"
                     : "border-green-200 text-green-600"
-                }`}
+                  }`}
               >
                 {advantage}
               </Button>
@@ -123,11 +119,10 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
               variant="outline"
               size="sm"
               onClick={() => toggleAdvantage(advantage)}
-              className={`text-sm justify-start ${
-                selectedAdvantages.includes(advantage)
+              className={`text-sm justify-start ${selectedAdvantages.includes(advantage)
                   ? "bg-pink-100 border-pink-300 text-pink-700"
                   : "border-gray-200 text-gray-600"
-              }`}
+                }`}
             >
               {advantage}
             </Button>
@@ -154,11 +149,10 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
               variant="outline"
               size="sm"
               onClick={() => toggleChallenge(challenge)}
-              className={`text-sm justify-start ${
-                selectedChallenges.includes(challenge)
+              className={`text-sm justify-start ${selectedChallenges.includes(challenge)
                   ? "bg-orange-100 border-orange-300 text-orange-700"
                   : "border-gray-200 text-gray-600"
-              }`}
+                }`}
             >
               {challenge}
             </Button>

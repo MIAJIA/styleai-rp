@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import type { OnboardingData } from "../../onboarding/page"
@@ -28,21 +28,27 @@ const SCENARIOS = [
 export default function ScenarioStep({ data, onUpdate, onValidationChange }: ScenarioStepProps) {
   const [selectedScenario, setSelectedScenario] = useState<string>(data.primaryScenario || "")
   const [customScenario, setCustomScenario] = useState(data.customScenario || "")
+  const isInitialMount = useRef(true)
 
-  // Memoize validation and update functions
-  const validateAndUpdate = useCallback(() => {
+  // Check validation whenever relevant state changes
+  useEffect(() => {
     const isValid = selectedScenario !== "" || customScenario.trim() !== ""
     onValidationChange(isValid)
+  }, [selectedScenario, customScenario, onValidationChange])
+
+  // Update parent data whenever relevant state changes
+  useEffect(() => {
+    // Skip the initial render to avoid immediate update on mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
 
     onUpdate({
       primaryScenario: selectedScenario,
       customScenario,
     })
-  }, [selectedScenario, customScenario, onUpdate, onValidationChange])
-
-  useEffect(() => {
-    validateAndUpdate()
-  }, [validateAndUpdate])
+  }, [selectedScenario, customScenario, onUpdate])
 
   const selectScenario = (scenarioId: string) => {
     setSelectedScenario(scenarioId)
@@ -62,11 +68,10 @@ export default function ScenarioStep({ data, onUpdate, onValidationChange }: Sce
         {SCENARIOS.map((scenario) => (
           <Card
             key={scenario.id}
-            className={`p-4 cursor-pointer transition-all ${
-              selectedScenario === scenario.id
+            className={`p-4 cursor-pointer transition-all ${selectedScenario === scenario.id
                 ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
                 : "border-gray-200 hover:border-pink-200"
-            }`}
+              }`}
             onClick={() => selectScenario(scenario.id)}
           >
             <div className="flex items-center space-x-3">

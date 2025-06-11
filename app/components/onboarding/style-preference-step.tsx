@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import type { OnboardingData } from "../../onboarding/page"
@@ -28,21 +28,27 @@ const STYLE_OPTIONS = [
 export default function StylePreferenceStep({ data, onUpdate, onValidationChange }: StylePreferenceStepProps) {
   const [selectedStyles, setSelectedStyles] = useState<string[]>(data.stylePreferences || [])
   const [customStyle, setCustomStyle] = useState(data.customStyle || "")
+  const isInitialMount = useRef(true)
 
-  // Memoize validation and update functions
-  const validateAndUpdate = useCallback(() => {
+  // Check validation whenever relevant state changes
+  useEffect(() => {
     const isValid = selectedStyles.length > 0 || customStyle.trim() !== ""
     onValidationChange(isValid)
+  }, [selectedStyles.length, customStyle, onValidationChange])
+
+  // Update parent data whenever relevant state changes
+  useEffect(() => {
+    // Skip the initial render to avoid immediate update on mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
 
     onUpdate({
       stylePreferences: selectedStyles,
       customStyle,
     })
-  }, [selectedStyles, customStyle, onUpdate, onValidationChange])
-
-  useEffect(() => {
-    validateAndUpdate()
-  }, [validateAndUpdate])
+  }, [selectedStyles, customStyle, onUpdate])
 
   const toggleStyle = (styleId: string) => {
     setSelectedStyles((prev) => (prev.includes(styleId) ? prev.filter((item) => item !== styleId) : [...prev, styleId]))
@@ -60,11 +66,10 @@ export default function StylePreferenceStep({ data, onUpdate, onValidationChange
         {STYLE_OPTIONS.map((style) => (
           <Card
             key={style.id}
-            className={`p-4 cursor-pointer transition-all ${
-              selectedStyles.includes(style.id)
+            className={`p-4 cursor-pointer transition-all ${selectedStyles.includes(style.id)
                 ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
                 : "border-gray-200 hover:border-pink-200"
-            }`}
+              }`}
             onClick={() => toggleStyle(style.id)}
           >
             <div className="flex items-center space-x-3">

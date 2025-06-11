@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -77,9 +77,15 @@ export default function OnboardingPage() {
     localStorage.setItem("styleMe_onboarding_data", JSON.stringify(onboardingData))
   }, [onboardingData])
 
-  const updateOnboardingData = (stepData: Partial<OnboardingData>) => {
+  // Memoize the update callback to prevent infinite re-renders
+  const updateOnboardingData = useCallback((stepData: Partial<OnboardingData>) => {
     setOnboardingData((prev) => ({ ...prev, ...stepData }))
-  }
+  }, [])
+
+  // Memoize the validation callback to prevent infinite re-renders
+  const handleValidationChange = useCallback((isValid: boolean) => {
+    setIsStepValid(isValid)
+  }, [])
 
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS - 1) {
@@ -109,30 +115,30 @@ export default function OnboardingPage() {
     switch (currentStep) {
       case 0:
         return (
-          <PhotoUploadStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={setIsStepValid} />
+          <PhotoUploadStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={handleValidationChange} />
         )
       case 1:
         return (
-          <BodyAnalysisStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={setIsStepValid} />
+          <BodyAnalysisStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={handleValidationChange} />
         )
       case 2:
         return (
           <StylePreferenceStep
             data={onboardingData}
             onUpdate={updateOnboardingData}
-            onValidationChange={setIsStepValid}
+            onValidationChange={handleValidationChange}
           />
         )
       case 3:
         return (
-          <ScenarioStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={setIsStepValid} />
+          <ScenarioStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={handleValidationChange} />
         )
       case 4:
         return (
           <StyleBoundariesStep
             data={onboardingData}
             onUpdate={updateOnboardingData}
-            onValidationChange={setIsStepValid}
+            onValidationChange={handleValidationChange}
           />
         )
       case 5:
@@ -140,7 +146,7 @@ export default function OnboardingPage() {
           <PersonalizationStep
             data={onboardingData}
             onUpdate={updateOnboardingData}
-            onValidationChange={setIsStepValid}
+            onValidationChange={handleValidationChange}
           />
         )
       default:
