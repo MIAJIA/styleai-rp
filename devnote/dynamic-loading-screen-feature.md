@@ -60,23 +60,23 @@
 *   **路径:** `POST /api/get-style-suggestion`
 *   **职责:** 快速生成并返回 AI 造型建议。
 *   **请求体 (Request Body):**
-    ```json
+    \`\`\`json
     {
       "human_image_url": "...",
       "garment_type": "...", // or garment_description
       "personaProfile": { ... }
     }
-    ```
+    \`\`\`
 *   **核心逻辑:**
     1.  接收请求，验证参数。
     2.  调用 OpenAI GPT-4o（复用现有 prompt 逻辑）。
     3.  获取返回的建议文本。
 *   **响应体 (Response Body):**
-    ```json
+    \`\`\`json
     {
       "styleSuggestion": "这是为您生成的专属造型建议..."
     }
-    ```
+    \`\`\`
 *   **特点:** 响应速度快，不涉及长时间等待。
 
 ### 4.2. 修改现有 API: `app/api/generate-style/route.ts`
@@ -84,7 +84,7 @@
 *   **路径:** `POST /api/generate-style` (保持不变)
 *   **职责:** 接收造型建议（可选）和图片信息，生成并返回最终图片。
 *   **请求体 (Request Body) - 扩展:**
-    ```json
+    \`\`\`json
     {
       "human_image_url": "...",
       "style_prompt": "...",
@@ -93,9 +93,9 @@
       "styleSuggestion": "这是已经从上一步获取到的建议文本...",
       "modelVersion": "kling-v1-5"
     }
-    ```
+    \`\`\`
 *   **核心逻辑修改:**
-    ```typescript
+    \`\`\`typescript
     // 在函数开头
     const { styleSuggestion, ...otherParams } = await request.json();
 
@@ -112,7 +112,7 @@
 
     // 后续逻辑保持不变，使用 finalStyleSuggestion 来构建可灵 AI 的 prompt
     // ... 调用可灵 AI，轮询，返回结果
-    ```
+    \`\`\`
 
 ---
 

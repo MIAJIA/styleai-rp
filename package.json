@@ -48,7 +48,7 @@
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
     "next-themes": "latest",
-    "openai": "^5.3.0",
+    "openai": "latest",
     "react": "^19",
     "react-day-picker": "latest",
     "react-dom": "^19",
@@ -59,6 +59,7 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "latest",
+    "ws": "latest",
     "zod": "^3.24.1"
   },
   "devDependencies": {

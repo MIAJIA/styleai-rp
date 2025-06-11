@@ -60,7 +60,7 @@
 
 ## 📤 输出格式参考（UserStyleProfile）
 
-```json
+\`\`\`json
 {
   "strengths": ["腿长", "腰细"],
   "weaknesses": ["胯宽"],
