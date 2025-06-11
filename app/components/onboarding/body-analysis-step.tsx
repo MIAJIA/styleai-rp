@@ -190,8 +190,8 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
             variant="outline"
             onClick={() => setBoneStructure("delicate")}
             className={`w-full justify-start text-sm ${boneStructure === "delicate"
-                ? "bg-blue-100 border-blue-300 text-blue-700"
-                : "border-gray-200 text-gray-600"
+              ? "bg-blue-100 border-blue-300 text-blue-700"
+              : "border-gray-200 text-gray-600"
               }`}
           >
             <span className="mr-2">🌸</span>
@@ -208,8 +208,8 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
             variant="outline"
             onClick={() => setUpperBodyType("straight")}
             className={`w-full justify-start text-sm ${upperBodyType === "straight"
-                ? "bg-purple-100 border-purple-300 text-purple-700"
-                : "border-gray-200 text-gray-600"
+              ? "bg-purple-100 border-purple-300 text-purple-700"
+              : "border-gray-200 text-gray-600"
               }`}
           >
             <span className="mr-2">📏</span>
@@ -219,8 +219,8 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
             variant="outline"
             onClick={() => setUpperBodyType("curved")}
             className={`w-full justify-start text-sm ${upperBodyType === "curved"
-                ? "bg-purple-100 border-purple-300 text-purple-700"
-                : "border-gray-200 text-gray-600"
+              ? "bg-purple-100 border-purple-300 text-purple-700"
+              : "border-gray-200 text-gray-600"
               }`}
           >
             <span className="mr-2">🌙</span>
