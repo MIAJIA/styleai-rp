@@ -36,6 +36,7 @@ export default function HomePage() {
   const [clothingFile, setClothingFile] = useState<File | null>(null)
   const [selfiePreview, setSelfiePreview] = useState<string>("")
   const [clothingPreview, setClothingPreview] = useState<string>("")
+  const [selectedPersona, setSelectedPersona] = useState<object | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [showAnimation, setShowAnimation] = useState(false)
   const [isApiFinished, setIsApiFinished] = useState(false)
@@ -46,6 +47,7 @@ export default function HomePage() {
 
   const handleSelfieUpload = (file: File) => {
     setSelfieFile(file)
+    setSelectedPersona(null)
     if (file && file.name) {
       const url = URL.createObjectURL(file)
       setSelfiePreview(url)
@@ -70,8 +72,9 @@ export default function HomePage() {
     setIsWardrobeOpen(false)
   }
 
-  const handlePortraitSelect = (imageSrc: string) => {
+  const handlePortraitSelect = (imageSrc: string, persona?: object) => {
     setSelfiePreview(imageSrc)
+    setSelectedPersona(persona || null)
     setSelfieFile(null)
     setIsPortraitSheetOpen(false)
   }
@@ -132,7 +135,6 @@ export default function HomePage() {
 
       if (finalGarmentFile) {
         formData.append("garment_image", finalGarmentFile)
-        // Also send the original source path, which is the key for the description map
         if (clothingPreview) {
           formData.append("garment_src", clothingPreview);
         }
@@ -140,6 +142,10 @@ export default function HomePage() {
         alert("Please select a garment to try on.")
         setIsGenerating(false)
         return
+      }
+
+      if (selectedPersona) {
+        formData.append("persona_profile", JSON.stringify(selectedPersona));
       }
 
       const response = await fetch("/api/generate", {
@@ -155,8 +161,7 @@ export default function HomePage() {
       const data = await response.json()
       if (data.imageUrl) {
         setGeneratedImageUrl(data.imageUrl)
-        // Pass the garment description from the API to the animation component
-        handleAnimationComplete(data.imageUrl, data.garmentDescription)
+        handleAnimationComplete(data.imageUrl, data.garmentDescription, data.personaProfile)
       } else {
         throw new Error("Generation succeeded but no image URL was returned.")
       }
@@ -171,21 +176,27 @@ export default function HomePage() {
     }
   }
 
-  const handleAnimationComplete = (finalImageUrl: string, garmentDescription?: string) => {
+  const handleAnimationComplete = (
+    finalImageUrl: string,
+    garmentDescription?: string,
+    personaProfile?: string
+  ) => {
     if (finalImageUrl) {
       const params = new URLSearchParams();
       params.set('imageUrl', finalImageUrl);
 
-      // Pass both the human and garment source URLs to the results page
+      // Pass all context to the results page
       if (selfiePreview) {
         params.set('humanSrc', selfiePreview);
       }
       if (clothingPreview) {
         params.set('garmentSrc', clothingPreview);
       }
-      // Pass the garment description if it exists
       if (garmentDescription) {
         params.set('garmentDescription', garmentDescription);
+      }
+      if (personaProfile) {
+        params.set('personaProfile', personaProfile);
       }
 
       router.push(`/results?${params.toString()}`);

@@ -16,6 +16,7 @@ interface PastLook {
   originalHumanSrc?: string
   originalGarmentSrc?: string
   garmentDescription?: string
+  personaProfile?: string | null
 }
 
 const RECENT_LOOKS_STORAGE_KEY = "styleai_recent_looks"
@@ -55,6 +56,7 @@ export default function ResultsPage() {
   const initialHumanSrc = searchParams.get("humanSrc")
   const initialGarmentSrc = searchParams.get("garmentSrc")
   const initialGarmentDescription = searchParams.get("garmentDescription")
+  const initialPersonaProfile = searchParams.get("personaProfile")
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(initialImageUrl)
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null)
   const [pastLooks, setPastLooks] = useState<PastLook[]>([])
@@ -83,13 +85,14 @@ export default function ResultsPage() {
           originalHumanSrc: initialHumanSrc ?? undefined,
           originalGarmentSrc: initialGarmentSrc ?? undefined,
           garmentDescription: initialGarmentDescription ?? undefined,
+          personaProfile: initialPersonaProfile,
         }
         const updatedLooks = [newLook, ...storedLooks]
         setPastLooks(updatedLooks)
         saveRecentLooks(updatedLooks)
       }
     }
-  }, [initialImageUrl, initialHumanSrc, initialGarmentSrc, initialGarmentDescription])
+  }, [initialImageUrl, initialHumanSrc, initialGarmentSrc, initialGarmentDescription, initialPersonaProfile])
 
   // Save pastLooks to localStorage whenever it changes
   useEffect(() => {
@@ -139,7 +142,7 @@ export default function ResultsPage() {
       return;
     }
 
-    const { originalGarmentSrc, originalHumanSrc, garmentDescription } = originalLook;
+    const { originalGarmentSrc, originalHumanSrc, garmentDescription, personaProfile } = originalLook;
 
     // The backend API requires a full URL for relative paths.
     const fullGarmentUrl = originalGarmentSrc.startsWith('/')
@@ -165,6 +168,7 @@ export default function ResultsPage() {
           style_prompt: styleId,
           garment_type: originalGarmentSrc,
           garment_description: garmentDescription,
+          personaProfile: personaProfile ? JSON.parse(personaProfile) : null,
         }),
       });
 
@@ -185,6 +189,7 @@ export default function ResultsPage() {
           originalHumanSrc: originalHumanSrc,
           originalGarmentSrc: originalGarmentSrc,
           garmentDescription: garmentDescription,
+          personaProfile: personaProfile,
         };
 
         // Add the new look to the front of the list

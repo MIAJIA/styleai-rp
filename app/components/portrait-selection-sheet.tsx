@@ -6,7 +6,7 @@ import { Plus, X } from "lucide-react"
 
 // Props for the component
 interface PortraitSelectionSheetProps {
-  onPortraitSelect: (imageSrc: string) => void
+  onPortraitSelect: (imageSrc: string, persona?: object) => void
 }
 
 // Data structure for a single portrait
@@ -15,11 +15,121 @@ interface Portrait {
   imageSrc: string
 }
 
-// Pre-defined example photos to show if the user has none
+// --- Start: Persona Data ---
+// This map will hold the detailed persona information for each example user.
+// The key is the image path, and the value is the detailed style profile.
+const examplePersonaMap = new Map<string, object>([
+  [
+    '/examples/example_王大可_职场.jpg',
+    {
+      "user_id": "user001",
+      "body_profile": {
+        "shape_type": "H型",
+        "height_cm": 166,
+        "weight_kg": 55,
+        "proportions": { "waist_position": "正常", "leg_length": "腿长", "shoulder_to_hip_ratio": "标准" },
+        "strengths": ["腿长", "头肩比好"],
+        "weaknesses": ["无明显腰线"]
+      },
+      "face_profile": {
+        "face_shape": "瓜子脸",
+        "line_style": "曲线感",
+        "facial_strengths": ["五官柔和"],
+        "facial_weaknesses": []
+      },
+      "color_texture": {
+        "skin_tone": "冷白",
+        "fabric_preferences": ["真丝", "羊毛"],
+        "pattern_preferences": ["素色"]
+      },
+      "natural_vibe": { "personality": "外向", "natural_style": "干练都市感" },
+      "style_goal": {
+        "target_vibe": "优雅精英",
+        "highlight_parts": ["腿部", "锁骨"],
+        "hide_parts": ["腰线"],
+        "scene": "上班",
+        "style_keywords": ["极简", "通勤", "中性色"],
+        "style_constraints": ["不能太暴露"]
+      }
+    }
+  ],
+  [
+    '/examples/example_李大可_少女.jpg',
+    {
+      "user_id": "user002",
+      "body_profile": {
+        "shape_type": "A型",
+        "height_cm": 155,
+        "weight_kg": 46,
+        "proportions": { "waist_position": "正常", "leg_length": "腿短", "shoulder_to_hip_ratio": "窄肩" },
+        "strengths": ["眼睛大", "腰细"],
+        "weaknesses": ["腿短", "身高矮"]
+      },
+      "face_profile": {
+        "face_shape": "圆脸",
+        "line_style": "曲线感",
+        "facial_strengths": ["笑容甜美"],
+        "facial_weaknesses": []
+      },
+      "color_texture": {
+        "skin_tone": "暖白",
+        "fabric_preferences": ["棉", "雪纺"],
+        "pattern_preferences": ["花朵", "碎图案"]
+      },
+      "natural_vibe": { "personality": "内向", "natural_style": "可爱少女系" },
+      "style_goal": {
+        "target_vibe": "韩系甜美",
+        "highlight_parts": ["脸部", "上半身"],
+        "hide_parts": ["腿部"],
+        "scene": "约会",
+        "style_keywords": ["韩系", "减龄", "可爱"],
+        "style_constraints": ["不穿高跟", "不能太成熟"]
+      }
+    }
+  ],
+  [
+    '/examples/example_刘大壮_文艺.jpg',
+    {
+      "user_id": "user003",
+      "body_profile": {
+        "shape_type": "X型",
+        "height_cm": 170,
+        "weight_kg": 58,
+        "proportions": { "waist_position": "正常", "leg_length": "腿长", "shoulder_to_hip_ratio": "标准" },
+        "strengths": ["身高好", "腿长"],
+        "weaknesses": ["胯宽"]
+      },
+      "face_profile": {
+        "face_shape": "长脸",
+        "line_style": "直线感",
+        "facial_strengths": ["鼻梁高", "眼型特别"],
+        "facial_weaknesses": ["颧骨略高"]
+      },
+      "color_texture": {
+        "skin_tone": "小麦色",
+        "fabric_preferences": ["麻", "棉"],
+        "pattern_preferences": ["几何", "拼接"]
+      },
+      "natural_vibe": { "personality": "中性", "natural_style": "文艺冷感" },
+      "style_goal": {
+        "target_vibe": "独立有态度",
+        "highlight_parts": ["肩部线条"],
+        "hide_parts": ["胯部"],
+        "scene": "展览/咖啡馆",
+        "style_keywords": ["日杂", "无性别风", "复古中性"],
+        "style_constraints": ["不喜欢紧身", "不喜欢高饱和色"]
+      }
+    }
+  ]
+]);
+// --- End: Persona Data ---
+
+// Pre-defined example photos to show if the user has none.
+// These paths now match the renamed files and the keys in the persona map.
 const EXAMPLE_PHOTOS: Portrait[] = [
-  { id: "example-1", imageSrc: "/examples/example_刘大壮.jpg" },
-  { id: "example-2", imageSrc: "/examples/example_李大可.jpg" },
-  { id: "example-3", imageSrc: "/examples/example_王大可.jpg" },
+  { id: "example-1", imageSrc: "/examples/example_刘大壮_文艺.jpg" },
+  { id: "example-2", imageSrc: "/examples/example_李大可_少女.jpg" },
+  { id: "example-3", imageSrc: "/examples/example_王大可_职场.jpg" },
 ];
 
 // Using the real idol images now located in /public/idols
@@ -185,7 +295,10 @@ export default function PortraitSelectionSheet({ onPortraitSelect }: PortraitSel
           className="relative group aspect-square bg-white rounded-xl shadow-sm cursor-pointer overflow-hidden"
         >
           <button
-            onClick={() => onPortraitSelect(photo.imageSrc)}
+            onClick={() => {
+              const persona = examplePersonaMap.get(photo.imageSrc);
+              onPortraitSelect(photo.imageSrc, persona);
+            }}
             className="w-full h-full bg-white rounded-lg overflow-hidden"
           >
             <img

@@ -85,6 +85,7 @@ export async function POST(request: Request) {
     const humanImageBlob = formData.get("human_image") as Blob | null;
     const garmentImageBlob = formData.get("garment_image") as Blob | null;
     const garmentSrc = formData.get("garment_src") as string | null;
+    const personaProfile = formData.get("persona_profile") as string | null;
 
     if (!humanImageBlob || !garmentImageBlob) {
       return NextResponse.json(
@@ -178,8 +179,12 @@ export async function POST(request: Request) {
         throw new Error("AI generation timed out.");
     }
 
-    // Step 5 - Return the final image URL to the frontend
-    return NextResponse.json({ imageUrl: finalImageUrl, garmentDescription });
+    // Step 5 - Return the final image URL and context to the frontend
+    return NextResponse.json({
+      imageUrl: finalImageUrl,
+      garmentDescription,
+      personaProfile,
+    });
 
   } catch (error) {
     console.error("An error occurred in the generate API:", error);

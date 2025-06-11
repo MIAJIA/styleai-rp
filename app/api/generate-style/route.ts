@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import * as jwt from "jsonwebtoken";
+import OpenAI from "openai";
 
 // Helper function to convert a file to a Base64 string
 const fileToBase64 = async (file: File): Promise<string> => {
@@ -34,6 +35,11 @@ async function fetchWithTimeout(
   clearTimeout(id);
   return response;
 }
+
+// --- OpenAI API Initialization ---
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 // --- Kling AI JWT Authentication ---
 const getApiToken = (accessKey: string, secretKey: string): string => {
@@ -129,6 +135,7 @@ export async function POST(request: Request) {
       style_prompt,
       garment_type,
       garment_description,
+      personaProfile,
       modelVersion = 'kling-v1-5'
     } = await request.json();
 
@@ -139,32 +146,109 @@ export async function POST(request: Request) {
       );
     }
 
-    // Step 0: Get the dynamic API Token
+    // Step 0: Get API Tokens and Keys
     const apiToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
-
-    // Step 1 - Convert human image URL to Base64
-    const humanImageBase64 = await urlToBase64(human_image_url);
-
-    // Step 2 - Prepare the prompt based on style
-    const stylePromptText = stylePrompts[style_prompt as keyof typeof stylePrompts] || "";
-    const finalGarmentDescription = garment_description || (garment_type ? garmentDescriptions.get(garment_type) : undefined);
-
-    let prompt = `Extremely important: The person's face must be identical to the original image.`;
-    // TODO: add body and pose
-    if (finalGarmentDescription) {
-      prompt += ` The clothing is a ${finalGarmentDescription} and it must also remain identical.`;
-    } else {
-      prompt += ` The clothing must also remain identical.`;
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ error: "OpenAI API key is not configured." }, { status: 500 });
     }
 
-    prompt += ` Only change the background to: ${stylePromptText || 'a beautiful setting'}. Do not alter the person or their attire in any way.`;
+    // Step 1 - Convert human image URL to Base64 (for Kling)
+    // We will pass URLs directly to OpenAI
+    const humanImageBase64 = await urlToBase64(human_image_url);
 
-    console.log("～～～Prompt:", prompt);
-    // Step 3 - Call Kling AI to submit the image generation task
+    // Step 2 - Prepare data for prompts
+    const stylePromptText = stylePrompts[style_prompt as keyof typeof stylePrompts] || "";
+    const finalGarmentDescription = garment_description || (garment_type ? garmentDescriptions.get(garment_type) : undefined);
+    let styleSuggestion = "";
+
+    // --- NEW: Step 2.5 - Get Style Suggestions from OpenAI if a persona is provided ---
+    if (personaProfile) {
+      console.log("Persona profile found, calling OpenAI for style suggestions...");
+      try {
+        // We need the absolute URL for the garment image to fetch it locally
+        const host = request.headers.get("host") || "localhost:3000";
+        const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+        const garmentImageUrl = garment_type ? `${protocol}://${host}${garment_type}` : '';
+
+        const openAIPrompt = `You are a professional fashion stylist. Given the user's photo, the photo of the target clothing item, and the user's style profile, generate personalized outfit suggestions focused on how well the target clothing item works for them. Your advice should highlight the user's strengths and reflect their styling goals, while providing realistic and supportive fashion recommendations. Be confident and friendly in tone.
+
+---
+
+🧠 AI Stylist Profile:
+${JSON.stringify(personaProfile, null, 2)}
+
+---
+
+🎯 Output Requirements:
+1. **Overall recommendation** – Is this item suitable for the user's body type and style goal? Why or why not?
+2. **Styling tips** – How to wear this item to highlight strengths and match the target vibe?
+   - Which **scenarios** (events, occasions, or settings) are most suitable for this outfit?
+   - What other **clothing items or accessories** would best complement this look? (e.g., jackets, shoes, bags, jewelry)
+3. **Confidence note** – End with a short, affirming message that helps the user feel empowered and stylish.
+
+Focus on personalizing the advice based on physical features, fashion preferences, and goals. Write as a trusted personal stylist.`;
+
+        if (garmentImageUrl && garment_type) {
+          // Instead of sending URLs to OpenAI, convert images to Base64 Data URIs,
+          // which is more robust and avoids localhost accessibility issues.
+          const humanImageB64 = await urlToBase64(human_image_url);
+          const garmentImageB64 = await urlToBase64(garmentImageUrl);
+
+          const getMimeType = (filePath: string) => {
+            if (filePath.endsWith('.png')) return 'image/png';
+            if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) return 'image/jpeg';
+            return 'image/jpeg'; // Default
+          };
+
+          const humanImageDataUri = `data:${getMimeType(human_image_url)};base64,${humanImageB64}`;
+          const garmentImageDataUri = `data:${getMimeType(garment_type)};base64,${garmentImageB64}`;
+
+          const visionResponse = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: openAIPrompt },
+                  { type: "image_url", image_url: { url: humanImageDataUri } },
+                  { type: "image_url", image_url: { url: garmentImageDataUri } },
+                ],
+              },
+            ],
+            max_tokens: 500,
+          });
+          styleSuggestion = visionResponse.choices[0].message.content || "";
+          console.log("～～～OpenAI Style Suggestion:", styleSuggestion);
+        }
+      } catch (e) {
+        console.error("Error calling OpenAI API:", e);
+        // Do not block the process if OpenAI fails, just log the error and proceed.
+        styleSuggestion = "Could not retrieve style suggestions, proceeding with default prompt.";
+      }
+    }
+
+    // Step 3 - Prepare the final prompt for Kling AI
+    let prompt = "";
+    if (styleSuggestion) {
+      prompt = `A photorealistic image of a person, styled according to the following expert fashion advice: "${styleSuggestion}". The background should be a scene inspired by: '${stylePromptText}'. IMPORTANT: The person's face and original clothing item must be perfectly preserved. The only change is the overall styling, accessories, and background, according to the fashion advice.`;
+    } else {
+      // Fallback to original prompt logic if no suggestion is generated
+      prompt = `Extremely important: The person's face must be identical to the original image.`;
+      if (finalGarmentDescription) {
+        prompt += ` The clothing is a ${finalGarmentDescription} and it must also remain identical.`;
+      } else {
+        prompt += ` The clothing must also remain identical.`;
+      }
+      prompt += ` Only change the background to: ${stylePromptText || 'a beautiful setting'}. Do not alter the person or their attire in any way.`;
+    }
+
+    console.log("～～～Final Kling Prompt:", prompt);
+    // Step 4 - Call Kling AI to submit the image generation task
     console.log(`Submitting image generation task to Kling AI using model: ${modelVersion}...`);
 
     const requestBody = buildRequestBody(modelVersion, prompt, humanImageBase64);
 
+    // print all info in requestBody
     console.log("Request body structure:", JSON.stringify(requestBody, null, 2).substring(0, 500) + "...");
 
     const submitResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${IMAGE_GENERATION_SUBMIT_PATH}`, {
@@ -186,7 +270,7 @@ export async function POST(request: Request) {
     const taskId = submitResult.data.task_id;
     console.log(`Image generation task submitted successfully. Task ID: ${taskId}`);
 
-    // Step 4 - Poll for the result
+    // Step 5 - Poll for the result
     let attempts = 0;
     const maxAttempts = 40;
     let finalImageUrl = "";
@@ -228,7 +312,7 @@ export async function POST(request: Request) {
         throw new Error("AI generation timed out.");
     }
 
-    // Step 5 - Return the final image URL to the frontend
+    // Step 6 - Return the final image URL to the frontend
     return NextResponse.json({ imageUrl: finalImageUrl });
 
   } catch (error) {
