@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import type { OnboardingData } from "../../onboarding/page"
+import { OnboardingData } from "@/lib/onboarding-storage"
 
 interface FacialAnalysisStepProps {
   data: OnboardingData
@@ -65,9 +65,8 @@ export default function FacialAnalysisStep({ data, onUpdate, onValidationChange 
           <Button
             variant="outline"
             onClick={() => setFacialIntensity("strong")}
-            className={`w-full justify-start text-sm p-4 h-auto ${
-              facialIntensity === "strong" ? "bg-red-100 border-red-300 text-red-700" : "border-gray-200 text-gray-600"
-            }`}
+            className={`w-full justify-start text-sm p-4 h-auto ${facialIntensity === "strong" ? "bg-red-100 border-red-300 text-red-700" : "border-gray-200 text-gray-600"
+              }`}
           >
             <div className="text-left">
               <div className="flex items-center">
@@ -81,11 +80,10 @@ export default function FacialAnalysisStep({ data, onUpdate, onValidationChange 
           <Button
             variant="outline"
             onClick={() => setFacialIntensity("medium")}
-            className={`w-full justify-start text-sm p-4 h-auto ${
-              facialIntensity === "medium"
+            className={`w-full justify-start text-sm p-4 h-auto ${facialIntensity === "medium"
                 ? "bg-yellow-100 border-yellow-300 text-yellow-700"
                 : "border-gray-200 text-gray-600"
-            }`}
+              }`}
           >
             <div className="text-left">
               <div className="flex items-center">
@@ -99,11 +97,10 @@ export default function FacialAnalysisStep({ data, onUpdate, onValidationChange 
           <Button
             variant="outline"
             onClick={() => setFacialIntensity("light")}
-            className={`w-full justify-start text-sm p-4 h-auto ${
-              facialIntensity === "light"
+            className={`w-full justify-start text-sm p-4 h-auto ${facialIntensity === "light"
                 ? "bg-blue-100 border-blue-300 text-blue-700"
                 : "border-gray-200 text-gray-600"
-            }`}
+              }`}
           >
             <div className="text-left">
               <div className="flex items-center">
@@ -125,9 +122,8 @@ export default function FacialAnalysisStep({ data, onUpdate, onValidationChange 
           <Button
             variant="outline"
             onClick={() => setFacialLines("straight")}
-            className={`w-full justify-start text-sm p-4 h-auto ${
-              facialLines === "straight" ? "bg-gray-100 border-gray-300 text-gray-700" : "border-gray-200 text-gray-600"
-            }`}
+            className={`w-full justify-start text-sm p-4 h-auto ${facialLines === "straight" ? "bg-gray-100 border-gray-300 text-gray-700" : "border-gray-200 text-gray-600"
+              }`}
           >
             <div className="text-left">
               <div className="flex items-center">
@@ -141,9 +137,8 @@ export default function FacialAnalysisStep({ data, onUpdate, onValidationChange 
           <Button
             variant="outline"
             onClick={() => setFacialLines("curved")}
-            className={`w-full justify-start text-sm p-4 h-auto ${
-              facialLines === "curved" ? "bg-pink-100 border-pink-300 text-pink-700" : "border-gray-200 text-gray-600"
-            }`}
+            className={`w-full justify-start text-sm p-4 h-auto ${facialLines === "curved" ? "bg-pink-100 border-pink-300 text-pink-700" : "border-gray-200 text-gray-600"
+              }`}
           >
             <div className="text-left">
               <div className="flex items-center">
@@ -165,11 +160,10 @@ export default function FacialAnalysisStep({ data, onUpdate, onValidationChange 
           <Button
             variant="outline"
             onClick={() => setFacialMaturity("mature")}
-            className={`w-full justify-start text-sm p-4 h-auto ${
-              facialMaturity === "mature"
+            className={`w-full justify-start text-sm p-4 h-auto ${facialMaturity === "mature"
                 ? "bg-purple-100 border-purple-300 text-purple-700"
                 : "border-gray-200 text-gray-600"
-            }`}
+              }`}
           >
             <div className="text-left">
               <div className="flex items-center">
@@ -183,11 +177,10 @@ export default function FacialAnalysisStep({ data, onUpdate, onValidationChange 
           <Button
             variant="outline"
             onClick={() => setFacialMaturity("youthful")}
-            className={`w-full justify-start text-sm p-4 h-auto ${
-              facialMaturity === "youthful"
+            className={`w-full justify-start text-sm p-4 h-auto ${facialMaturity === "youthful"
                 ? "bg-green-100 border-green-300 text-green-700"
                 : "border-gray-200 text-gray-600"
-            }`}
+              }`}
           >
             <div className="text-left">
               <div className="flex items-center">

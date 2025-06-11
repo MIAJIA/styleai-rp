@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import type { OnboardingData } from "../../onboarding/page"
+import { OnboardingData } from "@/lib/onboarding-storage"
 
 interface PersonalizationStepProps {
   data: OnboardingData
@@ -95,8 +95,8 @@ export default function PersonalizationStep({ data, onUpdate, onValidationChange
             <div
               key={style.id}
               className={`p-3 rounded-lg border cursor-pointer transition-all ${specificStyles.includes(style.id)
-                  ? "bg-pink-50 border-pink-300"
-                  : "border-gray-200 hover:border-pink-200"
+                ? "bg-pink-50 border-pink-300"
+                : "border-gray-200 hover:border-pink-200"
                 }`}
               onClick={() => toggleSpecificStyle(style.id)}
             >

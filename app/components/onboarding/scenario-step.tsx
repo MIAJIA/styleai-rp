@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import type { OnboardingData } from "../../onboarding/page"
+import { OnboardingData } from "@/lib/onboarding-storage"
 
 interface ScenarioStepProps {
   data: OnboardingData
@@ -62,8 +62,8 @@ export default function ScenarioStep({ data, onUpdate, onValidationChange }: Sce
           <Card
             key={scenario.id}
             className={`p-4 cursor-pointer transition-all ${selectedScenario === scenario.id
-                ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
-                : "border-gray-200 hover:border-pink-200"
+              ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
+              : "border-gray-200 hover:border-pink-200"
               }`}
             onClick={() => selectScenario(scenario.id)}
           >

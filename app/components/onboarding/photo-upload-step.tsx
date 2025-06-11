@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Camera, X, CheckCircle } from "lucide-react"
-import type { OnboardingData } from "../../onboarding/page"
+import { OnboardingData } from "@/lib/onboarding-storage"
 
 interface PhotoUploadStepProps {
   data: OnboardingData
@@ -13,13 +13,42 @@ interface PhotoUploadStepProps {
 }
 
 export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: PhotoUploadStepProps) {
-  const [fullBodyPhoto, setFullBodyPhoto] = useState<string>(data.fullBodyPhoto || "")
-  const [headPhoto, setHeadPhoto] = useState<string>(data.headPhoto || "")
+  const [fullBodyPhoto, setFullBodyPhoto] = useState<string>("")
+  const [headPhoto, setHeadPhoto] = useState<string>("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(false)
 
   const fullBodyInputRef = useRef<HTMLInputElement>(null)
   const headPhotoInputRef = useRef<HTMLInputElement>(null)
+
+  // Load photos from data or separate localStorage on mount
+  useEffect(() => {
+    // Try to load from data first
+    if (data.fullBodyPhoto) {
+      setFullBodyPhoto(data.fullBodyPhoto)
+    } else {
+      // Try to load from separate localStorage
+      const savedFullBodyPhoto = localStorage.getItem("styleMe_fullBodyPhoto")
+      if (savedFullBodyPhoto) {
+        setFullBodyPhoto(savedFullBodyPhoto)
+      }
+    }
+
+    if (data.headPhoto) {
+      setHeadPhoto(data.headPhoto)
+    } else {
+      // Try to load from separate localStorage
+      const savedHeadPhoto = localStorage.getItem("styleMe_headPhoto")
+      if (savedHeadPhoto) {
+        setHeadPhoto(savedHeadPhoto)
+      }
+    }
+
+    // Check if analysis was already completed
+    if (data.aiAnalysis) {
+      setAnalysisComplete(true)
+    }
+  }, [data.fullBodyPhoto, data.headPhoto, data.aiAnalysis])
 
   // Memoize the AI analysis function
   const simulateAIAnalysis = useCallback(async () => {
@@ -49,7 +78,7 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
     setAnalysisComplete(true)
   }, [fullBodyPhoto, headPhoto, onUpdate, isAnalyzing, analysisComplete])
 
-  // Handle validation
+  // Handle validation and trigger analysis
   useEffect(() => {
     const isValid = Boolean(fullBodyPhoto && headPhoto)
     onValidationChange(isValid)
@@ -59,14 +88,36 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
     }
   }, [fullBodyPhoto, headPhoto, onValidationChange, analysisComplete, isAnalyzing, simulateAIAnalysis])
 
+  // Update parent data when photos change
+  useEffect(() => {
+    if (fullBodyPhoto || headPhoto) {
+      onUpdate({
+        fullBodyPhoto,
+        headPhoto,
+      })
+    }
+  }, [fullBodyPhoto, headPhoto, onUpdate])
+
   const handleFileUpload = (file: File, type: "fullBody" | "head") => {
     const reader = new FileReader()
     reader.onload = (e) => {
       const result = e.target?.result as string
       if (type === "fullBody") {
         setFullBodyPhoto(result)
+        // Also save to separate localStorage immediately
+        try {
+          localStorage.setItem("styleMe_fullBodyPhoto", result)
+        } catch (error) {
+          console.warn("Failed to save full body photo to localStorage:", error)
+        }
       } else {
         setHeadPhoto(result)
+        // Also save to separate localStorage immediately
+        try {
+          localStorage.setItem("styleMe_headPhoto", result)
+        } catch (error) {
+          console.warn("Failed to save head photo to localStorage:", error)
+        }
       }
     }
     reader.readAsDataURL(file)
@@ -75,8 +126,10 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
   const removePhoto = (type: "fullBody" | "head") => {
     if (type === "fullBody") {
       setFullBodyPhoto("")
+      localStorage.removeItem("styleMe_fullBodyPhoto")
     } else {
       setHeadPhoto("")
+      localStorage.removeItem("styleMe_headPhoto")
     }
     setAnalysisComplete(false)
   }

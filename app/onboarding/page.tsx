@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import {
+  OnboardingData,
+  loadCompleteOnboardingData,
+  saveOnboardingData,
+  saveUserProfile
+} from "@/lib/onboarding-storage"
 
 // Import step components
 import PhotoUploadStep from "../components/onboarding/photo-upload-step"
@@ -15,54 +21,6 @@ import ScenarioStep from "../components/onboarding/scenario-step"
 import StyleBoundariesStep from "../components/onboarding/style-boundaries-step"
 import StyleSummaryStep from "../components/onboarding/style-summary-step"
 
-export interface OnboardingData {
-  // Step 0: Photo Upload
-  fullBodyPhoto?: string
-  headPhoto?: string
-  aiAnalysis?: {
-    bodyType?: string
-    faceShape?: string
-    skinTone?: string
-    proportions?: string
-    styleInitialSense?: string
-    bodyAdvantages?: string[]
-    boneStructure?: string
-    facialFeatures?: string
-  }
-
-  // Step 1: Body Analysis
-  bodyAdvantages?: string[]
-  bodyChallenges?: string[]
-  customAdvantages?: string
-  customChallenges?: string
-  boneStructure?: "strong" | "delicate" // 骨架感强/弱
-  upperBodyType?: "straight" | "curved" // 纸片感/圆润感
-
-  // Step 1.5: Facial Analysis
-  facialIntensity?: "strong" | "light" | "medium" // 浓颜/淡颜/中间
-  facialLines?: "straight" | "curved" // 直线/曲线
-  facialMaturity?: "mature" | "youthful" // 成熟感/幼态感
-
-  // Step 2: Style Preferences
-  stylePreferences?: string[]
-  customStyle?: string
-
-  // Step 3: Scenario
-  primaryScenario?: string
-  customScenario?: string
-
-  // Step 4: Style Boundaries
-  avoidElements?: string[]
-  customAvoid?: string
-
-  // Step 5: Style Summary (generated)
-  styleProfile?: {
-    structureCombination?: string
-    styleLabels?: string[]
-    recommendedKeywords?: string[]
-  }
-}
-
 const TOTAL_STEPS = 7
 
 export default function OnboardingPage() {
@@ -71,21 +29,17 @@ export default function OnboardingPage() {
   const [isStepValid, setIsStepValid] = useState(false)
   const router = useRouter()
 
-  // Load saved data on mount
+  // Load saved data on mount with improved loading
   useEffect(() => {
-    const savedData = localStorage.getItem("styleMe_onboarding_data")
-    if (savedData) {
-      try {
-        setOnboardingData(JSON.parse(savedData))
-      } catch (error) {
-        console.error("Error loading onboarding data:", error)
-      }
-    }
+    const completeData = loadCompleteOnboardingData()
+    setOnboardingData(completeData)
   }, [])
 
-  // Save data whenever it changes
+  // Save data whenever it changes with error handling
   useEffect(() => {
-    localStorage.setItem("styleMe_onboarding_data", JSON.stringify(onboardingData))
+    if (Object.keys(onboardingData).length > 0) {
+      saveOnboardingData(onboardingData)
+    }
   }, [onboardingData])
 
   // Memoize the update callback to prevent infinite re-renders
@@ -102,10 +56,23 @@ export default function OnboardingPage() {
     if (currentStep < TOTAL_STEPS - 1) {
       setCurrentStep((prev) => prev + 1)
     } else {
-      // Complete onboarding
-      localStorage.setItem("styleMe_onboarding_completed", "true")
-      localStorage.setItem("styleMe_user_profile", JSON.stringify(onboardingData))
-      router.push("/")
+      // Complete onboarding with improved error handling
+      try {
+        localStorage.setItem("styleMe_onboarding_completed", "true")
+
+        // Save user profile using the utility function
+        const profileSaved = saveUserProfile(onboardingData)
+
+        if (!profileSaved) {
+          console.warn("Failed to save complete user profile, but continuing...")
+        }
+
+        router.push("/")
+      } catch (error) {
+        console.error("Error completing onboarding:", error)
+        // Still try to navigate even if storage fails
+        router.push("/")
+      }
     }
   }
 

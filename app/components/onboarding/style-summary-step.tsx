@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import type { OnboardingData } from "../../onboarding/page"
+import { OnboardingData } from "@/lib/onboarding-storage"
 
 interface StyleSummaryStepProps {
   data: OnboardingData

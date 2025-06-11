@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import type { OnboardingData } from "../../onboarding/page"
+import { OnboardingData } from "@/lib/onboarding-storage"
 
 interface StylePreferenceStepProps {
   data: OnboardingData
@@ -62,8 +62,8 @@ export default function StylePreferenceStep({ data, onUpdate, onValidationChange
           <Card
             key={style.id}
             className={`p-4 cursor-pointer transition-all ${selectedStyles.includes(style.id)
-                ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
-                : "border-gray-200 hover:border-pink-200"
+              ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
+              : "border-gray-200 hover:border-pink-200"
               }`}
             onClick={() => toggleStyle(style.id)}
           >

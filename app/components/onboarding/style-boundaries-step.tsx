@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import type { OnboardingData } from "../../onboarding/page"
+import { OnboardingData } from "@/lib/onboarding-storage"
 
 interface StyleBoundariesStepProps {
   data: OnboardingData
@@ -92,8 +92,8 @@ export default function StyleBoundariesStep({ data, onUpdate, onValidationChange
               size="sm"
               onClick={() => toggleAvoidElement(element)}
               className={`text-sm justify-start ${avoidElements.includes(element)
-                  ? "bg-red-100 border-red-300 text-red-700"
-                  : "border-gray-200 text-gray-600"
+                ? "bg-red-100 border-red-300 text-red-700"
+                : "border-gray-200 text-gray-600"
                 }`}
             >
               {element}
