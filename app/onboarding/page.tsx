@@ -9,10 +9,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 // Import step components
 import PhotoUploadStep from "../components/onboarding/photo-upload-step"
 import BodyAnalysisStep from "../components/onboarding/body-analysis-step"
+import FacialAnalysisStep from "../components/onboarding/facial-analysis-step"
 import StylePreferenceStep from "../components/onboarding/style-preference-step"
 import ScenarioStep from "../components/onboarding/scenario-step"
 import StyleBoundariesStep from "../components/onboarding/style-boundaries-step"
-import PersonalizationStep from "../components/onboarding/personalization-step"
+import StyleSummaryStep from "../components/onboarding/style-summary-step"
 
 export interface OnboardingData {
   // Step 0: Photo Upload
@@ -25,6 +26,8 @@ export interface OnboardingData {
     proportions?: string
     styleInitialSense?: string
     bodyAdvantages?: string[]
+    boneStructure?: string
+    facialFeatures?: string
   }
 
   // Step 1: Body Analysis
@@ -32,6 +35,13 @@ export interface OnboardingData {
   bodyChallenges?: string[]
   customAdvantages?: string
   customChallenges?: string
+  boneStructure?: "strong" | "delicate" // 骨架感强/弱
+  upperBodyType?: "straight" | "curved" // 纸片感/圆润感
+
+  // Step 1.5: Facial Analysis
+  facialIntensity?: "strong" | "light" | "medium" // 浓颜/淡颜/中间
+  facialLines?: "straight" | "curved" // 直线/曲线
+  facialMaturity?: "mature" | "youthful" // 成熟感/幼态感
 
   // Step 2: Style Preferences
   stylePreferences?: string[]
@@ -45,14 +55,15 @@ export interface OnboardingData {
   avoidElements?: string[]
   customAvoid?: string
 
-  // Step 5: Personalization
-  sustainableFashion?: boolean
-  accessoryMatching?: boolean
-  specificStyles?: string[]
-  customSpecificStyle?: string
+  // Step 5: Style Summary (generated)
+  styleProfile?: {
+    structureCombination?: string
+    styleLabels?: string[]
+    recommendedKeywords?: string[]
+  }
 }
 
-const TOTAL_STEPS = 6
+const TOTAL_STEPS = 7
 
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(0)
@@ -105,8 +116,8 @@ export default function OnboardingPage() {
   }
 
   const handleSkip = () => {
-    // Allow skipping for optional steps (4 and 5)
-    if (currentStep >= 4) {
+    // Allow skipping for optional steps (5 and 6)
+    if (currentStep >= 5) {
       handleNext()
     }
   }
@@ -123,7 +134,7 @@ export default function OnboardingPage() {
         )
       case 2:
         return (
-          <StylePreferenceStep
+          <FacialAnalysisStep
             data={onboardingData}
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
@@ -131,9 +142,17 @@ export default function OnboardingPage() {
         )
       case 3:
         return (
-          <ScenarioStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={handleValidationChange} />
+          <StylePreferenceStep
+            data={onboardingData}
+            onUpdate={updateOnboardingData}
+            onValidationChange={handleValidationChange}
+          />
         )
       case 4:
+        return (
+          <ScenarioStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={handleValidationChange} />
+        )
+      case 5:
         return (
           <StyleBoundariesStep
             data={onboardingData}
@@ -141,13 +160,9 @@ export default function OnboardingPage() {
             onValidationChange={handleValidationChange}
           />
         )
-      case 5:
+      case 6:
         return (
-          <PersonalizationStep
-            data={onboardingData}
-            onUpdate={updateOnboardingData}
-            onValidationChange={handleValidationChange}
-          />
+          <StyleSummaryStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={handleValidationChange} />
         )
       default:
         return null
@@ -156,14 +171,20 @@ export default function OnboardingPage() {
 
   const getStepTitle = () => {
     const titles = [
-      "Upload Your Photos",
-      "Body Analysis",
-      "Style Preferences",
-      "Usage Scenarios",
-      "Style Boundaries",
-      "Personalization",
+      "照片上传", // Step 0
+      "身体结构识别", // Step 1
+      "面容结构判断", // Step 1.5
+      "风格偏好选择", // Step 2
+      "使用场景", // Step 3
+      "风格边界", // Step 4
+      "风格总结", // Step 5
     ]
     return titles[currentStep]
+  }
+
+  const getStepEmoji = () => {
+    const emojis = ["📸", "💪", "👩‍🎨", "🎨", "🎯", "🚫", "✨"]
+    return emojis[currentStep]
   }
 
   const progress = ((currentStep + 1) / TOTAL_STEPS) * 100
@@ -185,18 +206,21 @@ export default function OnboardingPage() {
             </Button>
 
             <div className="text-center">
-              <h1 className="text-lg font-semibold text-gray-800">{getStepTitle()}</h1>
+              <div className="flex items-center justify-center space-x-2 mb-1">
+                <span className="text-xl">{getStepEmoji()}</span>
+                <h1 className="text-lg font-semibold text-gray-800">{getStepTitle()}</h1>
+              </div>
               <p className="text-sm text-gray-500">
-                Step {currentStep + 1} of {TOTAL_STEPS}
+                第 {currentStep + 1} 步，共 {TOTAL_STEPS} 步
               </p>
             </div>
 
-            {currentStep >= 4 && (
+            {currentStep >= 5 && (
               <Button variant="ghost" size="sm" onClick={handleSkip} className="text-gray-500 text-sm">
-                Skip
+                跳过
               </Button>
             )}
-            {currentStep < 4 && <div className="w-12"></div>}
+            {currentStep < 5 && <div className="w-12"></div>}
           </div>
 
           <Progress value={progress} className="h-2" />
@@ -213,11 +237,11 @@ export default function OnboardingPage() {
         <div className="max-w-md mx-auto">
           <Button
             onClick={handleNext}
-            disabled={!isStepValid && currentStep < 4}
+            disabled={!isStepValid && currentStep < 5}
             className="w-full h-12 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50"
           >
             <span className="flex items-center justify-center space-x-2">
-              <span>{currentStep === TOTAL_STEPS - 1 ? "Complete Setup" : "Continue"}</span>
+              <span>{currentStep === TOTAL_STEPS - 1 ? "完成设置" : "继续"}</span>
               {currentStep < TOTAL_STEPS - 1 && <ChevronRight className="w-4 h-4" />}
             </span>
           </Button>
