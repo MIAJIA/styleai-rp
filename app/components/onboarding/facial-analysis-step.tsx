@@ -81,8 +81,8 @@ export default function FacialAnalysisStep({ data, onUpdate, onValidationChange 
             variant="outline"
             onClick={() => setFacialIntensity("medium")}
             className={`w-full justify-start text-sm p-4 h-auto ${facialIntensity === "medium"
-                ? "bg-yellow-100 border-yellow-300 text-yellow-700"
-                : "border-gray-200 text-gray-600"
+              ? "bg-yellow-100 border-yellow-300 text-yellow-700"
+              : "border-gray-200 text-gray-600"
               }`}
           >
             <div className="text-left">
@@ -98,8 +98,8 @@ export default function FacialAnalysisStep({ data, onUpdate, onValidationChange 
             variant="outline"
             onClick={() => setFacialIntensity("light")}
             className={`w-full justify-start text-sm p-4 h-auto ${facialIntensity === "light"
-                ? "bg-blue-100 border-blue-300 text-blue-700"
-                : "border-gray-200 text-gray-600"
+              ? "bg-blue-100 border-blue-300 text-blue-700"
+              : "border-gray-200 text-gray-600"
               }`}
           >
             <div className="text-left">
@@ -161,8 +161,8 @@ export default function FacialAnalysisStep({ data, onUpdate, onValidationChange 
             variant="outline"
             onClick={() => setFacialMaturity("mature")}
             className={`w-full justify-start text-sm p-4 h-auto ${facialMaturity === "mature"
-                ? "bg-purple-100 border-purple-300 text-purple-700"
-                : "border-gray-200 text-gray-600"
+              ? "bg-purple-100 border-purple-300 text-purple-700"
+              : "border-gray-200 text-gray-600"
               }`}
           >
             <div className="text-left">
@@ -178,8 +178,8 @@ export default function FacialAnalysisStep({ data, onUpdate, onValidationChange 
             variant="outline"
             onClick={() => setFacialMaturity("youthful")}
             className={`w-full justify-start text-sm p-4 h-auto ${facialMaturity === "youthful"
-                ? "bg-green-100 border-green-300 text-green-700"
-                : "border-gray-200 text-gray-600"
+              ? "bg-green-100 border-green-300 text-green-700"
+              : "border-gray-200 text-gray-600"
               }`}
           >
             <div className="text-left">
