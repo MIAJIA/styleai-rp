@@ -97,14 +97,6 @@ export default function ScenarioStep({ data, onUpdate, onValidationChange }: Sce
           className="text-sm"
         />
       </Card>
-
-      {/* Styling Context */}
-      <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <div className="text-center">
-          <p className="text-blue-800 font-medium">🎪 场景很重要</p>
-          <p className="text-sm text-blue-700 mt-1">了解你的主要场景有助于我们建议合适的风格、颜色和正式程度。</p>
-        </div>
-      </Card>
     </div>
   )
 }

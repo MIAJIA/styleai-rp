@@ -99,24 +99,6 @@ export default function StylePreferenceStep({ data, onUpdate, onValidationChange
           className="text-sm"
         />
       </Card>
-
-      {/* AI Recommendation */}
-      {data.aiAnalysis?.styleInitialSense && (
-        <Card className="p-4 bg-blue-50 border-blue-200">
-          <h4 className="font-semibold text-blue-800 mb-2">🤖 AI风格建议</h4>
-          <p className="text-sm text-blue-700">
-            基于你的照片分析，我们认为 <strong>{data.aiAnalysis.styleInitialSense}</strong> 会很适合你！
-          </p>
-        </Card>
-      )}
-
-      {/* Style Inspiration */}
-      <Card className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
-        <div className="text-center">
-          <p className="text-purple-800 font-medium">💡 风格小贴士</p>
-          <p className="text-sm text-purple-700 mt-1">不用担心局限在一个框框里！最好的风格是能反映你个性的混合搭配。</p>
-        </div>
-      </Card>
     </div>
   )
 }

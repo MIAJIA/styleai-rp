@@ -138,47 +138,87 @@ export const createUserProfile = (data: OnboardingData) => {
 }
 
 export const saveUserProfile = (data: OnboardingData): boolean => {
-  try {
-    // Create user profile without large photo data
-    const userProfile = createUserProfile(data)
-    const profileJson = JSON.stringify(userProfile)
-
-    if (!safeSetLocalStorage("styleMe_user_profile", profileJson)) {
-      // If even the reduced profile fails, save minimal essential data
-      const minimalProfile = {
-        bodyAdvantages: data.bodyAdvantages,
-        bodyChallenges: data.bodyChallenges,
-        boneStructure: data.boneStructure,
-        upperBodyType: data.upperBodyType,
-        facialIntensity: data.facialIntensity,
-        facialLines: data.facialLines,
-        facialMaturity: data.facialMaturity,
-        stylePreferences: data.stylePreferences,
-        primaryScenario: data.primaryScenario,
-        avoidElements: data.avoidElements,
-        styleProfile: data.styleProfile,
-        photoMetadata: {
-          hasFullBodyPhoto: !!data.fullBodyPhoto,
-          hasHeadPhoto: !!data.headPhoto,
-          photosStoredSeparately: true
-        }
-      }
-      return safeSetLocalStorage("styleMe_user_profile", JSON.stringify(minimalProfile))
-    }
-
-    // Store photos separately
-    if (data.fullBodyPhoto) {
-      safeSetLocalStorage("styleMe_fullBodyPhoto", data.fullBodyPhoto)
-    }
-    if (data.headPhoto) {
-      safeSetLocalStorage("styleMe_headPhoto", data.headPhoto)
-    }
-
-    return true
-  } catch (error) {
-    console.error("Error saving user profile:", error)
-    return false
+  // --- STRATEGY 1: IDEAL ---
+  // Save profile (without photos) and photos separately.
+  const { fullBodyPhoto, headPhoto, ...profileData } = data
+  const userProfile = {
+    ...profileData,
+    photoMetadata: {
+      hasFullBodyPhoto: !!fullBodyPhoto,
+      hasHeadPhoto: !!headPhoto,
+    },
+    savedAt: new Date().toISOString(),
   }
+
+  const profileJson = JSON.stringify(userProfile)
+  const profileSaveSuccess = safeSetLocalStorage("styleMe_user_profile", profileJson)
+
+  // Try to save photos, but don't let failure block success
+  if (fullBodyPhoto) {
+    safeSetLocalStorage("styleMe_fullBodyPhoto", fullBodyPhoto)
+  }
+  if (headPhoto) {
+    safeSetLocalStorage("styleMe_headPhoto", headPhoto)
+  }
+
+  if (profileSaveSuccess) {
+    console.log("Storage Strategy 1: Successfully saved full user profile.")
+    return true
+  }
+
+  // --- STRATEGY 2: CORE DATA ---
+  // The full profile was too large. Save only the most essential style data.
+  console.warn("Storage Strategy 1 failed. Trying Strategy 2: Core Data.")
+  const coreProfile = {
+    // Drop potentially large custom text fields
+    bodyAdvantages: data.bodyAdvantages,
+    bodyChallenges: data.bodyChallenges,
+    boneStructure: data.boneStructure,
+    upperBodyType: data.upperBodyType,
+    facialIntensity: data.facialIntensity,
+    facialLines: data.facialLines,
+    facialMaturity: data.facialMaturity,
+    stylePreferences: data.stylePreferences,
+    primaryScenario: data.primaryScenario,
+    avoidElements: data.avoidElements,
+    photoMetadata: userProfile.photoMetadata,
+    savedAt: userProfile.savedAt,
+  }
+  const coreProfileJson = JSON.stringify(coreProfile)
+  const coreSaveSuccess = safeSetLocalStorage("styleMe_user_profile", coreProfileJson)
+
+  if (coreSaveSuccess) {
+    console.log("Storage Strategy 2: Successfully saved core profile data.")
+    return true
+  }
+
+  // --- STRATEGY 3: MINIMAL DATA ---
+  // Core data was too large. Save absolute minimum.
+  console.warn("Storage Strategy 2 failed. Trying Strategy 3: Minimal Data.")
+  const minimalProfile = {
+    stylePreferences: data.stylePreferences,
+    primaryScenario: data.primaryScenario,
+    photoMetadata: userProfile.photoMetadata,
+    savedAt: userProfile.savedAt,
+  }
+  const minimalProfileJson = JSON.stringify(minimalProfile)
+  const minimalSaveSuccess = safeSetLocalStorage("styleMe_user_profile", minimalProfileJson)
+
+  if (minimalSaveSuccess) {
+    console.log("Storage Strategy 3: Successfully saved minimal profile data.")
+    return true
+  }
+
+  // --- STRATEGY 4: FINAL RESORT ---
+  // Everything failed. Save just a marker that onboarding was completed.
+  console.error("Storage Strategy 3 failed. All profile save attempts failed. Saving completion marker only.")
+  safeSetLocalStorage("styleMe_user_profile", JSON.stringify({
+      error: "Failed to save profile data due to storage limitations.",
+      photoMetadata: userProfile.photoMetadata,
+      savedAt: userProfile.savedAt,
+  }))
+
+  return false // Indicate that the main profile save was not successful.
 }
 
 export const getUserPhotos = () => {

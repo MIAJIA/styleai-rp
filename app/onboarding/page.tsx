@@ -157,40 +157,40 @@ export default function OnboardingPage() {
   const progress = ((currentStep + 1) / TOTAL_STEPS) * 100
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 relative">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 relative pb-32">
+      {/* New Simplified Header with Pagination Dots */}
       <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-pink-100">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handlePrevious}
-              disabled={currentStep === 0}
-              className="p-2 h-auto"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
+        <div className="px-6 h-16 flex items-center justify-between">
+          {/* Back Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handlePrevious}
+            disabled={currentStep === 0}
+            className="p-2 h-auto disabled:opacity-30"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </Button>
 
-            <div className="text-center">
-              <div className="flex items-center justify-center space-x-2 mb-1">
-                <span className="text-xl">{getStepEmoji()}</span>
-                <h1 className="text-lg font-semibold text-gray-800">{getStepTitle()}</h1>
-              </div>
-              <p className="text-sm text-gray-500">
-                第 {currentStep + 1} 步，共 {TOTAL_STEPS} 步
-              </p>
-            </div>
+          {/* Pagination Dots */}
+          <div className="flex items-center space-x-2">
+            {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
+              <div
+                key={index}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${currentStep === index ? "bg-pink-500 w-4" : "bg-gray-300"
+                  }`}
+              />
+            ))}
+          </div>
 
-            {currentStep >= 5 && (
-              <Button variant="ghost" size="sm" onClick={handleSkip} className="text-gray-500 text-sm">
+          {/* Skip Button (or placeholder) */}
+          <div className="w-14 text-right">
+            {currentStep >= 5 && currentStep < TOTAL_STEPS - 1 && (
+              <Button variant="ghost" size="sm" onClick={handleSkip} className="text-gray-500 text-sm px-1">
                 跳过
               </Button>
             )}
-            {currentStep < 5 && <div className="w-12"></div>}
           </div>
-
-          <Progress value={progress} className="h-2" />
         </div>
       </div>
 
