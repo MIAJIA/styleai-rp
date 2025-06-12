@@ -35,7 +35,7 @@ export default function MyStylePage() {
     headPhoto: null,
   })
   const [loading, setLoading] = useState(true)
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ myPhotos: true })
   const router = useRouter()
 
   useEffect(() => {
@@ -235,6 +235,58 @@ export default function MyStylePage() {
                     </Badge>
                   ))}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* My Photos Section */}
+          <Card className="shadow-lg col-span-2">
+            <CardContent className="p-3">
+              <button
+                onClick={() => toggleSection("myPhotos")}
+                className="w-full flex items-center justify-between"
+              >
+                <div className="flex items-center gap-1">
+                  <Camera className="w-3 h-3 text-[#FF6EC7]" />
+                  <h3 className="font-medium text-xs">My Photos</h3>
+                </div>
+                {expandedSections["myPhotos"] ? (
+                  <ChevronUp className="w-4 h-4 text-gray-500" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                )}
+              </button>
+              {expandedSections["myPhotos"] && (
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-center text-gray-600">Full Body</p>
+                    {photos.fullBodyPhoto ? (
+                      <img
+                        src={photos.fullBodyPhoto}
+                        alt="Full body"
+                        className="w-full h-auto object-cover rounded-lg border"
+                      />
+                    ) : (
+                      <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-400">
+                        No Photo
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-center text-gray-600">Headshot</p>
+                    {photos.headPhoto ? (
+                      <img
+                        src={photos.headPhoto}
+                        alt="Headshot"
+                        className="w-full h-auto object-cover rounded-lg border"
+                      />
+                    ) : (
+                      <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-400">
+                        No Photo
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -462,34 +514,6 @@ export default function MyStylePage() {
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Photo Status - Compact */}
-          {profileData?.photoMetadata && (
-            <Card className="shadow-lg">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <Camera className="w-3 h-3 text-[#FF6EC7]" />
-                    <h3 className="font-medium text-xs">Photos</h3>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="flex items-center gap-1">
-                      <div
-                        className={`w-2 h-2 rounded-full ${profileData.photoMetadata.hasFullBodyPhoto ? "bg-green-500" : "bg-gray-300"}`}
-                      />
-                      <span className="text-xs">Full</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div
-                        className={`w-2 h-2 rounded-full ${profileData.photoMetadata.hasHeadPhoto ? "bg-green-500" : "bg-gray-300"}`}
-                      />
-                      <span className="text-xs">Head</span>
-                    </div>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           )}

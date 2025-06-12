@@ -17,6 +17,7 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
   const [headPhoto, setHeadPhoto] = useState<string>("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
 
   const fullBodyInputRef = useRef<HTMLInputElement>(null)
   const headPhotoInputRef = useRef<HTMLInputElement>(null)
@@ -50,32 +51,42 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
     }
   }, [data.fullBodyPhoto, data.headPhoto, data.aiAnalysis])
 
-  // Memoize the AI analysis function
-  const simulateAIAnalysis = useCallback(async () => {
-    if (isAnalyzing || analysisComplete) return
+  // New function to call the backend API for analysis
+  const runAIAnalysis = useCallback(async () => {
+    if (isAnalyzing || analysisComplete || !fullBodyPhoto || !headPhoto) return
 
     setIsAnalyzing(true)
+    setAnalysisError(null)
 
-    // Simulate AI analysis delay
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+    try {
+      const response = await fetch('/api/analyze-photos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ fullBodyPhoto, headPhoto }),
+      })
 
-    const mockAnalysis = {
-      bodyType: "Hourglass",
-      faceShape: "Oval",
-      skinTone: "Warm",
-      proportions: "Balanced",
-      styleInitialSense: "Classic with modern touches",
-      bodyAdvantages: ["Well-defined waist", "Balanced proportions", "Long legs"],
+      if (!response.ok) {
+        throw new Error('Failed to get analysis from server.')
+      }
+
+      const result = await response.json()
+
+      if (result.aiAnalysis) {
+        onUpdate({
+          aiAnalysis: result.aiAnalysis,
+        })
+        setAnalysisComplete(true)
+      } else {
+        throw new Error('Invalid analysis data received.')
+      }
+    } catch (error) {
+      console.error("AI Analysis failed:", error)
+      setAnalysisError("Sorry, we couldn't analyze the photos. Please try again or use different images.")
+    } finally {
+      setIsAnalyzing(false)
     }
-
-    onUpdate({
-      fullBodyPhoto,
-      headPhoto,
-      aiAnalysis: mockAnalysis,
-    })
-
-    setIsAnalyzing(false)
-    setAnalysisComplete(true)
   }, [fullBodyPhoto, headPhoto, onUpdate, isAnalyzing, analysisComplete])
 
   // Handle validation and trigger analysis
@@ -83,10 +94,11 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
     const isValid = Boolean(fullBodyPhoto && headPhoto)
     onValidationChange(isValid)
 
-    if (isValid && !analysisComplete && !isAnalyzing) {
-      simulateAIAnalysis()
+    // Automatically trigger analysis once both photos are uploaded and there's no error
+    if (isValid && !analysisComplete && !isAnalyzing && !analysisError) {
+      runAIAnalysis()
     }
-  }, [fullBodyPhoto, headPhoto, onValidationChange, analysisComplete, isAnalyzing, simulateAIAnalysis])
+  }, [fullBodyPhoto, headPhoto, onValidationChange, analysisComplete, isAnalyzing, analysisError, runAIAnalysis])
 
   // Update parent data when photos change
   useEffect(() => {
@@ -102,6 +114,11 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
     const reader = new FileReader()
     reader.onload = (e) => {
       const result = e.target?.result as string
+
+      // Reset the analysis state when a new photo is uploaded
+      setAnalysisComplete(false)
+      setAnalysisError(null)
+
       if (type === "fullBody") {
         setFullBodyPhoto(result)
         // Also save to separate localStorage immediately
@@ -131,7 +148,9 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
       setHeadPhoto("")
       localStorage.removeItem("styleMe_headPhoto")
     }
+    // Reset the analysis state
     setAnalysisComplete(false)
+    setAnalysisError(null)
   }
 
   return (
@@ -248,19 +267,18 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
           <div className="flex items-center space-x-3">
             {isAnalyzing ? (
               <>
-                <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
-                <div>
-                  <p className="font-semibold text-pink-800">Analyzing your photos...</p>
-                  <p className="text-sm text-pink-600">Our AI is identifying your unique features</p>
-                </div>
+                <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-sm text-pink-700 font-medium">AI is analyzing your photos...</p>
               </>
             ) : analysisComplete ? (
               <>
-                <CheckCircle className="w-6 h-6 text-green-500" />
-                <div>
-                  <p className="font-semibold text-green-800">Analysis complete!</p>
-                  <p className="text-sm text-green-600">Ready to personalize your style</p>
-                </div>
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <p className="text-sm text-green-700 font-medium">Analysis complete! You can proceed.</p>
+              </>
+            ) : analysisError ? (
+              <>
+                <X className="w-5 h-5 text-red-600" />
+                <p className="text-sm text-red-700 font-medium">{analysisError}</p>
               </>
             ) : null}
           </div>

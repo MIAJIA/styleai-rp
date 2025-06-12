@@ -154,14 +154,13 @@ export default function HomePage() {
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Failed to generate image: ${errorText}`)
+        throw new Error(`Failed to generate image: ${await response.text()}`)
       }
 
       const data = await response.json()
       if (data.imageUrl) {
         setGeneratedImageUrl(data.imageUrl)
-        handleAnimationComplete(data.imageUrl, data.garmentDescription, data.personaProfile)
+        setIsApiFinished(true)
       } else {
         throw new Error("Generation succeeded but no image URL was returned.")
       }
@@ -171,40 +170,24 @@ export default function HomePage() {
         alert(error.message)
       }
       setShowAnimation(false)
-    } finally {
       setIsGenerating(false)
     }
   }
 
-  const handleAnimationComplete = (
-    finalImageUrl: string,
-    garmentDescription?: string,
-    personaProfile?: string
-  ) => {
-    if (finalImageUrl) {
+  const handleAnimationAndNavigation = () => {
+    if (generatedImageUrl) {
       const params = new URLSearchParams();
-      params.set('imageUrl', finalImageUrl);
+      params.set('imageUrl', generatedImageUrl);
 
-      // Pass all context to the results page
-      if (selfiePreview) {
-        params.set('humanSrc', selfiePreview);
-      }
-      if (clothingPreview) {
-        params.set('garmentSrc', clothingPreview);
-      }
-      if (garmentDescription) {
-        params.set('garmentDescription', garmentDescription);
-      }
-      if (personaProfile) {
-        params.set('personaProfile', personaProfile);
-      }
+      if (selfiePreview) params.set('humanSrc', selfiePreview);
+      if (clothingPreview) params.set('garmentSrc', clothingPreview);
 
       router.push(`/results?${params.toString()}`);
     }
-    // Reset states
     setShowAnimation(false)
     setIsApiFinished(false)
     setGeneratedImageUrl(null)
+    setIsGenerating(false)
   }
 
   const hasRequiredImages = selfiePreview && clothingPreview
@@ -214,7 +197,7 @@ export default function HomePage() {
       <GenerationAnimation
         isVisible={showAnimation}
         isComplete={isApiFinished}
-        onComplete={() => handleAnimationComplete(generatedImageUrl!)}
+        onComplete={handleAnimationAndNavigation}
       />
       {/* Gradient background elements */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-[#D5F500] rounded-full opacity-50 blur-xl -translate-y-1/2 translate-x-1/2"></div>
