@@ -114,134 +114,20 @@ export default function StyleSummaryStep({ data, onUpdate, onValidationChange }:
   }, [onValidationChange, generateStyleProfile])
 
   return (
-    <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-gray-800">风格总结</h2>
-        <p className="text-gray-600">基于你的信息，我们为你生成了专属的风格档案</p>
-      </div>
-
+    <div className="flex items-center justify-center min-h-[40vh]">
       {isGenerating ? (
-        <Card className="p-6 bg-gradient-to-r from-pink-50 to-rose-50 border-pink-200">
-          <div className="text-center space-y-4">
-            <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <div>
-              <p className="font-semibold text-pink-800">正在分析你的风格...</p>
-              <p className="text-sm text-pink-600">AI正在整合你的所有信息</p>
-            </div>
+        <div className="text-center space-y-4 p-6 bg-white/50 rounded-lg">
+          <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <div>
+            <p className="font-semibold text-pink-800">正在生成你的风格档案...</p>
+            <p className="text-sm text-pink-600">AI正在整合你的所有信息</p>
           </div>
-        </Card>
+        </div>
       ) : styleProfile ? (
-        <>
-          {/* Structure Combination */}
-          <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-            <h3 className="font-semibold text-blue-800 mb-2">🧬 结构组合识别</h3>
-            <div className="text-center">
-              <span className="text-2xl font-bold text-blue-900">{styleProfile.structureCombination}</span>
-            </div>
-          </Card>
-
-          {/* Style Labels */}
-          <Card className="p-4">
-            <h3 className="font-semibold text-gray-800 mb-3">🏷️ 风格标签</h3>
-            <div className="flex flex-wrap gap-2">
-              {styleProfile.styleLabels.map((label, index) => (
-                <Badge key={index} variant="secondary" className="bg-pink-100 text-pink-800 border-pink-200">
-                  {label}
-                </Badge>
-              ))}
-            </div>
-          </Card>
-
-          {/* Recommended Keywords */}
-          <Card className="p-4">
-            <h3 className="font-semibold text-gray-800 mb-3">💡 推荐关键词</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {styleProfile.recommendedKeywords.map((keyword, index) => (
-                <div
-                  key={index}
-                  className="bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 rounded-lg p-3 text-center"
-                >
-                  <span className="text-sm font-medium text-rose-800">{keyword}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Personal Summary */}
-          <Card className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
-            <h3 className="font-semibold text-purple-800 mb-2">✨ 你的风格总结</h3>
-            <p className="text-sm text-purple-700">
-              你是一个 <strong>{styleProfile.structureCombination}</strong> 的{" "}
-              <strong>{styleProfile.styleLabels.join("、")}</strong> 类型。我们建议你在穿搭中多运用{" "}
-              <strong>{styleProfile.recommendedKeywords.slice(0, 3).join("、")}</strong>{" "}
-              等元素，这样能最好地展现你的个人魅力。
-            </p>
-          </Card>
-
-          {/* User Data Summary */}
-          <Card className="p-4 bg-gray-50 border-gray-200">
-            <h3 className="font-semibold text-gray-800 mb-3">📋 你的偏好回顾</h3>
-            <div className="space-y-2 text-sm">
-              {data.stylePreferences && data.stylePreferences.length > 0 && (
-                <div>
-                  <span className="text-gray-600">喜欢的风格：</span>
-                  <span className="ml-2 font-medium">{data.stylePreferences.join("、")}</span>
-                </div>
-              )}
-              {data.primaryScenario && (
-                <div>
-                  <span className="text-gray-600">主要场景：</span>
-                  <span className="ml-2 font-medium">
-                    {data.primaryScenario === "work"
-                      ? "工作职场"
-                      : data.primaryScenario === "casual"
-                        ? "日常休闲"
-                        : data.primaryScenario === "date"
-                          ? "约会社交"
-                          : data.primaryScenario === "special"
-                            ? "特殊活动"
-                            : data.primaryScenario === "travel"
-                              ? "旅行度假"
-                              : data.primaryScenario === "creative"
-                                ? "创意表达"
-                                : data.primaryScenario}
-                  </span>
-                </div>
-              )}
-              {data.bodyAdvantages && data.bodyAdvantages.length > 0 && (
-                <div>
-                  <span className="text-gray-600">身体优势：</span>
-                  <span className="ml-2 font-medium">{data.bodyAdvantages.join("、")}</span>
-                </div>
-              )}
-            </div>
-          </Card>
-
-          {/* Ready Message */}
-          <Card className="p-6 bg-gradient-to-r from-pink-50 via-rose-50 to-orange-50 border-pink-200">
-            <div className="text-center space-y-3">
-              <div className="text-4xl">🎉</div>
-              <h3 className="text-xl font-bold text-gray-800">风格档案已生成！</h3>
-              <p className="text-gray-600">
-                现在你可以开始探索专属于你的完美造型了。我们的AI造型师已经准备好为你创造惊艳的搭配！
-              </p>
-              <div className="flex items-center justify-center space-x-4 text-sm text-gray-500 mt-4">
-                <div className="flex items-center space-x-1">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span>照片已分析</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span>偏好已设定</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span>风格已生成</span>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </>
+        <div className="text-center space-y-4 p-6">
+          <div className="text-6xl animate-bounce">🎉</div>
+          <h2 className="text-2xl font-bold text-gray-800">风格档案已生成！</h2>
+        </div>
       ) : null}
     </div>
   )

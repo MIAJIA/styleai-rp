@@ -7,8 +7,7 @@ import { cn } from "@/lib/utils"
 const navItems = [
   { href: "/", label: "StyleMe", icon: Home },
   { href: "/results", label: "My Looks", icon: GalleryVerticalEnd },
-  { href: "/persona", label: "Persona", icon: User },
-  { href: "/about", label: "Behind", icon: Info },
+  { href: "/my-style", label: "My Style", icon: User },
 ]
 
 export default function IOSTabBar() {
