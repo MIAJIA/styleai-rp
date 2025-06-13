@@ -64,16 +64,11 @@ export default function ResultsPage() {
   const [error, setError] = useState<string | null>(null)
   const [isRecentLooksExpanded, setIsRecentLooksExpanded] = useState(false)
 
-  // Load recent looks from localStorage on mount
+  // Load recent looks from localStorage on mount and save the new one.
   useEffect(() => {
     const storedLooks = getRecentLooks()
-    setPastLooks(storedLooks)
-  }, [])
 
-  // Save the initial look to recent looks if it's new
-  useEffect(() => {
     if (initialImageUrl) {
-      const storedLooks = getRecentLooks()
       const isExistingLook = storedLooks.some(look => look.imageUrl === initialImageUrl)
 
       if (!isExistingLook) {
@@ -90,11 +85,15 @@ export default function ResultsPage() {
         const updatedLooks = [newLook, ...storedLooks]
         setPastLooks(updatedLooks)
         saveRecentLooks(updatedLooks)
+      } else {
+        setPastLooks(storedLooks)
       }
+    } else {
+      setPastLooks(storedLooks)
     }
   }, [initialImageUrl, initialHumanSrc, initialGarmentSrc, initialGarmentDescription, initialPersonaProfile])
 
-  // Save pastLooks to localStorage whenever it changes
+  // This secondary effect is to persist deletions
   useEffect(() => {
     if (pastLooks.length > 0) {
       saveRecentLooks(pastLooks)
@@ -130,19 +129,26 @@ export default function ResultsPage() {
   }
 
   const handleGenerateNewStyle = async (styleId: string) => {
-    // The source of truth for the human image is whatever is currently displayed.
-    const humanImageUrl = currentImageUrl;
+    const humanImageUrl = currentImageUrl
 
-    // We still need the original garment's path for the prompt and type lookup.
-    // So we find the very first, un-styled look in our history.
-    const originalLook = pastLooks.find(look => look.style === null);
+    // The look we want to transform is the one currently being displayed.
+    const lookToTransform = pastLooks.find(look => look.imageUrl === humanImageUrl)
 
-    if (!humanImageUrl || !originalLook?.originalGarmentSrc || isGenerating) {
-      alert("Could not find the necessary image sources to generate a new style. Please try again.");
-      return;
+    if (!humanImageUrl || !lookToTransform || !lookToTransform.originalGarmentSrc || isGenerating) {
+      let debugMessage =
+        "Could not find the necessary image sources to generate a new style. Please try again.\\n\\n[Debug Info]\\n"
+      debugMessage += `- Is Generating: ${isGenerating}\\n`
+      debugMessage += `- Human Image URL: ${humanImageUrl ? `OK (${humanImageUrl.substring(0, 70)}...)` : "MISSING"}\\n`
+      debugMessage += `- Look to Transform Found: ${lookToTransform ? "OK" : "NOT FOUND in history for current image"}\\n`
+      if (lookToTransform) {
+        debugMessage += `  - Garment Source in Look: ${lookToTransform.originalGarmentSrc ? `OK (${lookToTransform.originalGarmentSrc})` : "MISSING"}\\n`
+      }
+      alert(debugMessage)
+      return
     }
 
-    const { originalGarmentSrc, originalHumanSrc, garmentDescription, personaProfile } = originalLook;
+    // Now we use the correct look's data
+    const { originalGarmentSrc, originalHumanSrc, garmentDescription, personaProfile } = lookToTransform
 
     // The backend API requires a full URL for relative paths.
     const fullGarmentUrl = originalGarmentSrc.startsWith('/')
@@ -186,10 +192,10 @@ export default function ResultsPage() {
           imageUrl: data.imageUrl,
           style: styleId,
           timestamp: Date.now(),
-          originalHumanSrc: originalHumanSrc,
-          originalGarmentSrc: originalGarmentSrc,
-          garmentDescription: garmentDescription,
-          personaProfile: personaProfile,
+          originalHumanSrc: lookToTransform.originalHumanSrc,
+          originalGarmentSrc: lookToTransform.originalGarmentSrc,
+          garmentDescription: lookToTransform.garmentDescription,
+          personaProfile: lookToTransform.personaProfile,
         };
 
         // Add the new look to the front of the list

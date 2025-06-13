@@ -176,13 +176,15 @@ export default function HomePage() {
 
   const handleAnimationAndNavigation = () => {
     if (generatedImageUrl) {
-      const params = new URLSearchParams();
-      params.set('imageUrl', generatedImageUrl);
+      const params = new URLSearchParams()
+      params.set("imageUrl", generatedImageUrl)
 
-      if (selfiePreview) params.set('humanSrc', selfiePreview);
-      if (clothingPreview) params.set('garmentSrc', clothingPreview);
+      // The log shows these are short paths, so URL params are safe for this flow.
+      if (selfiePreview) params.set("humanSrc", selfiePreview)
+      if (clothingPreview) params.set("garmentSrc", clothingPreview)
+      if (selectedPersona) params.set("personaProfile", JSON.stringify(selectedPersona))
 
-      router.push(`/results?${params.toString()}`);
+      router.push(`/results?${params.toString()}`)
     }
     setShowAnimation(false)
     setIsApiFinished(false)
