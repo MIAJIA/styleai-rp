@@ -1,12 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
-import { Share2, Download, RefreshCw, Heart, Lock, ArrowLeft, Sparkles, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ArrowLeft, X } from "lucide-react"
 import IOSTabBar from "../components/ios-tab-bar"
-import StyleSelector from "../components/style-selector"
 
 interface PastLook {
   id: string
@@ -19,211 +16,28 @@ interface PastLook {
   personaProfile?: string | null
 }
 
-const RECENT_LOOKS_STORAGE_KEY = "styleai_recent_looks"
-
-// Helper function to read from localStorage safely
-const getRecentLooks = (): PastLook[] => {
-  if (typeof window === "undefined") {
-    return []
-  }
-  try {
-    const storedLooks = window.localStorage.getItem(RECENT_LOOKS_STORAGE_KEY)
-    if (storedLooks) {
-      return JSON.parse(storedLooks)
-    }
-  } catch (error) {
-    console.error("Failed to parse recent looks from localStorage", error)
-  }
-  return []
-}
-
-// Helper function to save to localStorage safely
-const saveRecentLooks = (looks: PastLook[]) => {
-  if (typeof window === "undefined") {
-    return
-  }
-  try {
-    window.localStorage.setItem(RECENT_LOOKS_STORAGE_KEY, JSON.stringify(looks))
-  } catch (error) {
-    console.error("Failed to save recent looks to localStorage", error)
-  }
-}
-
 export default function ResultsPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const initialImageUrl = searchParams.get("imageUrl")
-  const initialHumanSrc = searchParams.get("humanSrc")
-  const initialGarmentSrc = searchParams.get("garmentSrc")
-  const initialGarmentDescription = searchParams.get("garmentDescription")
-  const initialPersonaProfile = searchParams.get("personaProfile")
-  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(initialImageUrl)
-  const [selectedStyle, setSelectedStyle] = useState<string | null>(null)
   const [pastLooks, setPastLooks] = useState<PastLook[]>([])
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [isRecentLooksExpanded, setIsRecentLooksExpanded] = useState(false)
 
-  // Load recent looks from localStorage on mount and save the new one.
+  // Load past looks from localStorage on initial render
   useEffect(() => {
-    const storedLooks = getRecentLooks()
-
-    if (initialImageUrl) {
-      const isExistingLook = storedLooks.some(look => look.imageUrl === initialImageUrl)
-
-      if (!isExistingLook) {
-        const newLook: PastLook = {
-          id: Date.now().toString(),
-          imageUrl: initialImageUrl,
-          style: null, // Original generated look has no style transformation
-          timestamp: Date.now(),
-          originalHumanSrc: initialHumanSrc ?? undefined,
-          originalGarmentSrc: initialGarmentSrc ?? undefined,
-          garmentDescription: initialGarmentDescription ?? undefined,
-          personaProfile: initialPersonaProfile,
-        }
-        const updatedLooks = [newLook, ...storedLooks]
-        setPastLooks(updatedLooks)
-        saveRecentLooks(updatedLooks)
-      } else {
-        setPastLooks(storedLooks)
-      }
-    } else {
-      setPastLooks(storedLooks)
+    const storedLooks = localStorage.getItem("pastLooks")
+    if (storedLooks) {
+      setPastLooks(JSON.parse(storedLooks))
     }
-  }, [initialImageUrl, initialHumanSrc, initialGarmentSrc, initialGarmentDescription, initialPersonaProfile])
+  }, [])
 
-  // This secondary effect is to persist deletions
-  useEffect(() => {
-    if (pastLooks.length > 0) {
-      saveRecentLooks(pastLooks)
-    }
-  }, [pastLooks])
-
-  const handleDeleteLook = (lookIdToDelete: string) => {
-    const updatedLooks = pastLooks.filter((look) => look.id !== lookIdToDelete)
+  const handleDeleteLook = (lookId: string) => {
+    const updatedLooks = pastLooks.filter((look) => look.id !== lookId)
     setPastLooks(updatedLooks)
-  }
-
-  const handleShare = () => {
-    if (navigator.share && currentImageUrl) {
-      navigator.share({
-        title: "Check out my AI-generated look!",
-        text: "I just tried on this amazing outfit using StyleAI",
-        url: window.location.href,
-      })
-    }
-  }
-
-  // A simple function to trigger browser download
-  const handleDownload = () => {
-    if (currentImageUrl) {
-      const link = document.createElement('a');
-      link.href = currentImageUrl;
-      // You might want to give a more descriptive name
-      link.download = `styleai-look-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  }
-
-  const handleGenerateNewStyle = async (styleId: string) => {
-    const humanImageUrl = currentImageUrl
-
-    // The look we want to transform is the one currently being displayed.
-    const lookToTransform = pastLooks.find(look => look.imageUrl === humanImageUrl)
-
-    if (!humanImageUrl || !lookToTransform || !lookToTransform.originalGarmentSrc || isGenerating) {
-      let debugMessage =
-        "Could not find the necessary image sources to generate a new style. Please try again.\\n\\n[Debug Info]\\n"
-      debugMessage += `- Is Generating: ${isGenerating}\\n`
-      debugMessage += `- Human Image URL: ${humanImageUrl ? `OK (${humanImageUrl.substring(0, 70)}...)` : "MISSING"}\\n`
-      debugMessage += `- Look to Transform Found: ${lookToTransform ? "OK" : "NOT FOUND in history for current image"}\\n`
-      if (lookToTransform) {
-        debugMessage += `  - Garment Source in Look: ${lookToTransform.originalGarmentSrc ? `OK (${lookToTransform.originalGarmentSrc})` : "MISSING"}\\n`
-      }
-      alert(debugMessage)
-      return
-    }
-
-    // Now we use the correct look's data
-    const { originalGarmentSrc, originalHumanSrc, garmentDescription, personaProfile } = lookToTransform
-
-    // The backend API requires a full URL for relative paths.
-    const fullGarmentUrl = originalGarmentSrc.startsWith('/')
-      ? `${window.location.origin}${originalGarmentSrc}`
-      : originalGarmentSrc;
-
-    const fullHumanUrl = humanImageUrl.startsWith('/')
-      ? `${window.location.origin}${humanImageUrl}`
-      : humanImageUrl;
-
-    setSelectedStyle(styleId);
-    setIsGenerating(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/generate-style', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          human_image_url: fullHumanUrl,
-          style_prompt: styleId,
-          garment_type: originalGarmentSrc,
-          garment_description: garmentDescription,
-          personaProfile: personaProfile ? JSON.parse(personaProfile) : null,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const errorText = errorData.error || "An error occurred";
-        throw new Error(errorText);
-      }
-
-      const data = await response.json();
-
-      if (data.imageUrl) {
-        const newStyledLook: PastLook = {
-          id: Date.now().toString(),
-          imageUrl: data.imageUrl,
-          style: styleId,
-          timestamp: Date.now(),
-          originalHumanSrc: lookToTransform.originalHumanSrc,
-          originalGarmentSrc: lookToTransform.originalGarmentSrc,
-          garmentDescription: lookToTransform.garmentDescription,
-          personaProfile: lookToTransform.personaProfile,
-        };
-
-        // Add the new look to the front of the list
-        setPastLooks(prev => [newStyledLook, ...prev]);
-
-        // Update current image
-        setCurrentImageUrl(data.imageUrl);
-      }
-    } catch (error) {
-      console.error(error);
-      if (error instanceof Error) {
-        setError(error.message);
-      }
-    } finally {
-      setIsGenerating(false);
-      setSelectedStyle(null);
-    }
-  }
-
-  const handlePastLookClick = (pastLook: PastLook) => {
-    // When clicking a past look, simply set it as the current one.
-    // No need to add the previously viewed image to the history again.
-    setCurrentImageUrl(pastLook.imageUrl);
+    localStorage.setItem("pastLooks", JSON.stringify(updatedLooks))
   }
 
   const handleClearRecentLooks = () => {
     setPastLooks([])
-    saveRecentLooks([])
+    localStorage.removeItem("pastLooks")
   }
 
   const displayedLooks = isRecentLooksExpanded ? pastLooks : pastLooks.slice(0, 6)
@@ -233,62 +47,15 @@ export default function ResultsPage() {
       {/* iOS-style header with back button */}
       <div className="bg-white sticky top-0 z-10 border-b border-neutral-100 pt-safe">
         <div className="flex items-center px-4 h-12">
-          <button onClick={() => router.back()} className="w-10 h-10 flex items-center justify-center -ml-2 ios-btn">
+          <button onClick={() => router.push("/")} className="w-10 h-10 flex items-center justify-center -ml-2 ios-btn">
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-semibold flex-1 text-center">Your Outfit Gallery</h1>
+          <h1 className="text-lg font-semibold flex-1 text-center">My Looks</h1>
           <div className="w-10"></div>
         </div>
       </div>
 
       <div className="px-5 py-4 space-y-4">
-        {/* Main result display */}
-        <div className="w-full animate-fade-in">
-          <div className="bg-white rounded-xl shadow-sm">
-            {/* TODO: The current `object-contain` is a good defensive measure. If the root
-                image generation issue is fixed and results have a consistent aspect ratio,
-                we can re-evaluate this container's styling. See OPEN_ISSUES.md. */}
-            <div className="relative w-full aspect-[3/4] bg-neutral-100 rounded-xl">
-              {currentImageUrl ? (
-                <>
-                  <img
-                    src={currentImageUrl}
-                    alt="Generated fashion look"
-                    className="w-full h-full object-contain rounded-xl"
-                  />
-                  <div className="absolute top-3 right-3 flex flex-col gap-3">
-                    <button onClick={handleShare} className="h-10 w-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center ios-btn shadow-md">
-                      <Share2 size={20} />
-                    </button>
-                    <button onClick={handleDownload} className="h-10 w-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center ios-btn shadow-md">
-                      <Download size={20} />
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center text-neutral-500">
-                    <p>Generating your look...</p>
-                    <p className="text-xs">If this takes too long, please go back and try again.</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Style selector section */}
-        <div className="ios-card p-5 animate-fade-up">
-          <div className="mb-4">
-            <h3 className="text-sm font-medium text-neutral-700 mb-2">Transform with a New Style</h3>
-          </div>
-          <StyleSelector
-            selectedStyle={selectedStyle}
-            isGenerating={isGenerating}
-            onStyleSelect={handleGenerateNewStyle}
-          />
-        </div>
-
         {/* Recent Looks Section */}
         <div className="ios-card p-5 animate-fade-up">
           <div className="flex items-center justify-between mb-4">
@@ -307,16 +74,15 @@ export default function ResultsPage() {
             {pastLooks.length > 0 ? (
               displayedLooks.map((pastLook) => (
                 <div key={pastLook.id} className="relative group aspect-[3/4]">
-                  <button
-                    onClick={() => handlePastLookClick(pastLook)}
-                    className="w-full h-full bg-neutral-100 rounded-lg overflow-hidden ios-btn hover:scale-105 transition-transform"
+                  <div
+                    className="w-full h-full bg-neutral-100 rounded-lg overflow-hidden"
                   >
                     <img
                       src={pastLook.imageUrl}
                       alt="Past look"
                       className="w-full h-full object-cover"
                     />
-                  </button>
+                  </div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation() // Prevent click from bubbling to the main card
@@ -358,7 +124,7 @@ export default function ResultsPage() {
 
           {pastLooks.length === 0 && (
             <p className="text-xs text-neutral-500 text-center mt-3">
-              Try different styles to build your outfit collection
+              Your generated looks will appear here.
             </p>
           )}
         </div>

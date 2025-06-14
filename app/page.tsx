@@ -11,7 +11,9 @@ import { Drawer } from "vaul"
 import PortraitSelectionSheet from "./components/portrait-selection-sheet"
 import GenerationAnimation from "./components/generation-animation"
 import StyleSelector from "./components/style-selector"
-import { Palette, Wand2, Heart, Star, ArrowLeft, Share2, Download } from "lucide-react"
+import { Palette, Wand2, Heart, Star, ArrowLeft, Share2, Download, Loader2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 function dataURLtoFile(dataurl: string, filename: string): File | null {
   if (!dataurl) return null
@@ -46,7 +48,11 @@ export default function HomePage() {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null)
   const [isWardrobeOpen, setIsWardrobeOpen] = useState(false)
   const [isPortraitSheetOpen, setIsPortraitSheetOpen] = useState(false)
-  const [currentView, setCurrentView] = useState<"editor" | "result">("editor")
+  const [currentStage, setCurrentStage] = useState(1); // 1: Input, 2: Loading/Suggestion, 3: Result
+  const [occasion, setOccasion] = useState("日常通勤");
+  const [styleSuggestion, setStyleSuggestion] = useState<any>(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [isGeneratingFinalImage, setIsGeneratingFinalImage] = useState(false);
   const router = useRouter()
 
   const handleSelfieUpload = (file: File) => {
@@ -86,6 +92,150 @@ export default function HomePage() {
   const handleStyleSelect = (styleId: string) => {
     console.log(`Style selected: ${styleId}`)
     setSelectedStyle(styleId)
+  }
+
+  // Helper function to prepare image files for upload
+  const getFileFromPreview = async (previewUrl: string, defaultName: string): Promise<File | null> => {
+    if (previewUrl.startsWith("data:image")) {
+      return dataURLtoFile(previewUrl, `${defaultName}-${Date.now()}.png`);
+    } else if (previewUrl.startsWith("/")) {
+      const response = await fetch(previewUrl);
+      const blob = await response.blob();
+      return new File([blob], `${defaultName}-${Date.now()}.jpg`, { type: blob.type });
+    } else if (previewUrl.startsWith("blob:")) {
+      const response = await fetch(previewUrl);
+      const blob = await response.blob();
+      return new File([blob], `${defaultName}-${Date.now()}.jpg`, { type: blob.type });
+    }
+    return null;
+  }
+
+  // This function will now trigger the suggestion generation
+  const handleGetSuggestion = async () => {
+    if (!selfiePreview || !clothingPreview) {
+      alert("Please upload both a portrait and a garment photo.");
+      return;
+    }
+
+    setCurrentStage(2);
+    setLoadingProgress(0);
+    setStyleSuggestion(null);
+
+    // Animate progress bar
+    const interval = setInterval(() => {
+      setLoadingProgress(prev => Math.min(prev + 5, 95));
+    }, 200);
+
+    try {
+      const formData = new FormData();
+
+      const humanImageFile = selfieFile || await getFileFromPreview(selfiePreview, 'selfie');
+      const garmentImageFile = clothingFile || await getFileFromPreview(clothingPreview, 'garment');
+
+      if (!humanImageFile || !garmentImageFile) {
+        throw new Error("Could not process one of the images.");
+      }
+
+      formData.append("human_image", humanImageFile);
+      formData.append("garment_image", garmentImageFile);
+      formData.append("occasion", occasion);
+
+      const response = await fetch('/api/generate-suggestion', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to get suggestion: ${errorText}`);
+      }
+
+      const suggestion = await response.json();
+      setStyleSuggestion(suggestion);
+      setLoadingProgress(100);
+
+      // Automatically trigger the final image generation
+      await handleGenerateFinalImage(suggestion);
+
+    } catch (error) {
+      console.error(error);
+      alert(error instanceof Error ? error.message : "An unknown error occurred.");
+      setCurrentStage(1); // Revert to input stage on error
+    } finally {
+      clearInterval(interval);
+    }
+  };
+
+  const handleGenerateFinalImage = async (suggestion: any) => {
+    if (!suggestion?.image_prompt) {
+      alert("Missing a valid style prompt. Please try generating the suggestion again.");
+      return;
+    }
+    setIsGeneratingFinalImage(true);
+
+    try {
+      const formData = new FormData();
+
+      const humanImageFile = selfieFile || await getFileFromPreview(selfiePreview, 'selfie');
+      const garmentImageFile = clothingFile || await getFileFromPreview(clothingPreview, 'garment');
+
+      if (!humanImageFile || !garmentImageFile) {
+        throw new Error("Could not process one of the images for final generation.");
+      }
+
+      formData.append("human_image", humanImageFile);
+      formData.append("garment_image", garmentImageFile);
+      formData.append("prompt", suggestion.image_prompt);
+      formData.append("modelVersion", "kling-v2");
+
+      const response = await fetch('/api/generate-style-v2', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to generate final image: ${errorText}`);
+      }
+
+      const result = await response.json();
+      const imageUrl = result.imageUrl;
+
+      if (!imageUrl) {
+        throw new Error("Kling API response did not contain a valid image URL.");
+      }
+
+      // --- Save the new look to localStorage ---
+      try {
+        const storedLooks = localStorage.getItem("pastLooks");
+        const pastLooks = storedLooks ? JSON.parse(storedLooks) : [];
+
+        const newLook = {
+          id: `look-${Date.now()}`,
+          imageUrl: imageUrl,
+          style: suggestion.image_prompt, // Saving the detailed prompt as the "style"
+          timestamp: Date.now(),
+        };
+
+        // Add the new look to the beginning of the array
+        const updatedLooks = [newLook, ...pastLooks];
+
+        localStorage.setItem("pastLooks", JSON.stringify(updatedLooks));
+      } catch (storageError) {
+        console.error("Failed to save look to localStorage:", storageError);
+        // Non-fatal error, so we don't block the user from seeing their result
+      }
+
+      // --- Continue to update the UI ---
+      setGeneratedImageUrl(imageUrl);
+      setCurrentStage(3);
+
+    } catch (error) {
+      console.error(error);
+      alert(error instanceof Error ? error.message : "An unknown error occurred during final image generation.");
+    } finally {
+      setIsGeneratingFinalImage(false);
+    }
   }
 
   const handleGenerate = async () => {
@@ -172,7 +322,7 @@ export default function HomePage() {
         setGeneratedImageUrl(data.imageUrl)
         setIsApiFinished(true)
         if (generatedImageUrl) {
-          setCurrentView("result")
+          setCurrentStage(3)
         }
       } else {
         throw new Error("Generation succeeded but no image URL was returned.")
@@ -189,7 +339,7 @@ export default function HomePage() {
 
   const handleAnimationAndNavigation = () => {
     if (generatedImageUrl) {
-      setCurrentView("result")
+      setCurrentStage(3)
     }
     setShowAnimation(false)
     setIsApiFinished(false)
@@ -197,7 +347,7 @@ export default function HomePage() {
   }
 
   const handleCreateAnother = () => {
-    setCurrentView("editor")
+    setCurrentStage(1)
     setSelfiePreview("")
     setClothingPreview("")
     setSelfieFile(null)
@@ -251,13 +401,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-full pb-20 relative overflow-hidden">
-      {showAnimation && (
-        <GenerationAnimation
-          isVisible={showAnimation}
-          isComplete={isApiFinished}
-          onComplete={handleAnimationAndNavigation}
-        />
-      )}
+      {/* This animation component might be repurposed or removed depending on the new flow */}
+      {/* <GenerationAnimation ... /> */}
+
       {/* Gradient background elements */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-[#D5F500] rounded-full opacity-50 blur-xl -translate-y-1/2 translate-x-1/2"></div>
       <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#FF6EC7] rounded-full opacity-50 blur-xl translate-y-1/2 -translate-x-1/2"></div>
@@ -269,109 +415,144 @@ export default function HomePage() {
         {/* Stylish header */}
         <FashionHeader />
 
-        {/* Main content */}
+        {/* Main content area */}
         <div className="px-5 space-y-8">
-          {currentView === "editor" && (
-            <>
-              {/* Guided upload section */}
-              <div className="space-y-6">
-                <div className="flex w-full gap-4">
-                  {/* --- Step 1: Portrait --- */}
-                  <div className="w-full space-y-2">
-                    <h2 className="text-base font-semibold tracking-tight text-center">
-                      <span className="text-primary font-bold">Step 1:</span> Portrait
-                    </h2>
-                    <div onClick={() => setIsPortraitSheetOpen(true)} className="w-full">
-                      <CompactUpload
-                        preview={selfiePreview}
-                        required
-                        helpText="Full-body photo"
-                        variant="portrait"
-                        isTrigger
-                      />
-                    </div>
-                  </div>
-
-                  {/* --- Step 2: Garment --- */}
-                  <div className="w-full space-y-2">
-                    <h2 className="text-base font-semibold tracking-tight text-center">
-                      <span className="text-primary font-bold">Step 2:</span> Garment
-                    </h2>
-                    <div onClick={() => setIsWardrobeOpen(true)} className="w-full">
-                      <CompactUpload
-                        preview={clothingPreview}
-                        helpText="Item to try on"
-                        variant="garment"
-                        isTrigger
-                      />
-                    </div>
+          {/* Stage 1: Input Selection */}
+          {currentStage === 1 && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Upload Grids */}
+              <div className="flex w-full gap-4">
+                <div className="w-full space-y-2">
+                  <h2 className="text-base font-semibold tracking-tight text-center">
+                    <span className="text-primary font-bold">Step 1:</span> Your Photo
+                  </h2>
+                  <div onClick={() => setIsPortraitSheetOpen(true)} className="w-full">
+                    <CompactUpload
+                      preview={selfiePreview}
+                      required
+                      helpText="Full-body photo"
+                      variant="portrait"
+                      isTrigger
+                    />
                   </div>
                 </div>
-
-                {/* Style selector section */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-700">Choose Style</h3>
-                  <StyleSelector
-                    selectedStyle={selectedStyle}
-                    isGenerating={false}
-                    onStyleSelect={handleStyleSelect}
-                  />
+                <div className="w-full space-y-2">
+                  <h2 className="text-base font-semibold tracking-tight text-center">
+                    <span className="text-primary font-bold">Step 2:</span> Garment
+                  </h2>
+                  <div onClick={() => setIsWardrobeOpen(true)} className="w-full">
+                    <CompactUpload
+                      preview={clothingPreview}
+                      helpText="Item to try on"
+                      variant="garment"
+                      isTrigger
+                    />
+                  </div>
                 </div>
-
-                {/* Generate button */}
-                <Button
-                  onClick={handleGenerate}
-                  disabled={!hasRequiredImages || isGenerating}
-                  className="w-full h-14 bg-[#FF6EC7] hover:bg-[#FF6EC7]/90 text-white rounded-full font-playfair text-lg font-bold shadow-lg btn-bounce disabled:opacity-50"
-                >
-                  {isGenerating ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Creating Your Look...</span>
-                    </div>
-                  ) : (
-                    <span>✨ Generate My Look</span>
-                  )}
-                </Button>
               </div>
 
-              {/* Wardrobe Drawer */}
-              <Drawer.Root open={isWardrobeOpen} onOpenChange={setIsWardrobeOpen}>
-                {/* @ts-ignore */}
-                <Drawer.Portal>
-                  <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
-                  <Drawer.Content className="bg-zinc-100 flex flex-col rounded-t-[10px] h-[90%] fixed bottom-0 left-0 right-0 z-50">
-                    <div className="p-4 bg-white rounded-t-[10px] flex-1 overflow-y-auto">
-                      <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-zinc-300 mb-4" />
-                      <div className="max-w-md mx-auto">
-                        <Drawer.Title className="font-medium mb-4 text-center">
-                          Select from My Wardrobe
-                        </Drawer.Title>
-                        <StylishWardrobe onGarmentSelect={handleGarmentSelect} />
-                      </div>
-                    </div>
-                  </Drawer.Content>
-                </Drawer.Portal>
-              </Drawer.Root>
+              {/* Occasion Selector */}
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold tracking-tight text-center">
+                  <span className="text-primary font-bold">Step 3:</span> Occasion
+                </h3>
+                <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+                  {["日常通勤", "约会之夜", "周末休闲", "商务会议", "健身运动"].map((o) => (
+                    <button
+                      key={o}
+                      onClick={() => setOccasion(o)}
+                      className={cn(
+                        "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                        occasion === o
+                          ? "bg-primary text-white shadow-md"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
+                      )}
+                    >
+                      {o}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-              {/* Portrait Selection Drawer */}
-              <Drawer.Root open={isPortraitSheetOpen} onOpenChange={setIsPortraitSheetOpen}>
-                {/* @ts-ignore */}
-                <Drawer.Portal>
-                  <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
-                  <Drawer.Content className="bg-zinc-100 flex flex-col rounded-t-[10px] h-[90%] fixed bottom-0 left-0 right-0 z-50">
-                    <div className="p-4 bg-white rounded-t-[10px] flex-1 overflow-y-auto">
-                      <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-zinc-300 mb-4" />
-                      <Drawer.Title className="sr-only">Select a Portrait</Drawer.Title>
-                      <PortraitSelectionSheet onPortraitSelect={handlePortraitSelect} />
-                    </div>
-                  </Drawer.Content>
-                </Drawer.Portal>
-              </Drawer.Root>
-            </>
+              {/* Action Button */}
+              <Button
+                onClick={handleGetSuggestion}
+                disabled={!hasRequiredImages}
+                className="w-full h-14 bg-[#FF6EC7] hover:bg-[#FF6EC7]/90 text-white rounded-full font-playfair text-lg font-bold shadow-lg btn-bounce disabled:opacity-50"
+              >
+                <span>🚀 Get Styling Advice</span>
+              </Button>
+            </div>
           )}
 
-          {currentView === "result" && generatedImageUrl && (
+          {/* Drawers are part of the Input stage */}
+          <Drawer.Root open={isWardrobeOpen} onOpenChange={setIsWardrobeOpen}>
+            {/* @ts-ignore */}
+            <Drawer.Portal>
+              <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
+              <Drawer.Content className="bg-zinc-100 flex flex-col rounded-t-[10px] h-[90%] fixed bottom-0 left-0 right-0 z-50">
+                <div className="p-4 bg-white rounded-t-[10px] flex-1 overflow-y-auto">
+                  <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-zinc-300 mb-4" />
+                  <div className="max-w-md mx-auto">
+                    <Drawer.Title className="font-medium mb-4 text-center">
+                      Select from My Wardrobe
+                    </Drawer.Title>
+                    <StylishWardrobe onGarmentSelect={handleGarmentSelect} />
+                  </div>
+                </div>
+              </Drawer.Content>
+            </Drawer.Portal>
+          </Drawer.Root>
+
+          <Drawer.Root open={isPortraitSheetOpen} onOpenChange={setIsPortraitSheetOpen}>
+            {/* @ts-ignore */}
+            <Drawer.Portal>
+              <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
+              <Drawer.Content className="bg-zinc-100 flex flex-col rounded-t-[10px] h-[90%] fixed bottom-0 left-0 right-0 z-50">
+                <div className="p-4 bg-white rounded-t-[10px] flex-1 overflow-y-auto">
+                  <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-zinc-300 mb-4" />
+                  <Drawer.Title className="sr-only">Select a Portrait</Drawer.Title>
+                  <PortraitSelectionSheet onPortraitSelect={handlePortraitSelect} />
+                </div>
+              </Drawer.Content>
+            </Drawer.Portal>
+          </Drawer.Root>
+
+          {/* Stage 2: Loading & Suggestions */}
+          {currentStage === 2 && (
+            <div className="py-8 text-center space-y-6 animate-fade-in">
+              {!styleSuggestion ? (
+                <>
+                  <div className="w-16 h-16 mx-auto bg-gradient-to-br from-[#FF6EC7] to-[#D5F500] rounded-full flex items-center justify-center shadow-xl animate-pulse">
+                    <Wand2 className="text-white" size={28} />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-800 font-playfair">Analyzing Your Style...</h2>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div className="bg-primary h-2.5 rounded-full transition-all duration-300" style={{ width: `${loadingProgress}%` }}></div>
+                  </div>
+                  <p className="text-sm text-gray-600">Generating personalized advice just for you</p>
+                </>
+              ) : (
+                <div className="text-left space-y-4">
+                  <h2 className="text-2xl font-bold text-center text-gray-800 font-playfair mb-6">Your Personal Style Guide</h2>
+                  {Object.entries(styleSuggestion).filter(([key]) => key !== 'image_prompt').map(([key, value]) => (
+                    <div key={key} className="bg-white/80 p-4 rounded-xl shadow-sm border border-black/5">
+                      <h3 className="font-semibold text-primary mb-1 capitalize">{key.replace(/_/g, ' ')}</h3>
+                      <p className="text-gray-700 text-sm">{value as string}</p>
+                    </div>
+                  ))}
+                  <div className="flex flex-col items-center justify-center pt-6 space-y-3">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <p className="text-md font-semibold text-gray-700">Generating your look...</p>
+                    <p className="text-sm text-gray-500">This may take a moment.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Stage 3: Final Result */}
+          {currentStage === 3 && generatedImageUrl && (
             <div className="animate-fade-in space-y-6">
               {/* Result Image */}
               <div className="w-full aspect-[3/4] bg-neutral-100 rounded-2xl shadow-lg overflow-hidden relative">
