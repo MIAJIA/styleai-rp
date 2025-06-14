@@ -10,6 +10,8 @@ import IOSTabBar from "./components/ios-tab-bar"
 import { Drawer } from "vaul"
 import PortraitSelectionSheet from "./components/portrait-selection-sheet"
 import GenerationAnimation from "./components/generation-animation"
+import StyleSelector from "./components/style-selector"
+import { Palette, Wand2, Heart, Star } from "lucide-react"
 
 function dataURLtoFile(dataurl: string, filename: string): File | null {
   if (!dataurl) return null
@@ -36,6 +38,7 @@ export default function HomePage() {
   const [clothingFile, setClothingFile] = useState<File | null>(null)
   const [selfiePreview, setSelfiePreview] = useState<string>("")
   const [clothingPreview, setClothingPreview] = useState<string>("")
+  const [selectedStyle, setSelectedStyle] = useState<string>("fashion-magazine")
   const [selectedPersona, setSelectedPersona] = useState<object | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [showAnimation, setShowAnimation] = useState(false)
@@ -77,6 +80,11 @@ export default function HomePage() {
     setSelectedPersona(persona || null)
     setSelfieFile(null)
     setIsPortraitSheetOpen(false)
+  }
+
+  const handleStyleSelect = (styleId: string) => {
+    console.log(`Style selected: ${styleId}`)
+    setSelectedStyle(styleId)
   }
 
   const handleGenerate = async () => {
@@ -147,6 +155,7 @@ export default function HomePage() {
       if (selectedPersona) {
         formData.append("persona_profile", JSON.stringify(selectedPersona));
       }
+      formData.append("style_name", selectedStyle)
 
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -176,15 +185,13 @@ export default function HomePage() {
 
   const handleAnimationAndNavigation = () => {
     if (generatedImageUrl) {
-      const params = new URLSearchParams()
-      params.set("imageUrl", generatedImageUrl)
+      const params = new URLSearchParams();
+      params.set('imageUrl', generatedImageUrl);
 
-      // The log shows these are short paths, so URL params are safe for this flow.
-      if (selfiePreview) params.set("humanSrc", selfiePreview)
-      if (clothingPreview) params.set("garmentSrc", clothingPreview)
-      if (selectedPersona) params.set("personaProfile", JSON.stringify(selectedPersona))
+      if (selfiePreview) params.set('humanSrc', selfiePreview);
+      if (clothingPreview) params.set('garmentSrc', clothingPreview);
 
-      router.push(`/results?${params.toString()}`)
+      router.push(`/results?${params.toString()}`);
     }
     setShowAnimation(false)
     setIsApiFinished(false)
@@ -248,6 +255,16 @@ export default function HomePage() {
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Style selector section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-gray-700">Choose Style</h3>
+              <StyleSelector
+                selectedStyle={selectedStyle}
+                isGenerating={false}
+                onStyleSelect={handleStyleSelect}
+              />
             </div>
 
             {/* Generate button */}

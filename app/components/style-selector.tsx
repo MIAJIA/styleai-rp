@@ -26,7 +26,8 @@ export default function StyleSelector({ selectedStyle, isGenerating, onStyleSele
     <div className={cn("grid grid-cols-4 gap-2", className)}>
       {styles.map((style) => {
         const Icon = style.icon
-        const isLoading = isGenerating && selectedStyle === style.id
+        const isSelected = selectedStyle === style.id
+        const isLoading = isGenerating && isSelected
 
         return (
           <button
@@ -36,7 +37,8 @@ export default function StyleSelector({ selectedStyle, isGenerating, onStyleSele
             className={cn(
               "flex-shrink-0 relative rounded-xl p-2 text-center ios-btn transition-all duration-200 aspect-square flex flex-col items-center justify-center gap-1.5",
               style.color,
-              isGenerating && !isLoading ? "opacity-60 cursor-not-allowed" : "hover:scale-105",
+              isGenerating && !isSelected ? "opacity-60 cursor-not-allowed" : "hover:scale-105",
+              isSelected && !isGenerating ? "ring-2 ring-primary/50 ring-offset-2" : "",
               isLoading ? "ring-2 ring-primary ring-offset-2" : "",
             )}
           >

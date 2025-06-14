@@ -1,0 +1,122 @@
+## 📝 PRD：AI Styling 用户结构归类系统
+
+### 📌 项目目标
+
+构建一个后端风格归类系统，基于用户在 Onboarding 流程中提交的信息（含AI图像识别与用户自填项），将用户归类进 8 类结构化风格主线中，并提供对应推荐风格、穿搭关键词、搭配建议，用于驱动 Look 生成 / 图像生成 / 内容推荐。
+
+---
+
+### 🎯 核心功能
+
+1. 接收 Onboarding 完成后的结构化用户数据（JSON Schema）
+2. 匹配出对应的结构风格组合（8种）
+3. 返回：
+
+   * 用户结构标签（如：小骨架 × 扁身 × 暖脸）
+   * 风格关键词（3个以内）
+   * 推荐风格名称（1-3个）
+   * 推荐穿搭单品（2-4个）
+   * 搭配技巧说明（可选，用于展示或解释）
+
+---
+
+### 📥 输入参数（Request）
+
+POST `/api/style/match`
+
+```json
+{
+  "skeleton_size": "small",             // enum: small | medium | large
+  "body_volume": "full",                // enum: flat | full
+  "linearity": "curved",                // enum: angular | curved | mixed
+  "feature_volume": "moderate",         // optional
+  "maturity": "youthful",               // optional
+  "target_vibes": ["sweet_spicy", "elegant_refined"],
+  "primary_scene": "date"               // optional
+}
+```
+
+---
+
+### 📤 输出参数（Response）
+
+```json
+{
+  "structure_tag": "小骨架 × 圆身 × 暖脸",
+  "style_type": "类型8",
+  "style_keywords": ["小妩媚", "小性感"],
+  "recommended_styles": ["法式浪漫风", "小女人风", "茶歇裙风"],
+  "recommended_items": ["花朵收腰连衣裙", "小亮色喇叭裤", "针织修身裙"],
+  "dressing_tips": "强调正面腰线，使用柔和曲线与亮色系营造亲和感"
+}
+```
+
+---
+
+### 🧠 匹配逻辑说明
+
+```ts
+// 简化伪代码
+function classifyStyleType(skeleton, volume, linearity) {
+  const key = `${skeleton}-${volume}-${linearity}`;
+  const mapping = {
+    "large-flat-angular": { ...类型1 },
+    "large-flat-curved": { ...类型2 },
+    "large-full-angular": { ...类型3 },
+    "large-full-curved": { ...类型4 },
+    "small-flat-angular": { ...类型5 },
+    "small-flat-curved": { ...类型6 },
+    "small-full-angular": { ...类型7 },
+    "small-full-curved": { ...类型8 }
+  };
+  return mapping[key];
+}
+```
+
+> **注意：** `linearity === mixed` 可 fallback 至 `curved` 处理（暖脸优先）
+
+---
+
+### 📊 结构风格映射总表（8种主线风格）
+
+| 结构组合          | 关键词标签      | 推荐风格类型           | 推荐单品                 | 搭配技巧                 |
+| ------------- | ---------- | ---------------- | -------------------- | -------------------- |
+| 大骨架 × 扁身 × 冷脸 | 大气、干练、酷感   | 轻欧美风、北欧极简、时尚运动风  | 廓形西装、白衬衫配运动鞋、黑白条纹裙   | 线条简洁、冷色配色、突出直线感与率性气质 |
+| 大骨架 × 扁身 × 暖脸 | 名媛感、优雅、融合感 | 明媚港风、典雅女神风、精致休闲风 | 宝蓝/酒红色连衣裙、高腰裙、简洁剪裁长裤 | 利用高饱和暖色+有结构感单品融合冷暖风格 |
+| 大骨架 × 圆身 × 冷脸 | 御姐、性感、力量感  | 御姐风、复古法式风、冷辣风    | 收腰款大衣、针织连衣裙、纯色高饱和色   | 布料挺括+剪裁感解构冷感，突出胸腰比   |
+| 大骨架 × 圆身 × 暖脸 | 妩媚、华丽、大女人感 | 港风复古、浓颜女神风、度假风   | 花裙、鱼尾裙、包臀裙、大图案连衣裙    | 用曲线强调女性化，避免堆叠元素显臃肿   |
+| 小骨架 × 扁身 × 冷脸 | 清冷、骨感、文艺   | 性冷淡风、新中式风、知识分子风  | 马甲衬衫叠穿、灰蓝色裙装、直线感长裤   | 利用层次与线条，营造“瘦长清冷”感知   |
+| 小骨架 × 扁身 × 暖脸 | 亲和、软萌、少女感  | 韩系森系、清新运动风、小女人风  | 泡泡袖裙、百褶裙、奶油色卫衣       | 轻盈感材质、蓬松细节、亮色系柔化印象   |
+| 小骨架 × 圆身 × 冷脸 | 甜酷、反差感、个性  | 美式复古、甜酷混搭、牛仔学院风  | 紧身T恤+牛仔裤、短裙+帆布鞋      | 结构+曲线融合，用酷感元素中和冷感脸部  |
+| 小骨架 × 圆身 × 暖脸 | 小妩媚、小性感、温柔 | 法式浪漫风、小女人风、茶歇裙风  | 花朵收腰裙、小亮色喇叭裤、紧身针织    | 强调正面腰线+柔和色调，增加亲和魅力   |
+
+---
+
+### 🛠 系统设计建议
+
+* 归类逻辑可封装为服务函数 `getStyleProfile(userInput)`
+* 可缓存结构组合到风格建议的 Mapping 表（Redis / 内存Map）
+* 支持后期扩展精细化逻辑（结合 `feature_volume`, `maturity`, `target_vibes` 等细化排序）
+
+---
+
+### 📈 应用场景
+
+* Onboarding 结束时风格标签展示页
+* Lookbook / 穿搭建议页的引导内容
+* AI图像生成Prompt构建模块
+* 推荐Feed系统的风格分类标签
+
+---
+
+如需支持图像生成Prompt构建或图文推荐内容的联动API，可扩展字段如：
+
+* `prompt_keywords`
+* `image_reference_style`
+* `persona_id`
+
+---
+
+### ✅ 状态：准备实现
+
+由后端接口团队根据此文档进行接口开发，同时设计可编辑的结构-风格映射配置文件（YAML / JSON）。
