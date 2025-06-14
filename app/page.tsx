@@ -179,10 +179,31 @@ export default function HomePage() {
       const params = new URLSearchParams()
       params.set("imageUrl", generatedImageUrl)
 
-      // The log shows these are short paths, so URL params are safe for this flow.
-      if (selfiePreview) params.set("humanSrc", selfiePreview)
-      if (clothingPreview) params.set("garmentSrc", clothingPreview)
-      if (selectedPersona) params.set("personaProfile", JSON.stringify(selectedPersona))
+      // Hybrid approach for passing image sources:
+      // A string starting with 'data:image' is a base64 data URL and is always too long for a URL.
+      // Any other string is assumed to be a short path.
+
+      if (selfiePreview) {
+        if (selfiePreview.startsWith("data:image")) {
+          localStorage.setItem("temp_humanSrc", selfiePreview);
+          params.set("humanSrcStored", "true");
+        } else {
+          params.set("humanSrc", selfiePreview);
+        }
+      }
+
+      if (clothingPreview) {
+        if (clothingPreview.startsWith("data:image")) {
+          localStorage.setItem("temp_garmentSrc", clothingPreview);
+          params.set("garmentSrcStored", "true");
+        } else {
+          params.set("garmentSrc", clothingPreview);
+        }
+      }
+
+      if (selectedPersona) {
+        params.set("personaProfile", JSON.stringify(selectedPersona))
+      }
 
       router.push(`/results?${params.toString()}`)
     }
