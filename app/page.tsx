@@ -180,10 +180,13 @@ export default function HomePage() {
           setStage("suggestion"); // Show suggestion text
         } else if (data.status === 'completed') {
           const finalImageUrl = data.result?.imageUrl;
-          console.log('[POLLING] Status is completed. Final URL:', finalImageUrl);
+          console.log('[POLLING] Status is completed. Original Final URL:', finalImageUrl);
+
           if (finalImageUrl) {
-            console.log('[POLLING] Setting stage to "result" and updating image URL.');
-            setGeneratedImageUrl(finalImageUrl);
+            // Wrap the insecure URL with our secure proxy
+            const proxiedImageUrl = `/api/image-proxy?url=${encodeURIComponent(finalImageUrl)}`;
+            console.log('[POLLING] Setting stage to "result" and updating image URL via proxy:', proxiedImageUrl);
+            setGeneratedImageUrl(proxiedImageUrl);
             setStage("result"); // Move to final result stage
             setIsLoading(false);
             clearInterval(intervalId); // Stop polling
