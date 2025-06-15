@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import CompactUpload from "./components/compact-upload";
@@ -48,11 +48,14 @@ export default function HomePage() {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isWardrobeOpen, setIsWardrobeOpen] = useState(false);
   const [isPortraitSheetOpen, setIsPortraitSheetOpen] = useState(false);
-  const [currentStage, setCurrentStage] = useState(1); // 1: Input, 2: Loading/Suggestion, 3: Result
+  const [stage, setStage] = useState<"initial" | "loading" | "suggestion" | "result">("initial");
   const [occasion, setOccasion] = useState("日常通勤");
   const [styleSuggestion, setStyleSuggestion] = useState<any>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isGeneratingFinalImage, setIsGeneratingFinalImage] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [pollingError, setPollingError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleSelfieUpload = (file: File) => {
@@ -113,61 +116,97 @@ export default function HomePage() {
     return null;
   };
 
-  // This function will now trigger the suggestion generation
-  const handleGetSuggestion = async () => {
-    if (!selfiePreview || !clothingPreview) {
-      alert("Please upload both a portrait and a garment photo.");
-      return;
-    }
-
-    setCurrentStage(2);
-    setLoadingProgress(0);
+  // New handler for the entire generation process
+  const handleStartGeneration = async () => {
+    if (!selfiePreview || !clothingPreview) return;
+    setIsLoading(true);
+    setStage("loading"); // Move to loading stage
+    setJobId(null);
+    setPollingError(null);
     setStyleSuggestion(null);
 
-    // Animate progress bar
-    const interval = setInterval(() => {
-      setLoadingProgress((prev) => Math.min(prev + 5, 95));
-    }, 200);
-
     try {
-      const formData = new FormData();
+      const humanImage = await getFileFromPreview(selfiePreview, "selfie");
+      const garmentImage = await getFileFromPreview(clothingPreview, "garment");
 
-      const humanImageFile = selfieFile || (await getFileFromPreview(selfiePreview, "selfie"));
-      const garmentImageFile =
-        clothingFile || (await getFileFromPreview(clothingPreview, "garment"));
-
-      if (!humanImageFile || !garmentImageFile) {
+      if (!humanImage || !garmentImage) {
         throw new Error("Could not process one of the images.");
       }
 
-      formData.append("human_image", humanImageFile);
-      formData.append("garment_image", garmentImageFile);
+      const formData = new FormData();
+      formData.append("human_image", humanImage);
+      formData.append("garment_image", garmentImage);
       formData.append("occasion", occasion);
 
-      const response = await fetch("/api/generate-suggestion", {
+      const response = await fetch("/api/generation/start", {
         method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to get suggestion: ${errorText}`);
+        throw new Error(`Failed to start generation: ${errorText}`);
       }
 
-      const suggestion = await response.json();
-      setStyleSuggestion(suggestion);
-      setLoadingProgress(100);
-
-      // Automatically trigger the final image generation
-      await handleGenerateFinalImage(suggestion);
+      const { jobId: newJobId } = await response.json();
+      setJobId(newJobId);
+      // Polling will be initiated by the useEffect hook
     } catch (error) {
       console.error(error);
-      alert(error instanceof Error ? error.message : "An unknown error occurred.");
-      setCurrentStage(1); // Revert to input stage on error
-    } finally {
-      clearInterval(interval);
+      setPollingError(error instanceof Error ? error.message : String(error));
+      setIsLoading(false);
+      setStage("initial"); // Revert stage on error
     }
   };
+
+  useEffect(() => {
+    if (!jobId) return;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/generation/status?jobId=${jobId}`);
+        if (!response.ok) {
+          // Stop polling on non-200 responses
+          throw new Error(`Polling failed with status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('[POLLING] Received data:', data);
+
+        // Update UI based on job status
+        if (data.status === 'suggestion_generated') {
+          console.log('[POLLING] Status is suggestion_generated. Setting stage to "suggestion".');
+          setStyleSuggestion(data.suggestion);
+          setStage("suggestion"); // Show suggestion text
+        } else if (data.status === 'completed') {
+          const finalImageUrl = data.result?.imageUrl;
+          console.log('[POLLING] Status is completed. Final URL:', finalImageUrl);
+          if (finalImageUrl) {
+            console.log('[POLLING] Setting stage to "result" and updating image URL.');
+            setGeneratedImageUrl(finalImageUrl);
+            setStage("result"); // Move to final result stage
+            setIsLoading(false);
+            clearInterval(intervalId); // Stop polling
+          } else {
+            console.error('[POLLING] Error: Job completed but finalImageUrl is missing in the response.');
+          }
+        } else if (data.status === 'failed') {
+          throw new Error(data.statusMessage || 'Generation failed.');
+        }
+        // If status is 'pending' or 'loading', do nothing and wait for the next poll
+        console.log(`[POLLING] Current job status: ${data.status}. Polling will continue.`);
+
+      } catch (error) {
+        console.error("Polling error:", error);
+        setPollingError(error instanceof Error ? error.message : String(error));
+        setIsLoading(false);
+        setStage("initial");
+        clearInterval(intervalId); // Stop polling on error
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(intervalId); // Cleanup on component unmount or if jobId changes
+  }, [jobId]);
 
   const handleGenerateFinalImage = async (suggestion: any) => {
     console.log("\n--- Entering handleGenerateFinalImage ---");
@@ -245,7 +284,7 @@ export default function HomePage() {
 
       // --- Continue to update the UI ---
       setGeneratedImageUrl(imageUrl);
-      setCurrentStage(3);
+      setStage("result");
     } catch (error) {
       console.error(error);
       alert(
@@ -342,7 +381,7 @@ export default function HomePage() {
         setGeneratedImageUrl(data.imageUrl);
         setIsApiFinished(true);
         if (generatedImageUrl) {
-          setCurrentStage(3);
+          setStage("result");
         }
       } else {
         throw new Error("Generation succeeded but no image URL was returned.");
@@ -359,7 +398,7 @@ export default function HomePage() {
 
   const handleAnimationAndNavigation = () => {
     if (generatedImageUrl) {
-      setCurrentStage(3);
+      setStage("result");
     }
     setShowAnimation(false);
     setIsApiFinished(false);
@@ -367,7 +406,7 @@ export default function HomePage() {
   };
 
   const handleCreateAnother = () => {
-    setCurrentStage(1);
+    setStage("initial");
     setSelfiePreview("");
     setClothingPreview("");
     setSelfieFile(null);
@@ -424,6 +463,8 @@ export default function HomePage() {
 
   const hasRequiredImages = selfiePreview && clothingPreview;
 
+  console.log(`[RENDER] Component rendering with stage: "${stage}" and generatedImageUrl: ${generatedImageUrl ? "Exists" : "null"}`);
+
   return (
     <div className="min-h-full pb-20 relative overflow-hidden">
       {/* This animation component might be repurposed or removed depending on the new flow */}
@@ -443,7 +484,7 @@ export default function HomePage() {
         {/* Main content area */}
         <div className="px-5 space-y-8">
           {/* Stage 1: Input Selection */}
-          {currentStage === 1 && (
+          {stage === "initial" && (
             <div className="space-y-6 animate-fade-in">
               {/* Upload Grids */}
               <div className="flex w-full gap-4">
@@ -501,12 +542,15 @@ export default function HomePage() {
 
               {/* Action Button */}
               <Button
-                onClick={handleGetSuggestion}
-                disabled={!hasRequiredImages}
+                onClick={handleStartGeneration}
+                disabled={!hasRequiredImages || isLoading}
                 className="w-full h-14 bg-[#FF6EC7] hover:bg-[#FF6EC7]/90 text-white rounded-full font-playfair text-lg font-bold shadow-lg btn-bounce disabled:opacity-50"
               >
-                <span>🚀 Get Styling Advice</span>
+                {isLoading ? "Generating..." : "Generate Style"}
               </Button>
+              {pollingError && (
+                <p className="text-sm text-red-500 text-center mt-2">{pollingError}</p>
+              )}
             </div>
           )}
 
@@ -543,10 +587,11 @@ export default function HomePage() {
             </Drawer.Portal>
           </Drawer.Root>
 
-          {/* Stage 2: Loading & Suggestions */}
-          {currentStage === 2 && (
+          {/* Stage 2 & 3 combined: Loading, Suggestions, and Result */}
+          {(stage === "loading" || stage === "suggestion") && (
             <div className="py-8 text-center space-y-6 animate-fade-in">
-              {!styleSuggestion ? (
+              {/* Loading state (before suggestion) */}
+              {stage === "loading" && !styleSuggestion && (
                 <>
                   <div className="w-16 h-16 mx-auto bg-gradient-to-br from-[#FF6EC7] to-[#D5F500] rounded-full flex items-center justify-center shadow-xl animate-pulse">
                     <Wand2 className="text-white" size={28} />
@@ -554,17 +599,14 @@ export default function HomePage() {
                   <h2 className="text-xl font-bold text-gray-800 font-playfair">
                     Analyzing Your Style...
                   </h2>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div
-                      className="bg-primary h-2.5 rounded-full transition-all duration-300"
-                      style={{ width: `${loadingProgress}%` }}
-                    ></div>
-                  </div>
                   <p className="text-sm text-gray-600">
-                    Generating personalized advice just for you
+                    Generating personalized advice just for you...
                   </p>
                 </>
-              ) : (
+              )}
+
+              {/* Suggestion state (after suggestion, before final image) */}
+              {stage === "suggestion" && styleSuggestion && (
                 <div className="text-left space-y-4">
                   <h2 className="text-2xl font-bold text-center text-gray-800 font-playfair mb-6">
                     Your Personal Style Guide
@@ -593,7 +635,7 @@ export default function HomePage() {
           )}
 
           {/* Stage 3: Final Result */}
-          {currentStage === 3 && generatedImageUrl && (
+          {stage === "result" && generatedImageUrl && (
             <div className="animate-fade-in space-y-6">
               {/* Result Image */}
               <div className="w-full aspect-[3/4] bg-neutral-100 rounded-2xl shadow-lg overflow-hidden relative">
