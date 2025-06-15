@@ -10,6 +10,14 @@ const fileToBase64 = async (file: File): Promise<string> => {
   return buffer.toString("base64");
 };
 
+// Helper function to convert URL to Base64
+const urlToBase64 = async (url: string): Promise<string> => {
+  const response = await fetchWithTimeout(url, { timeout: 60000 });
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return buffer.toString("base64");
+};
+
 // Helper function for delaying execution, to be used in polling
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -48,6 +56,9 @@ const KLING_API_BASE_URL = "https://api-beijing.klingai.com";
 const IMAGE_GENERATION_SUBMIT_PATH = "/v1/images/generations";
 const IMAGE_GENERATION_STATUS_PATH = "/v1/images/generations/";
 
+const IMAGE_TRYON_SUBMIT_PATH = "/v1/images/kolors-virtual-try-on";
+const KOLORS_VIRTUAL_TRYON_STATUS_PATH = "/v1/images/kolors-virtual-try-on/";
+
 // --- Dynamic request body builder ---
 const buildRequestBody = (
   modelVersion: string,
@@ -60,7 +71,7 @@ const buildRequestBody = (
     aspect_ratio: "3:4",
     image: humanImageBase64,
   };
-
+  console.log("!!! build request body with modelVersion:", modelVersion);
   switch (modelVersion) {
     case 'kling-v1-5':
       return {
@@ -83,6 +94,101 @@ const buildRequestBody = (
   }
 };
 
+// --- Generic Kling Task Executor ---
+async function executeKlingTask(submitPath: string, queryPathPrefix: string, requestBody: object): Promise<string> {
+  // 1. Submit the task
+  const apiToken = getApiToken(KLING_ACCESS_KEY!, KLING_SECRET_KEY!);
+  const submitResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${submitPath}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+    timeout: 60000,
+  });
+
+  if (!submitResponse.ok) {
+    const errorBody = await submitResponse.text();
+    throw new Error(`Kling API Error on submit to ${submitPath}: ${submitResponse.status} ${errorBody}`);
+  }
+
+  const submitResult = await submitResponse.json();
+  const taskId = submitResult.data.task_id;
+  console.log(`Kling task submitted to ${submitPath}. Task ID: ${taskId}`);
+
+  // 2. Poll for the result
+  let attempts = 0;
+  const maxAttempts = 40;
+  let finalImageUrl = "";
+
+  while (attempts < maxAttempts) {
+      console.log(`Polling attempt #${attempts + 1} for task: ${taskId}`);
+      const pollingToken = getApiToken(KLING_ACCESS_KEY!, KLING_SECRET_KEY!);
+      const statusCheckResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${queryPathPrefix}${taskId}`, {
+          headers: { 'Authorization': `Bearer ${pollingToken}` },
+          timeout: 60000,
+      });
+
+      if (!statusCheckResponse.ok) {
+          throw new Error(`Kling API Error on status check: ${await statusCheckResponse.text()}`);
+      }
+
+      const statusResult = await statusCheckResponse.json();
+      const taskData = statusResult.data;
+
+      if (taskData.task_status === "succeed") {
+          console.log("Task succeeded. Full task_result data:", JSON.stringify(taskData.task_result, null, 2));
+
+          // Defensive parsing for different possible success structures
+          if (taskData.task_result && taskData.task_result.images && taskData.task_result.images.length > 0) {
+              finalImageUrl = taskData.task_result.images[0].url;
+          } else if (taskData.task_result && taskData.task_result.url) {
+              // Handle cases where the URL is directly in the task_result object
+              finalImageUrl = taskData.task_result.url;
+          } else {
+              throw new Error("Task succeeded, but the response structure for the image URL is unexpected. Check the server logs for the 'Full task_result data' output to see the actual structure.");
+          }
+
+          console.log(`Task ${taskId} succeeded! Image URL:`, finalImageUrl);
+          break;
+      } else if (taskData.task_status === "failed") {
+          throw new Error(`Kling task failed. Reason: ${taskData.task_status_msg || 'Unknown'}`);
+      }
+
+      attempts++;
+      await sleep(3000);
+  }
+
+  if (!finalImageUrl) {
+      throw new Error("Kling task timed out after multiple attempts.");
+  }
+
+  return finalImageUrl;
+}
+
+async function getStyledImageUrl(humanImageBase64: string, prompt: string, modelVersion: string): Promise<string> {
+    console.log(`--- Starting Step 4: Styled Image Generation ---`);
+    console.log(`Submitting task to Kling AI using model: ${modelVersion}...`);
+    console.log("～～～ Kling Prompt:", prompt);
+    const requestBody = buildRequestBody(modelVersion, prompt, humanImageBase64);
+    return executeKlingTask(IMAGE_GENERATION_SUBMIT_PATH, IMAGE_GENERATION_STATUS_PATH, requestBody);
+}
+
+async function getTryOnImageUrl(generatedImageUrl: string, garmentImageFile: File): Promise<string> {
+    console.log("--- Starting Step 5: Try-On Task ---");
+
+    const generatedImageBase64 = await urlToBase64(generatedImageUrl);
+    const garmentImageBase64 = await fileToBase64(garmentImageFile);
+
+    const tryOnRequestBody = {
+        human_image: generatedImageBase64,
+        cloth_image: garmentImageBase64,
+        model_name: "kolors-virtual-try-on-v1-5"
+    };
+
+    return executeKlingTask(IMAGE_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, tryOnRequestBody);
+}
 
 export async function POST(request: Request) {
   if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
@@ -92,86 +198,25 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const humanImageFile = formData.get('human_image') as File | null;
-    // garmentImage is not used by the Kling API directly; its info is in the prompt.
-    // const garmentImage = formData.get('garment_image') as File | null;
+    const garmentImageFile = formData.get('garment_image') as File | null;
     const prompt = formData.get('prompt') as string | null;
     const modelVersion = formData.get('modelVersion') as string | null;
 
-    if (!humanImageFile || !prompt || !modelVersion) {
+    if (!humanImageFile || !garmentImageFile || !prompt || !modelVersion) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     // Step 1: Convert human image to Base64
     const humanImageBase64 = await fileToBase64(humanImageFile);
 
-    // Step 2: Get API Token
-    const apiToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
+    // --- Step 4: Call the Styled Image Generation Function ---
+    const styledImageUrl = await getStyledImageUrl(humanImageBase64, prompt, modelVersion);
 
-    // Step 3: Build the request body for the specified model
-    const requestBody = buildRequestBody(modelVersion, prompt, humanImageBase64);
-    console.log(`Submitting image generation task to Kling AI using model: ${modelVersion}...`);
-    console.log("～～～Final Kling Prompt:", prompt);
-
-    // Step 4: Submit the image generation task
-    const submitResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${IMAGE_GENERATION_SUBMIT_PATH}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-      timeout: 60000, // 60-second timeout
-    });
-
-    if (!submitResponse.ok) {
-      const errorBody = await submitResponse.text();
-      throw new Error(`Kling API Error on submit: ${submitResponse.status} ${errorBody}`);
-    }
-
-    const submitResult = await submitResponse.json();
-    const taskId = submitResult.data.task_id;
-    console.log(`Image generation task submitted successfully. Task ID: ${taskId}`);
-
-    // Step 5: Poll for the result
-    let attempts = 0;
-    const maxAttempts = 40; // Approx 2 minutes (40 attempts * 3s sleep)
-    let finalImageUrl = "";
-
-    while (attempts < maxAttempts) {
-        console.log(`Polling attempt #${attempts + 1} for task: ${taskId}`);
-        const pollingToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
-
-        const statusCheckResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${IMAGE_GENERATION_STATUS_PATH}${taskId}`, {
-          headers: { 'Authorization': `Bearer ${pollingToken}` },
-          timeout: 60000,
-        });
-
-        if (!statusCheckResponse.ok) {
-            const errorBody = await statusCheckResponse.text();
-            throw new Error(`Kling API Error on status check: ${statusCheckResponse.status} ${errorBody}`);
-        }
-
-        const statusResult = await statusCheckResponse.json();
-        const taskData = statusResult.data;
-
-        if (taskData.task_status === "succeed") {
-            finalImageUrl = taskData.task_result.images[0].url;
-            console.log("Image generation succeeded! Image URL:", finalImageUrl);
-            break;
-        } else if (taskData.task_status === "failed") {
-            throw new Error(`Kling generation failed. Reason: ${taskData.task_status_msg || 'Unknown'}`);
-        }
-
-        attempts++;
-        await sleep(3000); // Wait 3 seconds before the next poll
-    }
-
-    if (!finalImageUrl) {
-        throw new Error("Kling generation timed out after multiple attempts.");
-    }
+    // --- Step 5: Call the Try-On API with the generated image and the garment ---
+    const finalTryOnUrl = await getTryOnImageUrl(styledImageUrl, garmentImageFile);
 
     // Step 6: Return the final image URL to the frontend
-    return NextResponse.json({ imageUrl: finalImageUrl });
+    return NextResponse.json({ imageUrl: finalTryOnUrl });
 
   } catch (error) {
     console.error('Error in /api/generate-style-v2:', error);
