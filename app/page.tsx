@@ -167,8 +167,10 @@ export default function HomePage() {
   };
 
   const handleGenerateFinalImage = async (suggestion: any) => {
+    console.log("\n--- Entering handleGenerateFinalImage ---");
     if (!suggestion?.image_prompt) {
       alert("Missing a valid style prompt. Please try generating the suggestion again.");
+      console.error("Client Error: Missing image_prompt in suggestion object.", suggestion);
       return;
     }
     setIsGeneratingFinalImage(true);
@@ -183,11 +185,22 @@ export default function HomePage() {
         throw new Error("Could not process one of the images for final generation.");
       }
 
+      const prompt = suggestion.image_prompt;
+      const modelVersion = "kling-v2";
+
+      // --- Detailed Logging of Fields to be Sent ---
+      console.log(`[CLIENT-SEND] Appending human_image:`, humanImageFile);
+      console.log(`[CLIENT-SEND] Appending garment_image:`, garmentImageFile);
+      console.log(`[CLIENT-SEND] Appending prompt: ${prompt.substring(0, 50)}...`);
+      console.log(`[CLIENT-SEND] Appending modelVersion: ${modelVersion}`);
+      // --- End of Logging ---
+
       formData.append("human_image", humanImageFile);
       formData.append("garment_image", garmentImageFile);
-      formData.append("prompt", suggestion.image_prompt);
-      formData.append("modelVersion", "kling-v2");
+      formData.append("prompt", prompt);
+      formData.append("modelVersion", modelVersion);
 
+      console.log("[CLIENT-SEND] Sending request to /api/generate-style-v2...");
       const response = await fetch('/api/generate-style-v2', {
         method: 'POST',
         body: formData,
@@ -213,7 +226,7 @@ export default function HomePage() {
         const newLook = {
           id: `look-${Date.now()}`,
           imageUrl: imageUrl,
-          style: suggestion.image_prompt, // Saving the detailed prompt as the "style"
+          style: prompt, // Saving the detailed prompt as the "style"
           timestamp: Date.now(),
         };
 

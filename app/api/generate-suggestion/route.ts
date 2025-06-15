@@ -78,7 +78,10 @@ export async function POST(request: Request) {
       // @ts-ignore
       response_format: { type: "json_object" },
     });
-
+    // log the whole prompt including the user's text input and system prompt
+    console.log("!!! prompt:", systemPrompt);
+    console.log("!!! user input:", occasion);
+    
     const content = response.choices[0].message.content;
     if (!content) {
         throw new Error("OpenAI returned an empty response.");

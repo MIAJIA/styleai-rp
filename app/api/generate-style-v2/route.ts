@@ -59,6 +59,10 @@ const IMAGE_GENERATION_STATUS_PATH = "/v1/images/generations/";
 const IMAGE_TRYON_SUBMIT_PATH = "/v1/images/kolors-virtual-try-on";
 const KOLORS_VIRTUAL_TRYON_STATUS_PATH = "/v1/images/kolors-virtual-try-on/";
 
+// --- Face Swap API Configuration (File-based, Final) ---
+const FACE_SWAP_API_URL = 'https://ai-face-swap2.p.rapidapi.com/public/process/files';
+const FACE_SWAP_API_HOST = 'ai-face-swap2.p.rapidapi.com';
+
 // --- Dynamic request body builder ---
 const buildRequestBody = (
   modelVersion: string,
@@ -167,6 +171,50 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
   return finalImageUrl;
 }
 
+// --- Step 6: AI Face Swap Function (File-based multipart/form-data) ---
+async function faceSwap(sourceFile: File, targetFile: File): Promise<string> {
+  console.log("--- Starting Step 6: AI Face Swap (File Upload) ---");
+  const rapidApiKey = process.env.RAPIDAPI_KEY;
+  if (!rapidApiKey) {
+    throw new Error("RAPIDAPI_KEY is not set in environment variables.");
+  }
+
+  // Use FormData to send files as multipart/form-data.
+  const formData = new FormData();
+  formData.append('source', sourceFile);
+  formData.append('target', targetFile);
+
+  const response = await fetchWithTimeout(FACE_SWAP_API_URL, {
+    method: 'POST',
+    headers: {
+      // DO NOT set Content-Type. The runtime will set it automatically
+      // to multipart/form-data with the correct boundary.
+      'accept': 'application/json',
+      'x-rapidapi-host': FACE_SWAP_API_HOST,
+      'x-rapidapi-key': rapidApiKey
+    },
+    body: formData,
+    timeout: 90000,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error("Face Swap API Error Response:", errorBody);
+    throw new Error(`Face swap API request failed: ${response.status} ${errorBody}`);
+  }
+
+  const result = await response.json();
+  const swappedImageUrl = result.file_url; // The API returns a URL in the 'file_url' field
+
+  if (!swappedImageUrl) {
+    console.error("Face Swap API Response did not contain 'file_url':", JSON.stringify(result, null, 2));
+    throw new Error("Face swap API did not return a valid image URL.");
+  }
+
+  console.log("Face swap completed successfully. Final URL:", swappedImageUrl);
+  return swappedImageUrl;
+}
+
 async function getStyledImageUrl(humanImageBase64: string, prompt: string, modelVersion: string): Promise<string> {
     console.log(`--- Starting Step 4: Styled Image Generation ---`);
     console.log(`Submitting task to Kling AI using model: ${modelVersion}...`);
@@ -191,32 +239,64 @@ async function getTryOnImageUrl(generatedImageUrl: string, garmentImageFile: Fil
 }
 
 export async function POST(request: Request) {
+  console.log("\n--- ENTERING /api/generate-style-v2 ---");
   if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
+    console.error("generate-style-v2: Kling AccessKey or SecretKey is not configured.");
     return NextResponse.json({ error: "Kling AccessKey or SecretKey is not configured." }, { status: 500 });
   }
 
   try {
     const formData = await request.formData();
+    console.log("generate-style-v2: FormData received from client.");
+
     const humanImageFile = formData.get('human_image') as File | null;
     const garmentImageFile = formData.get('garment_image') as File | null;
     const prompt = formData.get('prompt') as string | null;
     const modelVersion = formData.get('modelVersion') as string | null;
 
+    // --- Detailed Logging of Received Fields ---
+    console.log(`[SERVER-CHECK] Received human_image: ${humanImageFile ? `YES (name: ${humanImageFile.name}, size: ${humanImageFile.size})` : 'NO'}`);
+    console.log(`[SERVER-CHECK] Received garment_image: ${garmentImageFile ? `YES (name: ${garmentImageFile.name}, size: ${garmentImageFile.size})` : 'NO'}`);
+    console.log(`[SERVER-CHECK] Received prompt: ${prompt ? `YES (value: "${prompt.substring(0, 50)}...")` : 'NO'}`);
+    console.log(`[SERVER-CHECK] Received modelVersion: ${modelVersion ? `YES (value: ${modelVersion})` : 'NO'}`);
+    // --- End of Logging ---
+
     if (!humanImageFile || !garmentImageFile || !prompt || !modelVersion) {
+      console.error("generate-style-v2: A required field was missing. Aborting with 400.");
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Step 1: Convert human image to Base64
+    // Step 1: Convert human image to Base64. This will be the "source" for the face swap.
+    console.log("\n[STEP 1/7] Converting user image to Base64...");
     const humanImageBase64 = await fileToBase64(humanImageFile);
+    console.log("[STEP 1/7] Conversion complete.");
 
     // --- Step 4: Call the Styled Image Generation Function ---
+    console.log("\n[STEP 4/7] Starting styled image generation...");
     const styledImageUrl = await getStyledImageUrl(humanImageBase64, prompt, modelVersion);
+    console.log("[STEP 4/7] Styled image generation complete. URL:", styledImageUrl);
 
     // --- Step 5: Call the Try-On API with the generated image and the garment ---
+    console.log("\n[STEP 5/7] Starting virtual try-on...");
     const finalTryOnUrl = await getTryOnImageUrl(styledImageUrl, garmentImageFile);
+    console.log("[STEP 5/7] Virtual try-on complete. URL:", finalTryOnUrl);
 
-    // Step 6: Return the final image URL to the frontend
-    return NextResponse.json({ imageUrl: finalTryOnUrl });
+
+    // --- Step 6: Prepare for and Call the Face Swap API ---
+    console.log("\n[STEP 6/7] Preparing files for face swap...");
+    // Fetch the generated try-on image and create a File object from it.
+    const tryOnImageResponse = await fetch(finalTryOnUrl);
+    const tryOnImageBlob = await tryOnImageResponse.blob();
+    const tryOnImageFile = new File([tryOnImageBlob], "target_image.png", { type: tryOnImageBlob.type });
+
+    console.log("[STEP 6/7] Performing face swap via file upload...");
+    // Now, perform the swap using the original file and the newly created file.
+    const finalImageUrl = await faceSwap(humanImageFile, tryOnImageFile);
+    console.log("[STEP 6/7] Face swap complete.");
+
+    // Step 7: Return the final image URL directly to the frontend
+    console.log("\n[STEP 7/7] Process complete. Sending final URL to client...");
+    return NextResponse.json({ imageUrl: finalImageUrl });
 
   } catch (error) {
     console.error('Error in /api/generate-style-v2:', error);

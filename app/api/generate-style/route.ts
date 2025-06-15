@@ -245,7 +245,6 @@ Focus on personalizing the advice based on physical features, fashion preference
     console.log("～～～Final Kling Prompt:", prompt);
     // Step 4 - Call Kling AI to submit the image generation task
     console.log(`Submitting image generation task to Kling AI using model: ${modelVersion}...`);
-
     const requestBody = buildRequestBody(modelVersion, prompt, humanImageBase64);
 
     // print all info in requestBody
