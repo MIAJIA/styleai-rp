@@ -208,95 +208,6 @@ export default function HomePage() {
     return () => clearInterval(intervalId); // Cleanup on component unmount or if jobId changes
   }, [jobId]);
 
-  const handleGenerateFinalImage = async (suggestion: any) => {
-    console.log("\n--- Entering handleGenerateFinalImage ---");
-    if (!suggestion?.image_prompt) {
-      alert("Missing a valid style prompt. Please try generating the suggestion again.");
-      console.error("Client Error: Missing image_prompt in suggestion object.", suggestion);
-      return;
-    }
-    setIsGeneratingFinalImage(true);
-
-    try {
-      const formData = new FormData();
-
-      const humanImageFile = selfieFile || (await getFileFromPreview(selfiePreview, "selfie"));
-      const garmentImageFile =
-        clothingFile || (await getFileFromPreview(clothingPreview, "garment"));
-
-      if (!humanImageFile || !garmentImageFile) {
-        throw new Error("Could not process one of the images for final generation.");
-      }
-
-      const prompt = suggestion.image_prompt;
-      const modelVersion = "kling-v2";
-
-      // --- Detailed Logging of Fields to be Sent ---
-      console.log(`[CLIENT-SEND] Appending human_image:`, humanImageFile);
-      console.log(`[CLIENT-SEND] Appending garment_image:`, garmentImageFile);
-      console.log(`[CLIENT-SEND] Appending prompt: ${prompt.substring(0, 50)}...`);
-      console.log(`[CLIENT-SEND] Appending modelVersion: ${modelVersion}`);
-      // --- End of Logging ---
-
-      formData.append("human_image", humanImageFile);
-      formData.append("garment_image", garmentImageFile);
-      formData.append("prompt", prompt);
-      formData.append("modelVersion", modelVersion);
-
-      console.log("[CLIENT-SEND] Sending request to /api/generate-style-v2...");
-      const response = await fetch("/api/generate-style-v2", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to generate final image: ${errorText}`);
-      }
-
-      const result = await response.json();
-      const imageUrl = result.imageUrl;
-
-      if (!imageUrl) {
-        throw new Error("Kling API response did not contain a valid image URL.");
-      }
-
-      // --- Save the new look to localStorage ---
-      try {
-        const storedLooks = localStorage.getItem("pastLooks");
-        const pastLooks = storedLooks ? JSON.parse(storedLooks) : [];
-
-        const newLook = {
-          id: `look-${Date.now()}`,
-          imageUrl: imageUrl,
-          style: prompt, // Saving the detailed prompt as the "style"
-          timestamp: Date.now(),
-        };
-
-        // Add the new look to the beginning of the array
-        const updatedLooks = [newLook, ...pastLooks];
-
-        localStorage.setItem("pastLooks", JSON.stringify(updatedLooks));
-      } catch (storageError) {
-        console.error("Failed to save look to localStorage:", storageError);
-        // Non-fatal error, so we don't block the user from seeing their result
-      }
-
-      // --- Continue to update the UI ---
-      setGeneratedImageUrl(imageUrl);
-      setStage("result");
-    } catch (error) {
-      console.error(error);
-      alert(
-        error instanceof Error
-          ? error.message
-          : "An unknown error occurred during final image generation.",
-      );
-    } finally {
-      setIsGeneratingFinalImage(false);
-    }
-  };
-
   const handleGenerate = async () => {
     if (!selfiePreview) {
       alert("Please select a portrait.");
@@ -403,6 +314,7 @@ export default function HomePage() {
     setShowAnimation(false);
     setIsApiFinished(false);
     setIsGenerating(false);
+    setGeneratedImageUrl(null);
   };
 
   const handleCreateAnother = () => {
