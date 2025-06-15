@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import * as jwt from "jsonwebtoken";
+import { put } from "@vercel/blob";
 
 // Initialize the OpenAI client
 const openai = new OpenAI({
@@ -238,6 +239,7 @@ async function faceSwap(sourceFile: File, targetFile: File): Promise<string> {
 // --- Main Exported Orchestration Function ---
 
 interface FinalImageInput {
+  jobId: string;
   humanImageUrl: string;
   humanImageType: string;
   humanImageName: string;
@@ -248,6 +250,7 @@ interface FinalImageInput {
 }
 
 export async function generateFinalImage({
+  jobId,
   humanImageUrl,
   humanImageType,
   humanImageName,
@@ -305,11 +308,20 @@ export async function generateFinalImage({
   console.log("[4/5] Polling for Kling task result...");
   const initialImageUrl = await _pollKlingTask(taskId);
 
-  // Step 5: Perform face swap (this correctly uses File objects)
-  console.log("[5/5] Performing face swap...");
+  // Step 5: Perform face swap
+  console.log("[5/6] Performing face swap...");
   const initialImageFile = await urlToFile(initialImageUrl, "initial.jpg", "image/jpeg");
-  const finalImageUrl = await faceSwap(humanImageFile, initialImageFile);
+  const swappedHttpUrl = await faceSwap(humanImageFile, initialImageFile);
+
+  // Step 6: Persist final image to Vercel Blob and get a secure URL
+  console.log("[6/6] Persisting final image to secure storage...");
+  const finalImageResponse = await fetch(swappedHttpUrl);
+  const finalImageBlob = await finalImageResponse.blob();
+  const finalImageName = `final-look-${jobId}.png`;
+  const { url: finalSecureUrl } = await put(finalImageName, finalImageBlob, {
+    access: 'public',
+  });
 
   console.log("--- Final image generation pipeline complete ---");
-  return finalImageUrl;
+  return finalSecureUrl;
 }

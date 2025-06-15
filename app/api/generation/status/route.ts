@@ -89,6 +89,7 @@ export async function GET(request: Request) {
                 throw new Error("Cannot generate final image without an 'image_prompt' in the job suggestion.");
             }
             const finalImageUrl = await generateFinalImage({
+                jobId: job.jobId,
                 humanImageUrl: job.humanImage.url,
                 humanImageType: job.humanImage.type,
                 humanImageName: job.humanImage.name,
