@@ -129,8 +129,12 @@ const fileToBase64 = async (file: File): Promise<string> => {
 const KLING_ACCESS_KEY = process.env.KLING_AI_ACCESS_KEY;
 const KLING_SECRET_KEY = process.env.KLING_AI_SECRET_KEY;
 const KLING_API_BASE_URL = "https://api-beijing.klingai.com";
+// Paths for Virtual Try-on
 const KOLORS_VIRTUAL_TRYON_SUBMIT_PATH = "/v1/images/kolors-virtual-try-on";
 const KOLORS_VIRTUAL_TRYON_STATUS_PATH = "/v1/images/kolors-virtual-try-on/";
+// Paths for Image Stylization
+const KOLORS_STYLIZE_SUBMIT_PATH = "/v1/images/kling-v2";
+const KOLORS_STYLIZE_STATUS_PATH = "/v1/images/kling-v2/";
 
 const getApiToken = (accessKey: string, secretKey: string): string => {
   const payload = {
@@ -144,56 +148,115 @@ const getApiToken = (accessKey: string, secretKey: string): string => {
   });
 };
 
-// Private, reusable polling function
-async function _pollKlingTask(taskId: string): Promise<string> {
-    let attempts = 0;
-    const maxAttempts = 40; // Approx 2 minutes
+const buildRequestBody = (
+  modelVersion: string,
+  prompt: string,
+  humanImageBase64: string
+): object => {
+  // Base parameters common to most models
+  const baseBody = {
+    prompt: prompt,
+    aspect_ratio: "3:4",
+    image: humanImageBase64,
+  };
+  console.log("!!! build request body with modelVersion:", modelVersion);
+  switch (modelVersion) {
+    case 'kling-v1-5':
+      return {
+        ...baseBody,
+        image_reference: "face", // This model supports image_reference
+        human_fidelity: 1,
+        model_name: "kling-v1-5",
+      };
+    case 'kling-v2':
+      return {
+        ...baseBody,
+        model_name: "kling-v2", // This model does NOT support image_reference
+      };
+    default:
+      // Defaulting to v2 as a sensible choice, which doesn't use image_reference
+      return {
+        ...baseBody,
+        model_name: "kling-v2",
+      };
+  }
+};
 
-    while (attempts < maxAttempts) {
-        await sleep(3000); // 3-second interval
-        attempts++;
-        console.log(`Polling attempt #${attempts} for task: ${taskId}`);
+// More robust, reusable polling function
+async function executeKlingTask(submitPath: string, queryPathPrefix: string, requestBody: object): Promise<string> {
+  if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
+      throw new Error("Kling AI API keys are not configured.");
+  }
+  // 1. Submit the task
+  const apiToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
+  const submitResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${submitPath}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+    timeout: 60000,
+  });
 
-        if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
-            throw new Error("Kling AI API keys are not configured for polling.");
-        }
-        const pollingToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
+  if (!submitResponse.ok) {
+    const errorBody = await submitResponse.text();
+    throw new Error(`Kling API Error on submit to ${submitPath}: ${submitResponse.status} ${errorBody}`);
+  }
 
-        try {
-            const statusCheckResponse = await fetchWithTimeout(
-                `${KLING_API_BASE_URL}${KOLORS_VIRTUAL_TRYON_STATUS_PATH}${taskId}`,
-                { headers: { Authorization: `Bearer ${pollingToken}` }, timeout: 60000 }
-            );
+  const submitResult = await submitResponse.json();
+  const taskId = submitResult.data.task_id;
+  console.log(`Kling task submitted to ${submitPath}. Task ID: ${taskId}`);
 
-            if (!statusCheckResponse.ok) {
-                console.warn(`Kling polling failed on attempt ${attempts} with status ${statusCheckResponse.status}, continuing...`);
-                continue; // Don't fail the whole process for a single failed poll
-            }
+  // 2. Poll for the result
+  let attempts = 0;
+  const maxAttempts = 40;
+  let finalImageUrl = "";
 
-            const statusResult = await statusCheckResponse.json();
-            const taskData = statusResult.data;
+  while (attempts < maxAttempts) {
+    await sleep(3000); // 3-second interval
+    attempts++;
+    console.log(`Polling attempt #${attempts} for task: ${taskId}`);
 
-            if (taskData.task_status === "succeed") {
-                console.log("Kling task succeeded. Full response:", JSON.stringify(statusResult, null, 2));
-                const finalImageUrl = statusResult.data?.task_result?.images?.[0]?.url;
-                if (!finalImageUrl) {
-                    throw new Error("Kling task succeeded but a result URL was not found in the response.");
-                }
-                console.log(`Task ${taskId} succeeded! Image URL:`, finalImageUrl);
-                return finalImageUrl;
-            } else if (taskData.task_status === "failed") {
-                throw new Error(`Kling task ${taskId} failed. Reason: ${taskData.task_status_msg || "Unknown"}`);
-            }
-            // If status is 'processing' or other, the loop continues
-        } catch(pollError) {
-             console.warn(`Error during polling attempt ${attempts}:`, pollError);
-             // Continue to next attempt
-        }
+    const pollingToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
+    const statusCheckResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${queryPathPrefix}${taskId}`, {
+      headers: { 'Authorization': `Bearer ${pollingToken}` },
+      timeout: 60000,
+    });
+
+    if (!statusCheckResponse.ok) {
+      console.warn(`Kling polling failed on attempt ${attempts} with status ${statusCheckResponse.status}, continuing...`);
+      continue;
     }
 
-    throw new Error(`Kling task ${taskId} timed out after ${maxAttempts} attempts.`);
-}
+    const statusResult = await statusCheckResponse.json();
+    const taskData = statusResult.data;
 
+    if (taskData.task_status === "succeed") {
+      console.log("Kling task succeeded. Full response:", JSON.stringify(statusResult, null, 2));
+
+      // Defensive parsing for different possible success structures
+      if (taskData.task_result?.images?.length > 0) {
+        finalImageUrl = taskData.task_result.images[0].url;
+      } else if (taskData.task_result?.url) {
+        finalImageUrl = taskData.task_result.url;
+      } else {
+        throw new Error("Task succeeded, but the response structure for the image URL is unexpected.");
+      }
+
+      console.log(`Task ${taskId} succeeded! Image URL:`, finalImageUrl);
+      break;
+    } else if (taskData.task_status === "failed") {
+      throw new Error(`Kling task failed. Reason: ${taskData.task_status_msg || 'Unknown'}`);
+    }
+  }
+
+  if (!finalImageUrl) {
+    throw new Error(`Kling task ${taskId} timed out after ${maxAttempts} attempts.`);
+  }
+
+  return finalImageUrl;
+}
 
 // --- Face Swap ---
 const FACE_SWAP_API_URL = "https://ai-face-swap2.p.rapidapi.com/public/process/files";
@@ -261,66 +324,50 @@ export async function generateFinalImage({
 }: FinalImageInput): Promise<string> {
   console.log("--- Starting final image generation pipeline ---");
 
-  // Step 1: Convert input URLs to File objects. We need the File for FaceSwap later,
-  // and the Base64 string for the initial Kling call.
-  console.log("[1/5] Converting URLs to File objects...");
+  // Step 1: Convert input URLs to File objects for later use
+  console.log("[1/7] Converting URLs to File objects...");
   const humanImageFile = await urlToFile(humanImageUrl, humanImageName, humanImageType);
   const garmentImageFile = await urlToFile(garmentImageUrl, garmentImageName, garmentImageType);
 
-  // Step 2: Convert Files to Base64 for the JSON payload
-  console.log("[2/5] Converting Files to Base64 for Kling API...");
+  // Step 2: Convert original human image to Base64 for the stylization step
+  console.log("[2/7] Converting human image to Base64 for stylization...");
   const humanImageBase64 = await fileToBase64(humanImageFile);
+
+  // Step 3: (NEW) Generate a stylized background/pose image using kling-v2
+  console.log("[3/7] Generating stylized image with kling-v2...");
+  const stylizeRequestBody = buildRequestBody("kling-v2", imagePrompt, humanImageBase64);
+  const styledImageUrl = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, stylizeRequestBody);
+
+  // Step 4: Convert the new stylized image and the garment to Base64 for virtual try-on
+  console.log("[4/7] Converting stylized image and garment to Base64 for try-on...");
+  const styledImageFile = await urlToFile(styledImageUrl, "styled.jpg", "image/jpeg");
+  const styledImageBase64 = await fileToBase64(styledImageFile);
   const garmentImageBase64 = await fileToBase64(garmentImageFile);
 
-  // Step 3: Submit the initial try-on task to Kling using a JSON payload
-  console.log("[3/5] Submitting initial try-on task to Kling (as JSON)...");
-  if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
-      throw new Error("Kling AI API keys are not configured for submission.");
-  }
-
-  const klingRequestBody = {
-    model_name: "kolors-virtual-try-on-v1-5",
-    human_image: humanImageBase64,
+  // Step 5: Submit the virtual try-on task
+  console.log("[5/7] Submitting virtual try-on task...");
+  const tryOnRequestBody = {
+    model_name: "kolors-virtual-try-on-v1.5",
+    human_image: styledImageBase64,
     cloth_image: garmentImageBase64,
   };
+  const tryOnImageUrl = await executeKlingTask(KOLORS_VIRTUAL_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, tryOnRequestBody);
 
-  const apiToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
-  const submitResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${KOLORS_VIRTUAL_TRYON_SUBMIT_PATH}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(klingRequestBody),
-    timeout: 60000,
-  });
+  // Step 6: Perform face swap
+  console.log("[6/7] Performing face swap...");
+  const tryOnImageFile = await urlToFile(tryOnImageUrl, "tryon.jpg", "image/jpeg");
+  // Use original human file for the face source, and the try-on result as the target
+  const swappedHttpUrl = await faceSwap(humanImageFile, tryOnImageFile);
 
-  if (!submitResponse.ok) {
-    const errorBody = await submitResponse.text();
-    throw new Error(`Kling API submit failed: ${submitResponse.status} ${errorBody}`);
-  }
-
-  const submitResult = await submitResponse.json();
-  const taskId = submitResult.data.task_id;
-  console.log(`Kling task submitted. Task ID: ${taskId}`);
-
-  // Step 4: Poll for the Kling task result
-  console.log("[4/5] Polling for Kling task result...");
-  const initialImageUrl = await _pollKlingTask(taskId);
-
-  // Step 5: Perform face swap
-  console.log("[5/6] Performing face swap...");
-  const initialImageFile = await urlToFile(initialImageUrl, "initial.jpg", "image/jpeg");
-  const swappedHttpUrl = await faceSwap(humanImageFile, initialImageFile);
-
-  // Step 6: Persist final image to Vercel Blob and get a secure URL
-  console.log("[6/6] Persisting final image to secure storage...");
+  // Step 7: Persist final image to Vercel Blob and get a secure URL
+  console.log("[7/7] Persisting final image to secure storage...");
   const finalImageResponse = await fetch(swappedHttpUrl);
   const finalImageBlob = await finalImageResponse.blob();
   const finalImageName = `final-look-${jobId}.png`;
   const { url: finalSecureUrl } = await put(finalImageName, finalImageBlob, {
     access: 'public',
   });
+
 
   console.log("--- Final image generation pipeline complete ---");
   return finalSecureUrl;
