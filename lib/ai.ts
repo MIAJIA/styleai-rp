@@ -225,10 +225,15 @@ async function faceSwap(sourceFile: File, targetFile: File): Promise<string> {
   }
 
   const result = await response.json();
-  const swappedImageUrl = result.file_url;
+  let swappedImageUrl = result.file_url;
 
   if (!swappedImageUrl) {
     throw new Error("Face swap API did not return a valid 'file_url'.");
+  }
+
+  // Force HTTPS to prevent mixed content errors on the frontend
+  if (swappedImageUrl.startsWith('http://')) {
+    swappedImageUrl = swappedImageUrl.replace('http://', 'https://');
   }
 
   return swappedImageUrl;
