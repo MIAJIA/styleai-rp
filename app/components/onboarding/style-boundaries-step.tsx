@@ -1,70 +1,87 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { OnboardingData } from "@/lib/onboarding-storage"
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { OnboardingData } from "@/lib/onboarding-storage";
 
 interface StyleBoundariesStepProps {
-  data: OnboardingData
-  onUpdate: (data: Partial<OnboardingData>) => void
-  onValidationChange: (isValid: boolean) => void
+  data: OnboardingData;
+  onUpdate: (data: Partial<OnboardingData>) => void;
+  onValidationChange: (isValid: boolean) => void;
 }
 
-const AVOID_ELEMENTS = ["无袖上衣", "露背设计", "迷你裙", "高领衣服", "紧身衣物", "高跟鞋", "大图案", "荧光色"]
+const AVOID_ELEMENTS = [
+  "无袖上衣",
+  "露背设计",
+  "迷你裙",
+  "高领衣服",
+  "紧身衣物",
+  "高跟鞋",
+  "大图案",
+  "荧光色",
+];
 
-export default function StyleBoundariesStep({ data, onUpdate, onValidationChange }: StyleBoundariesStepProps) {
-  const [avoidElements, setAvoidElements] = useState<string[]>(data.avoidElements || [])
-  const [customAvoid, setCustomAvoid] = useState(data.customAvoid || "")
-  const isInitialMount = useRef(true)
+export default function StyleBoundariesStep({
+  data,
+  onUpdate,
+  onValidationChange,
+}: StyleBoundariesStepProps) {
+  const [avoidElements, setAvoidElements] = useState<string[]>(data.avoidElements || []);
+  const [customAvoid, setCustomAvoid] = useState(data.customAvoid || "");
+  const isInitialMount = useRef(true);
 
   // This step is optional, so always mark as valid
   useEffect(() => {
-    onValidationChange(true)
-  }, [onValidationChange])
+    onValidationChange(true);
+  }, [onValidationChange]);
 
   // Update parent data whenever relevant state changes
   useEffect(() => {
     // Skip the initial render to avoid immediate update on mount
     if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
+      isInitialMount.current = false;
+      return;
     }
 
     onUpdate({
       avoidElements,
       customAvoid,
-    })
-  }, [avoidElements, customAvoid, onUpdate])
+    });
+  }, [avoidElements, customAvoid, onUpdate]);
 
   const toggleAvoidElement = (element: string) => {
-    setAvoidElements((prev) => (prev.includes(element) ? prev.filter((item) => item !== element) : [...prev, element]))
-  }
+    setAvoidElements((prev) =>
+      prev.includes(element) ? prev.filter((item) => item !== element) : [...prev, element],
+    );
+  };
 
   // Generate suggestions based on body challenges
   const getSuggestions = useCallback(() => {
-    const suggestions = []
+    const suggestions = [];
     if (data.bodyChallenges?.includes("胯宽")) {
-      suggestions.push("建议避开紧身下装")
+      suggestions.push("建议避开紧身下装");
     }
     if (data.bodyChallenges?.includes("脖子短")) {
-      suggestions.push("高领可能不太理想")
+      suggestions.push("高领可能不太理想");
     }
     if (data.bodyChallenges?.includes("肩膀宽")) {
-      suggestions.push("无袖上衣可能会强调肩宽")
+      suggestions.push("无袖上衣可能会强调肩宽");
     }
-    return suggestions
-  }, [data.bodyChallenges])
+    return suggestions;
+  }, [data.bodyChallenges]);
 
-  const suggestions = getSuggestions()
+  const suggestions = getSuggestions();
 
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold text-gray-800">风格边界</h2>
         <p className="text-gray-600">排除你不希望出现的搭配元素，让我们尊重你的舒适区。</p>
-        <p className="text-sm text-pink-600 font-medium">这一步是可选的 - 如果你对一切都开放可以跳过！</p>
+        <p className="text-sm text-pink-600 font-medium">
+          这一步是可选的 - 如果你对一切都开放可以跳过！
+        </p>
       </div>
 
       {/* AI-based suggestions */}
@@ -91,10 +108,11 @@ export default function StyleBoundariesStep({ data, onUpdate, onValidationChange
               variant="outline"
               size="sm"
               onClick={() => toggleAvoidElement(element)}
-              className={`text-sm justify-start ${avoidElements.includes(element)
-                ? "bg-red-100 border-red-300 text-red-700"
-                : "border-gray-200 text-gray-600"
-                }`}
+              className={`text-sm justify-start ${
+                avoidElements.includes(element)
+                  ? "bg-red-100 border-red-300 text-red-700"
+                  : "border-gray-200 text-gray-600"
+              }`}
             >
               {element}
             </Button>
@@ -131,5 +149,5 @@ export default function StyleBoundariesStep({ data, onUpdate, onValidationChange
         </Card>
       )}
     </div>
-  )
+  );
 }

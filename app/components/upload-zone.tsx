@@ -1,36 +1,36 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef } from "react"
-import { Camera, Upload } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState, useRef } from "react";
+import { Camera, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface UploadZoneProps {
-  onImageUpload: (file: File) => void
-  label: string
-  preview?: string
+  onImageUpload: (file: File) => void;
+  label: string;
+  preview?: string;
 }
 
 export default function UploadZone({ onImageUpload, label, preview }: UploadZoneProps) {
-  const [isDragging, setIsDragging] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    const files = e.dataTransfer.files
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
     if (files[0] && files[0].type.startsWith("image/")) {
-      onImageUpload(files[0])
+      onImageUpload(files[0]);
     }
-  }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
+    const files = e.target.files;
     if (files?.[0]) {
-      onImageUpload(files[0])
+      onImageUpload(files[0]);
     }
-  }
+  };
 
   return (
     <div className="space-y-3">
@@ -46,7 +46,11 @@ export default function UploadZone({ onImageUpload, label, preview }: UploadZone
       >
         {preview ? (
           <div className="relative">
-            <img src={preview || "/placeholder.svg"} alt="Preview" className="w-full h-32 object-cover rounded-xl" />
+            <img
+              src={preview || "/placeholder.svg"}
+              alt="Preview"
+              className="w-full h-32 object-cover rounded-xl"
+            />
             <Button
               size="sm"
               variant="secondary"
@@ -71,8 +75,14 @@ export default function UploadZone({ onImageUpload, label, preview }: UploadZone
           </div>
         )}
 
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
       </div>
     </div>
-  )
+  );
 }

@@ -1,31 +1,31 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export default function WelcomePage() {
-  const [isVisible, setIsVisible] = useState(false)
-  const router = useRouter()
+  const [isVisible, setIsVisible] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     // Trigger animation after component mounts
     const timer = setTimeout(() => {
-      setIsVisible(true)
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [])
+      setIsVisible(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleGetStarted = () => {
     // Check if user has completed onboarding
-    const hasCompletedOnboarding = localStorage.getItem("styleMe_onboarding_completed")
+    const hasCompletedOnboarding = localStorage.getItem("styleMe_onboarding_completed");
 
     if (hasCompletedOnboarding) {
-      router.push("/")
+      router.push("/");
     } else {
-      router.push("/onboarding")
+      router.push("/onboarding");
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 flex items-center justify-center px-6 relative overflow-hidden">
@@ -114,7 +114,9 @@ export default function WelcomePage() {
         <div
           className={`pt-8 transition-all duration-1000 delay-900 ease-out ${isVisible ? "opacity-100" : "opacity-0"}`}
         >
-          <p className="text-xs text-gray-400 font-medium tracking-wide">DISCOVER YOUR PERFECT STYLE</p>
+          <p className="text-xs text-gray-400 font-medium tracking-wide">
+            DISCOVER YOUR PERFECT STYLE
+          </p>
         </div>
       </div>
 
@@ -132,16 +134,22 @@ export default function WelcomePage() {
             isVisible ? "opacity-20 translate-y-0" : "opacity-0 translate-y-4"
           }`}
         >
-          <div className="w-2 h-2 bg-rose-400 rounded-full animate-pulse" style={{ animationDelay: "0.5s" }}></div>
+          <div
+            className="w-2 h-2 bg-rose-400 rounded-full animate-pulse"
+            style={{ animationDelay: "0.5s" }}
+          ></div>
         </div>
         <div
           className={`absolute top-1/2 right-1/4 transition-all duration-2000 delay-1400 ease-out ${
             isVisible ? "opacity-25 translate-y-0" : "opacity-0 translate-y-4"
           }`}
         >
-          <div className="w-1.5 h-1.5 bg-pink-400 rounded-full animate-pulse" style={{ animationDelay: "1s" }}></div>
+          <div
+            className="w-1.5 h-1.5 bg-pink-400 rounded-full animate-pulse"
+            style={{ animationDelay: "1s" }}
+          ></div>
         </div>
       </div>
     </div>
-  )
+  );
 }

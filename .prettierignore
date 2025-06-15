@@ -1,0 +1,10 @@
+# Ignore artifacts:
+.next
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+
+# Ignore config files
+next.config.mjs
+postcss.config.mjs

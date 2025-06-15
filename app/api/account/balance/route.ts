@@ -8,9 +8,12 @@ const getApiToken = (accessKey: string, secretKey: string): string => {
     exp: Math.floor(Date.now() / 1000) + 1800, // 30 minutes expiration
     nbf: Math.floor(Date.now() / 1000) - 5, // 5 seconds tolerance
   };
-  const token = jwt.sign(payload, secretKey, { algorithm: 'HS256', header: { alg: "HS256", typ: "JWT" } });
+  const token = jwt.sign(payload, secretKey, {
+    algorithm: "HS256",
+    header: { alg: "HS256", typ: "JWT" },
+  });
   return token;
-}
+};
 
 const KLING_ACCESS_KEY = process.env.KLING_AI_ACCESS_KEY;
 const KLING_SECRET_KEY = process.env.KLING_AI_SECRET_KEY;
@@ -19,7 +22,10 @@ const ACCOUNT_COSTS_PATH = "/account/costs";
 
 export async function GET() {
   if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
-    return NextResponse.json({ error: "AccessKey or SecretKey is not configured in .env.local" }, { status: 500 });
+    return NextResponse.json(
+      { error: "AccessKey or SecretKey is not configured in .env.local" },
+      { status: 500 },
+    );
   }
 
   try {
@@ -36,10 +42,10 @@ export async function GET() {
     console.log(`Querying account balance from: ${url.toString()}`);
 
     const response = await fetch(url.toString(), {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${apiToken}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
       },
     });
 
@@ -50,7 +56,6 @@ export async function GET() {
 
     const result = await response.json();
     return NextResponse.json(result);
-
   } catch (error) {
     console.error("An error occurred while fetching account balance:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";

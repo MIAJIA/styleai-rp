@@ -9,5 +9,5 @@ export default function Loading() {
         <p className="text-neutral-600 font-medium">Loading Ensemble...</p>
       </div>
     </div>
-  )
+  );
 }

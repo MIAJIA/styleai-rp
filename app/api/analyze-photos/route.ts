@@ -1,74 +1,87 @@
-import { NextResponse } from "next/server"
-import OpenAI from "openai"
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
 
 // Initialize the OpenAI client with your API key
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-})
+});
 
 const face_style_map = {
-  "元气少女脸": {
+  元气少女脸: {
     feature_keywords: ["清纯", "亲和"],
     style_suggestion: ["纯欲", "邻家少女风"],
   },
-  "优雅学姐脸": {
+  优雅学姐脸: {
     feature_keywords: ["温暖", "端庄"],
     style_suggestion: ["知性", "质感", "轻熟女"],
   },
-  "清新古典脸": {
+  清新古典脸: {
     feature_keywords: ["中式", "干净"],
     style_suggestion: ["新中式", "古典风"],
   },
-  "高级时尚脸": {
+  高级时尚脸: {
     feature_keywords: ["飒冷", "个性"],
     style_suggestion: ["模特感", "御姐风"],
   },
-  "清纯校花脸": {
+  清纯校花脸: {
     feature_keywords: ["白月光", "自然"],
     style_suggestion: ["明艳端庄", "甜美"],
   },
-  "温婉港姐脸": {
+  温婉港姐脸: {
     feature_keywords: ["知性", "圆润"],
     style_suggestion: ["港风", "大女人风"],
   },
-  "复仇千金脸": {
+  复仇千金脸: {
     feature_keywords: ["冷艳", "宅女感"],
     style_suggestion: ["冷贵风", "性冷淡风"],
   },
-  "飒爽姐妻脸": {
+  飒爽姐妻脸: {
     feature_keywords: ["酷", "第一眼美女"],
     style_suggestion: ["高级", "酷感御姐风"],
   },
-  "甜美混血脸": {
+  甜美混血脸: {
     feature_keywords: ["芭比感", "明艳"],
     style_suggestion: ["韩系女团风", "芭比甜妹"],
   },
-  "优雅阔太脸": {
+  优雅阔太脸: {
     feature_keywords: ["富贵花", "大气"],
     style_suggestion: ["华丽", "贵气女人风"],
   },
-  "调性甜酷脸": {
+  调性甜酷脸: {
     feature_keywords: ["攻击性高", "混血感"],
     style_suggestion: ["厌世风", "恶女风"],
   },
-  "总裁御姐脸": {
+  总裁御姐脸: {
     feature_keywords: ["冷艳", "强气场"],
     style_suggestion: ["大女人风", "御姐风"],
   },
-}
+};
 
 // Define the expected structure for the AI's response - SIMPLIFIED to avoid content filters
 const aiAnalysisSchema = {
   type: "object",
   properties: {
-    bodyType: { type: "string", description: "Classify body shape, e.g., 'Hourglass', 'Rectangle', 'Pear'" },
-    faceShape: { type: "string", description: "Classify face shape, e.g., 'Oval', 'Square', 'Heart'" },
-    styleInitialSense: { type: "string", description: "A one-sentence summary of the overall style impression." },
-    boneStructure: { type: "string", description: "Classify bone structure, e.g., 'Delicate', 'Strong'" },
+    bodyType: {
+      type: "string",
+      description: "Classify body shape, e.g., 'Hourglass', 'Rectangle', 'Pear'",
+    },
+    faceShape: {
+      type: "string",
+      description: "Classify face shape, e.g., 'Oval', 'Square', 'Heart'",
+    },
+    styleInitialSense: {
+      type: "string",
+      description: "A one-sentence summary of the overall style impression.",
+    },
+    boneStructure: {
+      type: "string",
+      description: "Classify bone structure, e.g., 'Delicate', 'Strong'",
+    },
     bodyAdvantages: {
       type: "array",
       items: { type: "string" },
-      description: "List of body features that can be highlighted with clothing, e.g., ['Defined waist', 'Long legs']",
+      description:
+        "List of body features that can be highlighted with clothing, e.g., ['Defined waist', 'Long legs']",
     },
     face_style: {
       type: "object",
@@ -86,7 +99,8 @@ const aiAnalysisSchema = {
         style_recommendation: {
           type: "array",
           items: { type: "string" },
-          description: "The style recommendations for the matched face type, e.g., ['纯欲', '邻家少女风'].",
+          description:
+            "The style recommendations for the matched face type, e.g., ['纯欲', '邻家少女风'].",
         },
       },
       required: ["type_name", "feature_keywords", "style_recommendation"],
@@ -100,14 +114,14 @@ const aiAnalysisSchema = {
     "bodyAdvantages",
     "face_style",
   ],
-}
+};
 
 export async function POST(request: Request) {
   try {
-    const { fullBodyPhoto, headPhoto } = await request.json()
+    const { fullBodyPhoto, headPhoto } = await request.json();
 
     if (!fullBodyPhoto || !headPhoto) {
-      return NextResponse.json({ error: "Missing required photo data" }, { status: 400 })
+      return NextResponse.json({ error: "Missing required photo data" }, { status: 400 });
     }
 
     const response = await openai.chat.completions.create({
@@ -161,21 +175,25 @@ ${JSON.stringify(aiAnalysisSchema, null, 2)}
         },
       ],
       max_tokens: 1500,
-    })
+    });
 
     // Log the entire API response for debugging
     console.log("OpenAI API Response:", JSON.stringify(response, null, 2));
 
-    if (!response.choices || response.choices.length === 0 || !response.choices[0].message.content) {
+    if (
+      !response.choices ||
+      response.choices.length === 0 ||
+      !response.choices[0].message.content
+    ) {
       console.error("Invalid response structure from OpenAI:", response);
       throw new Error("Failed to get a valid analysis from the AI.");
     }
 
-    const aiAnalysis = JSON.parse(response.choices[0].message.content)
+    const aiAnalysis = JSON.parse(response.choices[0].message.content);
 
-    return NextResponse.json({ aiAnalysis })
+    return NextResponse.json({ aiAnalysis });
   } catch (error) {
-    console.error("Error calling OpenAI API:", error)
-    return NextResponse.json({ error: "Failed to analyze photos" }, { status: 500 })
+    console.error("Error calling OpenAI API:", error);
+    return NextResponse.json({ error: "Failed to analyze photos" }, { status: 500 });
   }
 }

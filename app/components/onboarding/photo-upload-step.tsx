@@ -1,104 +1,118 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Camera, X, CheckCircle } from "lucide-react"
-import { OnboardingData } from "@/lib/onboarding-storage"
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Camera, X, CheckCircle } from "lucide-react";
+import { OnboardingData } from "@/lib/onboarding-storage";
 
 interface PhotoUploadStepProps {
-  data: OnboardingData
-  onUpdate: (data: Partial<OnboardingData>) => void
-  onValidationChange: (isValid: boolean) => void
+  data: OnboardingData;
+  onUpdate: (data: Partial<OnboardingData>) => void;
+  onValidationChange: (isValid: boolean) => void;
 }
 
-export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: PhotoUploadStepProps) {
-  const [fullBodyPhoto, setFullBodyPhoto] = useState<string>("")
-  const [headPhoto, setHeadPhoto] = useState<string>("")
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [analysisComplete, setAnalysisComplete] = useState(false)
-  const [analysisError, setAnalysisError] = useState<string | null>(null)
+export default function PhotoUploadStep({
+  data,
+  onUpdate,
+  onValidationChange,
+}: PhotoUploadStepProps) {
+  const [fullBodyPhoto, setFullBodyPhoto] = useState<string>("");
+  const [headPhoto, setHeadPhoto] = useState<string>("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
-  const fullBodyInputRef = useRef<HTMLInputElement>(null)
-  const headPhotoInputRef = useRef<HTMLInputElement>(null)
+  const fullBodyInputRef = useRef<HTMLInputElement>(null);
+  const headPhotoInputRef = useRef<HTMLInputElement>(null);
 
   // Load photos from data or separate localStorage on mount
   useEffect(() => {
     // Try to load from data first
     if (data.fullBodyPhoto) {
-      setFullBodyPhoto(data.fullBodyPhoto)
+      setFullBodyPhoto(data.fullBodyPhoto);
     } else {
       // Try to load from separate localStorage
-      const savedFullBodyPhoto = localStorage.getItem("styleMe_fullBodyPhoto")
+      const savedFullBodyPhoto = localStorage.getItem("styleMe_fullBodyPhoto");
       if (savedFullBodyPhoto) {
-        setFullBodyPhoto(savedFullBodyPhoto)
+        setFullBodyPhoto(savedFullBodyPhoto);
       }
     }
 
     if (data.headPhoto) {
-      setHeadPhoto(data.headPhoto)
+      setHeadPhoto(data.headPhoto);
     } else {
       // Try to load from separate localStorage
-      const savedHeadPhoto = localStorage.getItem("styleMe_headPhoto")
+      const savedHeadPhoto = localStorage.getItem("styleMe_headPhoto");
       if (savedHeadPhoto) {
-        setHeadPhoto(savedHeadPhoto)
+        setHeadPhoto(savedHeadPhoto);
       }
     }
 
     // Check if analysis was already completed
     if (data.aiAnalysis) {
-      setAnalysisComplete(true)
+      setAnalysisComplete(true);
     }
-  }, [data.fullBodyPhoto, data.headPhoto, data.aiAnalysis])
+  }, [data.fullBodyPhoto, data.headPhoto, data.aiAnalysis]);
 
   // New function to call the backend API for analysis
   const runAIAnalysis = useCallback(async () => {
-    if (isAnalyzing || analysisComplete || !fullBodyPhoto || !headPhoto) return
+    if (isAnalyzing || analysisComplete || !fullBodyPhoto || !headPhoto) return;
 
-    setIsAnalyzing(true)
-    setAnalysisError(null)
+    setIsAnalyzing(true);
+    setAnalysisError(null);
 
     try {
-      const response = await fetch('/api/analyze-photos', {
-        method: 'POST',
+      const response = await fetch("/api/analyze-photos", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ fullBodyPhoto, headPhoto }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to get analysis from server.')
+        throw new Error("Failed to get analysis from server.");
       }
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (result.aiAnalysis) {
         onUpdate({
           aiAnalysis: result.aiAnalysis,
-        })
-        setAnalysisComplete(true)
+        });
+        setAnalysisComplete(true);
       } else {
-        throw new Error('Invalid analysis data received.')
+        throw new Error("Invalid analysis data received.");
       }
     } catch (error) {
-      console.error("AI Analysis failed:", error)
-      setAnalysisError("Sorry, we couldn't analyze the photos. Please try again or use different images.")
+      console.error("AI Analysis failed:", error);
+      setAnalysisError(
+        "Sorry, we couldn't analyze the photos. Please try again or use different images.",
+      );
     } finally {
-      setIsAnalyzing(false)
+      setIsAnalyzing(false);
     }
-  }, [fullBodyPhoto, headPhoto, onUpdate, isAnalyzing, analysisComplete])
+  }, [fullBodyPhoto, headPhoto, onUpdate, isAnalyzing, analysisComplete]);
 
   // Handle validation and trigger analysis
   useEffect(() => {
-    const isValid = Boolean(fullBodyPhoto && headPhoto)
-    onValidationChange(isValid)
+    const isValid = Boolean(fullBodyPhoto && headPhoto);
+    onValidationChange(isValid);
 
     // Automatically trigger analysis once both photos are uploaded and there's no error
     if (isValid && !analysisComplete && !isAnalyzing && !analysisError) {
-      runAIAnalysis()
+      runAIAnalysis();
     }
-  }, [fullBodyPhoto, headPhoto, onValidationChange, analysisComplete, isAnalyzing, analysisError, runAIAnalysis])
+  }, [
+    fullBodyPhoto,
+    headPhoto,
+    onValidationChange,
+    analysisComplete,
+    isAnalyzing,
+    analysisError,
+    runAIAnalysis,
+  ]);
 
   // Update parent data when photos change
   useEffect(() => {
@@ -106,59 +120,60 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
       onUpdate({
         fullBodyPhoto,
         headPhoto,
-      })
+      });
     }
-  }, [fullBodyPhoto, headPhoto, onUpdate])
+  }, [fullBodyPhoto, headPhoto, onUpdate]);
 
   const handleFileUpload = (file: File, type: "fullBody" | "head") => {
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = (e) => {
-      const result = e.target?.result as string
+      const result = e.target?.result as string;
 
       // Reset the analysis state when a new photo is uploaded
-      setAnalysisComplete(false)
-      setAnalysisError(null)
+      setAnalysisComplete(false);
+      setAnalysisError(null);
 
       if (type === "fullBody") {
-        setFullBodyPhoto(result)
+        setFullBodyPhoto(result);
         // Also save to separate localStorage immediately
         try {
-          localStorage.setItem("styleMe_fullBodyPhoto", result)
+          localStorage.setItem("styleMe_fullBodyPhoto", result);
         } catch (error) {
-          console.warn("Failed to save full body photo to localStorage:", error)
+          console.warn("Failed to save full body photo to localStorage:", error);
         }
       } else {
-        setHeadPhoto(result)
+        setHeadPhoto(result);
         // Also save to separate localStorage immediately
         try {
-          localStorage.setItem("styleMe_headPhoto", result)
+          localStorage.setItem("styleMe_headPhoto", result);
         } catch (error) {
-          console.warn("Failed to save head photo to localStorage:", error)
+          console.warn("Failed to save head photo to localStorage:", error);
         }
       }
-    }
-    reader.readAsDataURL(file)
-  }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const removePhoto = (type: "fullBody" | "head") => {
     if (type === "fullBody") {
-      setFullBodyPhoto("")
-      localStorage.removeItem("styleMe_fullBodyPhoto")
+      setFullBodyPhoto("");
+      localStorage.removeItem("styleMe_fullBodyPhoto");
     } else {
-      setHeadPhoto("")
-      localStorage.removeItem("styleMe_headPhoto")
+      setHeadPhoto("");
+      localStorage.removeItem("styleMe_headPhoto");
     }
     // Reset the analysis state
-    setAnalysisComplete(false)
-    setAnalysisError(null)
-  }
+    setAnalysisComplete(false);
+    setAnalysisError(null);
+  };
 
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold text-gray-800">Let's Get to Know You</h2>
         <p className="text-gray-600">
-          Upload your photos so our AI can analyze your unique features and create personalized recommendations.
+          Upload your photos so our AI can analyze your unique features and create personalized
+          recommendations.
         </p>
       </div>
 
@@ -169,7 +184,9 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-gray-800">Full Body Photo</h3>
-              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full">Required</span>
+              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full">
+                Required
+              </span>
             </div>
 
             {!fullBodyPhoto ? (
@@ -205,8 +222,8 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
               accept="image/*"
               className="hidden"
               onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) handleFileUpload(file, "fullBody")
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(file, "fullBody");
               }}
             />
           </div>
@@ -217,7 +234,9 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-gray-800">Head & Shoulders Photo</h3>
-              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full">Required</span>
+              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full">
+                Required
+              </span>
             </div>
 
             {!headPhoto ? (
@@ -253,8 +272,8 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
               accept="image/*"
               className="hidden"
               onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) handleFileUpload(file, "head")
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(file, "head");
               }}
             />
           </div>
@@ -273,7 +292,9 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
             ) : analysisComplete ? (
               <>
                 <CheckCircle className="w-5 h-5 text-green-600" />
-                <p className="text-sm text-green-700 font-medium">Analysis complete! You can proceed.</p>
+                <p className="text-sm text-green-700 font-medium">
+                  Analysis complete! You can proceed.
+                </p>
               </>
             ) : analysisError ? (
               <>
@@ -320,5 +341,5 @@ export default function PhotoUploadStep({ data, onUpdate, onValidationChange }: 
         </ul>
       </Card>
     </div>
-  )
+  );
 }

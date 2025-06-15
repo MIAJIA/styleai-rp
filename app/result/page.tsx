@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Share2, Download, RefreshCw, Heart, Lock, Sparkles } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Navigation from "../components/navigation"
+import { useState } from "react";
+import { Share2, Download, RefreshCw, Heart, Lock, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Navigation from "../components/navigation";
 
 export default function ResultPage() {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isLiked, setIsLiked] = useState(false)
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
 
   const results = [
     {
@@ -28,7 +28,7 @@ export default function ResultPage() {
       style: "Professional Look",
       isBlurred: true,
     },
-  ]
+  ];
 
   const handleShare = () => {
     if (navigator.share) {
@@ -36,9 +36,9 @@ export default function ResultPage() {
         title: "Check out my AI-generated look!",
         text: "I just tried on this amazing outfit using StyleAI",
         url: window.location.href,
-      })
+      });
     }
-  }
+  };
 
   return (
     <div className="min-h-screen pb-20 bg-gradient-to-br from-rose-50 to-pink-50">
@@ -87,7 +87,10 @@ export default function ResultPage() {
                       onClick={() => setIsLiked(!isLiked)}
                       className="absolute top-3 right-3 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
                     >
-                      <Heart size={18} className={isLiked ? "text-rose-500 fill-current" : "text-gray-600"} />
+                      <Heart
+                        size={18}
+                        className={isLiked ? "text-rose-500 fill-current" : "text-gray-600"}
+                      />
                     </button>
                   </div>
                 </div>
@@ -108,7 +111,10 @@ export default function ResultPage() {
             <Share2 size={18} className="mr-2" />
             Share
           </Button>
-          <Button variant="outline" className="h-12 border-rose-200 text-rose-600 hover:bg-rose-50 rounded-2xl">
+          <Button
+            variant="outline"
+            className="h-12 border-rose-200 text-rose-600 hover:bg-rose-50 rounded-2xl"
+          >
             <Download size={18} className="mr-2" />
             Save
           </Button>
@@ -126,11 +132,15 @@ export default function ResultPage() {
           <Sparkles className="text-white" size={20} />
         </div>
         <h3 className="font-semibold text-gray-800 mb-2">Unlock All Styles</h3>
-        <p className="text-sm text-gray-600 mb-4">Get unlimited AI-generated looks and premium styles</p>
-        <Button className="bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl px-6">Upgrade Now</Button>
+        <p className="text-sm text-gray-600 mb-4">
+          Get unlimited AI-generated looks and premium styles
+        </p>
+        <Button className="bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl px-6">
+          Upgrade Now
+        </Button>
       </div>
 
       <Navigation />
     </div>
-  )
+  );
 }

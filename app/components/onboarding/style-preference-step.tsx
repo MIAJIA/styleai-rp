@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { OnboardingData } from "@/lib/onboarding-storage"
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { OnboardingData } from "@/lib/onboarding-storage";
 
 interface StylePreferenceStepProps {
-  data: OnboardingData
-  onUpdate: (data: Partial<OnboardingData>) => void
-  onValidationChange: (isValid: boolean) => void
+  data: OnboardingData;
+  onUpdate: (data: Partial<OnboardingData>) => void;
+  onValidationChange: (isValid: boolean) => void;
 }
 
 const STYLE_OPTIONS = [
@@ -18,36 +18,42 @@ const STYLE_OPTIONS = [
   { id: "sweet", label: "甜辣并存", emoji: "🔥", description: "吸睛、妩媚、有魅力" },
   { id: "professional", label: "专业干练", emoji: "💼", description: "利落、有气场、职场感" },
   { id: "minimalist", label: "极简艺术", emoji: "🎨", description: "克制、深思、高级感" },
-]
+];
 
-export default function StylePreferenceStep({ data, onUpdate, onValidationChange }: StylePreferenceStepProps) {
-  const [selectedStyles, setSelectedStyles] = useState<string[]>(data.stylePreferences || [])
-  const [customStyle, setCustomStyle] = useState(data.customStyle || "")
-  const isInitialMount = useRef(true)
+export default function StylePreferenceStep({
+  data,
+  onUpdate,
+  onValidationChange,
+}: StylePreferenceStepProps) {
+  const [selectedStyles, setSelectedStyles] = useState<string[]>(data.stylePreferences || []);
+  const [customStyle, setCustomStyle] = useState(data.customStyle || "");
+  const isInitialMount = useRef(true);
 
   // Check validation whenever relevant state changes
   useEffect(() => {
-    const isValid = selectedStyles.length > 0 || customStyle.trim() !== ""
-    onValidationChange(isValid)
-  }, [selectedStyles.length, customStyle, onValidationChange])
+    const isValid = selectedStyles.length > 0 || customStyle.trim() !== "";
+    onValidationChange(isValid);
+  }, [selectedStyles.length, customStyle, onValidationChange]);
 
   // Update parent data whenever relevant state changes
   useEffect(() => {
     // Skip the initial render to avoid immediate update on mount
     if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
+      isInitialMount.current = false;
+      return;
     }
 
     onUpdate({
       stylePreferences: selectedStyles,
       customStyle,
-    })
-  }, [selectedStyles, customStyle, onUpdate])
+    });
+  }, [selectedStyles, customStyle, onUpdate]);
 
   const toggleStyle = (styleId: string) => {
-    setSelectedStyles((prev) => (prev.includes(styleId) ? prev.filter((item) => item !== styleId) : [...prev, styleId]))
-  }
+    setSelectedStyles((prev) =>
+      prev.includes(styleId) ? prev.filter((item) => item !== styleId) : [...prev, styleId],
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -61,10 +67,11 @@ export default function StylePreferenceStep({ data, onUpdate, onValidationChange
         {STYLE_OPTIONS.map((style) => (
           <Card
             key={style.id}
-            className={`p-4 cursor-pointer transition-all ${selectedStyles.includes(style.id)
-              ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
-              : "border-gray-200 hover:border-pink-200"
-              }`}
+            className={`p-4 cursor-pointer transition-all ${
+              selectedStyles.includes(style.id)
+                ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
+                : "border-gray-200 hover:border-pink-200"
+            }`}
             onClick={() => toggleStyle(style.id)}
           >
             <div className="flex items-center space-x-3">
@@ -75,7 +82,9 @@ export default function StylePreferenceStep({ data, onUpdate, onValidationChange
                 >
                   {style.label}
                 </h3>
-                <p className={`text-sm ${selectedStyles.includes(style.id) ? "text-pink-600" : "text-gray-600"}`}>
+                <p
+                  className={`text-sm ${selectedStyles.includes(style.id) ? "text-pink-600" : "text-gray-600"}`}
+                >
                   {style.description}
                 </p>
               </div>
@@ -100,5 +109,5 @@ export default function StylePreferenceStep({ data, onUpdate, onValidationChange
         />
       </Card>
     </div>
-  )
+  );
 }

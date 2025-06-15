@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import React, { useRef, useState, ChangeEvent } from "react"
-import { Upload, X } from "lucide-react"
+import React, { useRef, useState, ChangeEvent } from "react";
+import { Upload, X } from "lucide-react";
 
 // Helper function to process and resize the image if necessary
 const processImage = (file: File): Promise<File> => {
@@ -24,20 +24,25 @@ const processImage = (file: File): Promise<File> => {
 
         console.log("Image aspect ratio is invalid, processing with intelligent cropping...");
 
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
         if (!ctx) {
-          return reject(new Error('Could not get canvas context'));
+          return reject(new Error("Could not get canvas context"));
         }
 
-        let sx = 0, sy = 0, sWidth = width, sHeight = height;
+        let sx = 0,
+          sy = 0,
+          sWidth = width,
+          sHeight = height;
 
-        if (aspectRatio < minRatio) { // Image is too tall, crop from the top
+        if (aspectRatio < minRatio) {
+          // Image is too tall, crop from the top
           sHeight = width / minRatio; // New height that fits the min ratio
           canvas.width = width;
           canvas.height = sHeight;
           // sx, sy remain 0, sWidth remains width
-        } else { // Image is too wide, crop from the center
+        } else {
+          // Image is too wide, crop from the center
           sWidth = height * maxRatio; // New width that fits the max ratio
           sx = (width - sWidth) / 2; // Start cropping from the horizontal center
           canvas.width = sWidth;
@@ -49,10 +54,12 @@ const processImage = (file: File): Promise<File> => {
 
         canvas.toBlob((blob) => {
           if (!blob) {
-            return reject(new Error('Canvas to Blob conversion failed'));
+            return reject(new Error("Canvas to Blob conversion failed"));
           }
           const newFile = new File([blob], file.name, { type: file.type });
-          console.log(`Image processed successfully. Original: ${width}x${height}, New: ${canvas.width}x${canvas.height}`);
+          console.log(
+            `Image processed successfully. Original: ${width}x${height}, New: ${canvas.width}x${canvas.height}`,
+          );
           resolve(newFile);
         }, file.type);
       };
@@ -67,11 +74,11 @@ const processImage = (file: File): Promise<File> => {
 };
 
 interface IOSUploadProps {
-  label: string
-  onImageSelect: (file: File) => void
-  preview: string
-  required?: boolean
-  helpText?: string
+  label: string;
+  onImageSelect: (file: File) => void;
+  preview: string;
+  required?: boolean;
+  helpText?: string;
 }
 
 export default function IOSUpload({
@@ -81,7 +88,7 @@ export default function IOSUpload({
   required,
   helpText,
 }: IOSUploadProps) {
-  const ref = useRef<HTMLInputElement>(null)
+  const ref = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,23 +111,29 @@ export default function IOSUpload({
         setIsProcessing(false);
       }
     }
-  }
+  };
 
   const clearImage = (e: React.MouseEvent) => {
-    e.stopPropagation()
+    e.stopPropagation();
     if (ref.current) {
-      ref.current.value = ""
+      ref.current.value = "";
     }
     // Create a dummy file to reset the state
     onImageSelect(new File([], ""));
-  }
+  };
 
   return (
     <div
       className="ios-uploader relative aspect-[3/4] bg-neutral-100 rounded-lg flex flex-col items-center justify-center text-center p-3 cursor-pointer"
       onClick={() => ref.current?.click()}
     >
-      <input type="file" accept="image/jpeg,image/png" className="hidden" ref={ref} onChange={onFileChange} />
+      <input
+        type="file"
+        accept="image/jpeg,image/png"
+        className="hidden"
+        ref={ref}
+        onChange={onFileChange}
+      />
       {preview ? (
         <>
           <img src={preview} alt="Preview" className="w-full h-full object-contain rounded-md" />
@@ -148,11 +161,13 @@ export default function IOSUpload({
         </div>
       )}
       {helpText && (
-        <p className="absolute bottom-2 text-neutral-400 text-[10px] leading-tight px-2">{helpText}</p>
+        <p className="absolute bottom-2 text-neutral-400 text-[10px] leading-tight px-2">
+          {helpText}
+        </p>
       )}
       {error && (
         <div className="absolute bottom-2 text-red-500 text-[10px] leading-tight px-2">{error}</div>
       )}
     </div>
-  )
+  );
 }

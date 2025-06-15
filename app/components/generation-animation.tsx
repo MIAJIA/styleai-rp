@@ -1,37 +1,77 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { Sparkles, Shirt, Heart, Star, Camera, Palette, Wand2, PenTool, MapPin, Eye } from "lucide-react"
+import { useState, useEffect, useRef } from "react";
+import {
+  Sparkles,
+  Shirt,
+  Heart,
+  Star,
+  Camera,
+  Palette,
+  Wand2,
+  PenTool,
+  MapPin,
+  Eye,
+} from "lucide-react";
 
 interface GenerationAnimationProps {
-  isVisible: boolean
-  isComplete?: boolean
-  onComplete?: () => void
+  isVisible: boolean;
+  isComplete?: boolean;
+  onComplete?: () => void;
 }
 
 interface StylerCard {
-  id: string
-  heading: string
-  advice: string
-  signature: string
-  icon: any
-  delay: number
+  id: string;
+  heading: string;
+  advice: string;
+  signature: string;
+  icon: any;
+  delay: number;
 }
 
-export default function GenerationAnimation({ isVisible, isComplete, onComplete }: GenerationAnimationProps) {
-  const [currentStep, setCurrentStep] = useState(0)
-  const [progress, setProgress] = useState(0)
-  const [visibleCards, setVisibleCards] = useState<string[]>([])
-  const stepTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const progressTimerRef = useRef<NodeJS.Timeout | null>(null)
+export default function GenerationAnimation({
+  isVisible,
+  isComplete,
+  onComplete,
+}: GenerationAnimationProps) {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [visibleCards, setVisibleCards] = useState<string[]>([]);
+  const stepTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const steps = [
-    { text: "Analyzing your photo...", subText: "Understanding your style", icon: Camera, duration: 2000 },
-    { text: "Processing garment details...", subText: "Identifying fabric and fit", icon: Shirt, duration: 2500 },
-    { text: "AI magic in progress...", subText: "Creating your perfect look", icon: Wand2, duration: 3000 },
-    { text: "Adding style touches...", subText: "Perfecting the details", icon: Palette, duration: 2000 },
-    { text: "Almost ready...", subText: "Finalizing your transformation", icon: Sparkles, duration: 4000 },
-  ]
+    {
+      text: "Analyzing your photo...",
+      subText: "Understanding your style",
+      icon: Camera,
+      duration: 2000,
+    },
+    {
+      text: "Processing garment details...",
+      subText: "Identifying fabric and fit",
+      icon: Shirt,
+      duration: 2500,
+    },
+    {
+      text: "AI magic in progress...",
+      subText: "Creating your perfect look",
+      icon: Wand2,
+      duration: 3000,
+    },
+    {
+      text: "Adding style touches...",
+      subText: "Perfecting the details",
+      icon: Palette,
+      duration: 2000,
+    },
+    {
+      text: "Almost ready...",
+      subText: "Finalizing your transformation",
+      icon: Sparkles,
+      duration: 4000,
+    },
+  ];
 
   // Generate personalized stylist cards based on the current step
   const getStylerCards = (): StylerCard[] => {
@@ -93,101 +133,101 @@ export default function GenerationAnimation({ isVisible, isComplete, onComplete 
           delay: 500,
         },
       ],
-    ]
+    ];
 
-    if (currentStep < 2) return cardSets[0]
-    if (currentStep < 4) return cardSets[1]
-    return cardSets[2]
-  }
+    if (currentStep < 2) return cardSets[0];
+    if (currentStep < 4) return cardSets[1];
+    return cardSets[2];
+  };
 
   useEffect(() => {
     if (!isVisible) {
-      setCurrentStep(0)
-      setProgress(0)
-      setVisibleCards([])
-      return
+      setCurrentStep(0);
+      setProgress(0);
+      setVisibleCards([]);
+      return;
     }
 
-    let stepTimer: NodeJS.Timeout
-    let progressTimer: NodeJS.Timeout
+    let stepTimer: NodeJS.Timeout;
+    let progressTimer: NodeJS.Timeout;
 
     const runStep = (stepIndex: number) => {
       if (stepIndex >= steps.length) {
         // Loop the last step to keep the animation alive until isComplete is true
-        const lastStepIndex = steps.length - 1
-        setCurrentStep(lastStepIndex)
-        setProgress(99) // Hold at 99%
-        return
+        const lastStepIndex = steps.length - 1;
+        setCurrentStep(lastStepIndex);
+        setProgress(99); // Hold at 99%
+        return;
       }
 
-      setCurrentStep(stepIndex)
-      const stepDuration = steps[stepIndex].duration
-      const progressIncrement = (100 / stepDuration) * 50
+      setCurrentStep(stepIndex);
+      const stepDuration = steps[stepIndex].duration;
+      const progressIncrement = (100 / stepDuration) * 50;
 
-      let currentProgress = (stepIndex / steps.length) * 100
-      setProgress(Math.min(currentProgress, 99)) // Cap progress at 99 before completion
+      let currentProgress = (stepIndex / steps.length) * 100;
+      setProgress(Math.min(currentProgress, 99)); // Cap progress at 99 before completion
 
       // Show cards with staggered animation
-      const cards = getStylerCards()
-      setVisibleCards([])
+      const cards = getStylerCards();
+      setVisibleCards([]);
       cards.forEach((card, index) => {
         setTimeout(() => {
-          setVisibleCards((prev) => [...prev, card.id])
-        }, card.delay)
-      })
+          setVisibleCards((prev) => [...prev, card.id]);
+        }, card.delay);
+      });
 
       progressTimer = setInterval(() => {
-        currentProgress += progressIncrement
-        const maxProgress = ((stepIndex + 1) / steps.length) * 100
+        currentProgress += progressIncrement;
+        const maxProgress = ((stepIndex + 1) / steps.length) * 100;
         if (currentProgress >= maxProgress) {
-          currentProgress = maxProgress
-          clearInterval(progressTimer)
+          currentProgress = maxProgress;
+          clearInterval(progressTimer);
         }
-        setProgress(Math.min(currentProgress, 99)) // Cap progress at 99 before completion
-      }, 50)
+        setProgress(Math.min(currentProgress, 99)); // Cap progress at 99 before completion
+      }, 50);
 
       stepTimer = setTimeout(() => {
-        clearInterval(progressTimer)
-        runStep(stepIndex + 1)
-      }, stepDuration)
-    }
+        clearInterval(progressTimer);
+        runStep(stepIndex + 1);
+      }, stepDuration);
+    };
 
-    runStep(0)
+    runStep(0);
 
     return () => {
-      clearTimeout(stepTimer)
-      clearInterval(progressTimer)
-    }
-  }, [isVisible])
+      clearTimeout(stepTimer);
+      clearInterval(progressTimer);
+    };
+  }, [isVisible]);
 
   useEffect(() => {
     if (isComplete) {
-      if (stepTimerRef.current) clearTimeout(stepTimerRef.current)
-      if (progressTimerRef.current) clearInterval(progressTimerRef.current)
+      if (stepTimerRef.current) clearTimeout(stepTimerRef.current);
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
 
-      setProgress(100)
+      setProgress(100);
 
       setTimeout(() => {
-        onComplete?.()
-      }, 500) // Wait 500ms after hitting 100% to navigate
+        onComplete?.();
+      }, 500); // Wait 500ms after hitting 100% to navigate
     }
-  }, [isComplete, onComplete])
+  }, [isComplete, onComplete]);
 
   useEffect(() => {
     // Update visible cards when step changes
-    const cards = getStylerCards()
-    setVisibleCards([])
+    const cards = getStylerCards();
+    setVisibleCards([]);
     cards.forEach((card, index) => {
       setTimeout(() => {
-        setVisibleCards((prev) => [...prev, card.id])
-      }, card.delay)
-    })
-  }, [currentStep])
+        setVisibleCards((prev) => [...prev, card.id]);
+      }, card.delay);
+    });
+  }, [currentStep]);
 
-  if (!isVisible) return null
+  if (!isVisible) return null;
 
-  const CurrentIcon = steps[currentStep]?.icon || Camera
-  const stylerCards = getStylerCards()
+  const CurrentIcon = steps[currentStep]?.icon || Camera;
+  const stylerCards = getStylerCards();
 
   return (
     <div className="fixed inset-0 z-50 bg-[#fff9f4] flex items-center justify-center overflow-hidden py-12 px-4">
@@ -264,8 +304,9 @@ export default function GenerationAnimation({ isVisible, isComplete, onComplete 
               {steps.map((_, i) => (
                 <div
                   key={i}
-                  className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full transition-all duration-300 ${i <= currentStep ? "bg-[#FF6EC7]" : "bg-gray-300"
-                    }`}
+                  className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full transition-all duration-300 ${
+                    i <= currentStep ? "bg-[#FF6EC7]" : "bg-gray-300"
+                  }`}
                 />
               ))}
             </div>
@@ -275,14 +316,15 @@ export default function GenerationAnimation({ isVisible, isComplete, onComplete 
         {/* Mobile-optimized stylist cards */}
         <div className="space-y-2 sm:space-y-3 flex-1 min-h-0 overflow-hidden">
           {stylerCards.map((card) => {
-            const IconComponent = card.icon
-            const isVisible = visibleCards.includes(card.id)
+            const IconComponent = card.icon;
+            const isVisible = visibleCards.includes(card.id);
 
             return (
               <div
                 key={card.id}
-                className={`bg-gradient-to-br from-white/80 to-gray-50/60 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-lg border border-white/40 transition-all duration-700 transform ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-                  }`}
+                className={`bg-gradient-to-br from-white/80 to-gray-50/60 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-lg border border-white/40 transition-all duration-700 transform ${
+                  isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                }`}
               >
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
@@ -294,12 +336,16 @@ export default function GenerationAnimation({ isVisible, isComplete, onComplete 
                     <h3 className="text-sm sm:text-base font-serif font-semibold text-gray-800 mb-1 font-playfair">
                       {card.heading}
                     </h3>
-                    <p className="text-xs sm:text-sm text-gray-700 leading-relaxed mb-1 sm:mb-2">{card.advice}</p>
-                    <p className="text-xs text-gray-500 font-serif italic font-playfair">{card.signature}</p>
+                    <p className="text-xs sm:text-sm text-gray-700 leading-relaxed mb-1 sm:mb-2">
+                      {card.advice}
+                    </p>
+                    <p className="text-xs text-gray-500 font-serif italic font-playfair">
+                      {card.signature}
+                    </p>
                   </div>
                 </div>
               </div>
-            )
+            );
           })}
         </div>
       </div>
@@ -307,5 +353,5 @@ export default function GenerationAnimation({ isVisible, isComplete, onComplete 
       {/* Subtle overlay animation */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer-overlay" />
     </div>
-  )
+  );
 }

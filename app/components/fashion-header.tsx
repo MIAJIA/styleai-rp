@@ -8,5 +8,5 @@ export default function FashionHeader() {
         </p>
       </div>
     </header>
-  )
+  );
 }

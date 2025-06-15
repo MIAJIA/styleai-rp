@@ -1,53 +1,56 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, X } from "lucide-react"
-import IOSTabBar from "../components/ios-tab-bar"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, X } from "lucide-react";
+import IOSTabBar from "../components/ios-tab-bar";
 
 interface PastLook {
-  id: string
-  imageUrl: string
-  style: string | null
-  timestamp: number
-  originalHumanSrc?: string
-  originalGarmentSrc?: string
-  garmentDescription?: string
-  personaProfile?: string | null
+  id: string;
+  imageUrl: string;
+  style: string | null;
+  timestamp: number;
+  originalHumanSrc?: string;
+  originalGarmentSrc?: string;
+  garmentDescription?: string;
+  personaProfile?: string | null;
 }
 
 export default function ResultsPage() {
-  const router = useRouter()
-  const [pastLooks, setPastLooks] = useState<PastLook[]>([])
-  const [isRecentLooksExpanded, setIsRecentLooksExpanded] = useState(false)
+  const router = useRouter();
+  const [pastLooks, setPastLooks] = useState<PastLook[]>([]);
+  const [isRecentLooksExpanded, setIsRecentLooksExpanded] = useState(false);
 
   // Load past looks from localStorage on initial render
   useEffect(() => {
-    const storedLooks = localStorage.getItem("pastLooks")
+    const storedLooks = localStorage.getItem("pastLooks");
     if (storedLooks) {
-      setPastLooks(JSON.parse(storedLooks))
+      setPastLooks(JSON.parse(storedLooks));
     }
-  }, [])
+  }, []);
 
   const handleDeleteLook = (lookId: string) => {
-    const updatedLooks = pastLooks.filter((look) => look.id !== lookId)
-    setPastLooks(updatedLooks)
-    localStorage.setItem("pastLooks", JSON.stringify(updatedLooks))
-  }
+    const updatedLooks = pastLooks.filter((look) => look.id !== lookId);
+    setPastLooks(updatedLooks);
+    localStorage.setItem("pastLooks", JSON.stringify(updatedLooks));
+  };
 
   const handleClearRecentLooks = () => {
-    setPastLooks([])
-    localStorage.removeItem("pastLooks")
-  }
+    setPastLooks([]);
+    localStorage.removeItem("pastLooks");
+  };
 
-  const displayedLooks = isRecentLooksExpanded ? pastLooks : pastLooks.slice(0, 6)
+  const displayedLooks = isRecentLooksExpanded ? pastLooks : pastLooks.slice(0, 6);
 
   return (
     <div className="min-h-full pb-20">
       {/* iOS-style header with back button */}
       <div className="bg-white sticky top-0 z-10 border-b border-neutral-100 pt-safe">
         <div className="flex items-center px-4 h-12">
-          <button onClick={() => router.push("/")} className="w-10 h-10 flex items-center justify-center -ml-2 ios-btn">
+          <button
+            onClick={() => router.push("/")}
+            className="w-10 h-10 flex items-center justify-center -ml-2 ios-btn"
+          >
             <ArrowLeft size={20} />
           </button>
           <h1 className="text-lg font-semibold flex-1 text-center">My Looks</h1>
@@ -71,46 +74,42 @@ export default function ResultsPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            {pastLooks.length > 0 ? (
-              displayedLooks.map((pastLook) => (
-                <div key={pastLook.id} className="relative group aspect-[3/4]">
-                  <div
-                    className="w-full h-full bg-neutral-100 rounded-lg overflow-hidden"
-                  >
-                    <img
-                      src={pastLook.imageUrl}
-                      alt="Past look"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation() // Prevent click from bubbling to the main card
-                      handleDeleteLook(pastLook.id)
-                    }}
-                    className="absolute top-0 right-0 z-10 p-2 text-white bg-black/40 rounded-bl-lg rounded-tr-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 ios-btn"
-                    aria-label="Delete look"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              ))
-            ) : (
-              // Empty placeholder boxes
-              Array.from({ length: 3 }).map((_, index) => (
-                <div
-                  key={`placeholder-${index}`}
-                  className="aspect-[3/4] bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-lg flex items-center justify-center"
-                >
-                  <div className="text-center text-neutral-400">
-                    <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-neutral-200 flex items-center justify-center">
-                      <span className="text-xs">👗</span>
+            {pastLooks.length > 0
+              ? displayedLooks.map((pastLook) => (
+                  <div key={pastLook.id} className="relative group aspect-[3/4]">
+                    <div className="w-full h-full bg-neutral-100 rounded-lg overflow-hidden">
+                      <img
+                        src={pastLook.imageUrl}
+                        alt="Past look"
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <p className="text-xs">New Look</p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent click from bubbling to the main card
+                        handleDeleteLook(pastLook.id);
+                      }}
+                      className="absolute top-0 right-0 z-10 p-2 text-white bg-black/40 rounded-bl-lg rounded-tr-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 ios-btn"
+                      aria-label="Delete look"
+                    >
+                      <X size={16} />
+                    </button>
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              : // Empty placeholder boxes
+                Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={`placeholder-${index}`}
+                    className="aspect-[3/4] bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-lg flex items-center justify-center"
+                  >
+                    <div className="text-center text-neutral-400">
+                      <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-neutral-200 flex items-center justify-center">
+                        <span className="text-xs">👗</span>
+                      </div>
+                      <p className="text-xs">New Look</p>
+                    </div>
+                  </div>
+                ))}
           </div>
 
           {pastLooks.length > 6 && (
@@ -118,7 +117,7 @@ export default function ResultsPage() {
               onClick={() => setIsRecentLooksExpanded(!isRecentLooksExpanded)}
               className="w-full text-xs text-center text-primary font-medium p-2 mt-2 rounded-lg ios-btn bg-primary/10"
             >
-              {isRecentLooksExpanded ? 'Show Less' : `Show ${pastLooks.length - 6} More Looks...`}
+              {isRecentLooksExpanded ? "Show Less" : `Show ${pastLooks.length - 6} More Looks...`}
             </button>
           )}
 
@@ -132,5 +131,5 @@ export default function ResultsPage() {
 
       <IOSTabBar />
     </div>
-  )
+  );
 }

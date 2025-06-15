@@ -10,14 +10,14 @@
 
 1.  **用户在 `my-style` 页面操作**：用户查看完自己的风格报告后，点击"用新风格改造"按钮，并选择一个目标风格（例如："法式复古"）。
 2.  **前端组件 (`app/my-style/page.tsx`)**：
-    *   获取当前页面已加载的 `aiAnalysis` 数据（用户的风格档案）。
-    *   获取用户选择的 `targetStyle`（"法式复古"）。
-    *   调用一个函数，如 `handleTransformClick`，来**动态构建**一个详细的 Prompt。
-    *   向后端的 `/api/generate-image` (或类似命名的) API 路由发送请求，请求体中包含这个新构建的 `prompt` 和用户的照片 `photoUrl`。
+    - 获取当前页面已加载的 `aiAnalysis` 数据（用户的风格档案）。
+    - 获取用户选择的 `targetStyle`（"法式复古"）。
+    - 调用一个函数，如 `handleTransformClick`，来**动态构建**一个详细的 Prompt。
+    - 向后端的 `/api/generate-image` (或类似命名的) API 路由发送请求，请求体中包含这个新构建的 `prompt` 和用户的照片 `photoUrl`。
 3.  **后端 API 路由 (`app/api/generate-image/route.ts`)**：
-    *   接收前端发来的 `prompt` 和 `photoUrl`。
-    *   调用 Kling AI 的 API，将这个详细的 `prompt` 传递给它。
-    *   将 Kling 返回的图片结果再返回给前端。
+    - 接收前端发来的 `prompt` 和 `photoUrl`。
+    - 调用 Kling AI 的 API，将这个详细的 `prompt` 传递给它。
+    - 将 Kling 返回的图片结果再返回给前端。
 
 ## Prompt 设计（关键部分）
 
@@ -43,9 +43,9 @@ Base the person's appearance, face, and body on the provided input image. Mainta
 **User's Inherent Style Profile (Context for the model):**
 - **Name:** ${userName}
 - **Body Type:** ${bodyType}
-- **Face Style:** ${type_name} (${feature_keywords.join(', ')})
-- **Key Body Strengths to Emphasize:** ${bodyAdvantages.join(', ')}
-- **Natural Style Affinity:** This person's inherent style leans towards ${style_recommendation.join(' and ')}.
+- **Face Style:** ${type_name} (${feature_keywords.join(", ")})
+- **Key Body Strengths to Emphasize:** ${bodyAdvantages.join(", ")}
+- **Natural Style Affinity:** This person's inherent style leans towards ${style_recommendation.join(" and ")}.
 
 **Creative Instruction (The Transformation):**
 Now, dress ${userName} in a complete, stylish outfit that perfectly embodies the **'${targetStyle}'** theme. The new outfit should be flattering to their specified body type and strengths. The overall mood should be chic, confident, and aspirational.
@@ -63,9 +63,10 @@ Now, dress ${userName} in a complete, stylish outfit that perfectly embodies the
 ## 实现步骤建议
 
 1.  **修改前端页面 `app/my-style/page.tsx`**：
-    *   确保此页面可以获取并管理 `aiAnalysis` 状态。
-    *   添加 UI 元素让用户可以选择 `targetStyle` (例如一个下拉菜单或一组按钮)。
-    *   实现一个处理点击事件的函数，类似这样：
+
+    - 确保此页面可以获取并管理 `aiAnalysis` 状态。
+    - 添加 UI 元素让用户可以选择 `targetStyle` (例如一个下拉菜单或一组按钮)。
+    - 实现一个处理点击事件的函数，类似这样：
 
     ```tsx
     // 在 app/my-style/page.tsx 中
@@ -85,9 +86,9 @@ Now, dress ${userName} in a complete, stylish outfit that perfectly embodies the
 
       // 3. 调用后端 API
       try {
-        const response = await fetch('/api/generate-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             prompt: detailedPrompt,
             photoUrl: userPhoto.url, // 假设用户照片URL已存储

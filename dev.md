@@ -200,6 +200,7 @@ globals.css
 本文档概述了"生成我的造型"功能的后端架构。该后端将使用 Next.js API Routes 实现，它在现有的 Next.js 应用中提供了一个无服务器函数（Serverless Function）环境。
 
 该后端的主要职责是：
+
 - 从前端接收一张图片和一个风格偏好。
 - 安全地与外部的 AI 图像生成服务进行通信。
 - 将生成后的图片 URL 返回给前端。
@@ -223,10 +224,10 @@ globals.css
 
 #### 请求体 (由前端发送)
 
-| 字段            | 类型   | 描述                         | 是否必须 |
-|-----------------|--------|------------------------------|----------|
-| `human_image`   | File   | 用户的肖像图片。             | 是       |
-| `garment_image` | File   | 要试穿的服装图片。           | 是       |
+| 字段            | 类型 | 描述               | 是否必须 |
+| --------------- | ---- | ------------------ | -------- |
+| `human_image`   | File | 用户的肖像图片。   | 是       |
+| `garment_image` | File | 要试穿的服装图片。 | 是       |
 
 #### 成功响应 (200 OK)
 
@@ -234,7 +235,7 @@ globals.css
 
 \`\`\`json
 {
-  "imageUrl": "https://path.to/generated-image.png"
+"imageUrl": "https://path.to/generated-image.png"
 }
 \`\`\`
 
@@ -258,9 +259,9 @@ globals.css
 
 为了在不使用后端数据库的情况下保存用户生成的历史记录，我们将采用浏览器的 `localStorage` 技术。
 
--   **技术选型**: `localStorage`
--   **存储内容**: 一个JSON字符串化的数组，包含所有生成图片的URL。
--   **键 (Key)**: `generatedLooks`
+- **技术选型**: `localStorage`
+- **存储内容**: 一个JSON字符串化的数组，包含所有生成图片的URL。
+- **键 (Key)**: `generatedLooks`
 
 ### 工作流程:
 
@@ -272,27 +273,29 @@ globals.css
 
 ## 6. 安全性与可扩展性 (简化版)
 
--   **API 密钥管理**: `KLING_AI_API_KEY` 依然必须存储在环境变量中。
--   **风险**: 此简化方案的主要风险在于 **服务器函数超时**。如果AI生成+后端轮询的总时长超过了平台限制（如Vercel免费版为10-15秒），请求将失败。**此风险在Demo阶段被认为是可接受的。**
--   **此方案不推荐用于生产环境**，生产环境应采用我们之前设计的、包含Webhook和独立存储的健壮异步架构。
+- **API 密钥管理**: `KLING_AI_API_KEY` 依然必须存储在环境变量中。
+- **风险**: 此简化方案的主要风险在于 **服务器函数超时**。如果AI生成+后端轮询的总时长超过了平台限制（如Vercel免费版为10-15秒），请求将失败。**此风险在Demo阶段被认为是可接受的。**
+- **此方案不推荐用于生产环境**，生产环境应采用我们之前设计的、包含Webhook和独立存储的健壮异步架构。
 
 ## 7. 实施计划 (最简化Demo版)
 
 1.  **环境变量配置**:
-    -   创建 `.env.local` 文件。
-    -   添加 `KLING_AI_API_KEY` 用于存放 Kling AI 的 API 密钥。
+
+    - 创建 `.env.local` 文件。
+    - 添加 `KLING_AI_API_KEY` 用于存放 Kling AI 的 API 密钥。
 
 2.  **后端API实现**:
-    -   创建并实现**唯一**的后端接口 `POST /api/generate/route.ts`。
-    -   在该接口内完成接收文件、转换为Base64、提交任务给Kling AI、获取`task_id`、循环轮询任务状态、直到获取最终`imageUrl`并返回的全部逻辑。
+
+    - 创建并实现**唯一**的后端接口 `POST /api/generate/route.ts`。
+    - 在该接口内完成接收文件、转换为Base64、提交任务给Kling AI、获取`task_id`、循环轮询任务状态、直到获取最终`imageUrl`并返回的全部逻辑。
 
 3.  **前端实现**:
-    -   更新 `app/page.tsx`，使其调用 `/api/generate` 接口，并耐心等待其返回最终结果。
-    -   收到结果后，通过URL参数 `router.push(\`/results?imageUrl=\${imageUrl}\`)` 跳转。
-    -   `app/results/page.tsx` 的逻辑保持不变：从URL参数读取`imageUrl`，并使用 `localStorage` 进行历史记录的存取和展示。
-
+    - 更新 `app/page.tsx`，使其调用 `/api/generate` 接口，并耐心等待其返回最终结果。
+    - 收到结果后，通过URL参数 `router.push(\`/results?imageUrl=\${imageUrl}\`)` 跳转。
+    - `app/results/page.tsx` 的逻辑保持不变：从URL参数读取`imageUrl`，并使用 `localStorage` 进行历史记录的存取和展示。
 
 # 计划
+
 1 修改主页 (app/page.tsx)，实现生成逻辑
 找到页面上的"生成"按钮。
 为其绑定一个新的 onClick 事件处理函数。
@@ -314,6 +317,7 @@ globals.css
 ## 如何处理 `git push` 被拒与 `git pull` 中断的问题
 
 我们遇到的核心问题链是：
+
 1.  `git push` 推送失败。
 2.  `git pull` 拉取时被中断。
 3.  Git 仓库进入一个"正在合并 (MERGING)"的"卡住"状态。
@@ -323,7 +327,7 @@ globals.css
 当你执行 `git push` 时，如果看到这样的错误：
 
 \`\`\`
-! [rejected]        main -> main (fetch first)
+! [rejected] main -> main (fetch first)
 error: failed to push some refs to '...'
 \`\`\`
 
@@ -338,12 +342,13 @@ error: failed to push some refs to '...'
 当你执行 `git pull` 时，如果网络不稳定导致命令被中断，你就会进入我们遇到的"卡住"状态。
 
 **症状**：
-*   你的命令行提示符后面会出现 `(main|MERGING)` 或类似的字样。
-*   此时你再执行 `git pull` 或 `git merge`，会收到错误：
-    \`\`\`
-    error: You have not concluded your merge (MERGE_HEAD exists).
-    fatal: Exiting because of unfinished merge.
-    \`\`\`
+
+- 你的命令行提示符后面会出现 `(main|MERGING)` 或类似的字样。
+- 此时你再执行 `git pull` 或 `git merge`，会收到错误：
+  \`\`\`
+  error: You have not concluded your merge (MERGE_HEAD exists).
+  fatal: Exiting because of unfinished merge.
+  \`\`\`
 
 **核心原因**：`git pull` 命令实际上是 `git fetch`（获取）和 `git merge`（合并）两个动作的组合。你的操作在 `merge` 的过程中被中断了，留下了一个 `MERGE_HEAD` 临时文件，标志着一个"未完成的合并"。
 
@@ -380,12 +385,13 @@ git merge --abort
 #### **第四步：完成合并**
 
 执行 `git merge` 后，可能会出现两种情况：
-*   **自动合并成功**：Git 可能会打开一个编辑器让你输入一个"Merge Commit"信息。直接保存并关闭即可。
-*   **需要我们手动确认**：就像我们遇到的情况，`git status` 显示 `All conflicts fixed but you are still merging.`。这说明 Git 已经成功地自动合并了所有文件，它只是需要你创建一个合并提交来最终确认这个操作。
-    \`\`\`bash
-    # 只需执行 commit 即可，Git 会自动生成一条默认的合并信息
-    git commit
-    \`\`\`
+
+- **自动合并成功**：Git 可能会打开一个编辑器让你输入一个"Merge Commit"信息。直接保存并关闭即可。
+- **需要我们手动确认**：就像我们遇到的情况，`git status` 显示 `All conflicts fixed but you are still merging.`。这说明 Git 已经成功地自动合并了所有文件，它只是需要你创建一个合并提交来最终确认这个操作。
+  \`\`\`bash
+  # 只需执行 commit 即可，Git 会自动生成一条默认的合并信息
+  git commit
+  \`\`\`
 
 ---
 

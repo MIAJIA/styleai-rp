@@ -1,6 +1,5 @@
 P1. 改成carousel
 
-
 generate-style 里面call kling 生成prompt的时候去掉“Overall Recommendation” 和 “Confidence note” 只把输出中的Styling tips 加入进去kling的prompt。 请注意 我还需要在其他地方用到"Overall Recommendation" 和 "Confidence note" 所以openai的output还是保持不变
 
 # Open Issue: Generated Images are Cropped (Missing Head/Face)
@@ -33,13 +32,15 @@ The problem is **not** in how the final image is displayed on the results page; 
 To solve this, the image pre-processing logic needs a fundamental redesign.
 
 - **[HIGH PRIORITY] `app/page.tsx` (or image upload component):**
-    - **TODO:** The core task is to re-implement the client-side image pre-processing. The goal is to create a "smart crop" function. This function should:
-        1.  Identify the most important region of the image (e.g., from the top of the head to the waist).
-        2.  Crop and resize this region to precisely match the aspect ratio expected by the Kling AI API.
-        3.  Consider giving the user a manual cropping tool as a more robust solution, allowing them to define the area for the virtual try-on.
+
+  - **TODO:** The core task is to re-implement the client-side image pre-processing. The goal is to create a "smart crop" function. This function should:
+    1.  Identify the most important region of the image (e.g., from the top of the head to the waist).
+    2.  Crop and resize this region to precisely match the aspect ratio expected by the Kling AI API.
+    3.  Consider giving the user a manual cropping tool as a more robust solution, allowing them to define the area for the virtual try-on.
 
 - **`app/api/generate/route.ts`:**
-    - **TODO:** As an alternative to client-side logic, investigate implementing server-side image processing using a library like `sharp`. This would offload the work from the user's device, provide more consistent results, and give us more control over the final image sent to the AI. See `OPEN_ISSUES.md` for full context.
+
+  - **TODO:** As an alternative to client-side logic, investigate implementing server-side image processing using a library like `sharp`. This would offload the work from the user's device, provide more consistent results, and give us more control over the final image sent to the AI. See `OPEN_ISSUES.md` for full context.
 
 - **`app/results/page.tsx`:**
-    - **TODO:** The current `object-contain` display is appropriate for now. If the image generation is fixed, and the resulting images have a consistent, correct aspect ratio, re-evaluate if this "letterbox" display is still needed or if the container can be sized to the image directly. See `OPEN_ISSUES.md` for full context.
+  - **TODO:** The current `object-contain` display is appropriate for now. If the image generation is fixed, and the resulting images have a consistent, correct aspect ratio, re-evaluate if this "letterbox" display is still needed or if the container can be sized to the image directly. See `OPEN_ISSUES.md` for full context.

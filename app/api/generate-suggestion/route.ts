@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
 
 // Initialize the OpenAI client
 const openai = new OpenAI({
@@ -9,7 +9,7 @@ const openai = new OpenAI({
 // Helper function to convert a file to a base64 data URL
 async function fileToDataURL(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();
-  const base64 = Buffer.from(buffer).toString('base64');
+  const base64 = Buffer.from(buffer).toString("base64");
   return `data:${file.type};base64,${base64}`;
 }
 
@@ -36,12 +36,15 @@ All text values in the JSON object should be in Chinese, **except for the \`imag
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
-    const humanImageFile = formData.get('human_image') as File | null;
-    const garmentImageFile = formData.get('garment_image') as File | null;
-    const occasion = formData.get('occasion') as string | null;
+    const humanImageFile = formData.get("human_image") as File | null;
+    const garmentImageFile = formData.get("garment_image") as File | null;
+    const occasion = formData.get("occasion") as string | null;
 
     if (!humanImageFile || !garmentImageFile || !occasion) {
-      return NextResponse.json({ error: 'Missing required fields: human_image, garment_image, or occasion' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields: human_image, garment_image, or occasion" },
+        { status: 400 },
+      );
     }
 
     // Convert images to base64 data URLs
@@ -58,7 +61,10 @@ export async function POST(request: Request) {
         {
           role: "user",
           content: [
-            { type: "text", text: `Here is the person, the garment, and the occasion. Please provide your styling advice. Occasion: "${occasion}"` },
+            {
+              type: "text",
+              text: `Here is the person, the garment, and the occasion. Please provide your styling advice. Occasion: "${occasion}"`,
+            },
             {
               type: "image_url",
               image_url: {
@@ -81,19 +87,21 @@ export async function POST(request: Request) {
     // log the whole prompt including the user's text input and system prompt
     console.log("!!! prompt:", systemPrompt);
     console.log("!!! user input:", occasion);
-    
+
     const content = response.choices[0].message.content;
     if (!content) {
-        throw new Error("OpenAI returned an empty response.");
+      throw new Error("OpenAI returned an empty response.");
     }
 
     // Parse the JSON string and return it
     const suggestion = JSON.parse(content);
     return NextResponse.json(suggestion);
-
   } catch (error) {
-    console.error('Error in /api/generate-suggestion:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ error: 'Internal Server Error', details: errorMessage }, { status: 500 });
+    console.error("Error in /api/generate-suggestion:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+    return NextResponse.json(
+      { error: "Internal Server Error", details: errorMessage },
+      { status: 500 },
+    );
   }
 }

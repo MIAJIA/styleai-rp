@@ -1,101 +1,104 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import CompactUpload from "./components/compact-upload"
-import FashionHeader from "./components/fashion-header"
-import StylishWardrobe from "./components/stylish-wardrobe"
-import IOSTabBar from "./components/ios-tab-bar"
-import { Drawer } from "vaul"
-import PortraitSelectionSheet from "./components/portrait-selection-sheet"
-import GenerationAnimation from "./components/generation-animation"
-import StyleSelector from "./components/style-selector"
-import { Palette, Wand2, Heart, Star, ArrowLeft, Share2, Download, Loader2 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import CompactUpload from "./components/compact-upload";
+import FashionHeader from "./components/fashion-header";
+import StylishWardrobe from "./components/stylish-wardrobe";
+import IOSTabBar from "./components/ios-tab-bar";
+import { Drawer } from "vaul";
+import PortraitSelectionSheet from "./components/portrait-selection-sheet";
+import GenerationAnimation from "./components/generation-animation";
+import StyleSelector from "./components/style-selector";
+import { Palette, Wand2, Heart, Star, ArrowLeft, Share2, Download, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 function dataURLtoFile(dataurl: string, filename: string): File | null {
-  if (!dataurl) return null
-  const arr = dataurl.split(",")
-  if (arr.length < 2) return null
+  if (!dataurl) return null;
+  const arr = dataurl.split(",");
+  if (arr.length < 2) return null;
 
-  const mimeMatch = arr[0].match(/:(.*?);/)
-  if (!mimeMatch) return null
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  if (!mimeMatch) return null;
 
-  const mime = mimeMatch[1]
-  const bstr = atob(arr[1])
-  let n = bstr.length
-  const u8arr = new Uint8Array(n)
+  const mime = mimeMatch[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
 
   while (n--) {
-    u8arr[n] = bstr.charCodeAt(n)
+    u8arr[n] = bstr.charCodeAt(n);
   }
 
-  return new File([u8arr], filename, { type: mime })
+  return new File([u8arr], filename, { type: mime });
 }
 
 export default function HomePage() {
-  const [selfieFile, setSelfieFile] = useState<File | null>(null)
-  const [clothingFile, setClothingFile] = useState<File | null>(null)
-  const [selfiePreview, setSelfiePreview] = useState<string>("")
-  const [clothingPreview, setClothingPreview] = useState<string>("")
-  const [selectedStyle, setSelectedStyle] = useState<string>("fashion-magazine")
-  const [selectedPersona, setSelectedPersona] = useState<object | null>(null)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [showAnimation, setShowAnimation] = useState(false)
-  const [isApiFinished, setIsApiFinished] = useState(false)
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null)
-  const [isWardrobeOpen, setIsWardrobeOpen] = useState(false)
-  const [isPortraitSheetOpen, setIsPortraitSheetOpen] = useState(false)
+  const [selfieFile, setSelfieFile] = useState<File | null>(null);
+  const [clothingFile, setClothingFile] = useState<File | null>(null);
+  const [selfiePreview, setSelfiePreview] = useState<string>("");
+  const [clothingPreview, setClothingPreview] = useState<string>("");
+  const [selectedStyle, setSelectedStyle] = useState<string>("fashion-magazine");
+  const [selectedPersona, setSelectedPersona] = useState<object | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
+  const [isApiFinished, setIsApiFinished] = useState(false);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [isWardrobeOpen, setIsWardrobeOpen] = useState(false);
+  const [isPortraitSheetOpen, setIsPortraitSheetOpen] = useState(false);
   const [currentStage, setCurrentStage] = useState(1); // 1: Input, 2: Loading/Suggestion, 3: Result
   const [occasion, setOccasion] = useState("日常通勤");
   const [styleSuggestion, setStyleSuggestion] = useState<any>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isGeneratingFinalImage, setIsGeneratingFinalImage] = useState(false);
-  const router = useRouter()
+  const router = useRouter();
 
   const handleSelfieUpload = (file: File) => {
-    setSelfieFile(file)
-    setSelectedPersona(null)
+    setSelfieFile(file);
+    setSelectedPersona(null);
     if (file && file.name) {
-      const url = URL.createObjectURL(file)
-      setSelfiePreview(url)
+      const url = URL.createObjectURL(file);
+      setSelfiePreview(url);
     } else {
-      setSelfiePreview("")
+      setSelfiePreview("");
     }
-  }
+  };
 
   const handleClothingUpload = (file: File) => {
-    setClothingFile(file)
+    setClothingFile(file);
     if (file && file.name) {
-      const url = URL.createObjectURL(file)
-      setClothingPreview(url)
+      const url = URL.createObjectURL(file);
+      setClothingPreview(url);
     } else {
-      setClothingPreview("")
+      setClothingPreview("");
     }
-  }
+  };
 
   const handleGarmentSelect = (imageSrc: string) => {
-    setClothingPreview(imageSrc)
-    setClothingFile(null)
-    setIsWardrobeOpen(false)
-  }
+    setClothingPreview(imageSrc);
+    setClothingFile(null);
+    setIsWardrobeOpen(false);
+  };
 
   const handlePortraitSelect = (imageSrc: string, persona?: object) => {
-    setSelfiePreview(imageSrc)
-    setSelectedPersona(persona || null)
-    setSelfieFile(null)
-    setIsPortraitSheetOpen(false)
-  }
+    setSelfiePreview(imageSrc);
+    setSelectedPersona(persona || null);
+    setSelfieFile(null);
+    setIsPortraitSheetOpen(false);
+  };
 
   const handleStyleSelect = (styleId: string) => {
-    console.log(`Style selected: ${styleId}`)
-    setSelectedStyle(styleId)
-  }
+    console.log(`Style selected: ${styleId}`);
+    setSelectedStyle(styleId);
+  };
 
   // Helper function to prepare image files for upload
-  const getFileFromPreview = async (previewUrl: string, defaultName: string): Promise<File | null> => {
+  const getFileFromPreview = async (
+    previewUrl: string,
+    defaultName: string,
+  ): Promise<File | null> => {
     if (previewUrl.startsWith("data:image")) {
       return dataURLtoFile(previewUrl, `${defaultName}-${Date.now()}.png`);
     } else if (previewUrl.startsWith("/")) {
@@ -108,7 +111,7 @@ export default function HomePage() {
       return new File([blob], `${defaultName}-${Date.now()}.jpg`, { type: blob.type });
     }
     return null;
-  }
+  };
 
   // This function will now trigger the suggestion generation
   const handleGetSuggestion = async () => {
@@ -123,14 +126,15 @@ export default function HomePage() {
 
     // Animate progress bar
     const interval = setInterval(() => {
-      setLoadingProgress(prev => Math.min(prev + 5, 95));
+      setLoadingProgress((prev) => Math.min(prev + 5, 95));
     }, 200);
 
     try {
       const formData = new FormData();
 
-      const humanImageFile = selfieFile || await getFileFromPreview(selfiePreview, 'selfie');
-      const garmentImageFile = clothingFile || await getFileFromPreview(clothingPreview, 'garment');
+      const humanImageFile = selfieFile || (await getFileFromPreview(selfiePreview, "selfie"));
+      const garmentImageFile =
+        clothingFile || (await getFileFromPreview(clothingPreview, "garment"));
 
       if (!humanImageFile || !garmentImageFile) {
         throw new Error("Could not process one of the images.");
@@ -140,8 +144,8 @@ export default function HomePage() {
       formData.append("garment_image", garmentImageFile);
       formData.append("occasion", occasion);
 
-      const response = await fetch('/api/generate-suggestion', {
-        method: 'POST',
+      const response = await fetch("/api/generate-suggestion", {
+        method: "POST",
         body: formData,
       });
 
@@ -156,7 +160,6 @@ export default function HomePage() {
 
       // Automatically trigger the final image generation
       await handleGenerateFinalImage(suggestion);
-
     } catch (error) {
       console.error(error);
       alert(error instanceof Error ? error.message : "An unknown error occurred.");
@@ -178,8 +181,9 @@ export default function HomePage() {
     try {
       const formData = new FormData();
 
-      const humanImageFile = selfieFile || await getFileFromPreview(selfiePreview, 'selfie');
-      const garmentImageFile = clothingFile || await getFileFromPreview(clothingPreview, 'garment');
+      const humanImageFile = selfieFile || (await getFileFromPreview(selfiePreview, "selfie"));
+      const garmentImageFile =
+        clothingFile || (await getFileFromPreview(clothingPreview, "garment"));
 
       if (!humanImageFile || !garmentImageFile) {
         throw new Error("Could not process one of the images for final generation.");
@@ -201,8 +205,8 @@ export default function HomePage() {
       formData.append("modelVersion", modelVersion);
 
       console.log("[CLIENT-SEND] Sending request to /api/generate-style-v2...");
-      const response = await fetch('/api/generate-style-v2', {
-        method: 'POST',
+      const response = await fetch("/api/generate-style-v2", {
+        method: "POST",
         body: formData,
       });
 
@@ -242,32 +246,35 @@ export default function HomePage() {
       // --- Continue to update the UI ---
       setGeneratedImageUrl(imageUrl);
       setCurrentStage(3);
-
     } catch (error) {
       console.error(error);
-      alert(error instanceof Error ? error.message : "An unknown error occurred during final image generation.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "An unknown error occurred during final image generation.",
+      );
     } finally {
       setIsGeneratingFinalImage(false);
     }
-  }
+  };
 
   const handleGenerate = async () => {
     if (!selfiePreview) {
-      alert("Please select a portrait.")
-      return
+      alert("Please select a portrait.");
+      return;
     }
     if (!clothingPreview) {
-      alert("Please select a garment.")
-      return
+      alert("Please select a garment.");
+      return;
     }
 
-    setIsGenerating(true)
-    setShowAnimation(true)
-    setIsApiFinished(false)
-    setGeneratedImageUrl(null)
+    setIsGenerating(true);
+    setShowAnimation(true);
+    setIsApiFinished(false);
+    setGeneratedImageUrl(null);
 
     try {
-      const formData = new FormData()
+      const formData = new FormData();
 
       // --- Smartly handle the selfie image source ---
       let finalSelfieFile = selfieFile;
@@ -284,116 +291,121 @@ export default function HomePage() {
       }
 
       if (finalSelfieFile) {
-        formData.append("human_image", finalSelfieFile)
+        formData.append("human_image", finalSelfieFile);
       } else {
-        alert("Could not process the selected portrait. Please try again.")
-        setIsGenerating(false)
-        return
+        alert("Could not process the selected portrait. Please try again.");
+        setIsGenerating(false);
+        return;
       }
 
       // --- Smartly handle the garment image source (now fully robust) ---
-      let finalGarmentFile = clothingFile
+      let finalGarmentFile = clothingFile;
       // Scenario 1: Garment is a Data URL from localStorage (custom items)
       if (!finalGarmentFile && clothingPreview && clothingPreview.startsWith("data:image")) {
-        finalGarmentFile = dataURLtoFile(clothingPreview, `wardrobe-item-${Date.now()}.png`)
+        finalGarmentFile = dataURLtoFile(clothingPreview, `wardrobe-item-${Date.now()}.png`);
       }
       // Scenario 2: Garment is a local URL from /public (default items)
       else if (!finalGarmentFile && clothingPreview.startsWith("/")) {
         const response = await fetch(clothingPreview);
         const blob = await response.blob();
-        const fileName = clothingPreview.split('/').pop() || `default-garment-${Date.now()}.png`;
+        const fileName = clothingPreview.split("/").pop() || `default-garment-${Date.now()}.png`;
         finalGarmentFile = new File([blob], fileName, { type: blob.type });
       }
 
       if (finalGarmentFile) {
-        formData.append("garment_image", finalGarmentFile)
+        formData.append("garment_image", finalGarmentFile);
         if (clothingPreview) {
           formData.append("garment_src", clothingPreview);
         }
       } else {
-        alert("Please select a garment to try on.")
-        setIsGenerating(false)
-        return
+        alert("Please select a garment to try on.");
+        setIsGenerating(false);
+        return;
       }
 
       if (selectedPersona) {
         formData.append("persona_profile", JSON.stringify(selectedPersona));
       }
-      formData.append("style_name", selectedStyle)
+      formData.append("style_name", selectedStyle);
 
       const response = await fetch("/api/generate", {
         method: "POST",
         body: formData,
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`Failed to generate image: ${await response.text()}`)
+        throw new Error(`Failed to generate image: ${await response.text()}`);
       }
 
-      const data = await response.json()
+      const data = await response.json();
       if (data.imageUrl) {
-        setGeneratedImageUrl(data.imageUrl)
-        setIsApiFinished(true)
+        setGeneratedImageUrl(data.imageUrl);
+        setIsApiFinished(true);
         if (generatedImageUrl) {
-          setCurrentStage(3)
+          setCurrentStage(3);
         }
       } else {
-        throw new Error("Generation succeeded but no image URL was returned.")
+        throw new Error("Generation succeeded but no image URL was returned.");
       }
     } catch (error) {
-      console.error(error)
+      console.error(error);
       if (error instanceof Error) {
-        alert(error.message)
+        alert(error.message);
       }
-      setShowAnimation(false)
-      setIsGenerating(false)
+      setShowAnimation(false);
+      setIsGenerating(false);
     }
-  }
+  };
 
   const handleAnimationAndNavigation = () => {
     if (generatedImageUrl) {
-      setCurrentStage(3)
+      setCurrentStage(3);
     }
-    setShowAnimation(false)
-    setIsApiFinished(false)
-    setIsGenerating(false)
-  }
+    setShowAnimation(false);
+    setIsApiFinished(false);
+    setIsGenerating(false);
+  };
 
   const handleCreateAnother = () => {
-    setCurrentStage(1)
-    setSelfiePreview("")
-    setClothingPreview("")
-    setSelfieFile(null)
-    setClothingFile(null)
-    setSelectedPersona(null)
-    setGeneratedImageUrl(null)
-  }
+    setCurrentStage(1);
+    setSelfiePreview("");
+    setClothingPreview("");
+    setSelfieFile(null);
+    setClothingFile(null);
+    setSelectedPersona(null);
+    setGeneratedImageUrl(null);
+  };
 
   const handleShare = () => {
     if (navigator.share && generatedImageUrl) {
       // Use the Web Share API on supported devices
       fetch(generatedImageUrl)
-        .then(res => res.blob())
-        .then(blob => {
-          const file = new File([blob], 'styleai-look.png', { type: 'image/png' });
+        .then((res) => res.blob())
+        .then((blob) => {
+          const file = new File([blob], "styleai-look.png", { type: "image/png" });
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator.share({
-              title: 'My StyleAI Look',
-              text: 'Check out the new look I generated with StyleAI!',
-              files: [file],
-            }).catch(console.error);
+            navigator
+              .share({
+                title: "My StyleAI Look",
+                text: "Check out the new look I generated with StyleAI!",
+                files: [file],
+              })
+              .catch(console.error);
           } else {
             // Fallback for when file sharing is not supported but API exists
-            navigator.share({
-              title: 'My StyleAI Look',
-              text: 'Check out the new look I generated with StyleAI!',
-              url: generatedImageUrl,
-            }).catch(console.error);
+            navigator
+              .share({
+                title: "My StyleAI Look",
+                text: "Check out the new look I generated with StyleAI!",
+                url: generatedImageUrl,
+              })
+              .catch(console.error);
           }
         });
     } else if (generatedImageUrl) {
       // Fallback for desktop browsers
-      navigator.clipboard.writeText(generatedImageUrl)
+      navigator.clipboard
+        .writeText(generatedImageUrl)
         .then(() => alert("Image URL copied to clipboard! You can paste it to share."))
         .catch(console.error);
     }
@@ -401,7 +413,7 @@ export default function HomePage() {
 
   const handleDownload = () => {
     if (generatedImageUrl) {
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = generatedImageUrl;
       link.download = `styleai-look-${Date.now()}.png`;
       document.body.appendChild(link);
@@ -410,7 +422,7 @@ export default function HomePage() {
     }
   };
 
-  const hasRequiredImages = selfiePreview && clothingPreview
+  const hasRequiredImages = selfiePreview && clothingPreview;
 
   return (
     <div className="min-h-full pb-20 relative overflow-hidden">
@@ -478,7 +490,7 @@ export default function HomePage() {
                         "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
                         occasion === o
                           ? "bg-primary text-white shadow-md"
-                          : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100",
                       )}
                     >
                       {o}
@@ -539,21 +551,37 @@ export default function HomePage() {
                   <div className="w-16 h-16 mx-auto bg-gradient-to-br from-[#FF6EC7] to-[#D5F500] rounded-full flex items-center justify-center shadow-xl animate-pulse">
                     <Wand2 className="text-white" size={28} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-800 font-playfair">Analyzing Your Style...</h2>
+                  <h2 className="text-xl font-bold text-gray-800 font-playfair">
+                    Analyzing Your Style...
+                  </h2>
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-primary h-2.5 rounded-full transition-all duration-300" style={{ width: `${loadingProgress}%` }}></div>
+                    <div
+                      className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                      style={{ width: `${loadingProgress}%` }}
+                    ></div>
                   </div>
-                  <p className="text-sm text-gray-600">Generating personalized advice just for you</p>
+                  <p className="text-sm text-gray-600">
+                    Generating personalized advice just for you
+                  </p>
                 </>
               ) : (
                 <div className="text-left space-y-4">
-                  <h2 className="text-2xl font-bold text-center text-gray-800 font-playfair mb-6">Your Personal Style Guide</h2>
-                  {Object.entries(styleSuggestion).filter(([key]) => key !== 'image_prompt').map(([key, value]) => (
-                    <div key={key} className="bg-white/80 p-4 rounded-xl shadow-sm border border-black/5">
-                      <h3 className="font-semibold text-primary mb-1 capitalize">{key.replace(/_/g, ' ')}</h3>
-                      <p className="text-gray-700 text-sm">{value as string}</p>
-                    </div>
-                  ))}
+                  <h2 className="text-2xl font-bold text-center text-gray-800 font-playfair mb-6">
+                    Your Personal Style Guide
+                  </h2>
+                  {Object.entries(styleSuggestion)
+                    .filter(([key]) => key !== "image_prompt")
+                    .map(([key, value]) => (
+                      <div
+                        key={key}
+                        className="bg-white/80 p-4 rounded-xl shadow-sm border border-black/5"
+                      >
+                        <h3 className="font-semibold text-primary mb-1 capitalize">
+                          {key.replace(/_/g, " ")}
+                        </h3>
+                        <p className="text-gray-700 text-sm">{value as string}</p>
+                      </div>
+                    ))}
                   <div className="flex flex-col items-center justify-center pt-6 space-y-3">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <p className="text-md font-semibold text-gray-700">Generating your look...</p>
@@ -615,5 +643,5 @@ export default function HomePage() {
       {/* iOS Tab Bar */}
       <IOSTabBar />
     </div>
-  )
+  );
 }

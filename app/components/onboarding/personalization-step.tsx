@@ -1,44 +1,68 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { OnboardingData } from "@/lib/onboarding-storage"
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { OnboardingData } from "@/lib/onboarding-storage";
 
 interface PersonalizationStepProps {
-  data: OnboardingData
-  onUpdate: (data: Partial<OnboardingData>) => void
-  onValidationChange: (isValid: boolean) => void
+  data: OnboardingData;
+  onUpdate: (data: Partial<OnboardingData>) => void;
+  onValidationChange: (isValid: boolean) => void;
 }
 
 const SPECIFIC_STYLES = [
-  { id: "korean", label: "Korean Style", emoji: "🇰🇷", description: "K-fashion trends, cute and trendy" },
-  { id: "french", label: "French Chic", emoji: "🇫🇷", description: "Effortless elegance, timeless pieces" },
-  { id: "japanese", label: "Japanese Minimalism", emoji: "🇯🇵", description: "Clean lines, quality basics" },
-  { id: "dark", label: "Dark Academia", emoji: "🖤", description: "Scholarly, vintage-inspired, moody" },
+  {
+    id: "korean",
+    label: "Korean Style",
+    emoji: "🇰🇷",
+    description: "K-fashion trends, cute and trendy",
+  },
+  {
+    id: "french",
+    label: "French Chic",
+    emoji: "🇫🇷",
+    description: "Effortless elegance, timeless pieces",
+  },
+  {
+    id: "japanese",
+    label: "Japanese Minimalism",
+    emoji: "🇯🇵",
+    description: "Clean lines, quality basics",
+  },
+  {
+    id: "dark",
+    label: "Dark Academia",
+    emoji: "🖤",
+    description: "Scholarly, vintage-inspired, moody",
+  },
   { id: "boho", label: "Bohemian", emoji: "🌻", description: "Free-spirited, artistic, flowing" },
   { id: "scandi", label: "Scandinavian", emoji: "❄️", description: "Minimalist, cozy, functional" },
-]
+];
 
-export default function PersonalizationStep({ data, onUpdate, onValidationChange }: PersonalizationStepProps) {
-  const [sustainableFashion, setSustainableFashion] = useState(data.sustainableFashion || false)
-  const [accessoryMatching, setAccessoryMatching] = useState(data.accessoryMatching || false)
-  const [specificStyles, setSpecificStyles] = useState<string[]>(data.specificStyles || [])
-  const [customSpecificStyle, setCustomSpecificStyle] = useState(data.customSpecificStyle || "")
-  const isInitialMount = useRef(true)
+export default function PersonalizationStep({
+  data,
+  onUpdate,
+  onValidationChange,
+}: PersonalizationStepProps) {
+  const [sustainableFashion, setSustainableFashion] = useState(data.sustainableFashion || false);
+  const [accessoryMatching, setAccessoryMatching] = useState(data.accessoryMatching || false);
+  const [specificStyles, setSpecificStyles] = useState<string[]>(data.specificStyles || []);
+  const [customSpecificStyle, setCustomSpecificStyle] = useState(data.customSpecificStyle || "");
+  const isInitialMount = useRef(true);
 
   // This step is completely optional, so always mark as valid
   useEffect(() => {
-    onValidationChange(true)
-  }, [onValidationChange])
+    onValidationChange(true);
+  }, [onValidationChange]);
 
   // Update parent data whenever relevant state changes
   useEffect(() => {
     // Skip the initial render to avoid immediate update on mount
     if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
+      isInitialMount.current = false;
+      return;
     }
 
     onUpdate({
@@ -46,18 +70,22 @@ export default function PersonalizationStep({ data, onUpdate, onValidationChange
       accessoryMatching,
       specificStyles,
       customSpecificStyle,
-    })
-  }, [sustainableFashion, accessoryMatching, specificStyles, customSpecificStyle, onUpdate])
+    });
+  }, [sustainableFashion, accessoryMatching, specificStyles, customSpecificStyle, onUpdate]);
 
   const toggleSpecificStyle = (styleId: string) => {
-    setSpecificStyles((prev) => (prev.includes(styleId) ? prev.filter((item) => item !== styleId) : [...prev, styleId]))
-  }
+    setSpecificStyles((prev) =>
+      prev.includes(styleId) ? prev.filter((item) => item !== styleId) : [...prev, styleId],
+    );
+  };
 
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold text-gray-800">Final Touches</h2>
-        <p className="text-gray-600">These preferences will help us fine-tune your styling experience.</p>
+        <p className="text-gray-600">
+          These preferences will help us fine-tune your styling experience.
+        </p>
         <p className="text-sm text-pink-600 font-medium">
           All optional - customize as much or as little as you'd like!
         </p>
@@ -67,8 +95,12 @@ export default function PersonalizationStep({ data, onUpdate, onValidationChange
       <Card className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-800 flex items-center">🌱 Sustainable Fashion Focus</h3>
-            <p className="text-sm text-gray-600 mt-1">Prioritize eco-friendly brands and sustainable styling tips</p>
+            <h3 className="font-semibold text-gray-800 flex items-center">
+              🌱 Sustainable Fashion Focus
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Prioritize eco-friendly brands and sustainable styling tips
+            </p>
           </div>
           <Switch checked={sustainableFashion} onCheckedChange={setSustainableFashion} />
         </div>
@@ -78,8 +110,12 @@ export default function PersonalizationStep({ data, onUpdate, onValidationChange
       <Card className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-800 flex items-center">💎 Complete Look Styling</h3>
-            <p className="text-sm text-gray-600 mt-1">Include accessories, bags, and jewelry recommendations</p>
+            <h3 className="font-semibold text-gray-800 flex items-center">
+              💎 Complete Look Styling
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Include accessories, bags, and jewelry recommendations
+            </p>
           </div>
           <Switch checked={accessoryMatching} onCheckedChange={setAccessoryMatching} />
         </div>
@@ -88,16 +124,19 @@ export default function PersonalizationStep({ data, onUpdate, onValidationChange
       {/* Specific Style Preferences */}
       <Card className="p-4">
         <h3 className="font-semibold text-gray-800 mb-3">🎨 Specific Style Inspirations</h3>
-        <p className="text-sm text-gray-600 mb-4">Any particular cultural or aesthetic styles you love?</p>
+        <p className="text-sm text-gray-600 mb-4">
+          Any particular cultural or aesthetic styles you love?
+        </p>
 
         <div className="space-y-2 mb-4">
           {SPECIFIC_STYLES.map((style) => (
             <div
               key={style.id}
-              className={`p-3 rounded-lg border cursor-pointer transition-all ${specificStyles.includes(style.id)
-                ? "bg-pink-50 border-pink-300"
-                : "border-gray-200 hover:border-pink-200"
-                }`}
+              className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                specificStyles.includes(style.id)
+                  ? "bg-pink-50 border-pink-300"
+                  : "border-gray-200 hover:border-pink-200"
+              }`}
               onClick={() => toggleSpecificStyle(style.id)}
             >
               <div className="flex items-center space-x-3">
@@ -108,7 +147,9 @@ export default function PersonalizationStep({ data, onUpdate, onValidationChange
                   >
                     {style.label}
                   </h4>
-                  <p className={`text-xs ${specificStyles.includes(style.id) ? "text-pink-600" : "text-gray-600"}`}>
+                  <p
+                    className={`text-xs ${specificStyles.includes(style.id) ? "text-pink-600" : "text-gray-600"}`}
+                  >
                     {style.description}
                   </p>
                 </div>
@@ -136,8 +177,8 @@ export default function PersonalizationStep({ data, onUpdate, onValidationChange
           <div className="text-4xl">🎉</div>
           <h3 className="text-xl font-bold text-gray-800">Almost Ready!</h3>
           <p className="text-gray-600">
-            You're all set to discover your perfect style. Our AI stylist now knows exactly how to help you look and
-            feel amazing!
+            You're all set to discover your perfect style. Our AI stylist now knows exactly how to
+            help you look and feel amazing!
           </p>
           <div className="flex items-center justify-center space-x-4 text-sm text-gray-500 mt-4">
             <div className="flex items-center space-x-1">
@@ -156,5 +197,5 @@ export default function PersonalizationStep({ data, onUpdate, onValidationChange
         </div>
       </Card>
     </div>
-  )
+  );
 }

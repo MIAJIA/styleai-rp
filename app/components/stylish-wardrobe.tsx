@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 
 // Define the structure of a wardrobe item and the whole wardrobe
 interface WardrobeItem {
@@ -23,25 +23,25 @@ interface MyWardrobeProps {
   onGarmentSelect: (imageSrc: string) => void;
 }
 
-const STORAGE_KEY = 'styleai_wardrobe';
+const STORAGE_KEY = "styleai_wardrobe";
 
 // --- Define Default Photos ---
 const DEFAULT_PHOTOS: Wardrobe = {
   tops: [
-    { id: 'default-top-1', imageSrc: '/cloth/green-top.png' },
-    { id: 'default-top-2', imageSrc: '/cloth/yellow-shirt.png' },
+    { id: "default-top-1", imageSrc: "/cloth/green-top.png" },
+    { id: "default-top-2", imageSrc: "/cloth/yellow-shirt.png" },
   ],
   bottoms: [
-    { id: 'default-bottom-1', imageSrc: '/cloth/jean.png' },
-    { id: 'default-bottom-2', imageSrc: '/cloth/LEIVs-jean-short.png' },
+    { id: "default-bottom-1", imageSrc: "/cloth/jean.png" },
+    { id: "default-bottom-2", imageSrc: "/cloth/LEIVs-jean-short.png" },
   ],
   dresses: [
-    { id: 'default-dress-1', imageSrc: '/cloth/blue-dress.png' },
-    { id: 'default-dress-2', imageSrc: '/cloth/yellow-dress.png' },
+    { id: "default-dress-1", imageSrc: "/cloth/blue-dress.png" },
+    { id: "default-dress-2", imageSrc: "/cloth/yellow-dress.png" },
   ],
   outerwear: [
-    { id: 'default-outerwear-1', imageSrc: '/cloth/whiteblazer.png' },
-    { id: 'default-outerwear-2', imageSrc: '/cloth/黑皮衣.png' },
+    { id: "default-outerwear-1", imageSrc: "/cloth/whiteblazer.png" },
+    { id: "default-outerwear-2", imageSrc: "/cloth/黑皮衣.png" },
   ],
 };
 
@@ -85,16 +85,16 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
 
   const processAndResizeImage = async (file: File): Promise<string | null> => {
     // 1. Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png'];
+    const allowedTypes = ["image/jpeg", "image/png"];
     if (!allowedTypes.includes(file.type)) {
-      alert('Invalid file format. Please upload a JPG or PNG image.');
+      alert("Invalid file format. Please upload a JPG or PNG image.");
       return null;
     }
 
     // 2. Validate file size (max 10MB) - this is for the RAW upload
     const maxSizeInBytes = 10 * 1024 * 1024;
     if (file.size > maxSizeInBytes) {
-      alert('File is too large. Please upload an image smaller than 10MB.');
+      alert("File is too large. Please upload an image smaller than 10MB.");
       return null;
     }
 
@@ -104,14 +104,16 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
       const img = new Image();
       img.onload = () => {
         if (img.width < 300 || img.height < 300) {
-          alert('Image dimensions are too small. Please use an image that is at least 300x300 pixels.');
+          alert(
+            "Image dimensions are too small. Please use an image that is at least 300x300 pixels.",
+          );
           URL.revokeObjectURL(objectUrl);
           resolve(null);
           return;
         }
 
         // Create canvas for resizing
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         const MAX_DIMENSION = 1024; // Increased from 512 to 1024 for higher quality
         let width = img.width;
         let height = img.height;
@@ -129,9 +131,9 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
         }
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext("2d");
         if (!ctx) {
-          alert('Could not get canvas context for resizing.');
+          alert("Could not get canvas context for resizing.");
           URL.revokeObjectURL(objectUrl);
           resolve(null);
           return;
@@ -139,13 +141,13 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
         ctx.drawImage(img, 0, 0, width, height);
 
         // Get the resized image as a JPEG Data URL (more efficient for photos)
-        const resizedImageSrc = canvas.toDataURL('image/jpeg', 0.85); // Use JPEG with 85% quality
+        const resizedImageSrc = canvas.toDataURL("image/jpeg", 0.85); // Use JPEG with 85% quality
         URL.revokeObjectURL(objectUrl);
         resolve(resizedImageSrc);
       };
       img.onerror = () => {
         URL.revokeObjectURL(objectUrl);
-        alert('Could not read image file. It might be corrupted.');
+        alert("Could not read image file. It might be corrupted.");
         resolve(null);
       };
       img.src = objectUrl;
@@ -163,13 +165,13 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
           id: `item-${Date.now()}`,
           imageSrc,
         };
-        setWardrobe(prev => {
+        setWardrobe((prev) => {
           // Filter out default items before adding the new one
-          const userItems = prev[category].filter(item => !item.id.startsWith('default-'));
+          const userItems = prev[category].filter((item) => !item.id.startsWith("default-"));
           return {
             ...prev,
             [category]: [newItem, ...userItems],
-          }
+          };
         });
       }
     }
@@ -190,8 +192,8 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
   const handleDeleteItem = (category: WardrobeCategory, itemId: string) => {
     // Add a confirmation dialog to prevent accidental deletion
     if (window.confirm("Are you sure you want to delete this item?")) {
-      setWardrobe(prev => {
-        const updatedItems = prev[category].filter(item => item.id !== itemId);
+      setWardrobe((prev) => {
+        const updatedItems = prev[category].filter((item) => item.id !== itemId);
         return {
           ...prev,
           [category]: updatedItems,
@@ -202,12 +204,20 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
 
   // This is a simplified render function for one category.
   // We will build this out with proper styling.
-  const renderCategory = (category: WardrobeCategory, name: string, emoji: string, colorClass: string) => {
+  const renderCategory = (
+    category: WardrobeCategory,
+    name: string,
+    emoji: string,
+    colorClass: string,
+  ) => {
     const userItems = wardrobe[category];
     const defaultItems = DEFAULT_PHOTOS[category];
-    const itemsToDisplay = [...userItems, ...defaultItems.filter(
-      dItem => !userItems.some(uItem => uItem.imageSrc === dItem.imageSrc)
-    )];
+    const itemsToDisplay = [
+      ...userItems,
+      ...defaultItems.filter(
+        (dItem) => !userItems.some((uItem) => uItem.imageSrc === dItem.imageSrc),
+      ),
+    ];
 
     return (
       <div className={`${colorClass} rounded-3xl p-4 shadow-lg`}>
@@ -240,7 +250,11 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
               onClick={() => onGarmentSelect(item.imageSrc)}
               className="relative group aspect-square bg-white rounded-xl shadow-sm cursor-pointer overflow-hidden"
             >
-              <img src={item.imageSrc} alt="wardrobe item" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+              <img
+                src={item.imageSrc}
+                alt="wardrobe item"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              />
               <button
                 onClick={(e) => {
                   e.stopPropagation(); // Prevent the main card's click event
@@ -256,7 +270,7 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
         </div>
       </div>
     );
-  }
+  };
 
   return (
     <div className="w-full">

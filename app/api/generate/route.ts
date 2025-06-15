@@ -3,14 +3,17 @@ import * as jwt from "jsonwebtoken";
 
 // This map is now defined directly in the file to avoid import issues.
 const garmentDescriptions = new Map<string, string>([
-  ['/cloth/green-top.png', 'A vibrant green casual knit top, perfect for a fresh, lively look.'],
-  ['/cloth/yellow-shirt.png', 'A bright yellow short-sleeve button-up shirt with a relaxed fit.'],
-  ['/cloth/jean.png', 'Classic blue denim jeans with a straight-leg cut.'],
-  ['/cloth/LEIVs-jean-short.png', 'Light-wash denim cutoff shorts, ideal for a summer day.'],
-  ['/cloth/blue-dress.png', 'An elegant, flowing light blue maxi dress with a simple silhouette.'],
-  ['/cloth/yellow-dress.png', 'A cheerful yellow sundress with a fitted bodice and flared skirt.'],
-  ['/cloth/whiteblazer.png', 'A sharp, tailored white blazer that adds sophistication to any outfit.'],
-  ['/cloth/黑皮衣.png', 'A classic black leather biker jacket, adding an edgy and cool vibe.']
+  ["/cloth/green-top.png", "A vibrant green casual knit top, perfect for a fresh, lively look."],
+  ["/cloth/yellow-shirt.png", "A bright yellow short-sleeve button-up shirt with a relaxed fit."],
+  ["/cloth/jean.png", "Classic blue denim jeans with a straight-leg cut."],
+  ["/cloth/LEIVs-jean-short.png", "Light-wash denim cutoff shorts, ideal for a summer day."],
+  ["/cloth/blue-dress.png", "An elegant, flowing light blue maxi dress with a simple silhouette."],
+  ["/cloth/yellow-dress.png", "A cheerful yellow sundress with a fitted bodice and flared skirt."],
+  [
+    "/cloth/whiteblazer.png",
+    "A sharp, tailored white blazer that adds sophistication to any outfit.",
+  ],
+  ["/cloth/黑皮衣.png", "A classic black leather biker jacket, adding an edgy and cool vibe."],
 ]);
 
 // TODO: The client-side image pre-processing is causing the AI to return cropped images.
@@ -36,9 +39,12 @@ const getApiToken = (accessKey: string, secretKey: string): string => {
     exp: Math.floor(Date.now() / 1000) + 1800, // 30 minutes expiration
     nbf: Math.floor(Date.now() / 1000) - 5, // 5 seconds tolerance
   };
-  const token = jwt.sign(payload, secretKey, { algorithm: 'HS256', header: { alg: "HS256", typ: "JWT" } });
+  const token = jwt.sign(payload, secretKey, {
+    algorithm: "HS256",
+    header: { alg: "HS256", typ: "JWT" },
+  });
   return token;
-}
+};
 
 // --- Kling AI API Configuration ---
 const KLING_ACCESS_KEY = process.env.KLING_AI_ACCESS_KEY;
@@ -49,13 +55,16 @@ const KLING_API_BASE_URL = "https://api-beijing.klingai.com";
 const VIRTUAL_TRYON_SUBMIT_PATH = "/v1/images/kolors-virtual-try-on";
 const VIRTUAL_TRYON_STATUS_PATH = "/v1/images/kolors-virtual-try-on/"; // Note the trailing slash for appending task_id
 
-async function fetchWithTimeout(resource: RequestInfo, options: RequestInit & { timeout: number }): Promise<Response> {
+async function fetchWithTimeout(
+  resource: RequestInfo,
+  options: RequestInit & { timeout: number },
+): Promise<Response> {
   const { timeout } = options;
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   const response = await fetch(resource, {
     ...options,
-    signal: controller.signal
+    signal: controller.signal,
   });
   clearTimeout(id);
   return response;
@@ -63,7 +72,10 @@ async function fetchWithTimeout(resource: RequestInfo, options: RequestInit & { 
 
 export async function POST(request: Request) {
   if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
-    return NextResponse.json({ error: "AccessKey or SecretKey is not configured." }, { status: 500 });
+    return NextResponse.json(
+      { error: "AccessKey or SecretKey is not configured." },
+      { status: 500 },
+    );
   }
 
   try {
@@ -88,10 +100,7 @@ export async function POST(request: Request) {
     const personaProfile = formData.get("persona_profile") as string | null;
 
     if (!humanImageBlob || !garmentImageBlob) {
-      return NextResponse.json(
-        { error: "Missing human_image or garment_image" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing human_image or garment_image" }, { status: 400 });
     }
 
     // Step 0: Get the dynamic API Token
@@ -105,7 +114,7 @@ export async function POST(request: Request) {
     const garmentDescription = garmentSrc ? garmentDescriptions.get(garmentSrc) : null;
     let prompt = `Fusion of a person and a garment.`;
     if (garmentDescription) {
-      prompt += ` The clothing is a ${garmentDescription} and it must also remain identical.`
+      prompt += ` The clothing is a ${garmentDescription} and it must also remain identical.`;
     }
 
     const requestBody = {
@@ -116,10 +125,10 @@ export async function POST(request: Request) {
     // Step 3 - Call Kling AI to submit the task
     console.log("Submitting task to Kling AI...");
     const submitResponse = await fetch(`${KLING_API_BASE_URL}${VIRTUAL_TRYON_SUBMIT_PATH}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${apiToken}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(requestBody),
       // @ts-ignore
@@ -142,41 +151,44 @@ export async function POST(request: Request) {
     let finalImageUrl = "";
 
     while (attempts < maxAttempts) {
-        console.log(`Polling attempt #${attempts + 1} for task: ${taskId}`);
+      console.log(`Polling attempt #${attempts + 1} for task: ${taskId}`);
 
-        // Regenerate token for each poll request to ensure it's not expired
-        const pollingToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
+      // Regenerate token for each poll request to ensure it's not expired
+      const pollingToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
 
-        const statusCheckResponse = await fetch(`${KLING_API_BASE_URL}${VIRTUAL_TRYON_STATUS_PATH}${taskId}`, {
+      const statusCheckResponse = await fetch(
+        `${KLING_API_BASE_URL}${VIRTUAL_TRYON_STATUS_PATH}${taskId}`,
+        {
           headers: {
-            'Authorization': `Bearer ${pollingToken}`,
+            Authorization: `Bearer ${pollingToken}`,
           },
           // @ts-ignore
           timeout: 60000, // 60-second timeout for status check
-        });
+        },
+      );
 
-        if (!statusCheckResponse.ok) {
-            const errorBody = await statusCheckResponse.text();
-            throw new Error(`API Error on status check: ${statusCheckResponse.status} ${errorBody}`);
-        }
+      if (!statusCheckResponse.ok) {
+        const errorBody = await statusCheckResponse.text();
+        throw new Error(`API Error on status check: ${statusCheckResponse.status} ${errorBody}`);
+      }
 
-        const statusResult = await statusCheckResponse.json();
-        const taskData = statusResult.data; // Data is nested
+      const statusResult = await statusCheckResponse.json();
+      const taskData = statusResult.data; // Data is nested
 
-        if (taskData.task_status === "succeed") {
-            finalImageUrl = taskData.task_result.images[0].url;
-            console.log("Task succeeded! Image URL:", finalImageUrl);
-            break;
-        } else if (taskData.task_status === "failed") {
-            throw new Error(`AI generation failed. Reason: ${taskData.task_status_msg || 'Unknown'}`);
-        }
+      if (taskData.task_status === "succeed") {
+        finalImageUrl = taskData.task_result.images[0].url;
+        console.log("Task succeeded! Image URL:", finalImageUrl);
+        break;
+      } else if (taskData.task_status === "failed") {
+        throw new Error(`AI generation failed. Reason: ${taskData.task_status_msg || "Unknown"}`);
+      }
 
-        attempts++;
-        await sleep(3000);
+      attempts++;
+      await sleep(3000);
     }
 
     if (!finalImageUrl) {
-        throw new Error("AI generation timed out.");
+      throw new Error("AI generation timed out.");
     }
 
     // Step 5 - Return the final image URL and context to the frontend
@@ -185,7 +197,6 @@ export async function POST(request: Request) {
       garmentDescription,
       personaProfile,
     });
-
   } catch (error) {
     console.error("An error occurred in the generate API:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";

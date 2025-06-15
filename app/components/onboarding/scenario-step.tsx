@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { OnboardingData } from "@/lib/onboarding-storage"
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { OnboardingData } from "@/lib/onboarding-storage";
 
 interface ScenarioStepProps {
-  data: OnboardingData
-  onUpdate: (data: Partial<OnboardingData>) => void
-  onValidationChange: (isValid: boolean) => void
+  data: OnboardingData;
+  onUpdate: (data: Partial<OnboardingData>) => void;
+  onValidationChange: (isValid: boolean) => void;
 }
 
 const SCENARIOS = [
@@ -18,36 +18,36 @@ const SCENARIOS = [
   { id: "special", label: "特殊活动", emoji: "✨", description: "婚礼、晚宴、重要场合" },
   { id: "travel", label: "旅行度假", emoji: "🌴", description: "旅游、观光、度假活动" },
   { id: "creative", label: "创意表达", emoji: "🎨", description: "艺术活动、创意工作、自我表达" },
-]
+];
 
 export default function ScenarioStep({ data, onUpdate, onValidationChange }: ScenarioStepProps) {
-  const [selectedScenario, setSelectedScenario] = useState<string>(data.primaryScenario || "")
-  const [customScenario, setCustomScenario] = useState(data.customScenario || "")
-  const isInitialMount = useRef(true)
+  const [selectedScenario, setSelectedScenario] = useState<string>(data.primaryScenario || "");
+  const [customScenario, setCustomScenario] = useState(data.customScenario || "");
+  const isInitialMount = useRef(true);
 
   // Check validation whenever relevant state changes
   useEffect(() => {
-    const isValid = selectedScenario !== "" || customScenario.trim() !== ""
-    onValidationChange(isValid)
-  }, [selectedScenario, customScenario, onValidationChange])
+    const isValid = selectedScenario !== "" || customScenario.trim() !== "";
+    onValidationChange(isValid);
+  }, [selectedScenario, customScenario, onValidationChange]);
 
   // Update parent data whenever relevant state changes
   useEffect(() => {
     // Skip the initial render to avoid immediate update on mount
     if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
+      isInitialMount.current = false;
+      return;
     }
 
     onUpdate({
       primaryScenario: selectedScenario,
       customScenario,
-    })
-  }, [selectedScenario, customScenario, onUpdate])
+    });
+  }, [selectedScenario, customScenario, onUpdate]);
 
   const selectScenario = (scenarioId: string) => {
-    setSelectedScenario(scenarioId)
-  }
+    setSelectedScenario(scenarioId);
+  };
 
   return (
     <div className="space-y-6">
@@ -61,19 +61,24 @@ export default function ScenarioStep({ data, onUpdate, onValidationChange }: Sce
         {SCENARIOS.map((scenario) => (
           <Card
             key={scenario.id}
-            className={`p-4 cursor-pointer transition-all ${selectedScenario === scenario.id
-              ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
-              : "border-gray-200 hover:border-pink-200"
-              }`}
+            className={`p-4 cursor-pointer transition-all ${
+              selectedScenario === scenario.id
+                ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
+                : "border-gray-200 hover:border-pink-200"
+            }`}
             onClick={() => selectScenario(scenario.id)}
           >
             <div className="flex items-center space-x-3">
               <div className="text-2xl">{scenario.emoji}</div>
               <div className="flex-1">
-                <h3 className={`font-semibold ${selectedScenario === scenario.id ? "text-pink-800" : "text-gray-800"}`}>
+                <h3
+                  className={`font-semibold ${selectedScenario === scenario.id ? "text-pink-800" : "text-gray-800"}`}
+                >
                   {scenario.label}
                 </h3>
-                <p className={`text-sm ${selectedScenario === scenario.id ? "text-pink-600" : "text-gray-600"}`}>
+                <p
+                  className={`text-sm ${selectedScenario === scenario.id ? "text-pink-600" : "text-gray-600"}`}
+                >
                   {scenario.description}
                 </p>
               </div>
@@ -98,5 +103,5 @@ export default function ScenarioStep({ data, onUpdate, onValidationChange }: Sce
         />
       </Card>
     </div>
-  )
+  );
 }

@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Sparkles,
   User,
@@ -15,44 +15,50 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
-} from "lucide-react"
-import { loadCompleteOnboardingData, getUserPhotos, type OnboardingData } from "@/lib/onboarding-storage"
-import { useRouter } from "next/navigation"
+} from "lucide-react";
+import {
+  loadCompleteOnboardingData,
+  getUserPhotos,
+  type OnboardingData,
+} from "@/lib/onboarding-storage";
+import { useRouter } from "next/navigation";
 
 interface UserProfile extends OnboardingData {
-  savedAt?: string
+  savedAt?: string;
   photoMetadata?: {
-    hasFullBodyPhoto: boolean
-    hasHeadPhoto: boolean
-    photosStoredSeparately?: boolean
-  }
+    hasFullBodyPhoto: boolean;
+    hasHeadPhoto: boolean;
+    photosStoredSeparately?: boolean;
+  };
 }
 
 export default function MyStylePage() {
-  const [profileData, setProfileData] = useState<UserProfile | null>(null)
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [photos, setPhotos] = useState<{ fullBodyPhoto: string | null; headPhoto: string | null }>({
     fullBodyPhoto: null,
     headPhoto: null,
-  })
-  const [loading, setLoading] = useState(true)
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ myPhotos: true })
-  const router = useRouter()
+  });
+  const [loading, setLoading] = useState(true);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    myPhotos: true,
+  });
+  const router = useRouter();
 
   useEffect(() => {
     const loadProfile = () => {
       try {
-        const savedProfile = localStorage.getItem("styleMe_user_profile")
-        const onboardingData = loadCompleteOnboardingData()
-        const userPhotos = getUserPhotos()
+        const savedProfile = localStorage.getItem("styleMe_user_profile");
+        const onboardingData = loadCompleteOnboardingData();
+        const userPhotos = getUserPhotos();
 
-        let profile: UserProfile = onboardingData
+        let profile: UserProfile = onboardingData;
 
         if (savedProfile) {
           try {
-            const parsedProfile = JSON.parse(savedProfile)
-            profile = { ...onboardingData, ...parsedProfile }
+            const parsedProfile = JSON.parse(savedProfile);
+            profile = { ...onboardingData, ...parsedProfile };
           } catch (error) {
-            console.error("Error parsing saved profile:", error)
+            console.error("Error parsing saved profile:", error);
           }
         }
 
@@ -60,40 +66,40 @@ export default function MyStylePage() {
           hasFullBodyPhoto: !!userPhotos.fullBodyPhoto || !!onboardingData.fullBodyPhoto,
           hasHeadPhoto: !!userPhotos.headPhoto || !!onboardingData.headPhoto,
           photosStoredSeparately: true,
-        }
+        };
 
         if (!profile.savedAt) {
-          const onboardingCompleted = localStorage.getItem("styleMe_onboarding_completed")
+          const onboardingCompleted = localStorage.getItem("styleMe_onboarding_completed");
           if (onboardingCompleted) {
-            profile.savedAt = new Date().toISOString()
+            profile.savedAt = new Date().toISOString();
           }
         }
 
-        setProfileData(profile)
-        setPhotos(userPhotos)
+        setProfileData(profile);
+        setPhotos(userPhotos);
       } catch (error) {
-        console.error("Error loading profile:", error)
+        console.error("Error loading profile:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadProfile()
-  }, [])
+    loadProfile();
+  }, []);
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
-    }))
-  }
+    }));
+  };
 
   const hasCompletedOnboarding =
     profileData &&
     (profileData.boneStructure ||
       profileData.stylePreferences?.length ||
       profileData.primaryScenario ||
-      Object.keys(profileData).length > 2)
+      Object.keys(profileData).length > 2);
 
   if (loading) {
     return (
@@ -103,7 +109,7 @@ export default function MyStylePage() {
           <p className="text-gray-600">Loading your style profile...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!hasCompletedOnboarding) {
@@ -113,7 +119,9 @@ export default function MyStylePage() {
           <CardContent className="pt-6">
             <Sparkles className="w-16 h-16 mx-auto mb-4 text-[#FF6EC7]" />
             <h2 className="text-xl font-semibold mb-2">No Style Profile Yet</h2>
-            <p className="text-gray-600 mb-6">Complete the style assessment to get your personalized style profile</p>
+            <p className="text-gray-600 mb-6">
+              Complete the style assessment to get your personalized style profile
+            </p>
             <Button
               onClick={() => router.push("/onboarding")}
               className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90 text-white rounded-full font-bold"
@@ -123,70 +131,70 @@ export default function MyStylePage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   const getStructureCombination = () => {
-    if (!profileData) return ""
-    const bone = profileData.boneStructure === "strong" ? "Strong Frame" : "Delicate Frame"
-    const body = profileData.upperBodyType === "curved" ? "Curved" : "Straight"
+    if (!profileData) return "";
+    const bone = profileData.boneStructure === "strong" ? "Strong Frame" : "Delicate Frame";
+    const body = profileData.upperBodyType === "curved" ? "Curved" : "Straight";
     const face =
       profileData.facialIntensity === "strong"
         ? "Bold Features"
         : profileData.facialIntensity === "light"
           ? "Soft Features"
-          : "Balanced Features"
-    return `${bone} × ${body} × ${face}`
-  }
+          : "Balanced Features";
+    return `${bone} × ${body} × ${face}`;
+  };
 
   const getStyleLabels = () => {
     if (profileData?.styleProfile?.styleLabels?.length) {
-      return profileData.styleProfile.styleLabels
+      return profileData.styleProfile.styleLabels;
     }
-    const labels = []
+    const labels = [];
     if (profileData?.facialIntensity === "light" && profileData?.facialMaturity === "youthful") {
-      labels.push("Fresh & Youthful")
+      labels.push("Fresh & Youthful");
     }
     if (profileData?.boneStructure === "delicate" && profileData?.upperBodyType === "curved") {
-      labels.push("Soft Feminine")
+      labels.push("Soft Feminine");
     }
     if (profileData?.stylePreferences?.includes("酷感锐利")) {
-      labels.push("Edgy Cool")
+      labels.push("Edgy Cool");
     }
     if (profileData?.stylePreferences?.includes("优雅精致")) {
-      labels.push("Elegant Refined")
+      labels.push("Elegant Refined");
     }
     if (profileData?.stylePreferences?.includes("清新青春")) {
-      labels.push("Fresh & Vibrant")
+      labels.push("Fresh & Vibrant");
     }
-    return labels.length > 0 ? labels : ["Unique Style"]
-  }
+    return labels.length > 0 ? labels : ["Unique Style"];
+  };
 
   const getRecommendedKeywords = () => {
     if (profileData?.styleProfile?.recommendedKeywords?.length) {
-      return profileData.styleProfile.recommendedKeywords
+      return profileData.styleProfile.recommendedKeywords;
     }
-    const keywords = []
-    if (profileData?.bodyAdvantages?.includes("腰细")) keywords.push("High Waistline")
-    if (profileData?.bodyAdvantages?.includes("腿长")) keywords.push("Cropped Tops")
-    if (profileData?.facialIntensity === "light") keywords.push("Soft Colors")
-    if (profileData?.boneStructure === "delicate") keywords.push("Delicate Details")
-    if (profileData?.stylePreferences?.includes("清新青春")) keywords.push("Bright Tones")
-    if (profileData?.primaryScenario === "工作职场") keywords.push("Professional")
-    return keywords.length > 0 ? keywords : ["Comfortable", "Natural"]
-  }
+    const keywords = [];
+    if (profileData?.bodyAdvantages?.includes("腰细")) keywords.push("High Waistline");
+    if (profileData?.bodyAdvantages?.includes("腿长")) keywords.push("Cropped Tops");
+    if (profileData?.facialIntensity === "light") keywords.push("Soft Colors");
+    if (profileData?.boneStructure === "delicate") keywords.push("Delicate Details");
+    if (profileData?.stylePreferences?.includes("清新青春")) keywords.push("Bright Tones");
+    if (profileData?.primaryScenario === "工作职场") keywords.push("Professional");
+    return keywords.length > 0 ? keywords : ["Comfortable", "Natural"];
+  };
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return "Recently"
+    if (!dateString) return "Recently";
     try {
       return new Date(dateString).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
-      })
+      });
     } catch {
-      return "Recently"
+      return "Recently";
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-[#fff9f4] pb-20 relative overflow-hidden">
@@ -389,7 +397,11 @@ export default function MyStylePage() {
                     <User className="w-3 h-3 text-[#FF6EC7]" />
                     <h3 className="font-medium text-xs">Body Analysis</h3>
                   </div>
-                  {expandedSections.body ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  {expandedSections.body ? (
+                    <ChevronUp className="w-3 h-3" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3" />
+                  )}
                 </button>
 
                 {expandedSections.body && (
@@ -472,7 +484,10 @@ export default function MyStylePage() {
                     {profileData.primaryScenario && (
                       <div>
                         <p className="text-xs text-gray-600 mb-1">Primary Scenario</p>
-                        <Badge variant="outline" className="border-blue-200 text-blue-700 text-xs px-2 py-0.5">
+                        <Badge
+                          variant="outline"
+                          className="border-blue-200 text-blue-700 text-xs px-2 py-0.5"
+                        >
                           {profileData.primaryScenario}
                         </Badge>
                       </div>
@@ -507,7 +522,11 @@ export default function MyStylePage() {
                     <p className="text-xs text-gray-600 mb-1">Elements to Avoid</p>
                     <div className="flex flex-wrap gap-1">
                       {profileData.avoidElements.map((element, index) => (
-                        <Badge key={index} variant="secondary" className="bg-red-100 text-red-700 text-xs px-2 py-0.5">
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="bg-red-100 text-red-700 text-xs px-2 py-0.5"
+                        >
                           {element}
                         </Badge>
                       ))}
@@ -539,5 +558,5 @@ export default function MyStylePage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,38 +1,46 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { ChevronDown, ChevronUp } from "lucide-react"
-import { OnboardingData } from "@/lib/onboarding-storage"
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { OnboardingData } from "@/lib/onboarding-storage";
 
 interface BodyAnalysisStepProps {
-  data: OnboardingData
-  onUpdate: (data: Partial<OnboardingData>) => void
-  onValidationChange: (isValid: boolean) => void
+  data: OnboardingData;
+  onUpdate: (data: Partial<OnboardingData>) => void;
+  onValidationChange: (isValid: boolean) => void;
 }
 
-const BODY_ADVANTAGES = ["腿长", "腰细", "比例好", "肩颈线条好", "肩膀有型", "身材匀称"]
+const BODY_ADVANTAGES = ["腿长", "腰细", "比例好", "肩颈线条好", "肩膀有型", "身材匀称"];
 
-const BODY_CHALLENGES = ["胯宽", "腿短", "无腰线", "脖子短", "肩膀宽", "肩膀窄"]
+const BODY_CHALLENGES = ["胯宽", "腿短", "无腰线", "脖子短", "肩膀宽", "肩膀窄"];
 
-export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }: BodyAnalysisStepProps) {
-  const [selectedAdvantages, setSelectedAdvantages] = useState<string[]>(data.bodyAdvantages || [])
-  const [selectedChallenges, setSelectedChallenges] = useState<string[]>(data.bodyChallenges || [])
-  const [customAdvantages, setCustomAdvantages] = useState(data.customAdvantages || "")
-  const [customChallenges, setCustomChallenges] = useState(data.customChallenges || "")
-  const [boneStructure, setBoneStructure] = useState<"strong" | "delicate" | "">(data.boneStructure || "")
-  const [upperBodyType, setUpperBodyType] = useState<"straight" | "curved" | "">(data.upperBodyType || "")
-  const [showDetails, setShowDetails] = useState(false)
-  const isInitialMount = useRef(true)
+export default function BodyAnalysisStep({
+  data,
+  onUpdate,
+  onValidationChange,
+}: BodyAnalysisStepProps) {
+  const [selectedAdvantages, setSelectedAdvantages] = useState<string[]>(data.bodyAdvantages || []);
+  const [selectedChallenges, setSelectedChallenges] = useState<string[]>(data.bodyChallenges || []);
+  const [customAdvantages, setCustomAdvantages] = useState(data.customAdvantages || "");
+  const [customChallenges, setCustomChallenges] = useState(data.customChallenges || "");
+  const [boneStructure, setBoneStructure] = useState<"strong" | "delicate" | "">(
+    data.boneStructure || "",
+  );
+  const [upperBodyType, setUpperBodyType] = useState<"straight" | "curved" | "">(
+    data.upperBodyType || "",
+  );
+  const [showDetails, setShowDetails] = useState(false);
+  const isInitialMount = useRef(true);
 
   // Load AI suggestions into selected advantages on mount
   useEffect(() => {
     if (data.aiAnalysis?.bodyAdvantages && selectedAdvantages.length === 0) {
-      setSelectedAdvantages(data.aiAnalysis.bodyAdvantages)
+      setSelectedAdvantages(data.aiAnalysis.bodyAdvantages);
     }
-  }, [data.aiAnalysis?.bodyAdvantages])
+  }, [data.aiAnalysis?.bodyAdvantages]);
 
   // Check validation whenever relevant state changes
   useEffect(() => {
@@ -42,8 +50,8 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
       customAdvantages.trim() ||
       customChallenges.trim() ||
       boneStructure !== "" ||
-      upperBodyType !== ""
-    onValidationChange(isValid)
+      upperBodyType !== "";
+    onValidationChange(isValid);
   }, [
     selectedAdvantages.length,
     selectedChallenges.length,
@@ -52,14 +60,14 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
     boneStructure,
     upperBodyType,
     onValidationChange,
-  ])
+  ]);
 
   // Update parent data whenever relevant state changes
   useEffect(() => {
     // Skip the initial render to avoid immediate update on mount
     if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
+      isInitialMount.current = false;
+      return;
     }
 
     onUpdate({
@@ -69,7 +77,7 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
       customChallenges,
       boneStructure: boneStructure as "strong" | "delicate" | undefined,
       upperBodyType: upperBodyType as "straight" | "curved" | undefined,
-    })
+    });
   }, [
     selectedAdvantages,
     selectedChallenges,
@@ -78,25 +86,27 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
     boneStructure,
     upperBodyType,
     onUpdate,
-  ])
+  ]);
 
   const toggleAdvantage = (advantage: string) => {
     setSelectedAdvantages((prev) =>
       prev.includes(advantage) ? prev.filter((item) => item !== advantage) : [...prev, advantage],
-    )
-  }
+    );
+  };
 
   const toggleChallenge = (challenge: string) => {
     setSelectedChallenges((prev) =>
       prev.includes(challenge) ? prev.filter((item) => item !== challenge) : [...prev, challenge],
-    )
-  }
+    );
+  };
 
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold text-gray-800">身体结构识别</h2>
-        <p className="text-sm text-pink-600 font-medium">💖 每个身体都是美丽的！我们帮助你发现独特魅力</p>
+        <p className="text-sm text-pink-600 font-medium">
+          💖 每个身体都是美丽的！我们帮助你发现独特魅力
+        </p>
 
         {/* Expandable Details */}
         <div className="mt-3">
@@ -108,7 +118,11 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
           >
             <span className="flex items-center space-x-1">
               <span>了解更多</span>
-              {showDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              {showDetails ? (
+                <ChevronUp className="w-3 h-3" />
+              ) : (
+                <ChevronDown className="w-3 h-3" />
+              )}
             </span>
           </Button>
 
@@ -143,31 +157,35 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
               variant="outline"
               size="sm"
               onClick={() => toggleAdvantage(advantage)}
-              className={`text-sm px-3 py-1 h-auto whitespace-nowrap ${selectedAdvantages.includes(advantage)
-                ? "bg-pink-100 border-pink-300 text-pink-700"
-                : "border-gray-200 text-gray-600"
-                }`}
+              className={`text-sm px-3 py-1 h-auto whitespace-nowrap ${
+                selectedAdvantages.includes(advantage)
+                  ? "bg-pink-100 border-pink-300 text-pink-700"
+                  : "border-gray-200 text-gray-600"
+              }`}
             >
               {advantage}
             </Button>
           ))}
 
           {/* Add AI-identified advantages that are not in the predefined list */}
-          {data.aiAnalysis?.bodyAdvantages?.filter(advantage => !BODY_ADVANTAGES.includes(advantage)).map((advantage, index) => (
-            <Button
-              key={`ai-${index}`}
-              variant="outline"
-              size="sm"
-              onClick={() => toggleAdvantage(advantage)}
-              className={`text-sm px-3 py-1 h-auto whitespace-nowrap ${selectedAdvantages.includes(advantage)
-                ? "bg-green-100 border-green-300 text-green-700"
-                : "border-green-200 text-green-600"
+          {data.aiAnalysis?.bodyAdvantages
+            ?.filter((advantage) => !BODY_ADVANTAGES.includes(advantage))
+            .map((advantage, index) => (
+              <Button
+                key={`ai-${index}`}
+                variant="outline"
+                size="sm"
+                onClick={() => toggleAdvantage(advantage)}
+                className={`text-sm px-3 py-1 h-auto whitespace-nowrap ${
+                  selectedAdvantages.includes(advantage)
+                    ? "bg-green-100 border-green-300 text-green-700"
+                    : "border-green-200 text-green-600"
                 }`}
-            >
-              <span className="mr-1 text-xs">🤖</span>
-              {advantage}
-            </Button>
-          ))}
+              >
+                <span className="mr-1 text-xs">🤖</span>
+                {advantage}
+              </Button>
+            ))}
         </div>
 
         <Input
@@ -190,10 +208,11 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
               variant="outline"
               size="sm"
               onClick={() => toggleChallenge(challenge)}
-              className={`text-sm px-3 py-1 h-auto whitespace-nowrap ${selectedChallenges.includes(challenge)
-                ? "bg-orange-100 border-orange-300 text-orange-700"
-                : "border-gray-200 text-gray-600"
-                }`}
+              className={`text-sm px-3 py-1 h-auto whitespace-nowrap ${
+                selectedChallenges.includes(challenge)
+                  ? "bg-orange-100 border-orange-300 text-orange-700"
+                  : "border-gray-200 text-gray-600"
+              }`}
             >
               {challenge}
             </Button>
@@ -216,8 +235,11 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
           <Button
             variant="outline"
             onClick={() => setBoneStructure("strong")}
-            className={`w-full justify-start text-sm p-3 h-auto ${boneStructure === "strong" ? "bg-blue-100 border-blue-300 text-blue-700" : "border-gray-200 text-gray-600"
-              }`}
+            className={`w-full justify-start text-sm p-3 h-auto ${
+              boneStructure === "strong"
+                ? "bg-blue-100 border-blue-300 text-blue-700"
+                : "border-gray-200 text-gray-600"
+            }`}
           >
             <span className="mr-2">💪</span>
             大骨架（肩宽、手腕粗、整体框架大）
@@ -225,10 +247,11 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
           <Button
             variant="outline"
             onClick={() => setBoneStructure("delicate")}
-            className={`w-full justify-start text-sm p-3 h-auto ${boneStructure === "delicate"
-              ? "bg-blue-100 border-blue-300 text-blue-700"
-              : "border-gray-200 text-gray-600"
-              }`}
+            className={`w-full justify-start text-sm p-3 h-auto ${
+              boneStructure === "delicate"
+                ? "bg-blue-100 border-blue-300 text-blue-700"
+                : "border-gray-200 text-gray-600"
+            }`}
           >
             <span className="mr-2">🌸</span>
             小骨架（肩窄、手腕细、整体框架小）
@@ -244,10 +267,11 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
           <Button
             variant="outline"
             onClick={() => setUpperBodyType("straight")}
-            className={`w-full justify-start text-sm p-3 h-auto ${upperBodyType === "straight"
-              ? "bg-purple-100 border-purple-300 text-purple-700"
-              : "border-gray-200 text-gray-600"
-              }`}
+            className={`w-full justify-start text-sm p-3 h-auto ${
+              upperBodyType === "straight"
+                ? "bg-purple-100 border-purple-300 text-purple-700"
+                : "border-gray-200 text-gray-600"
+            }`}
           >
             <span className="mr-2">📏</span>
             直线型（身体平坦，缺乏起伏曲线）
@@ -255,10 +279,11 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
           <Button
             variant="outline"
             onClick={() => setUpperBodyType("curved")}
-            className={`w-full justify-start text-sm p-3 h-auto ${upperBodyType === "curved"
-              ? "bg-purple-100 border-purple-300 text-purple-700"
-              : "border-gray-200 text-gray-600"
-              }`}
+            className={`w-full justify-start text-sm p-3 h-auto ${
+              upperBodyType === "curved"
+                ? "bg-purple-100 border-purple-300 text-purple-700"
+                : "border-gray-200 text-gray-600"
+            }`}
           >
             <span className="mr-2">🌙</span>
             曲线型（身体有明显的凹凸起伏）
@@ -266,5 +291,5 @@ export default function BodyAnalysisStep({ data, onUpdate, onValidationChange }:
         </div>
       </Card>
     </div>
-  )
+  );
 }

@@ -1,104 +1,112 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   OnboardingData,
   loadCompleteOnboardingData,
   saveOnboardingData,
-  saveUserProfile
-} from "@/lib/onboarding-storage"
+  saveUserProfile,
+} from "@/lib/onboarding-storage";
 
 // Import step components
-import PhotoUploadStep from "../components/onboarding/photo-upload-step"
-import BodyAnalysisStep from "../components/onboarding/body-analysis-step"
-import FacialAnalysisStep from "../components/onboarding/facial-analysis-step"
-import StylePreferenceStep from "../components/onboarding/style-preference-step"
-import ScenarioStep from "../components/onboarding/scenario-step"
-import StyleBoundariesStep from "../components/onboarding/style-boundaries-step"
-import StyleSummaryStep from "../components/onboarding/style-summary-step"
+import PhotoUploadStep from "../components/onboarding/photo-upload-step";
+import BodyAnalysisStep from "../components/onboarding/body-analysis-step";
+import FacialAnalysisStep from "../components/onboarding/facial-analysis-step";
+import StylePreferenceStep from "../components/onboarding/style-preference-step";
+import ScenarioStep from "../components/onboarding/scenario-step";
+import StyleBoundariesStep from "../components/onboarding/style-boundaries-step";
+import StyleSummaryStep from "../components/onboarding/style-summary-step";
 
-const TOTAL_STEPS = 7
+const TOTAL_STEPS = 7;
 
 export default function OnboardingPage() {
-  const [currentStep, setCurrentStep] = useState(0)
-  const [onboardingData, setOnboardingData] = useState<OnboardingData>({})
-  const [isStepValid, setIsStepValid] = useState(false)
-  const router = useRouter()
+  const [currentStep, setCurrentStep] = useState(0);
+  const [onboardingData, setOnboardingData] = useState<OnboardingData>({});
+  const [isStepValid, setIsStepValid] = useState(false);
+  const router = useRouter();
 
   // Load saved data on mount with improved loading
   useEffect(() => {
-    const completeData = loadCompleteOnboardingData()
-    setOnboardingData(completeData)
-  }, [])
+    const completeData = loadCompleteOnboardingData();
+    setOnboardingData(completeData);
+  }, []);
 
   // Save data whenever it changes with error handling
   useEffect(() => {
     if (Object.keys(onboardingData).length > 0) {
-      saveOnboardingData(onboardingData)
+      saveOnboardingData(onboardingData);
     }
-  }, [onboardingData])
+  }, [onboardingData]);
 
   // Memoize the update callback to prevent infinite re-renders
   const updateOnboardingData = useCallback((stepData: Partial<OnboardingData>) => {
-    setOnboardingData((prev) => ({ ...prev, ...stepData }))
-  }, [])
+    setOnboardingData((prev) => ({ ...prev, ...stepData }));
+  }, []);
 
   // Memoize the validation callback to prevent infinite re-renders
   const handleValidationChange = useCallback((isValid: boolean) => {
-    setIsStepValid(isValid)
-  }, [])
+    setIsStepValid(isValid);
+  }, []);
 
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS - 1) {
-      setCurrentStep((prev) => prev + 1)
+      setCurrentStep((prev) => prev + 1);
     } else {
       // Complete onboarding with improved error handling
       try {
-        localStorage.setItem("styleMe_onboarding_completed", "true")
+        localStorage.setItem("styleMe_onboarding_completed", "true");
 
         // Save user profile using the utility function
-        const profileSaved = saveUserProfile(onboardingData)
+        const profileSaved = saveUserProfile(onboardingData);
 
         if (!profileSaved) {
-          console.warn("Failed to save complete user profile, but continuing...")
+          console.warn("Failed to save complete user profile, but continuing...");
         }
 
-        router.push("/")
+        router.push("/");
       } catch (error) {
-        console.error("Error completing onboarding:", error)
+        console.error("Error completing onboarding:", error);
         // Still try to navigate even if storage fails
-        router.push("/")
+        router.push("/");
       }
     }
-  }
+  };
 
   const handlePrevious = () => {
     if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1)
+      setCurrentStep((prev) => prev - 1);
     }
-  }
+  };
 
   const handleSkip = () => {
     // Allow skipping for optional steps (5 and 6)
     if (currentStep >= 5) {
-      handleNext()
+      handleNext();
     }
-  }
+  };
 
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 0:
         return (
-          <PhotoUploadStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={handleValidationChange} />
-        )
+          <PhotoUploadStep
+            data={onboardingData}
+            onUpdate={updateOnboardingData}
+            onValidationChange={handleValidationChange}
+          />
+        );
       case 1:
         return (
-          <BodyAnalysisStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={handleValidationChange} />
-        )
+          <BodyAnalysisStep
+            data={onboardingData}
+            onUpdate={updateOnboardingData}
+            onValidationChange={handleValidationChange}
+          />
+        );
       case 2:
         return (
           <FacialAnalysisStep
@@ -106,7 +114,7 @@ export default function OnboardingPage() {
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
           />
-        )
+        );
       case 3:
         return (
           <StylePreferenceStep
@@ -114,11 +122,15 @@ export default function OnboardingPage() {
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
           />
-        )
+        );
       case 4:
         return (
-          <ScenarioStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={handleValidationChange} />
-        )
+          <ScenarioStep
+            data={onboardingData}
+            onUpdate={updateOnboardingData}
+            onValidationChange={handleValidationChange}
+          />
+        );
       case 5:
         return (
           <StyleBoundariesStep
@@ -126,15 +138,19 @@ export default function OnboardingPage() {
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
           />
-        )
+        );
       case 6:
         return (
-          <StyleSummaryStep data={onboardingData} onUpdate={updateOnboardingData} onValidationChange={handleValidationChange} />
-        )
+          <StyleSummaryStep
+            data={onboardingData}
+            onUpdate={updateOnboardingData}
+            onValidationChange={handleValidationChange}
+          />
+        );
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   const getStepTitle = () => {
     const titles = [
@@ -145,16 +161,16 @@ export default function OnboardingPage() {
       "使用场景", // Step 3
       "风格边界", // Step 4
       "风格总结", // Step 5
-    ]
-    return titles[currentStep]
-  }
+    ];
+    return titles[currentStep];
+  };
 
   const getStepEmoji = () => {
-    const emojis = ["📸", "💪", "👩‍🎨", "🎨", "🎯", "🚫", "✨"]
-    return emojis[currentStep]
-  }
+    const emojis = ["📸", "💪", "👩‍🎨", "🎨", "🎯", "🚫", "✨"];
+    return emojis[currentStep];
+  };
 
-  const progress = ((currentStep + 1) / TOTAL_STEPS) * 100
+  const progress = ((currentStep + 1) / TOTAL_STEPS) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 relative pb-32">
@@ -177,8 +193,9 @@ export default function OnboardingPage() {
             {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
               <div
                 key={index}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${currentStep === index ? "bg-pink-500 w-4" : "bg-gray-300"
-                  }`}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  currentStep === index ? "bg-pink-500 w-4" : "bg-gray-300"
+                }`}
               />
             ))}
           </div>
@@ -186,7 +203,12 @@ export default function OnboardingPage() {
           {/* Skip Button (or placeholder) */}
           <div className="w-14 text-right">
             {currentStep >= 5 && currentStep < TOTAL_STEPS - 1 && (
-              <Button variant="ghost" size="sm" onClick={handleSkip} className="text-gray-500 text-sm px-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSkip}
+                className="text-gray-500 text-sm px-1"
+              >
                 跳过
               </Button>
             )}
@@ -215,5 +237,5 @@ export default function OnboardingPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

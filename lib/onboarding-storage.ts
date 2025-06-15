@@ -3,144 +3,144 @@
 
 export interface OnboardingData {
   // Step 0: Photo Upload
-  fullBodyPhoto?: string
-  headPhoto?: string
+  fullBodyPhoto?: string;
+  headPhoto?: string;
   aiAnalysis?: {
-    bodyType?: string
-    faceShape?: string
-    skinTone?: string
-    proportions?: string
-    styleInitialSense?: string
-    bodyAdvantages?: string[]
-    boneStructure?: string
-    facialFeatures?: string
-  }
+    bodyType?: string;
+    faceShape?: string;
+    skinTone?: string;
+    proportions?: string;
+    styleInitialSense?: string;
+    bodyAdvantages?: string[];
+    boneStructure?: string;
+    facialFeatures?: string;
+  };
 
   // Step 1: Body Analysis
-  bodyAdvantages?: string[]
-  bodyChallenges?: string[]
-  customAdvantages?: string
-  customChallenges?: string
-  boneStructure?: "strong" | "delicate"
-  upperBodyType?: "straight" | "curved"
+  bodyAdvantages?: string[];
+  bodyChallenges?: string[];
+  customAdvantages?: string;
+  customChallenges?: string;
+  boneStructure?: "strong" | "delicate";
+  upperBodyType?: "straight" | "curved";
 
   // Step 1.5: Facial Analysis
-  facialIntensity?: "strong" | "light" | "medium"
-  facialLines?: "straight" | "curved"
-  facialMaturity?: "mature" | "youthful"
+  facialIntensity?: "strong" | "light" | "medium";
+  facialLines?: "straight" | "curved";
+  facialMaturity?: "mature" | "youthful";
 
   // Step 2: Style Preferences
-  stylePreferences?: string[]
-  customStyle?: string
+  stylePreferences?: string[];
+  customStyle?: string;
 
   // Step 3: Scenario
-  primaryScenario?: string
-  customScenario?: string
+  primaryScenario?: string;
+  customScenario?: string;
 
   // Step 4: Style Boundaries
-  avoidElements?: string[]
-  customAvoid?: string
+  avoidElements?: string[];
+  customAvoid?: string;
 
   // Step 5: Style Summary (generated)
   styleProfile?: {
-    structureCombination?: string
-    styleLabels?: string[]
-    recommendedKeywords?: string[]
-  }
+    structureCombination?: string;
+    styleLabels?: string[];
+    recommendedKeywords?: string[];
+  };
 }
 
 export const safeSetLocalStorage = (key: string, value: string): boolean => {
   try {
-    localStorage.setItem(key, value)
-    return true
+    localStorage.setItem(key, value);
+    return true;
   } catch (error) {
-    console.error(`Failed to save to localStorage (${key}):`, error)
-    return false
+    console.error(`Failed to save to localStorage (${key}):`, error);
+    return false;
   }
-}
+};
 
 export const safeGetLocalStorage = (key: string): string | null => {
   try {
-    return localStorage.getItem(key)
+    return localStorage.getItem(key);
   } catch (error) {
-    console.error(`Failed to read from localStorage (${key}):`, error)
-    return null
+    console.error(`Failed to read from localStorage (${key}):`, error);
+    return null;
   }
-}
+};
 
 export const loadCompleteOnboardingData = (): OnboardingData => {
   // Load main data
-  const savedData = safeGetLocalStorage("styleMe_onboarding_data")
-  let data: OnboardingData = {}
+  const savedData = safeGetLocalStorage("styleMe_onboarding_data");
+  let data: OnboardingData = {};
 
   if (savedData) {
     try {
-      data = JSON.parse(savedData)
+      data = JSON.parse(savedData);
     } catch (error) {
-      console.error("Error parsing onboarding data:", error)
+      console.error("Error parsing onboarding data:", error);
     }
   }
 
   // Load photos from separate storage if not in main data
   if (!data.fullBodyPhoto) {
-    const fullBodyPhoto = safeGetLocalStorage("styleMe_fullBodyPhoto")
+    const fullBodyPhoto = safeGetLocalStorage("styleMe_fullBodyPhoto");
     if (fullBodyPhoto) {
-      data.fullBodyPhoto = fullBodyPhoto
+      data.fullBodyPhoto = fullBodyPhoto;
     }
   }
 
   if (!data.headPhoto) {
-    const headPhoto = safeGetLocalStorage("styleMe_headPhoto")
+    const headPhoto = safeGetLocalStorage("styleMe_headPhoto");
     if (headPhoto) {
-      data.headPhoto = headPhoto
+      data.headPhoto = headPhoto;
     }
   }
 
-  return data
-}
+  return data;
+};
 
 export const saveOnboardingData = (data: OnboardingData): boolean => {
-  const dataToSave = JSON.stringify(data)
+  const dataToSave = JSON.stringify(data);
   if (!safeSetLocalStorage("styleMe_onboarding_data", dataToSave)) {
     // If saving fails due to quota, try saving without photos
-    const { fullBodyPhoto, headPhoto, ...dataWithoutPhotos } = data
-    const reducedData = JSON.stringify(dataWithoutPhotos)
-    const success = safeSetLocalStorage("styleMe_onboarding_data", reducedData)
+    const { fullBodyPhoto, headPhoto, ...dataWithoutPhotos } = data;
+    const reducedData = JSON.stringify(dataWithoutPhotos);
+    const success = safeSetLocalStorage("styleMe_onboarding_data", reducedData);
 
     // Store photos separately if they exist
     if (fullBodyPhoto) {
-      safeSetLocalStorage("styleMe_fullBodyPhoto", fullBodyPhoto)
+      safeSetLocalStorage("styleMe_fullBodyPhoto", fullBodyPhoto);
     }
     if (headPhoto) {
-      safeSetLocalStorage("styleMe_headPhoto", headPhoto)
+      safeSetLocalStorage("styleMe_headPhoto", headPhoto);
     }
 
-    return success
+    return success;
   }
-  return true
-}
+  return true;
+};
 
 export const createUserProfile = (data: OnboardingData) => {
   // Create a profile without the large photo data
-  const { fullBodyPhoto, headPhoto, ...profileData } = data
+  const { fullBodyPhoto, headPhoto, ...profileData } = data;
 
   // Store photos separately with metadata
   const photoMetadata = {
     hasFullBodyPhoto: !!fullBodyPhoto,
     hasHeadPhoto: !!headPhoto,
-    photosStoredSeparately: true
-  }
+    photosStoredSeparately: true,
+  };
 
   return {
     ...profileData,
-    photoMetadata
-  }
-}
+    photoMetadata,
+  };
+};
 
 export const saveUserProfile = (data: OnboardingData): boolean => {
   // --- STRATEGY 1: IDEAL ---
   // Save profile (without photos) and photos separately.
-  const { fullBodyPhoto, headPhoto, ...profileData } = data
+  const { fullBodyPhoto, headPhoto, ...profileData } = data;
   const userProfile = {
     ...profileData,
     photoMetadata: {
@@ -148,27 +148,27 @@ export const saveUserProfile = (data: OnboardingData): boolean => {
       hasHeadPhoto: !!headPhoto,
     },
     savedAt: new Date().toISOString(),
-  }
+  };
 
-  const profileJson = JSON.stringify(userProfile)
-  const profileSaveSuccess = safeSetLocalStorage("styleMe_user_profile", profileJson)
+  const profileJson = JSON.stringify(userProfile);
+  const profileSaveSuccess = safeSetLocalStorage("styleMe_user_profile", profileJson);
 
   // Try to save photos, but don't let failure block success
   if (fullBodyPhoto) {
-    safeSetLocalStorage("styleMe_fullBodyPhoto", fullBodyPhoto)
+    safeSetLocalStorage("styleMe_fullBodyPhoto", fullBodyPhoto);
   }
   if (headPhoto) {
-    safeSetLocalStorage("styleMe_headPhoto", headPhoto)
+    safeSetLocalStorage("styleMe_headPhoto", headPhoto);
   }
 
   if (profileSaveSuccess) {
-    console.log("Storage Strategy 1: Successfully saved full user profile.")
-    return true
+    console.log("Storage Strategy 1: Successfully saved full user profile.");
+    return true;
   }
 
   // --- STRATEGY 2: CORE DATA ---
   // The full profile was too large. Save only the most essential style data.
-  console.warn("Storage Strategy 1 failed. Trying Strategy 2: Core Data.")
+  console.warn("Storage Strategy 1 failed. Trying Strategy 2: Core Data.");
   const coreProfile = {
     // Drop potentially large custom text fields
     bodyAdvantages: data.bodyAdvantages,
@@ -183,55 +183,60 @@ export const saveUserProfile = (data: OnboardingData): boolean => {
     avoidElements: data.avoidElements,
     photoMetadata: userProfile.photoMetadata,
     savedAt: userProfile.savedAt,
-  }
-  const coreProfileJson = JSON.stringify(coreProfile)
-  const coreSaveSuccess = safeSetLocalStorage("styleMe_user_profile", coreProfileJson)
+  };
+  const coreProfileJson = JSON.stringify(coreProfile);
+  const coreSaveSuccess = safeSetLocalStorage("styleMe_user_profile", coreProfileJson);
 
   if (coreSaveSuccess) {
-    console.log("Storage Strategy 2: Successfully saved core profile data.")
-    return true
+    console.log("Storage Strategy 2: Successfully saved core profile data.");
+    return true;
   }
 
   // --- STRATEGY 3: MINIMAL DATA ---
   // Core data was too large. Save absolute minimum.
-  console.warn("Storage Strategy 2 failed. Trying Strategy 3: Minimal Data.")
+  console.warn("Storage Strategy 2 failed. Trying Strategy 3: Minimal Data.");
   const minimalProfile = {
     stylePreferences: data.stylePreferences,
     primaryScenario: data.primaryScenario,
     photoMetadata: userProfile.photoMetadata,
     savedAt: userProfile.savedAt,
-  }
-  const minimalProfileJson = JSON.stringify(minimalProfile)
-  const minimalSaveSuccess = safeSetLocalStorage("styleMe_user_profile", minimalProfileJson)
+  };
+  const minimalProfileJson = JSON.stringify(minimalProfile);
+  const minimalSaveSuccess = safeSetLocalStorage("styleMe_user_profile", minimalProfileJson);
 
   if (minimalSaveSuccess) {
-    console.log("Storage Strategy 3: Successfully saved minimal profile data.")
-    return true
+    console.log("Storage Strategy 3: Successfully saved minimal profile data.");
+    return true;
   }
 
   // --- STRATEGY 4: FINAL RESORT ---
   // Everything failed. Save just a marker that onboarding was completed.
-  console.error("Storage Strategy 3 failed. All profile save attempts failed. Saving completion marker only.")
-  safeSetLocalStorage("styleMe_user_profile", JSON.stringify({
+  console.error(
+    "Storage Strategy 3 failed. All profile save attempts failed. Saving completion marker only.",
+  );
+  safeSetLocalStorage(
+    "styleMe_user_profile",
+    JSON.stringify({
       error: "Failed to save profile data due to storage limitations.",
       photoMetadata: userProfile.photoMetadata,
       savedAt: userProfile.savedAt,
-  }))
+    }),
+  );
 
-  return false // Indicate that the main profile save was not successful.
-}
+  return false; // Indicate that the main profile save was not successful.
+};
 
 export const getUserPhotos = () => {
   return {
     fullBodyPhoto: safeGetLocalStorage("styleMe_fullBodyPhoto"),
-    headPhoto: safeGetLocalStorage("styleMe_headPhoto")
-  }
-}
+    headPhoto: safeGetLocalStorage("styleMe_headPhoto"),
+  };
+};
 
 export const clearOnboardingData = () => {
-  localStorage.removeItem("styleMe_onboarding_data")
-  localStorage.removeItem("styleMe_fullBodyPhoto")
-  localStorage.removeItem("styleMe_headPhoto")
-  localStorage.removeItem("styleMe_user_profile")
-  localStorage.removeItem("styleMe_onboarding_completed")
-}
+  localStorage.removeItem("styleMe_onboarding_data");
+  localStorage.removeItem("styleMe_fullBodyPhoto");
+  localStorage.removeItem("styleMe_headPhoto");
+  localStorage.removeItem("styleMe_user_profile");
+  localStorage.removeItem("styleMe_onboarding_completed");
+};
