@@ -90,6 +90,11 @@ interface PastLook {
   };
 }
 
+interface ProcessImages {
+  styledImage?: string;
+  tryOnImage?: string;
+}
+
 const saveLook = (look: PastLook) => {
   try {
     console.log('!!!Saving look:', look); // Debug log
@@ -143,6 +148,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
+  const [processImages, setProcessImages] = useState<ProcessImages>({});
   const router = useRouter();
 
   const handleSelfieUpload = (file: File) => {
@@ -262,6 +268,10 @@ export default function HomePage() {
 
         const data = await response.json();
         console.log('[POLLING] Received data:', data);
+
+        if (data.processImages) {
+          setProcessImages(data.processImages);
+        }
 
         if (data.status === 'suggestion_generated') {
           console.log('[POLLING] Status is suggestion_generated. Setting stage to "suggestion".');
@@ -626,6 +636,26 @@ export default function HomePage() {
                   <p className="text-sm text-gray-600">
                     Generating personalized advice just for you...
                   </p>
+
+                  {/* Preview track images */}
+                  <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
+                    {[
+                      { label: "Original", src: selfiePreview },
+                      { label: "Garment", src: clothingPreview },
+                      { label: "Styled", src: processImages.styledImage },
+                      { label: "Try-On", src: processImages.tryOnImage },
+                    ]
+                      .filter((item) => item.src)
+                      .map((item) => (
+                        <div key={item.label} className="space-y-1">
+                          <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                            {/* @ts-ignore */}
+                            <img src={item.src} alt={item.label} className="w-full h-full object-cover" />
+                          </div>
+                          <p className="text-[10px] text-gray-500 text-center">{item.label}</p>
+                        </div>
+                      ))}
+                  </div>
                 </>
               )}
 
