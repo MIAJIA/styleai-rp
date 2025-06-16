@@ -124,10 +124,51 @@ export default function PhotoUploadStep({
     }
   }, [fullBodyPhoto, headPhoto, onUpdate]);
 
-  const handleFileUpload = (file: File, type: "fullBody" | "head") => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
+  // Helper: compress image to dataURL (JPEG) to fit localStorage quota
+  const compressImageToDataUrl = async (
+    file: File,
+    maxWidth = 1000,
+    quality = 0.75,
+  ): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const scale = Math.min(maxWidth / img.width, 1);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas context not available"));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Image compression failed"));
+              return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              resolve(reader.result as string);
+              URL.revokeObjectURL(url);
+            };
+            reader.readAsDataURL(blob);
+          },
+          "image/jpeg",
+          quality,
+        );
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  };
+
+  const handleFileUpload = async (file: File, type: "fullBody" | "head") => {
+    try {
+      const result = await compressImageToDataUrl(file);
 
       // Reset the analysis state when a new photo is uploaded
       setAnalysisComplete(false);
@@ -135,7 +176,6 @@ export default function PhotoUploadStep({
 
       if (type === "fullBody") {
         setFullBodyPhoto(result);
-        // Also save to separate localStorage immediately
         try {
           localStorage.setItem("styleMe_fullBodyPhoto", result);
         } catch (error) {
@@ -143,15 +183,16 @@ export default function PhotoUploadStep({
         }
       } else {
         setHeadPhoto(result);
-        // Also save to separate localStorage immediately
         try {
           localStorage.setItem("styleMe_headPhoto", result);
         } catch (error) {
           console.warn("Failed to save head photo to localStorage:", error);
         }
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Error processing image:", err);
+      setAnalysisError("Failed to process image. Please try another photo.");
+    }
   };
 
   const removePhoto = (type: "fullBody" | "head") => {

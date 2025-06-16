@@ -1,48 +1,56 @@
 import OpenAI from "openai";
 import * as jwt from "jsonwebtoken";
 import { put } from "@vercel/blob";
+import { type OnboardingData } from "@/lib/onboarding-storage";
 
 // Initialize the OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const systemPrompt = `You are an expert fashion stylist. Your task is to analyze a person's photo, a piece of clothing, and a specified occasion to provide detailed, actionable styling advice.
+const systemPrompt = `Hellooo bestie! 💖 I'm your super fun, slightly over-caffeinated personal stylist. Think of me as the bubbly friend who hypes you up and sprinkles fashion magic everywhere ✨. I'll peek at your photo, the fab garment you picked, plus the occasion, then serve you ultra-personal, easy-to-follow styling tips.
 
-You will be given:
-1.  A photo of a person (full body if possible).
-2.  A photo of a single garment.
-3.  The name of an occasion (e.g., "日常通勤" for daily commute, "约会之夜" for date night).
+Here's what you'll hand me:
+1. Your gorgeous photo (full-body if possible 📸)
+2. A clothing piece you're obsessed with 👗
+3. The occasion you're dressing for (e.g. "日常通勤" or "约会之夜"), so I know the vibe!
 
-You MUST respond with a valid JSON object. The JSON object should have the following keys:
+I'll respond with a kawaii JSON (key names固定不变). Except for \`image_prompt\`, every value will be in playful, emoji-sprinkled Chinese. Imagine I'm chatting excitedly in your DMs!
 
--   \`scene_fit\`: (String) How well the garment fits the specified occasion and if any adjustments are needed.
--   \`style_alignment\`: (String) The style category of the garment and suggestions for complementary items (e.g., pants, shoes) to create a cohesive look.
--   \`personal_match\`: (String) How the garment complements the person's body type and appearance, with suggestions for how to wear it (e.g., tuck it in, roll up sleeves).
--   \`visual_focus\`: (String) Identify the main visual element of the outfit and advise on how to balance it with other pieces.
--   \`material_silhouette\`: (String) Recommendations on materials and silhouettes for accompanying pieces to enhance the overall look.
--   \`color_combination\`: (String) Color palette suggestions for the rest of the outfit, including primary, secondary, and accent colors.
--   \`reuse_versatility\`: (String) Suggestions for how to style the garment for at least two other different occasions.
--   \`image_prompt\`: (String) **This is the most important field.** Create a detailed, descriptive, and inspiring image generation prompt in English for a model like DALL-E or Midjourney. This prompt should describe the person from the photo wearing the provided garment in a setting that perfectly matches the occasion. It should be a full-body fashion shot description, focusing on the overall mood, lighting, style, and composition. Be specific and creative. For example: "A full-body fashion shot of a stylish young woman standing on a charming, sun-drenched cobblestone street in Paris. She is wearing a chic, [describe garment color and type], paired with tailored trousers and classic loafers. The lighting is warm and golden, casting soft shadows. The overall mood is sophisticated, effortless, and romantic. Photorealistic, editorial style."
+The JSON keys:
+- \`scene_fit\`: (String) 我来打分这件衣服跟场合的适配度，还会给出小调整建议～
+- \`style_alignment\`: (String) 这件单品的风格属性 + 我会推荐一起出场的配件，让整体 Look 更 wow ✨
+- \`personal_match\`: (String) 夸夸你的身材优点，告诉你怎么穿会更显优势（比如塞个衣角、卷卷袖子）😉
+- \`visual_focus\`: (String) 这套搭配的视觉 C 位是什么，以及怎么平衡其他元素～
+- \`material_silhouette\`: (String) 面料 & 版型建议，让细节也在线 ✅
+- \`color_combination\`: (String) 主色、副色、点缀色配色方案，让你出片率飙升 🎨
+- \`reuse_versatility\`: (String) 至少再给两种穿搭场景思路，让衣橱 CP 倍增 💡
+- \`image_prompt\`: (String, English ONLY) A creative prompt for an AI image generator. Full-body fashion shot that captures the perfect mood, lighting, and composition.
 
-All text values in the JSON object should be in Chinese, **except for the \`image_prompt\`**, which must be in English.`;
+Ready? Let's make you sparkle! ✨`;
 
 interface StyleSuggestionInput {
   humanImageUrl: string;
   garmentImageUrl: string;
   occasion: string;
+  userProfile?: OnboardingData; // optional but encouraged for better personalization
 }
 
 export async function getStyleSuggestionFromAI({
   humanImageUrl,
   garmentImageUrl,
   occasion,
+  userProfile,
 }: StyleSuggestionInput): Promise<any> {
   if (!humanImageUrl || !garmentImageUrl || !occasion) {
     throw new Error("Missing required inputs for style suggestion.");
   }
 
   try {
+    // Build additional context from user profile if provided
+    const userProfileContext = userProfile
+      ? `以下是我的风格档案 JSON：\n\n\`${JSON.stringify(userProfile)}\``
+      : "";
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -55,7 +63,7 @@ export async function getStyleSuggestionFromAI({
           content: [
             {
               type: "text",
-              text: `Here is the person, the garment, and the occasion. Please provide your styling advice. Occasion: "${occasion}"`,
+              text: `Here is my photo, the garment I love, and the occasion (\"${occasion}\"). ${userProfileContext}`,
             },
             {
               type: "image_url",
@@ -132,9 +140,9 @@ const KLING_API_BASE_URL = "https://api-beijing.klingai.com";
 // Paths for Virtual Try-on
 const KOLORS_VIRTUAL_TRYON_SUBMIT_PATH = "/v1/images/kolors-virtual-try-on";
 const KOLORS_VIRTUAL_TRYON_STATUS_PATH = "/v1/images/kolors-virtual-try-on/";
-// Paths for Image Stylization
-const KOLORS_STYLIZE_SUBMIT_PATH = "/v1/images/kling-v2";
-const KOLORS_STYLIZE_STATUS_PATH = "/v1/images/kling-v2/";
+// Paths for Image Stylization - CORRECTED
+const KOLORS_STYLIZE_SUBMIT_PATH = "/v1/images/generations";
+const KOLORS_STYLIZE_STATUS_PATH = "/v1/images/generations/";
 
 const getApiToken = (accessKey: string, secretKey: string): string => {
   const payload = {
@@ -347,7 +355,7 @@ export async function generateFinalImage({
   // Step 5: Submit the virtual try-on task
   console.log("[5/7] Submitting virtual try-on task...");
   const tryOnRequestBody = {
-    model_name: "kolors-virtual-try-on-v1.5",
+    model_name: "kolors-virtual-try-on-v1-5",
     human_image: styledImageBase64,
     cloth_image: garmentImageBase64,
   };
