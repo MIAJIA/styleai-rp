@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, X, ChevronDown, ChevronUp, Image as ImageIcon } from "lucide-react";
 import IOSTabBar from "../components/ios-tab-bar";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface PastLook {
   id: string;
@@ -14,12 +16,20 @@ interface PastLook {
   originalGarmentSrc?: string;
   garmentDescription?: string;
   personaProfile?: string | null;
+  processImages?: {
+    humanImage: string;
+    garmentImage: string;
+    finalImage: string;
+    styleSuggestion?: any;
+  };
 }
 
 export default function ResultsPage() {
   const router = useRouter();
   const [pastLooks, setPastLooks] = useState<PastLook[]>([]);
   const [isRecentLooksExpanded, setIsRecentLooksExpanded] = useState(false);
+  const [selectedLook, setSelectedLook] = useState<PastLook | null>(null);
+  const [showProcessImages, setShowProcessImages] = useState<Record<string, boolean>>({});
 
   // Load past looks from localStorage on initial render
   useEffect(() => {
@@ -38,6 +48,23 @@ export default function ResultsPage() {
   const handleClearRecentLooks = () => {
     setPastLooks([]);
     localStorage.removeItem("pastLooks");
+  };
+
+  const toggleProcessImages = (lookId: string) => {
+    setShowProcessImages(prev => ({
+      ...prev,
+      [lookId]: !prev[lookId]
+    }));
+  };
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const displayedLooks = isRecentLooksExpanded ? pastLooks : pastLooks.slice(0, 6);
@@ -73,52 +100,135 @@ export default function ResultsPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            {pastLooks.length > 0
-              ? displayedLooks.map((pastLook) => (
-                  <div key={pastLook.id} className="relative group aspect-[3/4]">
-                    <div className="w-full h-full bg-neutral-100 rounded-lg overflow-hidden">
+          {pastLooks.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                {displayedLooks.map((pastLook) => (
+                  <div key={pastLook.id} className="bg-white rounded-xl shadow-sm border border-gray-100">
+                    {/* Main Image */}
+                    <div className="relative aspect-[3/4] rounded-t-xl overflow-hidden">
                       <img
                         src={pastLook.imageUrl}
-                        alt="Past look"
+                        alt="Generated look"
                         className="w-full h-full object-cover"
                       />
+                      <button
+                        onClick={() => handleDeleteLook(pastLook.id)}
+                        className="absolute top-2 right-2 p-2 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent click from bubbling to the main card
-                        handleDeleteLook(pastLook.id);
-                      }}
-                      className="absolute top-0 right-0 z-10 p-2 text-white bg-black/40 rounded-bl-lg rounded-tr-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 ios-btn"
-                      aria-label="Delete look"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))
-              : // Empty placeholder boxes
-                Array.from({ length: 3 }).map((_, index) => (
-                  <div
-                    key={`placeholder-${index}`}
-                    className="aspect-[3/4] bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-lg flex items-center justify-center"
-                  >
-                    <div className="text-center text-neutral-400">
-                      <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-neutral-200 flex items-center justify-center">
-                        <span className="text-xs">👗</span>
+
+                    {/* Look Details */}
+                    <div className="p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-gray-900 text-sm">
+                            {pastLook.style === 'suggestion' ? 'Style Suggestion' : pastLook.style}
+                          </h4>
+                          <p className="text-xs text-gray-500">{formatDate(pastLook.timestamp)}</p>
+                        </div>
+                        {pastLook.processImages && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleProcessImages(pastLook.id)}
+                            className="text-gray-600 h-8 px-2"
+                          >
+                            <ImageIcon className="w-4 h-4 mr-1" />
+                            {showProcessImages[pastLook.id] ? (
+                              <ChevronUp className="w-4 h-4" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
                       </div>
-                      <p className="text-xs">New Look</p>
+
+                      {/* Process Images */}
+                      {showProcessImages[pastLook.id] && pastLook.processImages && (
+                        <div className="mt-3 space-y-3">
+                          <div className="grid grid-cols-3 gap-1">
+                            <div className="space-y-1">
+                              <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                <img
+                                  src={pastLook.processImages.humanImage}
+                                  alt="Original photo"
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <p className="text-[10px] text-gray-500 text-center">Original</p>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                <img
+                                  src={pastLook.processImages.garmentImage}
+                                  alt="Garment"
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <p className="text-[10px] text-gray-500 text-center">Garment</p>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                <img
+                                  src={pastLook.processImages.finalImage}
+                                  alt="Final look"
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <p className="text-[10px] text-gray-500 text-center">Final</p>
+                            </div>
+                          </div>
+
+                          {/* Style Suggestion */}
+                          {pastLook.processImages.styleSuggestion && (
+                            <div className="bg-gray-50 rounded-lg p-2 text-xs">
+                              <h5 className="font-medium text-gray-900 mb-1">Style Suggestion</h5>
+                              {Object.entries(pastLook.processImages.styleSuggestion)
+                                .filter(([key]) => key !== "image_prompt")
+                                .map(([key, value]) => (
+                                  <div key={key} className="mb-1">
+                                    <span className="text-gray-600 capitalize">{key.replace(/_/g, " ")}: </span>
+                                    <span className="text-gray-900">{value as string}</span>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
-          </div>
+              </div>
 
-          {pastLooks.length > 6 && (
-            <button
-              onClick={() => setIsRecentLooksExpanded(!isRecentLooksExpanded)}
-              className="w-full text-xs text-center text-primary font-medium p-2 mt-2 rounded-lg ios-btn bg-primary/10"
-            >
-              {isRecentLooksExpanded ? "Show Less" : `Show ${pastLooks.length - 6} More Looks...`}
-            </button>
+              {pastLooks.length > 6 && (
+                <button
+                  onClick={() => setIsRecentLooksExpanded(!isRecentLooksExpanded)}
+                  className="w-full text-xs text-center text-primary font-medium p-2 mt-4 rounded-lg ios-btn bg-primary/10"
+                >
+                  {isRecentLooksExpanded ? "Show Less" : `Show ${pastLooks.length - 6} More Looks...`}
+                </button>
+              )}
+            </>
+          ) : (
+            // Empty placeholder boxes
+            <div className="grid grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={`placeholder-${index}`}
+                  className="aspect-[3/4] bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-lg flex items-center justify-center"
+                >
+                  <div className="text-center text-neutral-400">
+                    <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-neutral-200 flex items-center justify-center">
+                      <span className="text-xs">👗</span>
+                    </div>
+                    <p className="text-xs">New Look</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
 
           {pastLooks.length === 0 && (

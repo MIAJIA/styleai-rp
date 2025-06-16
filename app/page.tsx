@@ -11,9 +11,47 @@ import { Drawer } from "vaul";
 import PortraitSelectionSheet from "./components/portrait-selection-sheet";
 import GenerationAnimation from "./components/generation-animation";
 import StyleSelector from "./components/style-selector";
-import { Palette, Wand2, Heart, Star, ArrowLeft, Share2, Download, Loader2 } from "lucide-react";
+import {
+  Palette,
+  Wand2,
+  Heart,
+  Star,
+  ArrowLeft,
+  Share2,
+  Download,
+  Loader2,
+  BookOpen,
+  Footprints,
+  Coffee,
+  Mic,
+  Palmtree,
+  Sparkles,
+  PartyPopper
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+
+const styles = [
+  { id: "fashion-magazine", name: "Magazine", icon: BookOpen, color: "bg-pink-100 text-pink-900" },
+  { id: "running-outdoors", name: "Outdoors", icon: Footprints, color: "bg-emerald-100 text-emerald-900" },
+  { id: "coffee-shop", name: "Coffee", icon: Coffee, color: "bg-amber-100 text-amber-900" },
+  { id: "music-show", name: "Music Show", icon: Mic, color: "bg-purple-100 text-purple-900" },
+  { id: "date-night", name: "Date Night", icon: Heart, color: "bg-rose-100 text-rose-900" },
+  { id: "beach-day", name: "Beach Day", icon: Palmtree, color: "bg-sky-100 text-sky-900" },
+  { id: "casual-chic", name: "Casual Chic", icon: Sparkles, color: "bg-violet-100 text-violet-900" },
+  { id: "party-glam", name: "Party Glam", icon: PartyPopper, color: "bg-amber-100 text-amber-900" },
+];
+
+const stylePrompts = {
+  "fashion-magazine": "standing in a semi-surreal environment blending organic shapes and architectural elements. The background features dreamlike washes of indigo and burnt orange, with subtle floating geometric motifs inspired by Ukiyo-e clouds. Lighting combines soft studio strobes with atmospheric glow, creating dimensional shadows. Composition balances realistic human proportions with slightly exaggerated fabric movement, evoking a living oil painting. Texture details: fine wool fibers visible, slight film grain. Style fusion: Richard Avedon's fashion realism + Egon Schiele's expressive lines + niji's color vibrancy (but photorealistic), 4k resolution.",
+  "running-outdoors": "A vibrant, sun-drenched hillside with lush greenery under a clear blue sky, capturing an adventure lifestyle mood. The scene is bathed in soft, natural light, creating a sense of cinematic realism. Shot with the professional quality of a Canon EOS R5, emphasizing realistic textures and high definition, 4k resolution.",
+  "coffee-shop": "A cozy, sunlit coffee shop with the warm aroma of freshly ground beans. The person is sitting at a rustic wooden table by a large window, holding a ceramic mug. The background shows soft, blurred details of a barista and an espresso machine. The style should be intimate and warm, with natural light creating soft shadows, reminiscent of a lifestyle magazine photograph, 4k resolution.",
+  "casual-chic": "trendy Brooklyn street with colorful murals, chic coffee shop with exposed brick walls, urban rooftop garden with city views, stylish boutique district, contemporary art gallery setting, natural daylight with artistic shadows, street style fashion photography, 4k resolution",
+  "music-show": "Group idol style, performing on stage, spotlight and dreamy lighting, high-definition portrait, soft glow and bokeh, dynamic hair movement, glamorous makeup, K-pop inspired outfit (shiny, fashionable), expressive pose, cinematic stage background, lens flare, fantasy concert vibe, ethereal lighting, 4k resolution.",
+  "date-night": "A realistic romantic evening on a backyard patio--string lights overhead, wine glasses, laughing mid-conversation with friend. Subtle body language, soft bokeh lights, hint of connection. Created using: Sony Alpha A7R IV, cinematic lighting, shallow depth of field, natural expressions, sunset color grading Shot in kodak gold 200 with a canon EOS R6, 4k resolution.",
+  "beach-day": "On the beach, soft sunlight, gentle waves in the background, highly detailed, lifelike textures, natural lighting, vivid colors, 4k resolution",
+  "party-glam": "opulent ballroom with crystal chandeliers, luxurious velvet curtains and gold accents, dramatic spotlight effects with rich jewel tones, champagne bar with marble countertops, exclusive VIP lounge atmosphere, professional event photography with glamorous lighting, 4k resolution",
+};
 
 function dataURLtoFile(dataurl: string, filename: string): File | null {
   if (!dataurl) return null;
@@ -34,6 +72,55 @@ function dataURLtoFile(dataurl: string, filename: string): File | null {
 
   return new File([u8arr], filename, { type: mime });
 }
+
+interface PastLook {
+  id: string;
+  imageUrl: string;
+  style: string | null;
+  timestamp: number;
+  originalHumanSrc?: string;
+  originalGarmentSrc?: string;
+  garmentDescription?: string;
+  personaProfile?: string | null;
+  processImages?: {
+    humanImage: string;
+    garmentImage: string;
+    finalImage: string;
+    styleSuggestion?: any;
+  };
+}
+
+const saveLook = (look: PastLook) => {
+  try {
+    console.log('!!!Saving look:', look); // Debug log
+    const storedLooks = localStorage.getItem("pastLooks");
+    let looks: PastLook[] = [];
+    if (storedLooks) {
+      looks = JSON.parse(storedLooks);
+      console.log('!!!Existing looks:', looks); // Debug log
+    }
+
+    // Add process images to the look
+    if (!look.processImages) {
+      look.processImages = {
+        humanImage: look.originalHumanSrc || '',
+        garmentImage: look.originalGarmentSrc || '',
+        finalImage: look.imageUrl,
+        styleSuggestion: look.style === 'suggestion' ? look.personaProfile : undefined
+      };
+    }
+
+    // Remove any existing look with the same ID
+    looks = looks.filter(existingLook => existingLook.id !== look.id);
+
+    // Add the new look at the beginning
+    looks.unshift(look);
+    console.log('Saving looks to localStorage:', looks); // Debug log
+    localStorage.setItem("pastLooks", JSON.stringify(looks));
+  } catch (error) {
+    console.error("Failed to save look to localStorage:", error);
+  }
+};
 
 export default function HomePage() {
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
@@ -137,6 +224,10 @@ export default function HomePage() {
       formData.append("human_image", humanImage);
       formData.append("garment_image", garmentImage);
       formData.append("occasion", occasion);
+      // Add the style prompt if available
+      if (stylePrompts[occasion as keyof typeof stylePrompts]) {
+        formData.append("style_prompt", stylePrompts[occasion as keyof typeof stylePrompts]);
+      }
 
       const response = await fetch("/api/generation/start", {
         method: "POST",
@@ -166,34 +257,52 @@ export default function HomePage() {
       try {
         const response = await fetch(`/api/generation/status?jobId=${jobId}`);
         if (!response.ok) {
-          // Stop polling on non-200 responses
           throw new Error(`Polling failed with status: ${response.status}`);
         }
 
         const data = await response.json();
         console.log('[POLLING] Received data:', data);
 
-        // Update UI based on job status
         if (data.status === 'suggestion_generated') {
           console.log('[POLLING] Status is suggestion_generated. Setting stage to "suggestion".');
           setStyleSuggestion(data.suggestion);
-          setStage("suggestion"); // Show suggestion text
+          setStage("suggestion");
+
         } else if (data.status === 'completed') {
           const finalImageUrl = data.result?.imageUrl;
           console.log('[POLLING] Status is completed. Final URL:', finalImageUrl);
           if (finalImageUrl) {
             console.log('[POLLING] Setting stage to "result" and updating image URL.');
             setGeneratedImageUrl(finalImageUrl);
-            setStage("result"); // Move to final result stage
+            setStage("result");
             setIsLoading(false);
-            clearInterval(intervalId); // Stop polling
+
+            // Save only the final look with all process images
+            const finalLook: PastLook = {
+              id: jobId,
+              imageUrl: finalImageUrl,
+              style: occasion,
+              timestamp: Date.now(),
+              originalHumanSrc: selfiePreview,
+              originalGarmentSrc: clothingPreview,
+              personaProfile: selectedPersona ? JSON.stringify(selectedPersona) : null,
+              processImages: {
+                humanImage: selfiePreview,
+                garmentImage: clothingPreview,
+                finalImage: finalImageUrl,
+                styleSuggestion: data.suggestion
+              }
+            };
+            console.log('Saving final look:', finalLook);
+            saveLook(finalLook);
+
+            clearInterval(intervalId);
           } else {
             console.error('[POLLING] Error: Job completed but finalImageUrl is missing in the response.');
           }
         } else if (data.status === 'failed') {
           throw new Error(data.statusMessage || 'Generation failed.');
         }
-        // If status is 'pending' or 'loading', do nothing and wait for the next poll
         console.log(`[POLLING] Current job status: ${data.status}. Polling will continue.`);
 
       } catch (error) {
@@ -201,12 +310,12 @@ export default function HomePage() {
         setPollingError(error instanceof Error ? error.message : String(error));
         setIsLoading(false);
         setStage("initial");
-        clearInterval(intervalId); // Stop polling on error
+        clearInterval(intervalId);
       }
-    }, 3000); // Poll every 3 seconds
+    }, 3000);
 
-    return () => clearInterval(intervalId); // Cleanup on component unmount or if jobId changes
-  }, [jobId]);
+    return () => clearInterval(intervalId);
+  }, [jobId, occasion, selfiePreview, clothingPreview, selectedPersona, styleSuggestion]);
 
   const handleGenerate = async () => {
     if (!selfiePreview) {
@@ -432,23 +541,26 @@ export default function HomePage() {
               {/* Occasion Selector */}
               <div className="space-y-3">
                 <h3 className="text-base font-semibold tracking-tight text-center">
-                  <span className="text-primary font-bold">Step 3:</span> Occasion
+                  <span className="text-primary font-bold">Step 3:</span> Choose Your Scene
                 </h3>
-                <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-                  {["日常通勤", "约会之夜", "周末休闲", "商务会议", "健身运动"].map((o) => (
-                    <button
-                      key={o}
-                      onClick={() => setOccasion(o)}
-                      className={cn(
-                        "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
-                        occasion === o
-                          ? "bg-primary text-white shadow-md"
-                          : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100",
-                      )}
-                    >
-                      {o}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                  {styles.map((style) => {
+                    const Icon = style.icon;
+                    return (
+                      <button
+                        key={style.id}
+                        onClick={() => setOccasion(style.id)}
+                        className={cn(
+                          "flex flex-col items-center justify-center p-4 rounded-xl transition-all",
+                          occasion === style.id ? style.color : "bg-white hover:bg-gray-50",
+                          "border border-gray-200"
+                        )}
+                      >
+                        <Icon className="w-6 h-6 mb-2" />
+                        <span className="text-sm font-medium">{style.name}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
