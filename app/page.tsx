@@ -26,12 +26,14 @@ import {
   Mic,
   Palmtree,
   Sparkles,
-  PartyPopper
+  PartyPopper,
+  Image as ImageIcon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const styles = [
+  { id: "original-scene", name: "Original", icon: ImageIcon, color: "bg-gray-100 text-gray-900" },
   { id: "fashion-magazine", name: "Magazine", icon: BookOpen, color: "bg-pink-100 text-pink-900" },
   { id: "running-outdoors", name: "Outdoors", icon: Footprints, color: "bg-emerald-100 text-emerald-900" },
   { id: "coffee-shop", name: "Coffee", icon: Coffee, color: "bg-amber-100 text-amber-900" },
@@ -51,6 +53,7 @@ const stylePrompts = {
   "date-night": "A realistic romantic evening on a backyard patio--string lights overhead, wine glasses, laughing mid-conversation with friend. Subtle body language, soft bokeh lights, hint of connection. Created using: Sony Alpha A7R IV, cinematic lighting, shallow depth of field, natural expressions, sunset color grading Shot in kodak gold 200 with a canon EOS R6, 4k resolution.",
   "beach-day": "On the beach, soft sunlight, gentle waves in the background, highly detailed, lifelike textures, natural lighting, vivid colors, 4k resolution",
   "party-glam": "opulent ballroom with crystal chandeliers, luxurious velvet curtains and gold accents, dramatic spotlight effects with rich jewel tones, champagne bar with marble countertops, exclusive VIP lounge atmosphere, professional event photography with glamorous lighting, 4k resolution",
+  "original-scene": "",
 };
 
 function dataURLtoFile(dataurl: string, filename: string): File | null {
@@ -662,9 +665,30 @@ export default function HomePage() {
               {/* Suggestion state (after suggestion, before final image) */}
               {stage === "suggestion" && styleSuggestion && (
                 <div className="text-left space-y-4">
+                  {/* Process images grid on top */}
+                  <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto pb-6">
+                    {[
+                      { label: "Original", src: selfiePreview },
+                      { label: "Garment", src: clothingPreview },
+                      { label: "Styled", src: processImages.styledImage },
+                      { label: "Try-On", src: processImages.tryOnImage },
+                    ]
+                      .filter((item) => item.src)
+                      .map((item) => (
+                        <div key={item.label} className="space-y-1">
+                          <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                            {/* @ts-ignore */}
+                            <img src={item.src} alt={item.label} className="w-full h-full object-cover" />
+                          </div>
+                          <p className="text-[10px] text-gray-500 text-center">{item.label}</p>
+                        </div>
+                      ))}
+                  </div>
+
                   <h2 className="text-2xl font-bold text-center text-gray-800 font-playfair mb-6">
                     Your Personal Style Guide
                   </h2>
+
                   {Object.entries(styleSuggestion)
                     .filter(([key]) => key !== "image_prompt")
                     .map(([key, value]) => (
@@ -678,6 +702,7 @@ export default function HomePage() {
                         <p className="text-gray-700 text-sm">{value as string}</p>
                       </div>
                     ))}
+
                   <div className="flex flex-col items-center justify-center pt-6 space-y-3">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <p className="text-md font-semibold text-gray-700">Generating your look...</p>
