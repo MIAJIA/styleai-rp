@@ -30,6 +30,7 @@ type ChatModeData = {
   selfiePreview: string;
   clothingPreview: string;
   occasion: string;
+  generationMode: "tryon-only" | "simple-scene" | "advanced-scene";
   selectedPersona: object | null;
   selfieFile: any;
   clothingFile: any;
@@ -139,7 +140,7 @@ export default function ChatPage() {
   const [chatData, setChatData] = useState<ChatModeData | null>(null);
   const [isInitialized, setIsInitialized] = useState(false); // 新增：防止重复初始化
   const [hasProcessedCompletion, setHasProcessedCompletion] = useState(false); // 新增：防止重复处理完成状态
-  const hasProcessedCompletionRef = useRef(false); // Ref for reliable check inside interval
+  const processedStatusesRef = useRef<Set<string>>(new Set()); // Ref to track processed statuses
   const [pollingIntervalRef, setPollingIntervalRef] = useState<NodeJS.Timeout | null>(null); // 新增：轮询引用管理
   // 新增：用于API集成的状态
   const [jobId, setJobId] = useState<string | null>(null);
@@ -267,7 +268,7 @@ export default function ChatPage() {
     setIsGenerating(true);
     setPollingError(null);
     setHasProcessedCompletion(false); // 重置完成状态标记
-    hasProcessedCompletionRef.current = false; // 重置ref锁
+    processedStatusesRef.current.clear(); // 重置已处理状态的跟踪器
 
     try {
       // 第一步：显示开始生成的消息
@@ -290,6 +291,9 @@ export default function ChatPage() {
       formData.append("human_image", humanImage);
       formData.append("garment_image", garmentImage);
       formData.append("occasion", chatData.occasion);
+      formData.append("generation_mode", chatData.generationMode || "advanced-scene");
+
+      console.log(`[CHAT DEBUG] Starting generation with mode: ${chatData.generationMode || "advanced-scene"}`);
 
       const response = await fetch("/api/generation/start", {
         method: "POST",
@@ -336,7 +340,7 @@ export default function ChatPage() {
 
     const intervalId = setInterval(async () => {
       // 使用Ref进行最可靠的检查，防止由于闭包导致的状态陈旧问题
-      if (hasProcessedCompletionRef.current) {
+      if (processedStatusesRef.current.has('completed')) {
         console.log('[CHAT POLLING] Completion already processed via ref, stopping this interval.');
         clearInterval(intervalId);
         setPollingIntervalRef(null);
@@ -350,13 +354,19 @@ export default function ChatPage() {
         }
 
         const data = await response.json();
-        console.log('[CHAT POLLING] Received data:', data);
+        console.log(`[CHAT POLLING] Received data for job ${jobId}. Status: ${data.status}.`);
+
+        // --- NEW: Check for already processed status to prevent duplicates ---
+        if (processedStatusesRef.current.has(data.status)) {
+          console.log(`[CHAT POLLING] Status '${data.status}' already processed. Skipping message duplication.`);
+          return;
+        }
 
         // --- 主状态处理 ---
 
         // 步骤1: 建议生成
         if (data.status === 'suggestion_generated') {
-          console.log('[CHAT POLLING] Suggestion generated');
+          console.log('[CHAT POLLING] Processing status: suggestion_generated');
           replaceLastLoadingMessage({
             type: 'text',
             role: 'ai',
@@ -364,11 +374,12 @@ export default function ChatPage() {
           });
           // 添加新的loading消息
           setTimeout(() => addMessage({ type: 'loading', role: 'ai', loadingText: 'AI正在生成你的专属造型图片...' }), 1000);
+          processedStatusesRef.current.add(data.status); // Mark as processed
         }
 
         // 步骤2: 风格化完成 (带功能开关)
         else if (data.status === 'stylization_completed' && showIntermediateSteps) {
-          console.log('[CHAT POLLING] Stylization completed');
+          console.log('[CHAT POLLING] Processing status: stylization_completed');
           if (data.processImages?.styledImage) {
             // 先用文字替换loading
             replaceLastLoadingMessage({
@@ -381,12 +392,13 @@ export default function ChatPage() {
               addMessage({ type: 'image', role: 'ai', imageUrl: data.processImages.styledImage });
               addMessage({ type: 'loading', role: 'ai', loadingText: '正在进行虚拟试穿...' });
             }, 800);
+            processedStatusesRef.current.add(data.status); // Mark as processed
           }
         }
 
         // 步骤3: 试穿完成 (带功能开关)
         else if (data.status === 'tryon_completed' && showIntermediateSteps) {
-          console.log('[CHAT POLLING] Try-on completed');
+          console.log('[CHAT POLLING] Processing status: tryon_completed');
           if (data.processImages?.tryOnImage) {
             // 先用文字替换loading
             replaceLastLoadingMessage({
@@ -399,14 +411,14 @@ export default function ChatPage() {
               addMessage({ type: 'image', role: 'ai', imageUrl: data.processImages.tryOnImage });
               addMessage({ type: 'loading', role: 'ai', loadingText: '最后一步，面部融合，马上就好...' });
             }, 800);
+            processedStatusesRef.current.add(data.status); // Mark as processed
           }
         }
 
         // 步骤4: 全部完成
         else if (data.status === 'completed') {
-          console.log('[CHAT POLLING] Generation completed');
-          if (hasProcessedCompletionRef.current) return;
-          hasProcessedCompletionRef.current = true;
+          console.log('[CHAT POLLING] Processing status: completed');
+          processedStatusesRef.current.add(data.status); // Mark as processed to stop polling
 
           const finalImageUrl = data.result?.imageUrl;
           if (finalImageUrl) {

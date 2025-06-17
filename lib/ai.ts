@@ -166,34 +166,34 @@ const getApiToken = (accessKey: string, secretKey: string): string => {
   });
 };
 
-const buildRequestBody = (
+// This function is now more generic for building stylization request bodies
+const buildStylizeRequestBody = (
   modelVersion: string,
   prompt: string,
   humanImageBase64: string
 ): object => {
-  // Base parameters common to most models
   const baseBody = {
     prompt: prompt,
     aspect_ratio: "3:4",
     image: humanImageBase64,
   };
-  console.log("!!! build request body with modelVersion:", modelVersion);
-  console.log("!!! baseBody prompt:", baseBody.prompt);
+  console.log("Building stylize request for model:", modelVersion);
+
   switch (modelVersion) {
     case 'kling-v1-5':
       return {
         ...baseBody,
-        image_reference: "face", // This model supports image_reference
+        image_reference: "face",
         human_fidelity: 1,
         model_name: "kling-v1-5",
       };
     case 'kling-v2':
       return {
         ...baseBody,
-        model_name: "kling-v2", // This model does NOT support image_reference
+        model_name: "kling-v2",
       };
     default:
-      // Defaulting to v2 as a sensible choice, which doesn't use image_reference
+      console.warn(`Unknown modelVersion '${modelVersion}', defaulting to kling-v2.`);
       return {
         ...baseBody,
         model_name: "kling-v2",
@@ -290,7 +290,7 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
 const FACE_SWAP_API_URL = "https://ai-face-swap2.p.rapidapi.com/public/process/files";
 const FACE_SWAP_API_HOST = "ai-face-swap2.p.rapidapi.com";
 
-async function faceSwap(sourceFile: File, targetFile: File, retries: number = 2): Promise<string> {
+async function runFaceSwap(sourceFile: File, targetFile: File, retries: number = 2): Promise<string> {
   const rapidApiKey = process.env.RAPIDAPI_KEY;
   if (!rapidApiKey) {
     throw new Error("RAPIDAPI_KEY is not set.");
@@ -349,90 +349,199 @@ async function faceSwap(sourceFile: File, targetFile: File, retries: number = 2)
 }
 
 
-// --- Main Exported Orchestration Functions (Refactored) ---
+// --- Main Job Interface and Atomic Steps ---
 
-// This interface needs to be in sync with the one in the status route
-interface Job {
+// This interface needs to be in sync with the one in the status route and the frontend
+export type GenerationMode = "tryon-only" | "simple-scene" | "advanced-scene";
+
+export interface Job {
   jobId: string;
   humanImage: { url: string; type: string; name: string };
   garmentImage: { url: string; type: string; name: string };
+  generationMode: GenerationMode;
   suggestion?: { image_prompt: string; [key: string]: any; };
-  processImages?: { styledImage?: string; tryOnImage?: string; };
+  processImages?: {
+    styledImage?: string;
+    tryOnImage?: string;
+  };
 }
 
 /**
- * Step 1: Generates a stylized base image using a prompt.
+ * ATOMIC STEP: Generates a stylized base image using a specific model.
  */
-export async function generateStyledImage(job: Job): Promise<string> {
-  console.log("[AI Pipeline - Step 1/3] Generating stylized image...");
-  if (!job.suggestion?.image_prompt) {
-    throw new Error("Cannot generate styled image without 'image_prompt'.");
+async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string): Promise<string> {
+  console.log(`[ATOMIC_STEP] Running Stylization with ${modelVersion}...`);
+  if (!prompt) {
+    throw new Error("Cannot generate styled image without a 'prompt'.");
   }
 
-  const humanImageFile = await urlToFile(job.humanImage.url, job.humanImage.name, job.humanImage.type);
+  const humanImageFile = await urlToFile(humanImageUrl, humanImageName, humanImageType);
   const humanImageBase64 = await fileToBase64(humanImageFile);
 
-  const stylizeRequestBody = buildRequestBody("kling-v2", job.suggestion.image_prompt, humanImageBase64);
+  const stylizeRequestBody = buildStylizeRequestBody(modelVersion, prompt, humanImageBase64);
   const styledImageUrl = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, stylizeRequestBody);
 
-  console.log("[AI Pipeline - Step 1/3] Stylized image generated:", styledImageUrl.substring(0, 100));
+  console.log(`[ATOMIC_STEP] Stylization with ${modelVersion} complete:`, styledImageUrl.substring(0, 100));
   return styledImageUrl;
 }
 
 /**
- * Step 2: Performs virtual try-on using the stylized image and the garment.
+ * ATOMIC STEP: Performs virtual try-on.
+ * @param canvasImageUrl The URL of the image to apply the clothing to.
+ * @param garmentImageUrl The URL of the clothing item.
  */
-export async function generateTryOnImage(job: Job): Promise<string> {
-  console.log("[AI Pipeline - Step 2/3] Performing virtual try-on...");
-  if (!job.processImages?.styledImage) {
-      throw new Error("Cannot perform try-on without a styled image URL in the job.");
-  }
+async function runVirtualTryOn(canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string): Promise<string> {
+  console.log("[ATOMIC_STEP] Running Virtual Try-On...");
 
-  // Convert stylized image and garment to files/base64
-  const styledImageFile = await urlToFile(job.processImages.styledImage, "styled.jpg", "image/jpeg");
-  const styledImageBase64 = await fileToBase64(styledImageFile);
-  const garmentImageFile = await urlToFile(job.garmentImage.url, job.garmentImage.name, job.garmentImage.type);
+  // Convert canvas image and garment to files/base64
+  const canvasImageFile = await urlToFile(canvasImageUrl, "canvas.jpg", "image/jpeg");
+  const canvasImageBase64 = await fileToBase64(canvasImageFile);
+  const garmentImageFile = await urlToFile(garmentImageUrl, garmentImageName, garmentImageType);
   const garmentImageBase64 = await fileToBase64(garmentImageFile);
 
   const tryOnRequestBody = {
     model_name: "kolors-virtual-try-on-v1-5",
-    human_image: styledImageBase64,
+    human_image: canvasImageBase64,
     cloth_image: garmentImageBase64,
   };
 
   const tryOnImageUrl = await executeKlingTask(KOLORS_VIRTUAL_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, tryOnRequestBody);
 
-  console.log("[AI Pipeline - Step 2/3] Virtual try-on complete:", tryOnImageUrl.substring(0, 100));
+  console.log("[ATOMIC_STEP] Virtual Try-On complete:", tryOnImageUrl.substring(0, 100));
   return tryOnImageUrl;
 }
 
 /**
- * Step 3: Performs face swap and saves the final image to blob storage.
+ * ATOMIC STEP: Performs face swap.
  */
-export async function performFaceSwapAndSave(job: Job): Promise<string> {
-  console.log("[AI Pipeline - Step 3/3] Performing face swap and saving...");
-  if (!job.processImages?.tryOnImage) {
-    throw new Error("Cannot perform face swap without a try-on image URL in the job.");
-  }
+async function runAndPerformFaceSwap(humanImageUrl: string, humanImageName: string, humanImageType: string, tryOnImageUrl: string): Promise<string> {
+  console.log("[ATOMIC_STEP] Running Face Swap...");
 
   // Convert images to files
-  const humanImageFile = await urlToFile(job.humanImage.url, job.humanImage.name, job.humanImage.type);
-  const tryOnImageFile = await urlToFile(job.processImages.tryOnImage, "tryon.jpg", "image/jpeg");
+  const humanImageFile = await urlToFile(humanImageUrl, humanImageName, humanImageType);
+  const tryOnImageFile = await urlToFile(tryOnImageUrl, "tryon.jpg", "image/jpeg");
 
   // Perform face swap
-  const swappedHttpUrl = await faceSwap(humanImageFile, tryOnImageFile);
-  console.log("[AI Pipeline - Step 3/3] Face swap complete. Persisting to storage...");
+  const swappedHttpUrl = await runFaceSwap(humanImageFile, tryOnImageFile);
+  console.log("[ATOMIC_STEP] Face Swap complete:", swappedHttpUrl.substring(0, 100));
+  return swappedHttpUrl;
+}
 
-  // Persist final image to Vercel Blob
-  const finalImageResponse = await fetch(swappedHttpUrl);
-  const finalImageBlob = await finalImageResponse.blob();
-  const finalImageName = `final-look-${job.jobId}.png`;
+/**
+ * FINALIZATION STEP: Saves the final image to blob storage.
+ */
+async function saveFinalImageToBlob(finalImageUrl: string, jobId: string): Promise<string> {
+    console.log("[FINAL_STEP] Saving final image to blob storage...");
+    const finalImageResponse = await fetch(finalImageUrl);
+    if (!finalImageResponse.ok) {
+        throw new Error(`Failed to fetch final image from URL: ${finalImageUrl}`);
+    }
+    const finalImageBlob = await finalImageResponse.blob();
+    const finalImageName = `final-look-${jobId}.png`;
 
-  const { url: finalSecureUrl } = await put(finalImageName, finalImageBlob, {
-    access: 'public',
-    addRandomSuffix: true,
-  });
+    const { url: finalSecureUrl } = await put(finalImageName, finalImageBlob, {
+      access: 'public',
+      addRandomSuffix: true,
+    });
 
-  console.log("[AI Pipeline - Step 3/3] Final image saved to blob storage:", finalSecureUrl);
-  return finalSecureUrl;
+    console.log("[FINAL_STEP] Final image saved:", finalSecureUrl);
+    return finalSecureUrl;
+}
+
+
+// --- Pipeline Orchestration Functions ---
+
+/**
+ * PIPELINE 1: Performs virtual try-on only.
+ */
+export async function executeTryOnOnlyPipeline(job: Job): Promise<string> {
+  console.log(`[PIPELINE_START] Executing "Try-On Only" pipeline for job ${job.jobId}`);
+
+  // Step 1: Virtual Try-On on the original human image
+  // The 'canvas' is the user's original photo.
+  const tryOnImageUrl = await runVirtualTryOn(
+    job.humanImage.url,
+    job.garmentImage.url,
+    job.garmentImage.name,
+    job.garmentImage.type
+  );
+  await kv.hset(job.jobId, { tryOnImage: tryOnImageUrl });
+
+
+  // Step 2: Save the result to blob storage
+  const finalUrl = await saveFinalImageToBlob(tryOnImageUrl, job.jobId);
+
+  console.log(`[PIPELINE_END] "Try-On Only" pipeline finished for job ${job.jobId}`);
+  return finalUrl;
+}
+
+/**
+ * PIPELINE 2: Generates a simple scene with the user.
+ */
+export async function executeSimpleScenePipeline(job: Job): Promise<string> {
+  console.log(`[PIPELINE_START] Executing "Simple Scene" pipeline for job ${job.jobId}`);
+  if (!job.suggestion?.image_prompt) {
+    throw new Error("Cannot run simple scene pipeline without 'image_prompt'.");
+  }
+
+  // Step 1: Stylize the image using the simpler, faster model
+  const styledImageUrl = await runStylization(
+    'kling-v1-5',
+    job.suggestion.image_prompt,
+    job.humanImage.url,
+    job.humanImage.name,
+    job.humanImage.type
+  );
+  await kv.hset(job.jobId, { styledImage: styledImageUrl });
+
+  // Step 2: Save the result to blob storage
+  const finalUrl = await saveFinalImageToBlob(styledImageUrl, job.jobId);
+
+  console.log(`[PIPELINE_END] "Simple Scene" pipeline finished for job ${job.jobId}`);
+  return finalUrl;
+}
+
+
+/**
+ * PIPELINE 3: Performs the full advanced scene generation.
+ */
+export async function executeAdvancedScenePipeline(job: Job): Promise<string> {
+  console.log(`[PIPELINE_START] Executing "Advanced Scene" pipeline for job ${job.jobId}`);
+   if (!job.suggestion?.image_prompt) {
+    throw new Error("Cannot run advanced scene pipeline without 'image_prompt'.");
+  }
+
+  // Step 1: Generate the stylized background/pose with the advanced model
+  const styledImageUrl = await runStylization(
+    'kling-v2',
+    job.suggestion.image_prompt,
+    job.humanImage.url,
+    job.humanImage.name,
+    job.humanImage.type
+  );
+  await kv.hset(job.jobId, { styledImage: styledImageUrl });
+
+  // Step 2: Perform virtual try-on using the newly stylized image as the canvas
+  const tryOnImageUrl = await runVirtualTryOn(
+    styledImageUrl,
+    job.garmentImage.url,
+    job.garmentImage.name,
+    job.garmentImage.type
+  );
+  await kv.hset(job.jobId, { tryOnImage: tryOnImageUrl });
+
+
+  // Step 3: Perform face swap to put the user's face back onto the generated body
+  const swappedImageUrl = await runAndPerformFaceSwap(
+    job.humanImage.url,
+    job.humanImage.name,
+    job.humanImage.type,
+    tryOnImageUrl
+  );
+
+  // Step 4: Save the final, face-swapped image to blob storage
+  const finalUrl = await saveFinalImageToBlob(swappedImageUrl, job.jobId);
+
+  console.log(`[PIPELINE_END] "Advanced Scene" pipeline finished for job ${job.jobId}`);
+  return finalUrl;
 }

@@ -28,7 +28,9 @@ import {
   Sparkles,
   PartyPopper,
   MessageCircle,
-  Zap
+  Zap,
+  Shirt,
+  Layers
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -145,7 +147,8 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
-  const [generationMode, setGenerationMode] = useState<"traditional" | "chat" | null>(null);
+  const [experienceMode, setExperienceMode] = useState<"traditional" | "chat" | null>(null);
+  const [generationMode, setGenerationMode] = useState<"tryon-only" | "simple-scene" | "advanced-scene">("advanced-scene");
   const [processImages, setProcessImages] = useState({
     humanImage: "",
     garmentImage: "",
@@ -241,6 +244,9 @@ export default function HomePage() {
       formData.append("human_image", humanImage);
       formData.append("garment_image", garmentImage);
       formData.append("occasion", occasion);
+      // Add the selected generation pipeline mode
+      formData.append("generation_mode", generationMode);
+
       // Add the style prompt if available
       if (stylePrompts[occasion as keyof typeof stylePrompts]) {
         formData.append("style_prompt", stylePrompts[occasion as keyof typeof stylePrompts]);
@@ -522,6 +528,7 @@ export default function HomePage() {
       selfiePreview,
       clothingPreview,
       occasion,
+      generationMode,
       selectedPersona,
       hasRequiredImages
     });
@@ -531,6 +538,7 @@ export default function HomePage() {
       selfiePreview,
       clothingPreview,
       occasion,
+      generationMode,
       selectedPersona,
       selfieFile: selfieFile ? {
         name: selfieFile.name,
@@ -559,7 +567,7 @@ export default function HomePage() {
 
   // 修改原有的handleStartGeneration函数，用于传统模式
   const handleTraditionalMode = async () => {
-    setGenerationMode("traditional");
+    setExperienceMode("traditional");
     await handleStartGeneration();
   };
 
@@ -643,10 +651,40 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Step 4: Generation Mode Selection */}
-              <div className="space-y-4">
+              {/* Step 4: Generation Pipeline Mode Selection */}
+              <div className="space-y-3">
                 <h3 className="text-base font-semibold tracking-tight text-center">
                   <span className="text-primary font-bold">Step 4:</span> Choose Generation Mode
+                </h3>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <ModeButton
+                    title="Try-On Only"
+                    description="Fastest results"
+                    icon={Shirt}
+                    isSelected={generationMode === 'tryon-only'}
+                    onClick={() => setGenerationMode('tryon-only')}
+                  />
+                  <ModeButton
+                    title="Simple Scene"
+                    description="New background & pose"
+                    icon={Sparkles}
+                    isSelected={generationMode === 'simple-scene'}
+                    onClick={() => setGenerationMode('simple-scene')}
+                  />
+                  <ModeButton
+                    title="Advanced Scene"
+                    description="Full generation"
+                    icon={Layers}
+                    isSelected={generationMode === 'advanced-scene'}
+                    onClick={() => setGenerationMode('advanced-scene')}
+                  />
+                </div>
+              </div>
+
+              {/* Step 5: Generation Experience Selection */}
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold tracking-tight text-center">
+                  <span className="text-primary font-bold">Step 5:</span> Choose Experience
                 </h3>
                 <div className="grid grid-cols-1 gap-3">
                   {/* Traditional Mode */}
@@ -966,3 +1004,32 @@ export default function HomePage() {
     </div>
   );
 }
+
+// Helper component for the mode buttons to avoid repetition
+const ModeButton = ({ title, description, icon: Icon, isSelected, onClick }: {
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  isSelected: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className={cn(
+      "flex flex-col items-center justify-center p-4 rounded-xl transition-all text-center",
+      "border-2",
+      isSelected
+        ? "bg-purple-50 border-purple-300 shadow-md"
+        : "bg-white hover:bg-gray-50 border-gray-200"
+    )}
+  >
+    <div className={cn(
+      "w-10 h-10 rounded-full flex items-center justify-center mb-2",
+      isSelected ? "bg-purple-500 text-white" : "bg-gray-100 text-gray-500"
+    )}>
+      <Icon size={20} />
+    </div>
+    <h4 className="font-semibold text-sm text-gray-800">{title}</h4>
+    <p className="text-xs text-gray-500">{description}</p>
+  </button>
+);

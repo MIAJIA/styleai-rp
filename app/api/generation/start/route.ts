@@ -2,6 +2,116 @@ import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { put } from '@vercel/blob';
+import {
+  getStyleSuggestionFromAI,
+  executeAdvancedScenePipeline,
+  executeSimpleScenePipeline,
+  executeTryOnOnlyPipeline,
+  type Job,
+  type GenerationMode,
+} from '@/lib/ai';
+import { saveLookToDB, type PastLook } from '@/lib/database';
+
+async function runPipelineInBackground(jobId: string) {
+  let job: Job | null = null;
+  try {
+    // Stage 1: Get Style Suggestion
+    job = await kv.hgetall<Job>(jobId);
+    if (!job) {
+      throw new Error(`Job with ID ${jobId} not found.`);
+    }
+
+    console.log(`[Job ${jobId}] Starting background pipeline for mode: ${job.generationMode}`);
+    await kv.hset(jobId, { status: 'processing', statusMessage: 'Analyzing your images and occasion...' });
+
+    const suggestion = await getStyleSuggestionFromAI({
+      humanImageUrl: job.humanImage.url,
+      garmentImageUrl: job.garmentImage.url,
+      occasion: job.occasion,
+    });
+
+    job.suggestion = suggestion;
+    await kv.hset(jobId, {
+      suggestion,
+      status: 'suggestion_generated',
+      statusMessage: 'Style advice generated. Preparing to create your look...'
+    });
+    console.log(`[Job ${jobId}] Suggestion generated.`);
+
+    // Stage 2: Execute the selected generation pipeline
+    let finalImageUrl: string;
+    const currentJobState = await kv.hgetall<Job>(jobId); // Get the most recent job state
+     if (!currentJobState) {
+      throw new Error(`Job with ID ${jobId} disappeared from KV store.`);
+    }
+
+    switch (currentJobState.generationMode) {
+      case 'tryon-only':
+        finalImageUrl = await executeTryOnOnlyPipeline(currentJobState);
+        break;
+      case 'simple-scene':
+        finalImageUrl = await executeSimpleScenePipeline(currentJobState);
+        break;
+      case 'advanced-scene':
+        finalImageUrl = await executeAdvancedScenePipeline(currentJobState);
+        break;
+      default:
+        throw new Error(`Unknown generation mode: ${currentJobState.generationMode}`);
+    }
+
+    // Stage 3: Mark job as complete
+    console.log(`[Job ${jobId}] Pipeline completed. Final URL: ${finalImageUrl}`);
+    await kv.hset(jobId, {
+      status: 'completed',
+      statusMessage: 'Your new look is ready!',
+      result: { imageUrl: finalImageUrl },
+      updatedAt: new Date().toISOString(),
+    });
+
+    // --- NEW: Save the final look to the primary database ---
+    try {
+      const finalJobState = await kv.hgetall<Job>(jobId);
+      if (!finalJobState) {
+        throw new Error("Job data not found for saving to DB.");
+      }
+
+      const lookToSave: PastLook = {
+        id: finalJobState.jobId,
+        imageUrl: finalImageUrl,
+        style: finalJobState.suggestion?.style_alignment || 'AI Generated',
+        timestamp: Date.now(),
+        originalHumanSrc: finalJobState.humanImage.url,
+        originalGarmentSrc: finalJobState.garmentImage.url,
+        garmentDescription: finalJobState.suggestion?.material_silhouette,
+        personaProfile: null, // This can be populated if available in the job
+        processImages: {
+          humanImage: finalJobState.humanImage.url,
+          garmentImage: finalJobState.garmentImage.url,
+          finalImage: finalImageUrl,
+          styleSuggestion: finalJobState.suggestion,
+        },
+      };
+      await saveLookToDB(lookToSave, 'default'); // Assuming 'default' user for now
+      console.log(`[Job ${jobId}] Successfully saved final look to primary DB.`);
+    } catch (dbError) {
+        console.error(`[Job ${jobId}] CRITICAL: Pipeline succeeded but failed to save look to DB.`, dbError);
+        // Optional: You could update the job status here to reflect the DB save error
+    }
+
+  } catch (error) {
+    console.error(`[Job ${jobId}] Background pipeline failed:`, error);
+    if (jobId) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      await kv.hset(jobId, {
+        status: 'failed',
+        statusMessage: `Generation failed: ${errorMessage}`,
+        error: errorMessage,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  }
+}
+
 
 export async function POST(request: Request) {
   try {
@@ -9,24 +119,32 @@ export async function POST(request: Request) {
     const humanImageFile = formData.get('human_image') as File | null;
     const garmentImageFile = formData.get('garment_image') as File | null;
     const occasion = formData.get('occasion') as string | null;
+    const generationMode = formData.get('generation_mode') as GenerationMode | null;
 
-    if (!humanImageFile || !garmentImageFile || !occasion) {
+    if (!humanImageFile || !garmentImageFile || !occasion || !generationMode) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    if (!['tryon-only', 'simple-scene', 'advanced-scene'].includes(generationMode)) {
+        return NextResponse.json({ error: 'Invalid generation mode' }, { status: 400 });
+    }
+
 
     // Upload images to Vercel Blob
     const humanImageBlob = await put(humanImageFile.name, humanImageFile, {
       access: 'public',
+      addRandomSuffix: true,
     });
     const garmentImageBlob = await put(garmentImageFile.name, garmentImageFile, {
       access: 'public',
+      addRandomSuffix: true,
     });
 
     const jobId = randomUUID();
-    const job = {
+    const jobData: Job = {
       jobId,
-      status: 'pending', // The 'status' endpoint will pick this up and start processing
-      statusMessage: 'Your request has been received. Files uploaded.',
+      status: 'pending',
+      statusMessage: 'Your request has been received and is waiting to be processed.',
       humanImage: {
         url: humanImageBlob.url,
         type: humanImageFile.type,
@@ -38,14 +156,17 @@ export async function POST(request: Request) {
         name: garmentImageFile.name,
       },
       occasion,
+      generationMode,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     // We have the URLs and metadata, now we create the job record in KV.
-    await kv.set(jobId, job);
+    await kv.hset(jobId, jobData);
 
-    // The status endpoint is responsible for starting the actual AI processing.
+    // Fire and forget the background process. Do NOT await it.
+    runPipelineInBackground(jobId);
+
     // This endpoint returns immediately after creating the job.
     return NextResponse.json({ jobId });
   } catch (error) {
