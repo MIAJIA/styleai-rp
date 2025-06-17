@@ -1,6 +1,7 @@
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 import { getStyleSuggestionFromAI, generateFinalImage } from '@/lib/ai';
+import { saveLookToDB, PastLook } from '@/lib/database';
 
 // Define the Job type for better type safety
 interface Job {
@@ -35,6 +36,13 @@ export async function GET(request: Request) {
 
     if (!job) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
+    // 如果任务已经处于最终状态（完成或失败），则直接返回，不执行任何操作。
+    // 这是防止客户端重复轮询已完成任务的关键。
+    if (job.status === 'completed' || job.status === 'failed') {
+        console.log(`[Job ${jobId}] Polling for an already terminal job (status: ${job.status}). Returning current state.`);
+        return NextResponse.json(job);
     }
 
     // This is the core of the state machine.
@@ -104,8 +112,39 @@ export async function GET(request: Request) {
             job.statusMessage = 'Your new look is ready!';
             job.result = { imageUrl: finalImageUrl };
             job.updatedAt = new Date().toISOString();
+
+            console.log(`[Job ${jobId}] Status 'completed'. Final image URL stored. Now saving to My Looks...`);
+
+            // --- Step 4: Save the completed look to the user's "My Looks" ---
+            try {
+              const lookToSave: PastLook = {
+                id: job.jobId,
+                imageUrl: finalImageUrl,
+                style: job.suggestion?.style_alignment || 'AI Generated',
+                timestamp: Date.now(),
+                originalHumanSrc: job.humanImage.url,
+                originalGarmentSrc: job.garmentImage.url,
+                garmentDescription: job.suggestion?.material_silhouette, // Example mapping
+                personaProfile: null, // This can be enriched if available
+                processImages: {
+                  humanImage: job.humanImage.url,
+                  garmentImage: job.garmentImage.url,
+                  finalImage: finalImageUrl,
+                  styleSuggestion: job.suggestion,
+                },
+              };
+
+              // The user ID can be passed from the client or managed via session in a real app
+              await saveLookToDB(lookToSave, 'default');
+              console.log(`[Job ${jobId}] Successfully saved to My Looks.`);
+            } catch (dbError) {
+              console.error(`[Job ${jobId}] Failed to save look to database:`, dbError);
+              // Do not fail the whole request, just log the error.
+              // The user can still see the result on the chat page.
+            }
+
+            // Finally, save the final job state
             await kv.set(jobId, job);
-            console.log(`[Job ${jobId}] Status 'completed'. Final image URL stored.`);
 
             return NextResponse.json(job);
 

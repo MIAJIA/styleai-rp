@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "app/api/generation/status/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/generation/start/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/generate/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/generate-style/route.ts": {
+      "maxDuration": 300
+    }
+  }
+}

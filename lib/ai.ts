@@ -3,32 +3,12 @@ import * as jwt from "jsonwebtoken";
 import { put } from "@vercel/blob";
 import { kv } from "@vercel/kv";
 import { type OnboardingData } from "@/lib/onboarding-storage";
+import { systemPrompt } from "./prompts";
 
 // Initialize the OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-const systemPrompt = `Hellooo bestie! 💖 I'm your super fun, slightly over-caffeinated personal stylist. Think of me as the bubbly friend who hypes you up and sprinkles fashion magic everywhere ✨. I'll peek at your photo, the fab garment you picked, plus the occasion, then serve you ultra-personal, easy-to-follow styling tips.
-
-Here's what you'll hand me:
-1. Your gorgeous photo (full-body if possible 📸)
-2. A clothing piece you're obsessed with 👗
-3. The occasion you're dressing for (e.g. "日常通勤" or "约会之夜"), so I know the vibe!
-
-I'll respond with a kawaii JSON (key names固定不变). Except for \`image_prompt\`, every value will be in playful, emoji-sprinkled Chinese. Imagine I'm chatting excitedly in your DMs!
-
-The JSON keys:
-- \`scene_fit\`: (String) 我来打分这件衣服跟场合的适配度，还会给出小调整建议～
-- \`style_alignment\`: (String) 这件单品的风格属性 + 我会推荐一起出场的配件，让整体 Look 更 wow ✨
-- \`personal_match\`: (String) 夸夸你的身材优点，告诉你怎么穿会更显优势（比如塞个衣角、卷卷袖子）😉
-- \`visual_focus\`: (String) 这套搭配的视觉 C 位是什么，以及怎么平衡其他元素～
-- \`material_silhouette\`: (String) 面料 & 版型建议，让细节也在线 ✅
-- \`color_combination\`: (String) 主色、副色、点缀色配色方案，让你出片率飙升 🎨
-- \`reuse_versatility\`: (String) 至少再给两种穿搭场景思路，让衣橱 CP 倍增 💡
-- \`image_prompt\`: (String, English ONLY) A creative prompt for an AI image generator. Full-body fashion shot that captures the perfect mood, lighting, and composition.
-
-Ready? Let's make you sparkle! ✨`;
 
 interface StyleSuggestionInput {
   humanImageUrl: string;
@@ -122,9 +102,38 @@ async function fetchWithTimeout(
 
 // Helper to convert a URL to a File object
 async function urlToFile(url: string, filename: string, mimeType: string): Promise<File> {
-  const response = await fetchWithTimeout(url, { timeout: 60000 });
-  const data = await response.blob();
-  return new File([data], filename, { type: mimeType });
+  const maxRetries = 3;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      console.log(`Converting URL to file (attempt ${attempt + 1}/${maxRetries}): ${url.substring(0, 100)}...`);
+
+      const response = await fetchWithTimeout(url, {
+        timeout: 120000 // 2 minutes timeout for file downloads
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.blob();
+      return new File([data], filename, { type: mimeType });
+
+    } catch (error) {
+      console.error(`URL to file conversion attempt ${attempt + 1} failed:`, error);
+
+      if (attempt === maxRetries - 1) {
+        throw new Error(`Failed to convert URL to file after ${maxRetries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+
+      // Wait before retrying
+      const waitTime = (attempt + 1) * 2000; // 2s, 4s, 6s
+      console.log(`Waiting ${waitTime}ms before retry...`);
+      await sleep(waitTime);
+    }
+  }
+
+  throw new Error("URL to file conversion failed: Maximum retries exceeded");
 }
 
 // Helper function to convert a File to a Base64 string
@@ -206,7 +215,7 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(requestBody),
-    timeout: 60000,
+    timeout: 120000, // Increased to 2 minutes for submit
   });
 
   if (!submitResponse.ok) {
@@ -220,49 +229,58 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
 
   // 2. Poll for the result
   let attempts = 0;
-  const maxAttempts = 40;
+  const maxAttempts = 60; // Increased max attempts
   let finalImageUrl = "";
 
   while (attempts < maxAttempts) {
-    await sleep(3000); // 3-second interval
+    await sleep(5000); // Increased to 5-second interval
     attempts++;
-    console.log(`Polling attempt #${attempts} for task: ${taskId}`);
+    console.log(`Polling attempt #${attempts} for task: ${taskId} (max ${maxAttempts})`);
 
     const pollingToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
-    const statusCheckResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${queryPathPrefix}${taskId}`, {
-      headers: { 'Authorization': `Bearer ${pollingToken}` },
-      timeout: 60000,
-    });
 
-    if (!statusCheckResponse.ok) {
-      console.warn(`Kling polling failed on attempt ${attempts} with status ${statusCheckResponse.status}, continuing...`);
-      continue;
-    }
+    try {
+      const statusCheckResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${queryPathPrefix}${taskId}`, {
+        headers: { 'Authorization': `Bearer ${pollingToken}` },
+        timeout: 90000, // Increased to 90 seconds for status check
+      });
 
-    const statusResult = await statusCheckResponse.json();
-    const taskData = statusResult.data;
-
-    if (taskData.task_status === "succeed") {
-      console.log("Kling task succeeded. Full response:", JSON.stringify(statusResult, null, 2));
-
-      // Defensive parsing for different possible success structures
-      if (taskData.task_result?.images?.length > 0) {
-        finalImageUrl = taskData.task_result.images[0].url;
-      } else if (taskData.task_result?.url) {
-        finalImageUrl = taskData.task_result.url;
-      } else {
-        throw new Error("Task succeeded, but the response structure for the image URL is unexpected.");
+      if (!statusCheckResponse.ok) {
+        console.warn(`Kling polling failed on attempt ${attempts} with status ${statusCheckResponse.status}, continuing...`);
+        continue;
       }
 
-      console.log(`Task ${taskId} succeeded! Image URL:`, finalImageUrl);
-      break;
-    } else if (taskData.task_status === "failed") {
-      throw new Error(`Kling task failed. Reason: ${taskData.task_status_msg || 'Unknown'}`);
+      const statusResult = await statusCheckResponse.json();
+      const taskData = statusResult.data;
+
+      if (taskData.task_status === "succeed") {
+        console.log("Kling task succeeded. Full response:", JSON.stringify(statusResult, null, 2));
+
+        // Defensive parsing for different possible success structures
+        if (taskData.task_result?.images?.length > 0) {
+          finalImageUrl = taskData.task_result.images[0].url;
+        } else if (taskData.task_result?.url) {
+          finalImageUrl = taskData.task_result.url;
+        } else {
+          throw new Error("Task succeeded, but the response structure for the image URL is unexpected.");
+        }
+
+        console.log(`Task ${taskId} succeeded! Image URL:`, finalImageUrl);
+        break;
+      } else if (taskData.task_status === "failed") {
+        throw new Error(`Kling task failed. Reason: ${taskData.task_status_msg || 'Unknown'}`);
+      }
+    } catch (pollError) {
+      console.warn(`Polling attempt ${attempts} encountered error:`, pollError);
+      // Continue to next attempt unless it's the last one
+      if (attempts >= maxAttempts) {
+        throw pollError;
+      }
     }
   }
 
   if (!finalImageUrl) {
-    throw new Error(`Kling task ${taskId} timed out after ${maxAttempts} attempts.`);
+    throw new Error(`Kling task ${taskId} timed out after ${maxAttempts} attempts (${maxAttempts * 5} seconds).`);
   }
 
   return finalImageUrl;
@@ -272,7 +290,7 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
 const FACE_SWAP_API_URL = "https://ai-face-swap2.p.rapidapi.com/public/process/files";
 const FACE_SWAP_API_HOST = "ai-face-swap2.p.rapidapi.com";
 
-async function faceSwap(sourceFile: File, targetFile: File): Promise<string> {
+async function faceSwap(sourceFile: File, targetFile: File, retries: number = 2): Promise<string> {
   const rapidApiKey = process.env.RAPIDAPI_KEY;
   if (!rapidApiKey) {
     throw new Error("RAPIDAPI_KEY is not set.");
@@ -282,30 +300,52 @@ async function faceSwap(sourceFile: File, targetFile: File): Promise<string> {
   formData.append("source", sourceFile);
   formData.append("target", targetFile);
 
-  const response = await fetchWithTimeout(FACE_SWAP_API_URL, {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "x-rapidapi-host": FACE_SWAP_API_HOST,
-      "x-rapidapi-key": rapidApiKey,
-    },
-    body: formData,
-    timeout: 90000,
-  });
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      console.log(`Face swap attempt ${attempt + 1}/${retries + 1}...`);
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Face swap API request failed: ${response.status} ${errorBody}`);
+      const response = await fetchWithTimeout(FACE_SWAP_API_URL, {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "x-rapidapi-host": FACE_SWAP_API_HOST,
+          "x-rapidapi-key": rapidApiKey,
+        },
+        body: formData,
+        timeout: 180000, // Increased to 3 minutes
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Face swap API request failed: ${response.status} ${errorBody}`);
+      }
+
+      const result = await response.json();
+      const swappedImageUrl = result.file_url;
+
+      if (!swappedImageUrl) {
+        throw new Error("Face swap API did not return a valid 'file_url'.");
+      }
+
+      console.log(`Face swap successful on attempt ${attempt + 1}`);
+      return swappedImageUrl;
+
+    } catch (error) {
+      console.error(`Face swap attempt ${attempt + 1} failed:`, error);
+
+      if (attempt === retries) {
+        // Last attempt failed, throw the error
+        throw new Error(`Face swap failed after ${retries + 1} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+
+      // Wait before retrying (exponential backoff)
+      const waitTime = Math.pow(2, attempt) * 5000; // 5s, 10s, 20s...
+      console.log(`Waiting ${waitTime}ms before retry...`);
+      await sleep(waitTime);
+    }
   }
 
-  const result = await response.json();
-  const swappedImageUrl = result.file_url;
-
-  if (!swappedImageUrl) {
-    throw new Error("Face swap API did not return a valid 'file_url'.");
-  }
-
-  return swappedImageUrl;
+  throw new Error("Face swap failed: Maximum retries exceeded");
 }
 
 
@@ -397,9 +437,34 @@ export async function generateFinalImage({
 
   // Step 6: Perform face swap
   console.log("[6/7] Performing face swap...");
+
+  // --- Progress Update: starting face swap ---
+  try {
+    const job: any = await kv.get(jobId);
+    if (job) {
+      job.statusMessage = "Performing advanced face swap for perfect results... this may take a few minutes.";
+      job.updatedAt = new Date().toISOString();
+      await kv.set(jobId, job);
+    }
+  } catch (kvErr) {
+    console.warn("[generateFinalImage] Failed to update KV with face swap start:", kvErr);
+  }
+
   const tryOnImageFile = await urlToFile(tryOnImageUrl, "tryon.jpg", "image/jpeg");
   // Use original human file for the face source, and the try-on result as the target
   const swappedHttpUrl = await faceSwap(humanImageFile, tryOnImageFile);
+
+  // --- Progress Update: face swap complete ---
+  try {
+    const job: any = await kv.get(jobId);
+    if (job) {
+      job.statusMessage = "Face swap complete! Finalizing your look...";
+      job.updatedAt = new Date().toISOString();
+      await kv.set(jobId, job);
+    }
+  } catch (kvErr) {
+    console.warn("[generateFinalImage] Failed to update KV with face swap complete:", kvErr);
+  }
 
   // Step 7: Persist final image to Vercel Blob and get a secure URL
   console.log("[7/7] Persisting final image to secure storage...");
@@ -408,6 +473,7 @@ export async function generateFinalImage({
   const finalImageName = `final-look-${jobId}.png`;
   const { url: finalSecureUrl } = await put(finalImageName, finalImageBlob, {
     access: 'public',
+    addRandomSuffix: true,
   });
 
 

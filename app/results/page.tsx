@@ -31,23 +31,147 @@ export default function ResultsPage() {
   const [selectedLook, setSelectedLook] = useState<PastLook | null>(null);
   const [showProcessImages, setShowProcessImages] = useState<Record<string, boolean>>({});
 
-  // Load past looks from localStorage on initial render
+  // Load past looks from database on initial render
   useEffect(() => {
-    const storedLooks = localStorage.getItem("pastLooks");
-    if (storedLooks) {
-      setPastLooks(JSON.parse(storedLooks));
-    }
+    const loadLooks = async () => {
+      try {
+        // 首先尝试从数据库加载
+        const response = await fetch('/api/looks?userId=default&limit=50');
+        const result = await response.json();
+
+        if (result.success && result.looks.length > 0) {
+          console.log(`Loaded ${result.looks.length} looks from database`);
+          setPastLooks(result.looks);
+          return;
+        }
+
+        // 如果数据库没有数据，尝试从 localStorage 迁移
+        const storedLooks = localStorage.getItem("pastLooks");
+        if (storedLooks) {
+          const localLooks = JSON.parse(storedLooks);
+          console.log(`Found ${localLooks.length} looks in localStorage, migrating...`);
+
+          // 先显示本地数据
+          setPastLooks(localLooks);
+
+          // 后台迁移到数据库
+          try {
+            const migrateResponse = await fetch('/api/looks/migrate', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                looks: localLooks,
+                userId: 'default',
+              }),
+            });
+
+            const migrateResult = await migrateResponse.json();
+            console.log('Migration result:', migrateResult);
+
+            if (migrateResult.success) {
+              // 迁移成功后清空 localStorage
+              localStorage.removeItem('pastLooks');
+              console.log('Migration completed, localStorage cleared');
+
+              // 重新从数据库加载以确保数据一致性
+              const freshResponse = await fetch('/api/looks?userId=default&limit=50');
+              const freshResult = await freshResponse.json();
+              if (freshResult.success) {
+                setPastLooks(freshResult.looks);
+              }
+            }
+          } catch (migrateError) {
+            console.error('Migration failed:', migrateError);
+            // 迁移失败，继续使用本地数据
+          }
+        } else {
+          console.log('No looks found in database or localStorage');
+          setPastLooks([]);
+        }
+      } catch (error) {
+        console.error('Error loading looks:', error);
+
+        // 如果所有方法都失败，尝试从 localStorage 读取
+        try {
+          const storedLooks = localStorage.getItem("pastLooks");
+          if (storedLooks) {
+            setPastLooks(JSON.parse(storedLooks));
+            console.log('Loaded looks from localStorage as fallback');
+          }
+        } catch (localError) {
+          console.error('Failed to load from localStorage:', localError);
+          setPastLooks([]);
+        }
+      }
+    };
+
+    loadLooks();
   }, []);
 
-  const handleDeleteLook = (lookId: string) => {
+  const handleDeleteLook = async (lookId: string) => {
+    try {
+      // 尝试从数据库删除
+      const response = await fetch(`/api/looks?lookId=${lookId}&userId=default`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('Look deleted from database successfully');
+      } else {
+        throw new Error(result.error || 'Failed to delete from database');
+      }
+    } catch (error) {
+      console.error('Failed to delete from database:', error);
+
+      // 回退到 localStorage 删除
+      try {
+        const storedLooks = localStorage.getItem("pastLooks");
+        if (storedLooks) {
+          const looks = JSON.parse(storedLooks);
+          const updatedLooks = looks.filter((look: PastLook) => look.id !== lookId);
+          localStorage.setItem("pastLooks", JSON.stringify(updatedLooks));
+        }
+      } catch (localError) {
+        console.error('Failed to delete from localStorage:', localError);
+      }
+    }
+
+    // 无论如何都更新 UI
     const updatedLooks = pastLooks.filter((look) => look.id !== lookId);
     setPastLooks(updatedLooks);
-    localStorage.setItem("pastLooks", JSON.stringify(updatedLooks));
   };
 
-  const handleClearRecentLooks = () => {
+  const handleClearRecentLooks = async () => {
+    try {
+      // 尝试从数据库清空
+      const response = await fetch('/api/looks?clearAll=true&userId=default', {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('All looks cleared from database successfully');
+      } else {
+        throw new Error(result.error || 'Failed to clear database');
+      }
+    } catch (error) {
+      console.error('Failed to clear database:', error);
+
+      // 回退到 localStorage 清空
+      try {
+        localStorage.removeItem("pastLooks");
+      } catch (localError) {
+        console.error('Failed to clear localStorage:', localError);
+      }
+    }
+
+    // 无论如何都更新 UI
     setPastLooks([]);
-    localStorage.removeItem("pastLooks");
   };
 
   const toggleProcessImages = (lookId: string) => {
@@ -100,25 +224,25 @@ export default function ResultsPage() {
             )}
           </div>
 
-            {pastLooks.length > 0 ? (
+          {pastLooks.length > 0 ? (
             <>
               <div className="grid grid-cols-2 gap-4">
                 {displayedLooks.map((pastLook) => (
                   <div key={pastLook.id} className="bg-white rounded-xl shadow-sm border border-gray-100">
                     {/* Main Image */}
                     <div className="relative aspect-[3/4] rounded-t-xl overflow-hidden">
-                    <img
-                      src={pastLook.imageUrl}
+                      <img
+                        src={pastLook.imageUrl}
                         alt="Generated look"
-                      className="w-full h-full object-cover"
-                    />
-                  <button
+                        className="w-full h-full object-cover"
+                      />
+                      <button
                         onClick={() => handleDeleteLook(pastLook.id)}
                         className="absolute top-2 right-2 p-2 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
 
                     {/* Look Details */}
                     <div className="p-3 space-y-2">
@@ -212,8 +336,8 @@ export default function ResultsPage() {
                 </button>
               )}
             </>
-            ) : (
-              // Empty placeholder boxes
+          ) : (
+            // Empty placeholder boxes
             <div className="grid grid-cols-2 gap-3">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
@@ -228,7 +352,7 @@ export default function ResultsPage() {
                   </div>
                 </div>
               ))}
-          </div>
+            </div>
           )}
 
           {pastLooks.length === 0 && (

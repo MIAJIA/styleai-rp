@@ -7,6 +7,12 @@ import IOSTabBar from "../components/ios-tab-bar";
 import ImageModal from "../components/image-modal";
 import { ArrowLeft, Download, Share2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  getChatWelcomeMessage,
+  getChatConfirmationMessage,
+  formatStyleSuggestion,
+  getChatCompletionMessage,
+} from "@/lib/prompts";
 
 // 消息类型定义
 type ChatMessage = {
@@ -133,6 +139,7 @@ export default function ChatPage() {
   const [chatData, setChatData] = useState<ChatModeData | null>(null);
   const [isInitialized, setIsInitialized] = useState(false); // 新增：防止重复初始化
   const [hasProcessedCompletion, setHasProcessedCompletion] = useState(false); // 新增：防止重复处理完成状态
+  const hasProcessedCompletionRef = useRef(false); // Ref for reliable check inside interval
   const [pollingIntervalRef, setPollingIntervalRef] = useState<NodeJS.Timeout | null>(null); // 新增：轮询引用管理
   // 新增：用于API集成的状态
   const [jobId, setJobId] = useState<string | null>(null);
@@ -241,38 +248,6 @@ export default function ChatPage() {
     }
   };
 
-  // 生成个性化的穿搭建议文本（基于API返回的数据）
-  const formatStyleSuggestion = (suggestion: any, occasionName: string) => {
-    const sections = [];
-
-    sections.push(`我已经分析了你的照片和选择的服装！✨`);
-    sections.push('');
-
-    if (suggestion.scene_fit) {
-      sections.push(`🎯 **场合适配度**\n${suggestion.scene_fit}`);
-      sections.push('');
-    }
-
-    if (suggestion.style_alignment) {
-      sections.push(`👗 **风格搭配建议**\n${suggestion.style_alignment}`);
-      sections.push('');
-    }
-
-    if (suggestion.personal_match) {
-      sections.push(`💫 **个人匹配度**\n${suggestion.personal_match}`);
-      sections.push('');
-    }
-
-    if (suggestion.color_combination) {
-      sections.push(`🎨 **配色方案**\n${suggestion.color_combination}`);
-      sections.push('');
-    }
-
-    sections.push(`接下来我会为你生成专属的试穿效果图和场景搭配图！`);
-
-    return sections.join('\n');
-  };
-
   // 真实的生成流程 - 集成现有API
   const startGeneration = async () => {
     console.log('[CHAT DEBUG] startGeneration called');
@@ -292,6 +267,7 @@ export default function ChatPage() {
     setIsGenerating(true);
     setPollingError(null);
     setHasProcessedCompletion(false); // 重置完成状态标记
+    hasProcessedCompletionRef.current = false; // 重置ref锁
 
     try {
       // 第一步：显示开始生成的消息
@@ -356,6 +332,14 @@ export default function ChatPage() {
     console.log('[CHAT POLLING] Starting new polling for job:', jobId);
 
     const intervalId = setInterval(async () => {
+      // 使用Ref进行最可靠的检查，防止由于闭包导致的状态陈旧问题
+      if (hasProcessedCompletionRef.current) {
+        console.log('[CHAT POLLING] Completion already processed via ref, stopping this interval.');
+        clearInterval(intervalId);
+        setPollingIntervalRef(null);
+        return;
+      }
+
       try {
         const response = await fetch(`/api/generation/status?jobId=${jobId}`);
         if (!response.ok) {
@@ -372,7 +356,7 @@ export default function ChatPage() {
           replaceLastLoadingMessage({
             type: 'text',
             role: 'ai',
-            content: formatStyleSuggestion(data.suggestion, getOccasionName(chatData!.occasion))
+            content: formatStyleSuggestion(data.suggestion)
           });
 
           // 添加新的loading消息用于最终图片生成
@@ -387,13 +371,14 @@ export default function ChatPage() {
         } else if (data.status === 'completed') {
           console.log('[CHAT POLLING] Generation completed');
 
-          // 防止重复处理完成状态
-          if (hasProcessedCompletion) {
+          // 再次检查，并立即设置锁
+          if (hasProcessedCompletionRef.current) {
             console.log('[CHAT POLLING] Already processed completion, skipping...');
             return;
           }
-
+          hasProcessedCompletionRef.current = true;
           setHasProcessedCompletion(true);
+
           const finalImageUrl = data.result?.imageUrl;
 
           if (finalImageUrl) {
@@ -409,7 +394,14 @@ export default function ChatPage() {
               addMessage({
                 type: 'text',
                 role: 'ai',
-                content: `🎉 你的专属造型已经完成！这是为${getOccasionName(chatData!.occasion)}场合精心设计的搭配，希望你喜欢！`
+                content: getChatCompletionMessage(getOccasionName(chatData!.occasion))
+              });
+
+              // 新增：告知用户已保存
+              addMessage({
+                type: 'text',
+                role: 'ai',
+                content: '✨ 这个造型已经自动保存到你的 "My Looks" 页面，方便随时查看！'
               });
 
               setCurrentStep('complete');
@@ -481,11 +473,7 @@ export default function ChatPage() {
         setChatData(parsedData);
 
         // 添加个性化欢迎消息
-        const welcomeMessage = `你好！我是你的专属AI造型师 ✨
-
-我看到你已经选择了照片和服装，准备为${getOccasionName(parsedData.occasion)}场合生成造型建议。
-
-让我来为你打造完美的穿搭方案吧！`;
+        const welcomeMessage = getChatWelcomeMessage(getOccasionName(parsedData.occasion));
 
         console.log('[CHAT DEBUG] Adding welcome message:', welcomeMessage);
 
@@ -538,9 +526,7 @@ export default function ChatPage() {
         initialMessages.push(createMessage({
           type: 'text',
           role: 'ai',
-          content: `很棒的选择！我已经收到了你的照片和为${getOccasionName(parsedData.occasion)}场合选择的服装。
-
-现在让我来分析这套搭配，为你生成专属的造型建议吧！`
+          content: getChatConfirmationMessage(getOccasionName(parsedData.occasion))
         }));
 
         // 一次性设置所有消息
