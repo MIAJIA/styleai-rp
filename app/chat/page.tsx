@@ -255,9 +255,11 @@ export default function ChatPage() {
     const suggestionOrder = [
       { key: 'scene_fit', title: '🎯 场合适配度' },
       { key: 'style_alignment', title: '👗 风格搭配建议' },
-      { key: 'color_coordination', title: '🎨 色彩协调性' },
-      { key: 'accessories_suggestion', title: '💍 配饰建议' },
-      { key: 'makeup_and_hairstyle_suggestion', title: '💄 妆发建议' },
+      { key: 'personal_match', title: '👤 个性化匹配' },
+      { key: 'visual_focus', title: '✨ 视觉焦点' },
+      { key: 'material_silhouette', title: '👚 材质与版型' },
+      { key: 'color_combination', title: '🎨 色彩搭配' },
+      { key: 'reuse_versatility', title: '💡 延展搭配性' },
     ];
 
     for (const item of suggestionOrder) {
@@ -430,6 +432,7 @@ export default function ChatPage() {
         // 根据状态更新UI
         switch (data.status) {
           case 'pending':
+            setCurrentStep('suggestion');
             replaceLastLoadingMessage({
               type: 'loading',
               role: 'ai',
@@ -437,6 +440,7 @@ export default function ChatPage() {
             });
             break;
           case 'processing_style_suggestion':
+            setCurrentStep('suggestion');
             replaceLastLoadingMessage({
               type: 'loading',
               role: 'ai',
@@ -446,6 +450,7 @@ export default function ChatPage() {
           case 'suggestion_generated':
             // 确保只处理一次
             if (!processedStatusesRef.current.has('suggestion_generated')) {
+              setCurrentStep('tryon');
               processedStatusesRef.current.add('suggestion_generated'); // 标记为已处理
               replaceLastLoadingMessage({ type: 'text', role: 'ai', content: '太棒了！我为你准备了一些专属的造型建议：' });
 
@@ -455,6 +460,7 @@ export default function ChatPage() {
             }
             break;
           case 'processing_stylization':
+            setCurrentStep('scene');
             // Only update the loading message if the suggestion display is finished.
             if (!isDisplayingSuggestion) {
               replaceLastLoadingMessage({
@@ -465,6 +471,7 @@ export default function ChatPage() {
             }
             break;
           case 'processing_tryon':
+            setCurrentStep('tryon');
             if (!isDisplayingSuggestion) {
               replaceLastLoadingMessage({
                 type: 'loading',
@@ -474,6 +481,7 @@ export default function ChatPage() {
             }
             break;
           case 'processing_faceswap':
+            setCurrentStep('scene');
             if (!isDisplayingSuggestion) {
               replaceLastLoadingMessage({
                 type: 'loading',
@@ -484,6 +492,7 @@ export default function ChatPage() {
             break;
           case 'completed':
             if (!hasProcessedCompletion) {
+              setCurrentStep('complete');
 
               const showCompletion = () => {
                 setHasProcessedCompletion(true); // 关键：设置标志位
@@ -664,6 +673,13 @@ export default function ChatPage() {
     // 标记为已初始化
     setIsInitialized(true);
   }, []); // 空依赖数组，确保只在组件挂载时运行一次
+
+  // 当获取到 jobId 后，开始轮询
+  useEffect(() => {
+    if (jobId) {
+      startPolling(jobId);
+    }
+  }, [jobId]);
 
   // 添加状态变化的调试日志
   useEffect(() => {
