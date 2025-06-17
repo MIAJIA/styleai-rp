@@ -510,12 +510,13 @@ export default function ChatPage() {
         {process.env.NODE_ENV === 'development' && (
           <div className="max-w-2xl mx-auto mt-4 p-4 bg-gray-100 rounded-lg text-xs">
             <h3 className="font-bold mb-2">Debug Info:</h3>
-            <div>isGenerating: {isGenerating.toString()}</div>
-            <div>currentStep: {currentStep}</div>
+            <div>isGenerating: {String(isGenerating)}</div>
+            <div>currentStep: {String(currentStep)}</div>
             <div>chatData: {chatData ? 'exists' : 'null'}</div>
-            <div>messages.length: {messages.length}</div>
+            <div>messages.length: {String(messages.length)}</div>
             <div>pollingError: {pollingError || 'none'}</div>
-            <div>Show start button: {(!isGenerating && currentStep === 'suggestion' && chatData && messages.length === 1).toString()}</div>
+            <div>Show start button: {String(!isGenerating && currentStep === 'suggestion' && chatData && messages.length === 1)}</div>
+            <div>Raw chatData: {chatData ? JSON.stringify(chatData, null, 2) : 'null'}</div>
           </div>
         )}
 
