@@ -228,10 +228,10 @@ const [currentStep, setCurrentStep] = useState<'suggestion' | 'tryon' | 'scene' 
 - [x] 实现页面路由和基础布局
 
 ### 10.2 第二阶段：功能集成
-- [ ] 集成现有的生成 API
-- [ ] 实现消息流的动态更新逻辑
-- [ ] 添加 Loading 状态和错误处理
-- [ ] 实现图片预览 Modal
+- [x] 集成现有的生成 API
+- [x] 实现消息流的动态更新逻辑
+- [x] 添加 Loading 状态和错误处理
+- [x] 实现图片预览 Modal
 
 ### 10.3 第三阶段：体验优化
 - [ ] 添加动画效果和过渡

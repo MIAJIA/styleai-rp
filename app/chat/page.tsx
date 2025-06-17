@@ -110,6 +110,9 @@ export default function ChatPage() {
   const [currentStep, setCurrentStep] = useState<'suggestion' | 'tryon' | 'scene' | 'complete'>('suggestion');
   const [messageIdCounter, setMessageIdCounter] = useState(0);
   const [chatData, setChatData] = useState<ChatModeData | null>(null);
+  // 新增：用于API集成的状态
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [pollingError, setPollingError] = useState<string | null>(null);
 
   // 图片预览 Modal 状态
   const [modalImage, setModalImage] = useState<string | null>(null);
@@ -184,28 +187,65 @@ export default function ChatPage() {
     return occasionMap[occasionId] || occasionId;
   };
 
-  // 生成个性化的穿搭建议
-  const generatePersonalizedAdvice = (data: ChatModeData) => {
-    const occasionName = getOccasionName(data.occasion);
-
-    return `我已经分析了你的照片和选择的服装！✨
-
-📸 **你的风格分析：**
-根据你上传的照片，我看到你有着很好的时尚品味。
-
-👗 **服装搭配建议：**
-你选择的这件服装非常适合${occasionName}场合！颜色和款式都很棒。
-
-🎯 **场合匹配度：**
-对于${occasionName}，这套搭配完美契合场合氛围，既时尚又实用。
-
-💡 **造型小贴士：**
-建议搭配一些简约的配饰来完善整体造型，比如一条精致的项链或者一个时尚的包包。
-
-接下来我会为你生成专属的试穿效果图和场景搭配图！`;
+  // 将预览URL转换为File对象的辅助函数
+  const getFileFromPreview = async (previewUrl: string, defaultName: string): Promise<File | null> => {
+    try {
+      if (previewUrl.startsWith("data:image")) {
+        // Data URL转换为File
+        const response = await fetch(previewUrl);
+        const blob = await response.blob();
+        return new File([blob], `${defaultName}-${Date.now()}.png`, { type: blob.type });
+      } else if (previewUrl.startsWith("/")) {
+        // 本地路径转换为File
+        const response = await fetch(previewUrl);
+        const blob = await response.blob();
+        return new File([blob], `${defaultName}-${Date.now()}.jpg`, { type: blob.type });
+      } else if (previewUrl.startsWith("blob:")) {
+        // Blob URL转换为File
+        const response = await fetch(previewUrl);
+        const blob = await response.blob();
+        return new File([blob], `${defaultName}-${Date.now()}.jpg`, { type: blob.type });
+      }
+      return null;
+    } catch (error) {
+      console.error('Error converting preview to file:', error);
+      return null;
+    }
   };
 
-  // 模拟生成流程
+  // 生成个性化的穿搭建议文本（基于API返回的数据）
+  const formatStyleSuggestion = (suggestion: any, occasionName: string) => {
+    const sections = [];
+
+    sections.push(`我已经分析了你的照片和选择的服装！✨`);
+    sections.push('');
+
+    if (suggestion.scene_fit) {
+      sections.push(`🎯 **场合适配度**\n${suggestion.scene_fit}`);
+      sections.push('');
+    }
+
+    if (suggestion.style_alignment) {
+      sections.push(`👗 **风格搭配建议**\n${suggestion.style_alignment}`);
+      sections.push('');
+    }
+
+    if (suggestion.personal_match) {
+      sections.push(`💫 **个人匹配度**\n${suggestion.personal_match}`);
+      sections.push('');
+    }
+
+    if (suggestion.color_combination) {
+      sections.push(`🎨 **配色方案**\n${suggestion.color_combination}`);
+      sections.push('');
+    }
+
+    sections.push(`接下来我会为你生成专属的试穿效果图和场景搭配图！`);
+
+    return sections.join('\n');
+  };
+
+  // 真实的生成流程 - 集成现有API
   const startGeneration = async () => {
     if (!chatData) {
       addMessage({
@@ -217,71 +257,149 @@ export default function ChatPage() {
     }
 
     setIsGenerating(true);
+    setPollingError(null);
 
-    // 第一步：生成个性化穿搭建议
-    addMessage({
-      type: 'loading',
-      role: 'ai',
-      loadingText: 'AI正在分析你的穿搭需求...'
-    });
+    try {
+      // 第一步：显示开始生成的消息
+      addMessage({
+        type: 'loading',
+        role: 'ai',
+        loadingText: 'AI正在分析你的穿搭需求...'
+      });
 
-    // 模拟 API 调用延迟
-    setTimeout(() => {
+      // 准备图片文件
+      const humanImage = await getFileFromPreview(chatData.selfiePreview, "selfie");
+      const garmentImage = await getFileFromPreview(chatData.clothingPreview, "garment");
+
+      if (!humanImage || !garmentImage) {
+        throw new Error("无法处理选择的图片，请重新选择。");
+      }
+
+      // 调用generation/start API
+      const formData = new FormData();
+      formData.append("human_image", humanImage);
+      formData.append("garment_image", garmentImage);
+      formData.append("occasion", chatData.occasion);
+
+      const response = await fetch("/api/generation/start", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`生成请求失败: ${errorText}`);
+      }
+
+      const { jobId: newJobId } = await response.json();
+      setJobId(newJobId);
+
+      // 开始轮询状态
+      startPolling(newJobId);
+
+    } catch (error) {
+      console.error('Generation error:', error);
+      setPollingError(error instanceof Error ? error.message : String(error));
+      setIsGenerating(false);
+
+      // 替换loading消息为错误消息
       replaceLastLoadingMessage({
         type: 'text',
         role: 'ai',
-        content: generatePersonalizedAdvice(chatData)
+        content: `生成过程中出现错误：${error instanceof Error ? error.message : '未知错误'}。请重试或返回主页重新选择。`
       });
+    }
+  };
 
-      // 第二步：生成试穿图
-      setTimeout(() => {
-        addMessage({
-          type: 'loading',
-          role: 'ai',
-          loadingText: 'AI正在生成你的试穿效果图...'
-        });
+  // 轮询状态的函数
+  const startPolling = (jobId: string) => {
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/generation/status?jobId=${jobId}`);
+        if (!response.ok) {
+          throw new Error(`轮询失败，状态码: ${response.status}`);
+        }
 
-        setTimeout(() => {
+        const data = await response.json();
+        console.log('[CHAT POLLING] Received data:', data);
+
+        if (data.status === 'suggestion_generated') {
+          console.log('[CHAT POLLING] Suggestion generated');
+
+          // 替换loading消息为穿搭建议
           replaceLastLoadingMessage({
-            type: 'image',
-            role: 'ai',
-            imageUrl: '/casual-chic-woman.png' // 使用存在的图片
-          });
-
-          addMessage({
             type: 'text',
             role: 'ai',
-            content: '这是你的试穿效果图！看起来非常棒，这套搭配很适合你的气质。'
+            content: formatStyleSuggestion(data.suggestion, getOccasionName(chatData!.occasion))
           });
 
-          // 第三步：生成场景图
+          // 添加新的loading消息用于最终图片生成
           setTimeout(() => {
             addMessage({
               type: 'loading',
               role: 'ai',
-              loadingText: 'AI正在生成场景搭配图...'
+              loadingText: 'AI正在生成你的专属造型图片...'
+            });
+          }, 1000);
+
+        } else if (data.status === 'completed') {
+          console.log('[CHAT POLLING] Generation completed');
+          const finalImageUrl = data.result?.imageUrl;
+
+          if (finalImageUrl) {
+            // 替换loading消息为最终图片
+            replaceLastLoadingMessage({
+              type: 'image',
+              role: 'ai',
+              imageUrl: finalImageUrl
             });
 
+            // 添加完成消息
             setTimeout(() => {
-              replaceLastLoadingMessage({
-                type: 'image',
-                role: 'ai',
-                imageUrl: '/elegant-outfit.png' // 使用存在的图片
-              });
-
               addMessage({
                 type: 'text',
                 role: 'ai',
-                content: `这是你在${getOccasionName(chatData.occasion)}场合的完整造型！整体搭配非常和谐，相信你穿上一定会很出色！🌟`
+                content: `🎉 你的专属造型已经完成！这是为${getOccasionName(chatData!.occasion)}场合精心设计的搭配，希望你喜欢！`
               });
 
               setCurrentStep('complete');
               setIsGenerating(false);
-            }, 3000);
-          }, 1000);
-        }, 4000);
-      }, 1000);
-    }, 2000);
+              clearInterval(intervalId);
+            }, 1000);
+          } else {
+            throw new Error('生成完成但未返回图片URL');
+          }
+
+        } else if (data.status === 'failed') {
+          throw new Error(data.statusMessage || '生成失败');
+        }
+
+        // 继续轮询其他状态
+        console.log(`[CHAT POLLING] Current status: ${data.status}, continuing...`);
+
+      } catch (error) {
+        console.error("Polling error:", error);
+        setPollingError(error instanceof Error ? error.message : String(error));
+        setIsGenerating(false);
+        clearInterval(intervalId);
+
+        // 显示错误消息
+        addMessage({
+          type: 'text',
+          role: 'ai',
+          content: `生成过程中出现错误：${error instanceof Error ? error.message : '未知错误'}。请重试或返回主页重新选择。`
+        });
+      }
+    }, 3000); // 每3秒轮询一次
+
+    // 设置超时清理
+    setTimeout(() => {
+      clearInterval(intervalId);
+      if (isGenerating) {
+        setIsGenerating(false);
+        setPollingError('生成超时，请重试');
+      }
+    }, 300000); // 5分钟超时
   };
 
   // 页面初始化
@@ -381,6 +499,25 @@ export default function ChatPage() {
                 className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
               >
                 返回主页选择
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* 显示错误信息 */}
+        {pollingError && (
+          <div className="max-w-2xl mx-auto mt-4">
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+              <p className="text-sm text-red-600 text-center">{pollingError}</p>
+              <Button
+                onClick={() => {
+                  setPollingError(null);
+                  if (chatData) startGeneration();
+                }}
+                variant="outline"
+                className="w-full mt-3"
+              >
+                重试
               </Button>
             </div>
           </div>
