@@ -62,10 +62,20 @@ function ChatBubble({ message, onImageClick }: {
 
   if (message.type === 'text') {
     return (
-      <div className="flex items-start gap-3 mb-4">
-        <AIAvatar />
-        <div className="bg-white rounded-2xl rounded-tl-md px-4 py-3 max-w-[80%] shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">{message.content}</p>
+      <div className={`flex items-start gap-3 mb-4 ${isAI ? '' : 'flex-row-reverse'}`}>
+        {isAI ? (
+          <AIAvatar />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-sm">👤</span>
+          </div>
+        )}
+        <div className={`rounded-2xl px-4 py-3 max-w-[80%] shadow-sm border ${isAI
+          ? 'bg-white rounded-tl-md border-gray-100'
+          : 'bg-blue-500 text-white rounded-tr-md border-blue-500'
+          }`}>
+          <p className={`text-sm leading-relaxed whitespace-pre-line ${isAI ? 'text-gray-800' : 'text-white'
+            }`}>{message.content}</p>
         </div>
       </div>
     );
@@ -73,25 +83,36 @@ function ChatBubble({ message, onImageClick }: {
 
   if (message.type === 'image') {
     return (
-      <div className="flex items-start gap-3 mb-4">
-        <AIAvatar />
-        <div className="bg-white rounded-2xl rounded-tl-md p-2 max-w-[80%] shadow-sm border border-gray-100">
+      <div className={`flex items-start gap-3 mb-4 ${isAI ? '' : 'flex-row-reverse'}`}>
+        {isAI ? (
+          <AIAvatar />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-sm">👤</span>
+          </div>
+        )}
+        <div className={`rounded-2xl p-2 max-w-[80%] shadow-sm border ${isAI
+          ? 'bg-white rounded-tl-md border-gray-100'
+          : 'bg-blue-50 rounded-tr-md border-blue-200'
+          }`}>
           <img
             src={message.imageUrl}
             alt="Generated image"
             className="w-full rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
             onClick={() => onImageClick(message.imageUrl!)}
           />
-          <div className="flex gap-2 mt-2 px-2">
-            <Button size="sm" variant="ghost" className="text-xs">
-              <Download className="w-3 h-3 mr-1" />
-              保存
-            </Button>
-            <Button size="sm" variant="ghost" className="text-xs">
-              <Share2 className="w-3 h-3 mr-1" />
-              分享
-            </Button>
-          </div>
+          {isAI && (
+            <div className="flex gap-2 mt-2 px-2">
+              <Button size="sm" variant="ghost" className="text-xs">
+                <Download className="w-3 h-3 mr-1" />
+                保存
+              </Button>
+              <Button size="sm" variant="ghost" className="text-xs">
+                <Share2 className="w-3 h-3 mr-1" />
+                分享
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -110,6 +131,9 @@ export default function ChatPage() {
   const [currentStep, setCurrentStep] = useState<'suggestion' | 'tryon' | 'scene' | 'complete'>('suggestion');
   const [messageIdCounter, setMessageIdCounter] = useState(0);
   const [chatData, setChatData] = useState<ChatModeData | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false); // 新增：防止重复初始化
+  const [hasProcessedCompletion, setHasProcessedCompletion] = useState(false); // 新增：防止重复处理完成状态
+  const [pollingIntervalRef, setPollingIntervalRef] = useState<NodeJS.Timeout | null>(null); // 新增：轮询引用管理
   // 新增：用于API集成的状态
   const [jobId, setJobId] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
@@ -148,12 +172,15 @@ export default function ChatPage() {
 
   // 添加消息的辅助函数
   const addMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
-    const newMessage: ChatMessage = {
-      ...message,
-      id: generateUniqueId(),
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, newMessage]);
+    setMessages(prev => {
+      const newId = `msg-${Date.now()}-${prev.length + 1}`;
+      const newMessage: ChatMessage = {
+        ...message,
+        id: newId,
+        timestamp: new Date(),
+      };
+      return [...prev, newMessage];
+    });
   };
 
   // 替换最后一条 loading 消息
@@ -162,9 +189,10 @@ export default function ChatPage() {
       const newMessages = [...prev];
       const lastIndex = newMessages.length - 1;
       if (lastIndex >= 0 && newMessages[lastIndex].type === 'loading') {
+        // 保持原有的 ID 以避免 React key 冲突
         newMessages[lastIndex] = {
           ...message,
-          id: newMessages[lastIndex].id, // 保持原有的 ID
+          id: newMessages[lastIndex].id,
           timestamp: new Date(),
         };
       }
@@ -263,6 +291,7 @@ export default function ChatPage() {
     console.log('[CHAT DEBUG] Starting generation process...');
     setIsGenerating(true);
     setPollingError(null);
+    setHasProcessedCompletion(false); // 重置完成状态标记
 
     try {
       // 第一步：显示开始生成的消息
@@ -318,6 +347,14 @@ export default function ChatPage() {
 
   // 轮询状态的函数
   const startPolling = (jobId: string) => {
+    // 清理现有的轮询
+    if (pollingIntervalRef) {
+      console.log('[CHAT POLLING] Clearing existing polling interval');
+      clearInterval(pollingIntervalRef);
+    }
+
+    console.log('[CHAT POLLING] Starting new polling for job:', jobId);
+
     const intervalId = setInterval(async () => {
       try {
         const response = await fetch(`/api/generation/status?jobId=${jobId}`);
@@ -349,6 +386,14 @@ export default function ChatPage() {
 
         } else if (data.status === 'completed') {
           console.log('[CHAT POLLING] Generation completed');
+
+          // 防止重复处理完成状态
+          if (hasProcessedCompletion) {
+            console.log('[CHAT POLLING] Already processed completion, skipping...');
+            return;
+          }
+
+          setHasProcessedCompletion(true);
           const finalImageUrl = data.result?.imageUrl;
 
           if (finalImageUrl) {
@@ -369,8 +414,11 @@ export default function ChatPage() {
 
               setCurrentStep('complete');
               setIsGenerating(false);
-              clearInterval(intervalId);
             }, 1000);
+
+            // 立即停止轮询
+            clearInterval(intervalId);
+            setPollingIntervalRef(null);
           } else {
             throw new Error('生成完成但未返回图片URL');
           }
@@ -387,6 +435,7 @@ export default function ChatPage() {
         setPollingError(error instanceof Error ? error.message : String(error));
         setIsGenerating(false);
         clearInterval(intervalId);
+        setPollingIntervalRef(null);
 
         // 显示错误消息
         addMessage({
@@ -400,15 +449,25 @@ export default function ChatPage() {
     // 设置超时清理
     setTimeout(() => {
       clearInterval(intervalId);
+      setPollingIntervalRef(null);
       if (isGenerating) {
         setIsGenerating(false);
         setPollingError('生成超时，请重试');
       }
     }, 300000); // 5分钟超时
+
+    // 设置新的轮询引用
+    setPollingIntervalRef(intervalId);
   };
 
   // 页面初始化
   useEffect(() => {
+    // 防止重复初始化
+    if (isInitialized) {
+      console.log('[CHAT DEBUG] Already initialized, skipping...');
+      return;
+    }
+
     console.log('[CHAT DEBUG] Page initialized, reading sessionStorage...');
 
     // 尝试从sessionStorage读取数据
@@ -429,29 +488,94 @@ export default function ChatPage() {
 让我来为你打造完美的穿搭方案吧！`;
 
         console.log('[CHAT DEBUG] Adding welcome message:', welcomeMessage);
-        addMessage({
+
+        // 使用一个数组来批量添加所有初始消息，避免多次状态更新
+        const initialMessages: ChatMessage[] = [];
+        let idCounter = 0;
+
+        const createMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>): ChatMessage => ({
+          ...message,
+          id: `msg-${Date.now()}-${++idCounter}`,
+          timestamp: new Date(),
+        });
+
+        // 1. AI 欢迎消息
+        initialMessages.push(createMessage({
           type: 'text',
           role: 'ai',
           content: welcomeMessage
-        });
+        }));
+
+        // 2. 用户照片文本
+        initialMessages.push(createMessage({
+          type: 'text',
+          role: 'user',
+          content: '这是我的照片：'
+        }));
+
+        // 3. 用户照片
+        initialMessages.push(createMessage({
+          type: 'image',
+          role: 'user',
+          imageUrl: parsedData.selfiePreview
+        }));
+
+        // 4. 用户服装文本
+        initialMessages.push(createMessage({
+          type: 'text',
+          role: 'user',
+          content: '我想试穿这件衣服：'
+        }));
+
+        // 5. 用户服装图片
+        initialMessages.push(createMessage({
+          type: 'image',
+          role: 'user',
+          imageUrl: parsedData.clothingPreview
+        }));
+
+        // 6. AI 确认消息
+        initialMessages.push(createMessage({
+          type: 'text',
+          role: 'ai',
+          content: `很棒的选择！我已经收到了你的照片和为${getOccasionName(parsedData.occasion)}场合选择的服装。
+
+现在让我来分析这套搭配，为你生成专属的造型建议吧！`
+        }));
+
+        // 一次性设置所有消息
+        setMessages(initialMessages);
+        setMessageIdCounter(idCounter);
+
       } else {
         console.log('[CHAT DEBUG] No sessionStorage data found, showing default message');
         // 如果没有数据，显示提示消息
-        addMessage({
+        const defaultMessage: ChatMessage = {
+          id: `msg-${Date.now()}-1`,
           type: 'text',
           role: 'ai',
-          content: '你好！我是你的专属AI造型师 ✨\n\n请先在主页选择你的照片和服装，然后我就可以为你生成专属的穿搭建议了！'
-        });
+          content: '你好！我是你的专属AI造型师 ✨\n\n请先在主页选择你的照片和服装，然后我就可以为你生成专属的穿搭建议了！',
+          timestamp: new Date(),
+        };
+        setMessages([defaultMessage]);
+        setMessageIdCounter(1);
       }
     } catch (error) {
       console.error('[CHAT DEBUG] Error reading chat data:', error);
-      addMessage({
+      const errorMessage: ChatMessage = {
+        id: `msg-${Date.now()}-1`,
         type: 'text',
         role: 'ai',
-        content: '你好！我是你的专属AI造型师 ✨\n\n请先在主页选择你的照片和服装，然后我就可以为你生成专属的穿搭建议了！'
-      });
+        content: '你好！我是你的专属AI造型师 ✨\n\n请先在主页选择你的照片和服装，然后我就可以为你生成专属的穿搭建议了！',
+        timestamp: new Date(),
+      };
+      setMessages([errorMessage]);
+      setMessageIdCounter(1);
     }
-  }, []);
+
+    // 标记为已初始化
+    setIsInitialized(true);
+  }, []); // 空依赖数组，确保只在组件挂载时运行一次
 
   // 添加状态变化的调试日志
   useEffect(() => {
@@ -464,16 +588,26 @@ export default function ChatPage() {
     });
   }, [isGenerating, currentStep, chatData, messages.length, pollingError]);
 
-  // 添加消息变化的调试日志
+  // 移除消息变化的调试日志以避免额外的渲染
+  // useEffect(() => {
+  //   console.log('[CHAT DEBUG] Messages updated:', messages.map(m => ({
+  //     id: m.id,
+  //     type: m.type,
+  //     role: m.role,
+  //     content: m.content?.substring(0, 50) + '...',
+  //     loadingText: m.loadingText
+  //   })));
+  // }, [messages]);
+
+  // 组件卸载时清理轮询
   useEffect(() => {
-    console.log('[CHAT DEBUG] Messages updated:', messages.map(m => ({
-      id: m.id,
-      type: m.type,
-      role: m.role,
-      content: m.content?.substring(0, 50) + '...',
-      loadingText: m.loadingText
-    })));
-  }, [messages]);
+    return () => {
+      if (pollingIntervalRef) {
+        console.log('[CHAT DEBUG] Cleaning up polling interval on unmount');
+        clearInterval(pollingIntervalRef);
+      }
+    };
+  }, [pollingIntervalRef]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 pb-20">
@@ -515,14 +649,24 @@ export default function ChatPage() {
             <div>chatData: {chatData ? 'exists' : 'null'}</div>
             <div>messages.length: {String(messages.length)}</div>
             <div>pollingError: {pollingError || 'none'}</div>
-            <div>Show start button: {String(!isGenerating && currentStep === 'suggestion' && chatData && messages.length === 1)}</div>
-            <div>Raw chatData: {chatData ? JSON.stringify(chatData, null, 2) : 'null'}</div>
+            <div>hasProcessedCompletion: {String(hasProcessedCompletion)}</div>
+            <div>pollingActive: {pollingIntervalRef ? 'yes' : 'no'}</div>
+            <div>Show start button: {String(!isGenerating && currentStep === 'suggestion' && chatData && messages.length === 6)}</div>
+            <div>Raw chatData: {chatData ? JSON.stringify({
+              ...chatData,
+              selfiePreview: chatData.selfiePreview?.startsWith('data:image')
+                ? `${chatData.selfiePreview.substring(0, 30)}... [base64 data truncated]`
+                : chatData.selfiePreview,
+              clothingPreview: chatData.clothingPreview?.startsWith('data:image')
+                ? `${chatData.clothingPreview.substring(0, 30)}... [base64 data truncated]`
+                : chatData.clothingPreview
+            }, null, 2) : 'null'}</div>
           </div>
         )}
 
         {/* 如果有数据且没有在生成中，显示开始按钮 */}
         {(() => {
-          const shouldShowButton = !isGenerating && currentStep === 'suggestion' && chatData && messages.length === 1;
+          const shouldShowButton = !isGenerating && currentStep === 'suggestion' && chatData && messages.length === 6;
           console.log('[CHAT DEBUG] Button visibility check:', {
             isGenerating,
             currentStep,
