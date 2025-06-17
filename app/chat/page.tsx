@@ -19,6 +19,17 @@ type ChatMessage = {
   timestamp: Date;
 };
 
+// 从主页传递的数据类型
+type ChatModeData = {
+  selfiePreview: string;
+  clothingPreview: string;
+  occasion: string;
+  selectedPersona: object | null;
+  selfieFile: any;
+  clothingFile: any;
+  timestamp: number;
+};
+
 // AI 头像组件
 function AIAvatar() {
   return (
@@ -54,7 +65,7 @@ function ChatBubble({ message, onImageClick }: {
       <div className="flex items-start gap-3 mb-4">
         <AIAvatar />
         <div className="bg-white rounded-2xl rounded-tl-md px-4 py-3 max-w-[80%] shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-800 leading-relaxed">{message.content}</p>
+          <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">{message.content}</p>
         </div>
       </div>
     );
@@ -98,6 +109,7 @@ export default function ChatPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentStep, setCurrentStep] = useState<'suggestion' | 'tryon' | 'scene' | 'complete'>('suggestion');
   const [messageIdCounter, setMessageIdCounter] = useState(0);
+  const [chatData, setChatData] = useState<ChatModeData | null>(null);
 
   // 图片预览 Modal 状态
   const [modalImage, setModalImage] = useState<string | null>(null);
@@ -157,11 +169,56 @@ export default function ChatPage() {
     });
   };
 
+  // 获取场合的中文名称
+  const getOccasionName = (occasionId: string) => {
+    const occasionMap: { [key: string]: string } = {
+      'fashion-magazine': '时尚杂志风',
+      'running-outdoors': '户外运动',
+      'coffee-shop': '咖啡厅约会',
+      'music-show': '音乐演出',
+      'date-night': '浪漫约会',
+      'beach-day': '海滩度假',
+      'casual-chic': '休闲时尚',
+      'party-glam': '派对魅力'
+    };
+    return occasionMap[occasionId] || occasionId;
+  };
+
+  // 生成个性化的穿搭建议
+  const generatePersonalizedAdvice = (data: ChatModeData) => {
+    const occasionName = getOccasionName(data.occasion);
+
+    return `我已经分析了你的照片和选择的服装！✨
+
+📸 **你的风格分析：**
+根据你上传的照片，我看到你有着很好的时尚品味。
+
+👗 **服装搭配建议：**
+你选择的这件服装非常适合${occasionName}场合！颜色和款式都很棒。
+
+🎯 **场合匹配度：**
+对于${occasionName}，这套搭配完美契合场合氛围，既时尚又实用。
+
+💡 **造型小贴士：**
+建议搭配一些简约的配饰来完善整体造型，比如一条精致的项链或者一个时尚的包包。
+
+接下来我会为你生成专属的试穿效果图和场景搭配图！`;
+  };
+
   // 模拟生成流程
   const startGeneration = async () => {
+    if (!chatData) {
+      addMessage({
+        type: 'text',
+        role: 'ai',
+        content: '抱歉，我没有收到你的选择数据。请返回主页重新选择照片和服装。'
+      });
+      return;
+    }
+
     setIsGenerating(true);
 
-    // 第一步：生成穿搭建议
+    // 第一步：生成个性化穿搭建议
     addMessage({
       type: 'loading',
       role: 'ai',
@@ -173,7 +230,7 @@ export default function ChatPage() {
       replaceLastLoadingMessage({
         type: 'text',
         role: 'ai',
-        content: '根据你选择的服装和场合，我为你推荐以下穿搭建议：\n\n这件衣服非常适合你选择的场合，颜色搭配很棒！建议搭配一些简约的配饰来完善整体造型。'
+        content: generatePersonalizedAdvice(chatData)
       });
 
       // 第二步：生成试穿图
@@ -181,7 +238,7 @@ export default function ChatPage() {
         addMessage({
           type: 'loading',
           role: 'ai',
-          loadingText: 'AI正在生成试穿效果图...'
+          loadingText: 'AI正在生成你的试穿效果图...'
         });
 
         setTimeout(() => {
@@ -189,6 +246,12 @@ export default function ChatPage() {
             type: 'image',
             role: 'ai',
             imageUrl: '/casual-chic-woman.png' // 使用存在的图片
+          });
+
+          addMessage({
+            type: 'text',
+            role: 'ai',
+            content: '这是你的试穿效果图！看起来非常棒，这套搭配很适合你的气质。'
           });
 
           // 第三步：生成场景图
@@ -206,6 +269,12 @@ export default function ChatPage() {
                 imageUrl: '/elegant-outfit.png' // 使用存在的图片
               });
 
+              addMessage({
+                type: 'text',
+                role: 'ai',
+                content: `这是你在${getOccasionName(chatData.occasion)}场合的完整造型！整体搭配非常和谐，相信你穿上一定会很出色！🌟`
+              });
+
               setCurrentStep('complete');
               setIsGenerating(false);
             }, 3000);
@@ -217,17 +286,39 @@ export default function ChatPage() {
 
   // 页面初始化
   useEffect(() => {
-    // 添加欢迎消息
-    addMessage({
-      type: 'text',
-      role: 'ai',
-      content: '你好！我是你的专属AI造型师 ✨\n\n请先在主页选择你的照片和服装，然后我就可以为你生成专属的穿搭建议了！'
-    });
+    // 尝试从sessionStorage读取数据
+    try {
+      const storedData = sessionStorage.getItem('chatModeData');
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        setChatData(parsedData);
 
-    // 移除自动开始生成流程
-    // setTimeout(() => {
-    //   startGeneration();
-    // }, 1000);
+        // 添加个性化欢迎消息
+        addMessage({
+          type: 'text',
+          role: 'ai',
+          content: `你好！我是你的专属AI造型师 ✨
+
+我看到你已经选择了照片和服装，准备为${getOccasionName(parsedData.occasion)}场合生成造型建议。
+
+让我来为你打造完美的穿搭方案吧！`
+        });
+      } else {
+        // 如果没有数据，显示提示消息
+        addMessage({
+          type: 'text',
+          role: 'ai',
+          content: '你好！我是你的专属AI造型师 ✨\n\n请先在主页选择你的照片和服装，然后我就可以为你生成专属的穿搭建议了！'
+        });
+      }
+    } catch (error) {
+      console.error('Error reading chat data:', error);
+      addMessage({
+        type: 'text',
+        role: 'ai',
+        content: '你好！我是你的专属AI造型师 ✨\n\n请先在主页选择你的照片和服装，然后我就可以为你生成专属的穿搭建议了！'
+      });
+    }
   }, []);
 
   return (
@@ -261,8 +352,8 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* 如果没有在生成中，显示开始按钮 */}
-        {!isGenerating && currentStep === 'suggestion' && messages.length === 1 && (
+        {/* 如果有数据且没有在生成中，显示开始按钮 */}
+        {!isGenerating && currentStep === 'suggestion' && chatData && messages.length === 1 && (
           <div className="max-w-2xl mx-auto mt-8">
             <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
               <p className="text-sm text-gray-600 mb-4 text-center">
@@ -273,6 +364,23 @@ export default function ChatPage() {
                 className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
               >
                 开始生成我的造型
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* 如果没有数据，显示返回主页按钮 */}
+        {!chatData && messages.length === 1 && (
+          <div className="max-w-2xl mx-auto mt-8">
+            <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
+              <p className="text-sm text-gray-600 mb-4 text-center">
+                请先选择你的照片和服装
+              </p>
+              <Button
+                onClick={() => router.push('/')}
+                className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
+              >
+                返回主页选择
               </Button>
             </div>
           </div>

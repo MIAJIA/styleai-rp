@@ -26,7 +26,9 @@ import {
   Mic,
   Palmtree,
   Sparkles,
-  PartyPopper
+  PartyPopper,
+  MessageCircle,
+  Zap
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -143,6 +145,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
+  const [generationMode, setGenerationMode] = useState<"traditional" | "chat" | null>(null);
   const router = useRouter();
 
   const handleSelfieUpload = (file: File) => {
@@ -484,6 +487,39 @@ export default function HomePage() {
 
   const hasRequiredImages = selfiePreview && clothingPreview;
 
+  // 新增：处理Chat模式的函数
+  const handleChatMode = () => {
+    // 将当前选择的数据存储到sessionStorage，供Chat页面使用
+    const chatData = {
+      selfiePreview,
+      clothingPreview,
+      occasion,
+      selectedPersona,
+      selfieFile: selfieFile ? {
+        name: selfieFile.name,
+        type: selfieFile.type,
+        size: selfieFile.size
+      } : null,
+      clothingFile: clothingFile ? {
+        name: clothingFile.name,
+        type: clothingFile.type,
+        size: clothingFile.size
+      } : null,
+      timestamp: Date.now()
+    };
+
+    sessionStorage.setItem('chatModeData', JSON.stringify(chatData));
+
+    // 导航到Chat页面
+    router.push('/chat');
+  };
+
+  // 修改原有的handleStartGeneration函数，用于传统模式
+  const handleTraditionalMode = async () => {
+    setGenerationMode("traditional");
+    await handleStartGeneration();
+  };
+
   console.log(`[RENDER] Component rendering with stage: "${stage}" and generatedImageUrl: ${generatedImageUrl ? "Exists" : "null"}`);
 
   return (
@@ -564,14 +600,69 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Action Button */}
-              <Button
-                onClick={handleStartGeneration}
-                disabled={!hasRequiredImages || isLoading}
-                className="w-full h-14 bg-[#FF6EC7] hover:bg-[#FF6EC7]/90 text-white rounded-full font-playfair text-lg font-bold shadow-lg btn-bounce disabled:opacity-50"
-              >
-                {isLoading ? "Generating..." : "Generate Style"}
-              </Button>
+              {/* Step 4: Generation Mode Selection */}
+              {hasRequiredImages && (
+                <div className="space-y-4">
+                  <h3 className="text-base font-semibold tracking-tight text-center">
+                    <span className="text-primary font-bold">Step 4:</span> Choose Generation Mode
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    {/* Traditional Mode */}
+                    <button
+                      onClick={handleTraditionalMode}
+                      disabled={isLoading}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-xl transition-all border-2",
+                        "bg-gradient-to-r from-[#FF6EC7]/10 to-[#D5F500]/10",
+                        "border-[#FF6EC7]/30 hover:border-[#FF6EC7]/50",
+                        "hover:shadow-lg transform hover:scale-[1.02]",
+                        isLoading && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-[#FF6EC7] to-[#D5F500] rounded-full flex items-center justify-center">
+                          <Zap className="text-white" size={20} />
+                        </div>
+                        <div className="text-left">
+                          <h4 className="font-semibold text-gray-800">Quick Generate</h4>
+                          <p className="text-sm text-gray-600">Instant style generation</p>
+                        </div>
+                      </div>
+                      <ArrowLeft className="text-gray-400 rotate-180" size={20} />
+                    </button>
+
+                    {/* Chat Mode */}
+                    <button
+                      onClick={handleChatMode}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-xl transition-all border-2",
+                        "bg-gradient-to-r from-purple-500/10 to-pink-500/10",
+                        "border-purple-500/30 hover:border-purple-500/50",
+                        "hover:shadow-lg transform hover:scale-[1.02]"
+                      )}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                          <MessageCircle className="text-white" size={20} />
+                        </div>
+                        <div className="text-left">
+                          <h4 className="font-semibold text-gray-800">Chat Experience</h4>
+                          <p className="text-sm text-gray-600">Step-by-step conversation</p>
+                        </div>
+                      </div>
+                      <ArrowLeft className="text-gray-400 rotate-180" size={20} />
+                    </button>
+                  </div>
+
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500">
+                      Choose how you'd like to generate your style
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 移除原来的Generate Style按钮，因为现在通过模式选择来触发 */}
               {pollingError && (
                 <p className="text-sm text-red-500 text-center mt-2">{pollingError}</p>
               )}
