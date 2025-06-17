@@ -146,6 +146,12 @@ export default function HomePage() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
   const [generationMode, setGenerationMode] = useState<"traditional" | "chat" | null>(null);
+  const [processImages, setProcessImages] = useState({
+    humanImage: "",
+    garmentImage: "",
+    styledImage: "",
+    tryOnImage: ""
+  });
   const router = useRouter();
 
   const handleSelfieUpload = (file: File) => {
@@ -215,6 +221,14 @@ export default function HomePage() {
     setPollingError(null);
     setStyleSuggestion(null);
 
+    // 初始化process images，显示用户输入的图片
+    setProcessImages({
+      humanImage: selfiePreview,
+      garmentImage: clothingPreview,
+      styledImage: "",
+      tryOnImage: ""
+    });
+
     try {
       const humanImage = await getFileFromPreview(selfiePreview, "selfie");
       const garmentImage = await getFileFromPreview(clothingPreview, "garment");
@@ -271,6 +285,14 @@ export default function HomePage() {
           setStyleSuggestion(data.suggestion);
           setStage("suggestion");
 
+          // 更新styled image（如果API返回了中间结果图片）
+          if (data.styledImageUrl) {
+            setProcessImages(prev => ({
+              ...prev,
+              styledImage: data.styledImageUrl
+            }));
+          }
+
         } else if (data.status === 'completed') {
           const finalImageUrl = data.result?.imageUrl;
           console.log('[POLLING] Status is completed. Final URL:', finalImageUrl);
@@ -279,6 +301,12 @@ export default function HomePage() {
             setGeneratedImageUrl(finalImageUrl);
             setStage("result");
             setIsLoading(false);
+
+            // 更新try-on image
+            setProcessImages(prev => ({
+              ...prev,
+              tryOnImage: finalImageUrl
+            }));
 
             // Save only the final look with all process images
             const finalLook: PastLook = {
@@ -624,8 +652,8 @@ export default function HomePage() {
                           <Zap className="text-white" size={20} />
                         </div>
                         <div className="text-left">
-                          <h4 className="font-semibold text-gray-800">Quick Generate</h4>
-                          <p className="text-sm text-gray-600">Instant style generation</p>
+                          <h4 className="font-semibold text-gray-800">Classic Mode</h4>
+                          <p className="text-sm text-gray-600">Traditional generation process</p>
                         </div>
                       </div>
                       <ArrowLeft className="text-gray-400 rotate-180" size={20} />
@@ -717,15 +745,133 @@ export default function HomePage() {
                   <p className="text-sm text-gray-600">
                     Generating personalized advice just for you...
                   </p>
+
+                  {/* 2×2 缩略图网格 - Loading阶段显示输入图片 */}
+                  <div className="max-w-sm mx-auto">
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Human Image */}
+                      <div className="aspect-square bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <img
+                          src={processImages.humanImage}
+                          alt="Your photo"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/5"></div>
+                      </div>
+
+                      {/* Garment Image */}
+                      <div className="aspect-square bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <img
+                          src={processImages.garmentImage}
+                          alt="Selected garment"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/5"></div>
+                      </div>
+
+                      {/* Styled Image Placeholder */}
+                      <div className="aspect-square bg-gray-100 rounded-xl shadow-sm border border-gray-200 flex items-center justify-center">
+                        <div className="text-center">
+                          <Loader2 className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
+                          <p className="text-xs text-gray-500">Styling...</p>
+                        </div>
+                      </div>
+
+                      {/* Try-On Image Placeholder */}
+                      <div className="aspect-square bg-gray-100 rounded-xl shadow-sm border border-gray-200 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="w-6 h-6 bg-gray-300 rounded-full mx-auto mb-2"></div>
+                          <p className="text-xs text-gray-500">Waiting...</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </>
               )}
 
               {/* Suggestion state (after suggestion, before final image) */}
               {stage === "suggestion" && styleSuggestion && (
-                <div className="text-left space-y-4">
+                <div className="text-left space-y-6">
                   <h2 className="text-2xl font-bold text-center text-gray-800 font-playfair mb-6">
                     Your Personal Style Guide
                   </h2>
+
+                  {/* 2×2 缩略图网格 - Suggestion阶段显示更多进度 */}
+                  <div className="max-w-sm mx-auto mb-6">
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Human Image */}
+                      <div className="aspect-square bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
+                        <img
+                          src={processImages.humanImage}
+                          alt="Your photo"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded">✓</div>
+                      </div>
+
+                      {/* Garment Image */}
+                      <div className="aspect-square bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
+                        <img
+                          src={processImages.garmentImage}
+                          alt="Selected garment"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded">✓</div>
+                      </div>
+
+                      {/* Styled Image */}
+                      <div className="aspect-square bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
+                        {processImages.styledImage ? (
+                          <>
+                            <img
+                              src={processImages.styledImage}
+                              alt="Styled result"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded">✓</div>
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-50 to-rose-50">
+                            <div className="text-center">
+                              <Loader2 className="w-6 h-6 animate-spin text-pink-500 mx-auto mb-2" />
+                              <p className="text-xs text-gray-600">Styling...</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Try-On Image */}
+                      <div className="aspect-square bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
+                        {processImages.tryOnImage ? (
+                          <>
+                            <img
+                              src={processImages.tryOnImage}
+                              alt="Try-on result"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded">✓</div>
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
+                            <div className="text-center">
+                              <Loader2 className="w-6 h-6 animate-spin text-purple-500 mx-auto mb-2" />
+                              <p className="text-xs text-gray-600">Try-On...</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 进度标签 */}
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      <p className="text-xs text-center text-gray-500">Your Photo</p>
+                      <p className="text-xs text-center text-gray-500">Garment</p>
+                      <p className="text-xs text-center text-gray-500">Styled</p>
+                      <p className="text-xs text-center text-gray-500">Try-On</p>
+                    </div>
+                  </div>
+
+                  {/* Style suggestions */}
                   {Object.entries(styleSuggestion)
                     .filter(([key]) => key !== "image_prompt")
                     .map(([key, value]) => (

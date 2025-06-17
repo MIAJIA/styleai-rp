@@ -1,6 +1,6 @@
-P1. 改成carousel
-
-generate-style 里面call kling 生成prompt的时候去掉“Overall Recommendation” 和 “Confidence note” 只把输出中的Styling tips 加入进去kling的prompt。 请注意 我还需要在其他地方用到"Overall Recommendation" 和 "Confidence note" 所以openai的output还是保持不变
+- P1. 改成carousel
+- generate-style 里面call kling 生成prompt的时候去掉“Overall Recommendation” 和 “Confidence note” 只把输出中的Styling tips 加入进去kling的prompt。 请注意 我还需要在其他地方用到"Overall Recommendation" 和 "Confidence note" 所以openai的output还是保持不变
+- classic mode 的时候之前设计的缩略图网格没有了 ； 已在「Suggestion」阶段同步显示 2×2 缩略图网格，用户能持续看到 Styled / Try-On 进度。 具体来讲的话,用户可以先看到他们的输入（human image, cloth image）；再看到第一个kling API call 返回的结果图像， 以及try on返回的结果图像
 
 # Open Issue: Generated Images are Cropped (Missing Head/Face)
 
