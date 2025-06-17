@@ -141,7 +141,9 @@ export default function ChatPage() {
   const [isInitialized, setIsInitialized] = useState(false); // 新增：防止重复初始化
   const [hasProcessedCompletion, setHasProcessedCompletion] = useState(false); // 新增：防止重复处理完成状态
   const processedStatusesRef = useRef<Set<string>>(new Set()); // Ref to track processed statuses
-  const [pollingIntervalRef, setPollingIntervalRef] = useState<NodeJS.Timeout | null>(null); // 新增：轮询引用管理
+  const [pollingIntervalId, setPollingIntervalId] = useState<NodeJS.Timeout | null>(null);
+  const [isDisplayingSuggestion, setIsDisplayingSuggestion] = useState(false); // 新增：防止在建议显示期间重复触发
+
   // 新增：用于API集成的状态
   const [jobId, setJobId] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
@@ -180,6 +182,7 @@ export default function ChatPage() {
 
   // 添加消息的辅助函数
   const addMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+    // 使用函数式更新来确保我们总是有最新的状态
     setMessages(prev => {
       const newId = `msg-${Date.now()}-${prev.length + 1}`;
       const newMessage: ChatMessage = {
@@ -187,7 +190,40 @@ export default function ChatPage() {
         id: newId,
         timestamp: new Date(),
       };
+      // 检查重复的消息ID
+      if (prev.some(m => m.id === newId)) {
+        console.warn("Duplicate message ID detected:", newId);
+        // 可以选择在这里返回原状态，或者生成一个新的唯一ID
+        return prev;
+      }
       return [...prev, newMessage];
+    });
+  };
+
+  // 更新或添加消息的辅助函数
+  const upsertMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>, targetId?: string) => {
+    setMessages(prev => {
+      const existingMsgIndex = targetId ? prev.findIndex(m => m.id === targetId) : -1;
+
+      if (existingMsgIndex !== -1) {
+        // 更新现有消息
+        const updatedMessages = [...prev];
+        updatedMessages[existingMsgIndex] = {
+          ...message,
+          id: prev[existingMsgIndex].id, // 保持ID
+          timestamp: new Date(),
+        };
+        return updatedMessages;
+      } else {
+        // 添加新消息
+        const newId = `msg-${Date.now()}-${prev.length + 1}`;
+        const newMessage: ChatMessage = {
+          ...message,
+          id: newId,
+          timestamp: new Date(),
+        };
+        return [...prev, newMessage];
+      }
     });
   };
 
@@ -204,8 +240,48 @@ export default function ChatPage() {
           timestamp: new Date(),
         };
       }
-      return newMessages;
+      // 如果最后一条不是loading，则直接添加
+      const newId = `msg-${Date.now()}-${prev.length + 1}`;
+      return [...prev, { ...message, id: newId, timestamp: new Date() }];
     });
+  };
+
+  // 新增：按顺序显示AI建议
+  const displaySuggestionSequentially = async (suggestion: any) => {
+    if (isDisplayingSuggestion) return; // 防止重复执行
+    setIsDisplayingSuggestion(true);
+    console.log('[CHAT UI] Received full suggestion object. Beginning sequential display.', suggestion);
+
+    const suggestionOrder = [
+      { key: 'scene_fit', title: '🎯 场合适配度' },
+      { key: 'style_alignment', title: '👗 风格搭配建议' },
+      { key: 'color_coordination', title: '🎨 色彩协调性' },
+      { key: 'accessories_suggestion', title: '💍 配饰建议' },
+      { key: 'makeup_and_hairstyle_suggestion', title: '💄 妆发建议' },
+    ];
+
+    for (const item of suggestionOrder) {
+      if (suggestion[item.key]) {
+        await new Promise(resolve => setTimeout(resolve, 1200)); // 等待1.2秒
+        console.log(`[CHAT UI] Displaying bubble: ${item.title}`);
+        addMessage({
+          type: 'text',
+          role: 'ai',
+          content: `**${item.title}**\n\n${suggestion[item.key]}`,
+        });
+      }
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('[CHAT UI] All suggestion bubbles displayed. Adding final loading message.');
+
+    // 添加最后的"生成中"消息
+    addMessage({
+      type: 'loading',
+      role: 'ai',
+      loadingText: 'AI正在生成你的专属造型图片...',
+    });
+    setIsDisplayingSuggestion(false);
   };
 
   // 获取场合的中文名称
@@ -251,49 +327,43 @@ export default function ChatPage() {
 
   // 真实的生成流程 - 集成现有API
   const startGeneration = async () => {
-    console.log('[CHAT DEBUG] startGeneration called');
-    console.log('[CHAT DEBUG] Current chatData:', chatData);
-
+    // 确保 chatData 存在
     if (!chatData) {
-      console.log('[CHAT DEBUG] No chatData found, showing error message');
+      console.error("[CHAT] Start generation called but chatData is null.");
       addMessage({
         type: 'text',
         role: 'ai',
-        content: '抱歉，我没有收到你的选择数据。请返回主页重新选择照片和服装。'
+        content: "抱歉，启动生成时遇到错误，缺少必要的信息。",
       });
       return;
     }
 
-    console.log('[CHAT DEBUG] Starting generation process...');
     setIsGenerating(true);
     setPollingError(null);
-    setHasProcessedCompletion(false); // 重置完成状态标记
-    processedStatusesRef.current.clear(); // 重置已处理状态的跟踪器
+    processedStatusesRef.current.clear(); // 重置已处理状态
+    setHasProcessedCompletion(false);     // 重置完成状态
+
+    addMessage({ type: 'loading', role: 'ai', loadingText: '正在准备你的专属造型分析...' });
 
     try {
-      // 第一步：显示开始生成的消息
-      addMessage({
-        type: 'loading',
-        role: 'ai',
-        loadingText: 'AI正在分析你的穿搭需求...'
-      });
-
-      // 准备图片文件
       const humanImage = await getFileFromPreview(chatData.selfiePreview, "selfie");
       const garmentImage = await getFileFromPreview(chatData.clothingPreview, "garment");
 
       if (!humanImage || !garmentImage) {
-        throw new Error("无法处理选择的图片，请重新选择。");
+        throw new Error("无法处理图片，请返回重试。");
       }
 
-      // 调用generation/start API
       const formData = new FormData();
       formData.append("human_image", humanImage);
       formData.append("garment_image", garmentImage);
       formData.append("occasion", chatData.occasion);
-      formData.append("generation_mode", chatData.generationMode || "advanced-scene");
+      formData.append("generation_mode", chatData.generationMode);
+      // Hardcode 'advanced-scene' if not present
+      // formData.append("generation_mode", chatData.generationMode || "advanced-scene");
 
-      console.log(`[CHAT DEBUG] Starting generation with mode: ${chatData.generationMode || "advanced-scene"}`);
+
+      console.log('[CHAT] Starting generation with mode:', chatData.generationMode);
+
 
       const response = await fetch("/api/generation/start", {
         method: "POST",
@@ -302,195 +372,186 @@ export default function ChatPage() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`生成请求失败: ${errorText}`);
+        throw new Error(`启动生成失败: ${errorText}`);
       }
 
       const { jobId: newJobId } = await response.json();
+      console.log(`[CHAT] Generation started. Job ID: ${newJobId}`);
       setJobId(newJobId);
-
-      // 开始轮询状态
-      startPolling(newJobId);
-
+      // 轮询将在 jobId 的 useEffect 中启动
     } catch (error) {
-      console.error('Generation error:', error);
-      setPollingError(error instanceof Error ? error.message : String(error));
-      setIsGenerating(false);
-
-      // 替换loading消息为错误消息
+      console.error("[CHAT] Error starting generation:", error);
+      const errorMessage = error instanceof Error ? error.message : "发生未知错误";
       replaceLastLoadingMessage({
         type: 'text',
         role: 'ai',
-        content: `生成过程中出现错误：${error instanceof Error ? error.message : '未知错误'}。请重试或返回主页重新选择。`
+        content: `抱歉，启动时遇到问题: ${errorMessage}`,
       });
+      setIsGenerating(false);
     }
   };
 
   // 轮询状态的函数
   const startPolling = (jobId: string) => {
-    // 功能开关，决定是否显示中间步骤
-    const showIntermediateSteps = process.env.NEXT_PUBLIC_SHOW_INTERMEDIATE_STEPS === 'true';
+    console.log(`[POLLING] Starting polling for Job ID: ${jobId}`);
 
-    // 清理现有的轮询
-    if (pollingIntervalRef) {
-      console.log('[CHAT POLLING] Clearing existing polling interval');
-      clearInterval(pollingIntervalRef);
+    // 清除任何可能存在的旧轮询
+    if (pollingIntervalId) {
+      clearInterval(pollingIntervalId);
     }
 
-    console.log('[CHAT POLLING] Starting new polling for job:', jobId);
-
-    const intervalId = setInterval(async () => {
-      // 使用Ref进行最可靠的检查，防止由于闭包导致的状态陈旧问题
-      if (processedStatusesRef.current.has('completed')) {
-        console.log('[CHAT POLLING] Completion already processed via ref, stopping this interval.');
-        clearInterval(intervalId);
-        setPollingIntervalRef(null);
+    const interval = setInterval(async () => {
+      // 如果已经处理完，或者正在显示建议，则暂时不轮询
+      if (hasProcessedCompletion || isDisplayingSuggestion) {
+        console.log(`[POLLING] Skipping poll because task is complete or suggestion is being displayed.`);
         return;
       }
-
       try {
         const response = await fetch(`/api/generation/status?jobId=${jobId}`);
         if (!response.ok) {
+          // 对 404 Not Found 等情况进行更温和的处理
+          if (response.status === 404) {
+            console.warn(`[POLLING] Job ${jobId} not found. It might be pending creation. Will retry.`);
+            return;
+          }
           throw new Error(`轮询失败，状态码: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log(`[CHAT POLLING] Received data for job ${jobId}. Status: ${data.status}.`);
+        const statusKey = `${data.status}-${data.timestamp}`; // Create a unique key for the status update
 
-        // --- NEW: Check for already processed status to prevent duplicates ---
-        if (processedStatusesRef.current.has(data.status)) {
-          console.log(`[CHAT POLLING] Status '${data.status}' already processed. Skipping message duplication.`);
+        // 使用Ref来防止因React重渲染导致的重复处理
+        if (processedStatusesRef.current.has(statusKey) || processedStatusesRef.current.has(data.status)) {
           return;
         }
 
-        // --- 主状态处理 ---
+        console.log('[POLLING] Received data:', data);
 
-        // 步骤1: 建议生成
-        if (data.status === 'suggestion_generated') {
-          console.log('[CHAT POLLING] Processing status: suggestion_generated');
-          replaceLastLoadingMessage({
-            type: 'text',
-            role: 'ai',
-            content: formatStyleSuggestion(data.suggestion)
-          });
-          // 添加新的loading消息
-          setTimeout(() => addMessage({ type: 'loading', role: 'ai', loadingText: 'AI正在生成你的专属造型图片...' }), 1000);
-          processedStatusesRef.current.add(data.status); // Mark as processed
-        }
-
-        // 步骤2: 风格化完成 (带功能开关)
-        else if (data.status === 'stylization_completed' && showIntermediateSteps) {
-          console.log('[CHAT POLLING] Processing status: stylization_completed');
-          if (data.processImages?.styledImage) {
-            // 先用文字替换loading
+        // 根据状态更新UI
+        switch (data.status) {
+          case 'pending':
             replaceLastLoadingMessage({
-              type: 'text',
+              type: 'loading',
               role: 'ai',
-              content: '第一步，为你生成了这张氛围感场景图！👇'
+              loadingText: '已收到请求，正在排队等待处理...'
             });
-            // 稍后显示图片和下一个loading
-            setTimeout(() => {
-              addMessage({ type: 'image', role: 'ai', imageUrl: data.processImages.styledImage });
-              addMessage({ type: 'loading', role: 'ai', loadingText: '正在进行虚拟试穿...' });
-            }, 800);
-            processedStatusesRef.current.add(data.status); // Mark as processed
-          }
-        }
-
-        // 步骤3: 试穿完成 (带功能开关)
-        else if (data.status === 'tryon_completed' && showIntermediateSteps) {
-          console.log('[CHAT POLLING] Processing status: tryon_completed');
-          if (data.processImages?.tryOnImage) {
-            // 先用文字替换loading
+            break;
+          case 'processing_style_suggestion':
             replaceLastLoadingMessage({
-              type: 'text',
+              type: 'loading',
               role: 'ai',
-              content: '第二步，将服装完美地穿在了模特身上！看下效果 ✨'
+              loadingText: 'AI正在分析你的风格并生成建议...'
             });
-            // 稍后显示图片和下一个loading
-            setTimeout(() => {
-              addMessage({ type: 'image', role: 'ai', imageUrl: data.processImages.tryOnImage });
-              addMessage({ type: 'loading', role: 'ai', loadingText: '最后一步，面部融合，马上就好...' });
-            }, 800);
-            processedStatusesRef.current.add(data.status); // Mark as processed
-          }
+            break;
+          case 'suggestion_generated':
+            // 确保只处理一次
+            if (!processedStatusesRef.current.has('suggestion_generated')) {
+              processedStatusesRef.current.add('suggestion_generated'); // 标记为已处理
+              replaceLastLoadingMessage({ type: 'text', role: 'ai', content: '太棒了！我为你准备了一些专属的造型建议：' });
+
+              // Fire-and-forget: Do not await. Let it run in the background
+              // while polling continues.
+              displaySuggestionSequentially(data.suggestion);
+            }
+            break;
+          case 'processing_stylization':
+            // Only update the loading message if the suggestion display is finished.
+            if (!isDisplayingSuggestion) {
+              replaceLastLoadingMessage({
+                type: 'loading',
+                role: 'ai',
+                loadingText: '正在应用场景风格化...'
+              });
+            }
+            break;
+          case 'processing_tryon':
+            if (!isDisplayingSuggestion) {
+              replaceLastLoadingMessage({
+                type: 'loading',
+                role: 'ai',
+                loadingText: '正在进行虚拟试穿...'
+              });
+            }
+            break;
+          case 'processing_faceswap':
+            if (!isDisplayingSuggestion) {
+              replaceLastLoadingMessage({
+                type: 'loading',
+                role: 'ai',
+                loadingText: '正在进行最后的面部融合处理...'
+              });
+            }
+            break;
+          case 'completed':
+            if (!hasProcessedCompletion) {
+
+              const showCompletion = () => {
+                setHasProcessedCompletion(true); // 关键：设置标志位
+                console.log('[POLLING] Status is completed. Final URL:', data.result?.imageUrl);
+                const finalImageUrl = data.result?.imageUrl;
+                if (finalImageUrl) {
+                  replaceLastLoadingMessage({
+                    type: 'text',
+                    role: 'ai',
+                    content: getChatCompletionMessage(getOccasionName(chatData!.occasion))
+                  });
+                  addMessage({
+                    type: 'image',
+                    role: 'ai',
+                    imageUrl: finalImageUrl,
+                  });
+                } else {
+                  replaceLastLoadingMessage({
+                    type: 'text',
+                    role: 'ai',
+                    content: "抱歉，生成完成了，但图片链接丢失了。",
+                  });
+                }
+                console.log('[POLLING] Stopping polling because job is complete.');
+                clearInterval(interval);
+                setPollingIntervalId(null);
+              }
+
+              // If suggestions are still being displayed, wait until they are finished.
+              if (isDisplayingSuggestion) {
+                const waitInterval = setInterval(() => {
+                  if (!isDisplayingSuggestion) {
+                    clearInterval(waitInterval);
+                    showCompletion();
+                  }
+                }, 100);
+              } else {
+                showCompletion();
+              }
+            }
+            break;
+          case 'failed':
+            throw new Error(data.statusMessage || '生成失败，未提供具体原因。');
+          default:
+            console.log(`[POLLING] Unhandled status: ${data.status}`);
         }
 
-        // 步骤4: 全部完成
-        else if (data.status === 'completed') {
-          console.log('[CHAT POLLING] Processing status: completed');
-          processedStatusesRef.current.add(data.status); // Mark as processed to stop polling
-
-          const finalImageUrl = data.result?.imageUrl;
-          if (finalImageUrl) {
-            // 先用完成消息替换loading
-            replaceLastLoadingMessage({
-              type: 'text',
-              role: 'ai',
-              content: getChatCompletionMessage(getOccasionName(chatData!.occasion))
-            });
-
-            // 稍后显示最终图片和保存信息
-            setTimeout(() => {
-              addMessage({ type: 'image', role: 'ai', imageUrl: finalImageUrl });
-              addMessage({ type: 'text', role: 'ai', content: '✨ 这个造型已经自动保存到你的 "My Looks" 页面，方便随时查看！' });
-              setCurrentStep('complete');
-              setIsGenerating(false);
-            }, 1200);
-
-            clearInterval(intervalId);
-            setPollingIntervalRef(null);
-          } else {
-            throw new Error('生成完成但未返回图片URL');
-          }
-        }
-
-        // 失败处理
-        else if (data.status === 'failed') {
-          throw new Error(data.statusMessage || '生成失败');
-        }
-
-        // 其他进行中状态...
-        else {
-          console.log(`[CHAT POLLING] Current status: ${data.status}, continuing...`);
-          // Optional: Update loading text based on status message
-          const lastMessage = messages[messages.length - 1];
-          if (lastMessage && lastMessage.type === 'loading' && data.statusMessage) {
-            setMessages(prev => {
-              const newMessages = [...prev];
-              newMessages[newMessages.length - 1].loadingText = data.statusMessage;
-              return newMessages;
-            });
-          }
+        // Do not add the general status key for 'suggestion_generated' as it has its own logic
+        if (data.status !== 'suggestion_generated') {
+          processedStatusesRef.current.add(statusKey); // 标记为已处理
         }
 
       } catch (error) {
-        console.error("Polling error:", error);
-        setPollingError(error instanceof Error ? error.message : String(error));
-        setIsGenerating(false);
-        clearInterval(intervalId);
-        setPollingIntervalRef(null);
-
-        // 显示错误消息
-        addMessage({
+        console.error("[POLLING] Polling error:", error);
+        const errorMessage = error instanceof Error ? error.message : "发生未知错误";
+        setPollingError(errorMessage);
+        replaceLastLoadingMessage({
           type: 'text',
           role: 'ai',
-          content: `生成过程中出现错误：${error instanceof Error ? error.message : '未知错误'}。请重试或返回主页重新选择。`
+          content: `抱歉，处理过程中遇到问题: ${errorMessage}`,
         });
-      }
-    }, 3000); // 每3秒轮询一次
-
-    // 设置超时清理
-    setTimeout(() => {
-      clearInterval(intervalId);
-      setPollingIntervalRef(null);
-      if (isGenerating) {
+        clearInterval(interval);
+        setPollingIntervalId(null);
         setIsGenerating(false);
-        setPollingError('生成超时，请重试');
       }
-    }, 300000); // 5分钟超时
+    }, 3000);
 
-    // 设置新的轮询引用
-    setPollingIntervalRef(intervalId);
+    setPollingIntervalId(interval);
   };
 
   // 页面初始化
@@ -629,12 +690,12 @@ export default function ChatPage() {
   // 组件卸载时清理轮询
   useEffect(() => {
     return () => {
-      if (pollingIntervalRef) {
-        console.log('[CHAT DEBUG] Cleaning up polling interval on unmount');
-        clearInterval(pollingIntervalRef);
+      if (pollingIntervalId) {
+        console.log('[LIFECYCLE] Component unmounting, clearing polling interval.');
+        clearInterval(pollingIntervalId);
       }
     };
-  }, [pollingIntervalRef]);
+  }, [pollingIntervalId]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 pb-20">
@@ -677,7 +738,7 @@ export default function ChatPage() {
             <div>messages.length: {String(messages.length)}</div>
             <div>pollingError: {pollingError || 'none'}</div>
             <div>hasProcessedCompletion: {String(hasProcessedCompletion)}</div>
-            <div>pollingActive: {pollingIntervalRef ? 'yes' : 'no'}</div>
+            <div>pollingActive: {pollingIntervalId ? 'yes' : 'no'}</div>
             <div>Show start button: {String(!isGenerating && currentStep === 'suggestion' && chatData && messages.length === 6)}</div>
             <div>Raw chatData: {chatData ? JSON.stringify({
               ...chatData,

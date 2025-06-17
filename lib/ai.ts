@@ -215,7 +215,7 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(requestBody),
-    timeout: 120000, // Increased to 2 minutes for submit
+    timeout: 180000, // Increased to 3 minutes for submit
   });
 
   if (!submitResponse.ok) {
@@ -242,7 +242,7 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
     try {
       const statusCheckResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${queryPathPrefix}${taskId}`, {
         headers: { 'Authorization': `Bearer ${pollingToken}` },
-        timeout: 90000, // Increased to 90 seconds for status check
+        timeout: 120000, // Increased to 2 minutes for status check
       });
 
       if (!statusCheckResponse.ok) {
@@ -393,11 +393,11 @@ async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: s
 async function runVirtualTryOn(canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string): Promise<string> {
   console.log("[ATOMIC_STEP] Running Virtual Try-On...");
 
-  // Convert canvas image and garment to files/base64
-  const canvasImageFile = await urlToFile(canvasImageUrl, "canvas.jpg", "image/jpeg");
-  const canvasImageBase64 = await fileToBase64(canvasImageFile);
-  const garmentImageFile = await urlToFile(garmentImageUrl, garmentImageName, garmentImageType);
-  const garmentImageBase64 = await fileToBase64(garmentImageFile);
+  // Convert canvas image and garment to files/base64 in parallel
+  const [canvasImageBase64, garmentImageBase64] = await Promise.all([
+    urlToFile(canvasImageUrl, "canvas.jpg", "image/jpeg").then(fileToBase64),
+    urlToFile(garmentImageUrl, garmentImageName, garmentImageType).then(fileToBase64)
+  ]);
 
   const tryOnRequestBody = {
     model_name: "kolors-virtual-try-on-v1-5",
@@ -417,9 +417,11 @@ async function runVirtualTryOn(canvasImageUrl: string, garmentImageUrl: string, 
 async function runAndPerformFaceSwap(humanImageUrl: string, humanImageName: string, humanImageType: string, tryOnImageUrl: string): Promise<string> {
   console.log("[ATOMIC_STEP] Running Face Swap...");
 
-  // Convert images to files
-  const humanImageFile = await urlToFile(humanImageUrl, humanImageName, humanImageType);
-  const tryOnImageFile = await urlToFile(tryOnImageUrl, "tryon.jpg", "image/jpeg");
+  // Convert images to files in parallel
+  const [humanImageFile, tryOnImageFile] = await Promise.all([
+      urlToFile(humanImageUrl, humanImageName, humanImageType),
+      urlToFile(tryOnImageUrl, "tryon.jpg", "image/jpeg")
+  ]);
 
   // Perform face swap
   const swappedHttpUrl = await runFaceSwap(humanImageFile, tryOnImageFile);
@@ -476,7 +478,7 @@ export async function executeTryOnOnlyPipeline(job: Job): Promise<string> {
 }
 
 /**
- * PIPELINE 2: Generates a simple scene with the user.
+ * PIPELINE 2: Generates a simple scene with the user, with improved clothing fidelity.
  */
 export async function executeSimpleScenePipeline(job: Job): Promise<string> {
   console.log(`[PIPELINE_START] Executing "Simple Scene" pipeline for job ${job.jobId}`);
@@ -484,7 +486,7 @@ export async function executeSimpleScenePipeline(job: Job): Promise<string> {
     throw new Error("Cannot run simple scene pipeline without 'image_prompt'.");
   }
 
-  // Step 1: Stylize the image using the simpler, faster model
+  // Step 1: Stylize the image using the simpler, faster model to get a new scene and pose.
   const styledImageUrl = await runStylization(
     'kling-v1-5',
     job.suggestion.image_prompt,
@@ -494,8 +496,18 @@ export async function executeSimpleScenePipeline(job: Job): Promise<string> {
   );
   await kv.hset(job.jobId, { styledImage: styledImageUrl });
 
-  // Step 2: Save the result to blob storage
-  const finalUrl = await saveFinalImageToBlob(styledImageUrl, job.jobId);
+  // Step 2: Perform virtual try-on on the new scene to ensure high clothing fidelity.
+  const tryOnImageUrl = await runVirtualTryOn(
+    styledImageUrl,
+    job.garmentImage.url,
+    job.garmentImage.name,
+    job.garmentImage.type
+  );
+  await kv.hset(job.jobId, { tryOnImage: tryOnImageUrl });
+
+
+  // Step 3: Save the result to blob storage
+  const finalUrl = await saveFinalImageToBlob(tryOnImageUrl, job.jobId);
 
   console.log(`[PIPELINE_END] "Simple Scene" pipeline finished for job ${job.jobId}`);
   return finalUrl;

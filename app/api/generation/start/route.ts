@@ -12,54 +12,37 @@ import {
 } from '@/lib/ai';
 import { saveLookToDB, type PastLook } from '@/lib/database';
 
-async function runPipelineInBackground(jobId: string) {
+// This background function now ONLY handles the long-running image generation
+async function runImageGenerationPipeline(jobId: string) {
   let job: Job | null = null;
   try {
-    // Stage 1: Get Style Suggestion
     job = await kv.hgetall<Job>(jobId);
     if (!job) {
       throw new Error(`Job with ID ${jobId} not found.`);
     }
-
-    console.log(`[Job ${jobId}] Starting background pipeline for mode: ${job.generationMode}`);
-    await kv.hset(jobId, { status: 'processing', statusMessage: 'Analyzing your images and occasion...' });
-
-    const suggestion = await getStyleSuggestionFromAI({
-      humanImageUrl: job.humanImage.url,
-      garmentImageUrl: job.garmentImage.url,
-      occasion: job.occasion,
-    });
-
-    job.suggestion = suggestion;
-    await kv.hset(jobId, {
-      suggestion,
-      status: 'suggestion_generated',
-      statusMessage: 'Style advice generated. Preparing to create your look...'
-    });
-    console.log(`[Job ${jobId}] Suggestion generated.`);
-
-    // Stage 2: Execute the selected generation pipeline
-    let finalImageUrl: string;
-    const currentJobState = await kv.hgetall<Job>(jobId); // Get the most recent job state
-     if (!currentJobState) {
-      throw new Error(`Job with ID ${jobId} disappeared from KV store.`);
+     if (!job.suggestion) {
+        throw new Error(`Job ${jobId} is missing the style suggestion needed for the pipeline.`);
     }
 
-    switch (currentJobState.generationMode) {
+    console.log(`[Job ${jobId}] Starting image generation pipeline for mode: ${job.generationMode}`);
+
+    // Execute the selected generation pipeline
+    let finalImageUrl: string;
+    switch (job.generationMode) {
       case 'tryon-only':
-        finalImageUrl = await executeTryOnOnlyPipeline(currentJobState);
+        finalImageUrl = await executeTryOnOnlyPipeline(job);
         break;
       case 'simple-scene':
-        finalImageUrl = await executeSimpleScenePipeline(currentJobState);
+        finalImageUrl = await executeSimpleScenePipeline(job);
         break;
       case 'advanced-scene':
-        finalImageUrl = await executeAdvancedScenePipeline(currentJobState);
+        finalImageUrl = await executeAdvancedScenePipeline(job);
         break;
       default:
-        throw new Error(`Unknown generation mode: ${currentJobState.generationMode}`);
+        throw new Error(`Unknown generation mode: ${job.generationMode}`);
     }
 
-    // Stage 3: Mark job as complete
+    // Mark job as complete
     console.log(`[Job ${jobId}] Pipeline completed. Final URL: ${finalImageUrl}`);
     await kv.hset(jobId, {
       status: 'completed',
@@ -68,7 +51,7 @@ async function runPipelineInBackground(jobId: string) {
       updatedAt: new Date().toISOString(),
     });
 
-    // --- NEW: Save the final look to the primary database ---
+    // Save the final look to the primary database
     try {
       const finalJobState = await kv.hgetall<Job>(jobId);
       if (!finalJobState) {
@@ -83,7 +66,7 @@ async function runPipelineInBackground(jobId: string) {
         originalHumanSrc: finalJobState.humanImage.url,
         originalGarmentSrc: finalJobState.garmentImage.url,
         garmentDescription: finalJobState.suggestion?.material_silhouette,
-        personaProfile: null, // This can be populated if available in the job
+        personaProfile: null,
         processImages: {
           humanImage: finalJobState.humanImage.url,
           garmentImage: finalJobState.garmentImage.url,
@@ -91,15 +74,14 @@ async function runPipelineInBackground(jobId: string) {
           styleSuggestion: finalJobState.suggestion,
         },
       };
-      await saveLookToDB(lookToSave, 'default'); // Assuming 'default' user for now
+      await saveLookToDB(lookToSave, 'default');
       console.log(`[Job ${jobId}] Successfully saved final look to primary DB.`);
     } catch (dbError) {
         console.error(`[Job ${jobId}] CRITICAL: Pipeline succeeded but failed to save look to DB.`, dbError);
-        // Optional: You could update the job status here to reflect the DB save error
     }
 
   } catch (error) {
-    console.error(`[Job ${jobId}] Background pipeline failed:`, error);
+    console.error(`[Job ${jobId}] Background image pipeline failed:`, error);
     if (jobId) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       await kv.hset(jobId, {
@@ -129,7 +111,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Invalid generation mode' }, { status: 400 });
     }
 
-
     // Upload images to Vercel Blob
     const humanImageBlob = await put(humanImageFile.name, humanImageFile, {
       access: 'public',
@@ -140,11 +121,21 @@ export async function POST(request: Request) {
       addRandomSuffix: true,
     });
 
+    // --- REFACTORED LOGIC ---
+    // Step 1: Get Style Suggestion immediately
+    const suggestion = await getStyleSuggestionFromAI({
+      humanImageUrl: humanImageBlob.url,
+      garmentImageUrl: garmentImageBlob.url,
+      occasion: occasion,
+    });
+     console.log(`[Job] Suggestion generated for new job.`);
+
+    // Step 2: Create the job record in KV with the suggestion included
     const jobId = randomUUID();
     const jobData: Job = {
       jobId,
-      status: 'pending',
-      statusMessage: 'Your request has been received and is waiting to be processed.',
+      status: 'suggestion_generated', // Start with this status
+      statusMessage: 'Style advice generated. Preparing to create your look...',
       humanImage: {
         url: humanImageBlob.url,
         type: humanImageFile.type,
@@ -157,17 +148,16 @@ export async function POST(request: Request) {
       },
       occasion,
       generationMode,
+      suggestion, // Include suggestion from the start
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-
-    // We have the URLs and metadata, now we create the job record in KV.
     await kv.hset(jobId, jobData);
 
-    // Fire and forget the background process. Do NOT await it.
-    runPipelineInBackground(jobId);
+    // Step 3: Fire and forget the background process for image generation.
+    runImageGenerationPipeline(jobId);
 
-    // This endpoint returns immediately after creating the job.
+    // Step 4: Return immediately.
     return NextResponse.json({ jobId });
   } catch (error) {
     console.error('Error starting generation job:', error);
