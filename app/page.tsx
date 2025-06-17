@@ -517,6 +517,15 @@ export default function HomePage() {
 
   // 新增：处理Chat模式的函数
   const handleChatMode = () => {
+    console.log('[MAIN DEBUG] Chat mode button clicked');
+    console.log('[MAIN DEBUG] Current state:', {
+      selfiePreview,
+      clothingPreview,
+      occasion,
+      selectedPersona,
+      hasRequiredImages
+    });
+
     // 将当前选择的数据存储到sessionStorage，供Chat页面使用
     const chatData = {
       selfiePreview,
@@ -536,9 +545,15 @@ export default function HomePage() {
       timestamp: Date.now()
     };
 
+    console.log('[MAIN DEBUG] Storing chat data to sessionStorage:', chatData);
     sessionStorage.setItem('chatModeData', JSON.stringify(chatData));
 
+    // 验证存储是否成功
+    const storedData = sessionStorage.getItem('chatModeData');
+    console.log('[MAIN DEBUG] Verification - stored data:', storedData);
+
     // 导航到Chat页面
+    console.log('[MAIN DEBUG] Navigating to /chat');
     router.push('/chat');
   };
 

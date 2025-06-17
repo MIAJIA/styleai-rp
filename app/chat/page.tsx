@@ -247,7 +247,11 @@ export default function ChatPage() {
 
   // 真实的生成流程 - 集成现有API
   const startGeneration = async () => {
+    console.log('[CHAT DEBUG] startGeneration called');
+    console.log('[CHAT DEBUG] Current chatData:', chatData);
+
     if (!chatData) {
+      console.log('[CHAT DEBUG] No chatData found, showing error message');
       addMessage({
         type: 'text',
         role: 'ai',
@@ -256,6 +260,7 @@ export default function ChatPage() {
       return;
     }
 
+    console.log('[CHAT DEBUG] Starting generation process...');
     setIsGenerating(true);
     setPollingError(null);
 
@@ -404,24 +409,33 @@ export default function ChatPage() {
 
   // 页面初始化
   useEffect(() => {
+    console.log('[CHAT DEBUG] Page initialized, reading sessionStorage...');
+
     // 尝试从sessionStorage读取数据
     try {
       const storedData = sessionStorage.getItem('chatModeData');
+      console.log('[CHAT DEBUG] Raw sessionStorage data:', storedData);
+
       if (storedData) {
         const parsedData = JSON.parse(storedData);
+        console.log('[CHAT DEBUG] Parsed chat data:', parsedData);
         setChatData(parsedData);
 
         // 添加个性化欢迎消息
-        addMessage({
-          type: 'text',
-          role: 'ai',
-          content: `你好！我是你的专属AI造型师 ✨
+        const welcomeMessage = `你好！我是你的专属AI造型师 ✨
 
 我看到你已经选择了照片和服装，准备为${getOccasionName(parsedData.occasion)}场合生成造型建议。
 
-让我来为你打造完美的穿搭方案吧！`
+让我来为你打造完美的穿搭方案吧！`;
+
+        console.log('[CHAT DEBUG] Adding welcome message:', welcomeMessage);
+        addMessage({
+          type: 'text',
+          role: 'ai',
+          content: welcomeMessage
         });
       } else {
+        console.log('[CHAT DEBUG] No sessionStorage data found, showing default message');
         // 如果没有数据，显示提示消息
         addMessage({
           type: 'text',
@@ -430,7 +444,7 @@ export default function ChatPage() {
         });
       }
     } catch (error) {
-      console.error('Error reading chat data:', error);
+      console.error('[CHAT DEBUG] Error reading chat data:', error);
       addMessage({
         type: 'text',
         role: 'ai',
@@ -438,6 +452,28 @@ export default function ChatPage() {
       });
     }
   }, []);
+
+  // 添加状态变化的调试日志
+  useEffect(() => {
+    console.log('[CHAT DEBUG] State changed:', {
+      isGenerating,
+      currentStep,
+      chatData: chatData ? 'exists' : 'null',
+      messagesLength: messages.length,
+      pollingError
+    });
+  }, [isGenerating, currentStep, chatData, messages.length, pollingError]);
+
+  // 添加消息变化的调试日志
+  useEffect(() => {
+    console.log('[CHAT DEBUG] Messages updated:', messages.map(m => ({
+      id: m.id,
+      type: m.type,
+      role: m.role,
+      content: m.content?.substring(0, 50) + '...',
+      loadingText: m.loadingText
+    })));
+  }, [messages]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 pb-20">
@@ -470,39 +506,78 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* 如果有数据且没有在生成中，显示开始按钮 */}
-        {!isGenerating && currentStep === 'suggestion' && chatData && messages.length === 1 && (
-          <div className="max-w-2xl mx-auto mt-8">
-            <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
-              <p className="text-sm text-gray-600 mb-4 text-center">
-                准备好开始生成你的专属造型了吗？
-              </p>
-              <Button
-                onClick={startGeneration}
-                className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
-              >
-                开始生成我的造型
-              </Button>
-            </div>
+        {/* 调试信息显示 */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="max-w-2xl mx-auto mt-4 p-4 bg-gray-100 rounded-lg text-xs">
+            <h3 className="font-bold mb-2">Debug Info:</h3>
+            <div>isGenerating: {isGenerating.toString()}</div>
+            <div>currentStep: {currentStep}</div>
+            <div>chatData: {chatData ? 'exists' : 'null'}</div>
+            <div>messages.length: {messages.length}</div>
+            <div>pollingError: {pollingError || 'none'}</div>
+            <div>Show start button: {(!isGenerating && currentStep === 'suggestion' && chatData && messages.length === 1).toString()}</div>
           </div>
         )}
 
-        {/* 如果没有数据，显示返回主页按钮 */}
-        {!chatData && messages.length === 1 && (
-          <div className="max-w-2xl mx-auto mt-8">
-            <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
-              <p className="text-sm text-gray-600 mb-4 text-center">
-                请先选择你的照片和服装
-              </p>
-              <Button
-                onClick={() => router.push('/')}
-                className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
-              >
-                返回主页选择
-              </Button>
+        {/* 如果有数据且没有在生成中，显示开始按钮 */}
+        {(() => {
+          const shouldShowButton = !isGenerating && currentStep === 'suggestion' && chatData && messages.length === 1;
+          console.log('[CHAT DEBUG] Button visibility check:', {
+            isGenerating,
+            currentStep,
+            hasChatData: !!chatData,
+            messagesLength: messages.length,
+            shouldShowButton
+          });
+
+          return shouldShowButton;
+        })() && (
+            <div className="max-w-2xl mx-auto mt-8">
+              <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
+                <p className="text-sm text-gray-600 mb-4 text-center">
+                  准备好开始生成你的专属造型了吗？
+                </p>
+                <Button
+                  onClick={() => {
+                    console.log('[CHAT DEBUG] Start generation button clicked');
+                    startGeneration();
+                  }}
+                  className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
+                >
+                  开始生成我的造型
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+        {/* 如果没有数据，显示返回主页按钮 */}
+        {(() => {
+          const shouldShowReturnButton = !chatData && messages.length === 1;
+          console.log('[CHAT DEBUG] Return button visibility check:', {
+            hasChatData: !!chatData,
+            messagesLength: messages.length,
+            shouldShowReturnButton
+          });
+
+          return shouldShowReturnButton;
+        })() && (
+            <div className="max-w-2xl mx-auto mt-8">
+              <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
+                <p className="text-sm text-gray-600 mb-4 text-center">
+                  请先选择你的照片和服装
+                </p>
+                <Button
+                  onClick={() => {
+                    console.log('[CHAT DEBUG] Return to home button clicked');
+                    router.push('/');
+                  }}
+                  className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
+                >
+                  返回主页选择
+                </Button>
+              </div>
+            </div>
+          )}
 
         {/* 显示错误信息 */}
         {pollingError && (
