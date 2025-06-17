@@ -143,6 +143,7 @@ export default function ChatPage() {
   const processedStatusesRef = useRef<Set<string>>(new Set()); // Ref to track processed statuses
   const [pollingIntervalId, setPollingIntervalId] = useState<NodeJS.Timeout | null>(null);
   const [isDisplayingSuggestion, setIsDisplayingSuggestion] = useState(false); // 新增：防止在建议显示期间重复触发
+  const [intermediateImageDisplayed, setIntermediateImageDisplayed] = useState(false);
 
   // 新增：用于API集成的状态
   const [jobId, setJobId] = useState<string | null>(null);
@@ -329,23 +330,24 @@ export default function ChatPage() {
 
   // 真实的生成流程 - 集成现有API
   const startGeneration = async () => {
-    // 确保 chatData 存在
     if (!chatData) {
-      console.error("[CHAT] Start generation called but chatData is null.");
-      addMessage({
-        type: 'text',
-        role: 'ai',
-        content: "抱歉，启动生成时遇到错误，缺少必要的信息。",
-      });
+      console.error("Chat data is not available to start generation.");
+      // todo: show error to user
       return;
     }
-
+    console.log("Starting generation process...");
     setIsGenerating(true);
     setPollingError(null);
-    processedStatusesRef.current.clear(); // 重置已处理状态
-    setHasProcessedCompletion(false);     // 重置完成状态
+    processedStatusesRef.current.clear();
+    setHasProcessedCompletion(false);
+    setIsDisplayingSuggestion(false);
+    setIntermediateImageDisplayed(false);
 
-    addMessage({ type: 'loading', role: 'ai', loadingText: '正在准备你的专属造型分析...' });
+    addMessage({
+      role: 'ai',
+      type: 'loading',
+      loadingText: '正在准备你的专属造型分析...',
+    });
 
     try {
       const humanImage = await getFileFromPreview(chatData.selfiePreview, "selfie");
@@ -487,6 +489,38 @@ export default function ChatPage() {
                 type: 'loading',
                 role: 'ai',
                 loadingText: '正在进行最后的面部融合处理...'
+              });
+            }
+            break;
+          case 'stylization_completed':
+            // Defensive check for the image URL at the root of the data object
+            const styledImageUrl = data.styledImage;
+            if (styledImageUrl && !intermediateImageDisplayed) {
+              console.log('[CHAT UI] Intermediate image received. Displaying scene...');
+
+              // 标记为已显示
+              setIntermediateImageDisplayed(true);
+              processedStatusesRef.current.add('stylization_completed');
+
+              // 1. 替换加载消息为提示文本
+              replaceLastLoadingMessage({
+                role: 'ai',
+                type: 'text',
+                content: "这是为您设计的场景和姿态，正在为您穿上最终的服装...",
+              });
+
+              // 2. 显示中间图片
+              addMessage({
+                role: 'ai',
+                type: 'image',
+                imageUrl: styledImageUrl,
+              });
+
+              // 3. 添加新的加载消息，为下一步做准备
+              addMessage({
+                role: 'ai',
+                type: 'loading',
+                loadingText: "正在进行最终合成，请稍候...",
               });
             }
             break;

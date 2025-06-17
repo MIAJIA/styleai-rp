@@ -128,7 +128,7 @@ export async function POST(request: Request) {
       garmentImageUrl: garmentImageBlob.url,
       occasion: occasion,
     });
-     console.log(`[Job] Suggestion generated for new job.`);
+     console.log(`[Job] Suggestion generated for new job.` , suggestion);
 
     // Step 2: Create the job record in KV with the suggestion included
     const jobId = randomUUID();

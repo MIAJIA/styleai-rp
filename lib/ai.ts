@@ -526,7 +526,11 @@ export async function executeSimpleScenePipeline(job: Job): Promise<string> {
     job.humanImage.name,
     job.humanImage.type
   );
-  await kv.hset(job.jobId, { styledImage: styledImageUrl });
+  await kv.hset(job.jobId, {
+    status: 'stylization_completed',
+    statusMessage: '场景已生成，正在进行虚拟试穿...',
+    styledImage: styledImageUrl
+  });
 
   // Step 2: Perform virtual try-on on the new scene to ensure high clothing fidelity.
   const tryOnImageUrl = await runVirtualTryOn(
@@ -563,7 +567,11 @@ export async function executeAdvancedScenePipeline(job: Job): Promise<string> {
     job.humanImage.name,
     job.humanImage.type
   );
-  await kv.hset(job.jobId, { styledImage: styledImageUrl });
+  await kv.hset(job.jobId, {
+    status: 'stylization_completed',
+    statusMessage: '场景已生成，正在进行虚拟试穿...',
+    styledImage: styledImageUrl
+  });
 
   // Step 2: Perform virtual try-on using the newly stylized image as the canvas
   const tryOnImageUrl = await runVirtualTryOn(
