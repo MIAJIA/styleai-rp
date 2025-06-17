@@ -323,6 +323,9 @@ export default function ChatPage() {
 
   // 轮询状态的函数
   const startPolling = (jobId: string) => {
+    // 功能开关，决定是否显示中间步骤
+    const showIntermediateSteps = process.env.NEXT_PUBLIC_SHOW_INTERMEDIATE_STEPS === 'true';
+
     // 清理现有的轮询
     if (pollingIntervalRef) {
       console.log('[CHAT POLLING] Clearing existing polling interval');
@@ -349,78 +352,104 @@ export default function ChatPage() {
         const data = await response.json();
         console.log('[CHAT POLLING] Received data:', data);
 
+        // --- 主状态处理 ---
+
+        // 步骤1: 建议生成
         if (data.status === 'suggestion_generated') {
           console.log('[CHAT POLLING] Suggestion generated');
-
-          // 替换loading消息为穿搭建议
           replaceLastLoadingMessage({
             type: 'text',
             role: 'ai',
             content: formatStyleSuggestion(data.suggestion)
           });
+          // 添加新的loading消息
+          setTimeout(() => addMessage({ type: 'loading', role: 'ai', loadingText: 'AI正在生成你的专属造型图片...' }), 1000);
+        }
 
-          // 添加新的loading消息用于最终图片生成
-          setTimeout(() => {
-            addMessage({
-              type: 'loading',
+        // 步骤2: 风格化完成 (带功能开关)
+        else if (data.status === 'stylization_completed' && showIntermediateSteps) {
+          console.log('[CHAT POLLING] Stylization completed');
+          if (data.processImages?.styledImage) {
+            // 先用文字替换loading
+            replaceLastLoadingMessage({
+              type: 'text',
               role: 'ai',
-              loadingText: 'AI正在生成你的专属造型图片...'
+              content: '第一步，为你生成了这张氛围感场景图！👇'
             });
-          }, 1000);
-
-        } else if (data.status === 'completed') {
-          console.log('[CHAT POLLING] Generation completed');
-
-          // 再次检查，并立即设置锁
-          if (hasProcessedCompletionRef.current) {
-            console.log('[CHAT POLLING] Already processed completion, skipping...');
-            return;
+            // 稍后显示图片和下一个loading
+            setTimeout(() => {
+              addMessage({ type: 'image', role: 'ai', imageUrl: data.processImages.styledImage });
+              addMessage({ type: 'loading', role: 'ai', loadingText: '正在进行虚拟试穿...' });
+            }, 800);
           }
+        }
+
+        // 步骤3: 试穿完成 (带功能开关)
+        else if (data.status === 'tryon_completed' && showIntermediateSteps) {
+          console.log('[CHAT POLLING] Try-on completed');
+          if (data.processImages?.tryOnImage) {
+            // 先用文字替换loading
+            replaceLastLoadingMessage({
+              type: 'text',
+              role: 'ai',
+              content: '第二步，将服装完美地穿在了模特身上！看下效果 ✨'
+            });
+            // 稍后显示图片和下一个loading
+            setTimeout(() => {
+              addMessage({ type: 'image', role: 'ai', imageUrl: data.processImages.tryOnImage });
+              addMessage({ type: 'loading', role: 'ai', loadingText: '最后一步，面部融合，马上就好...' });
+            }, 800);
+          }
+        }
+
+        // 步骤4: 全部完成
+        else if (data.status === 'completed') {
+          console.log('[CHAT POLLING] Generation completed');
+          if (hasProcessedCompletionRef.current) return;
           hasProcessedCompletionRef.current = true;
-          setHasProcessedCompletion(true);
 
           const finalImageUrl = data.result?.imageUrl;
-
           if (finalImageUrl) {
-            // 替换loading消息为最终图片
+            // 先用完成消息替换loading
             replaceLastLoadingMessage({
-              type: 'image',
+              type: 'text',
               role: 'ai',
-              imageUrl: finalImageUrl
+              content: getChatCompletionMessage(getOccasionName(chatData!.occasion))
             });
 
-            // 添加完成消息
+            // 稍后显示最终图片和保存信息
             setTimeout(() => {
-              addMessage({
-                type: 'text',
-                role: 'ai',
-                content: getChatCompletionMessage(getOccasionName(chatData!.occasion))
-              });
-
-              // 新增：告知用户已保存
-              addMessage({
-                type: 'text',
-                role: 'ai',
-                content: '✨ 这个造型已经自动保存到你的 "My Looks" 页面，方便随时查看！'
-              });
-
+              addMessage({ type: 'image', role: 'ai', imageUrl: finalImageUrl });
+              addMessage({ type: 'text', role: 'ai', content: '✨ 这个造型已经自动保存到你的 "My Looks" 页面，方便随时查看！' });
               setCurrentStep('complete');
               setIsGenerating(false);
-            }, 1000);
+            }, 1200);
 
-            // 立即停止轮询
             clearInterval(intervalId);
             setPollingIntervalRef(null);
           } else {
             throw new Error('生成完成但未返回图片URL');
           }
+        }
 
-        } else if (data.status === 'failed') {
+        // 失败处理
+        else if (data.status === 'failed') {
           throw new Error(data.statusMessage || '生成失败');
         }
 
-        // 继续轮询其他状态
-        console.log(`[CHAT POLLING] Current status: ${data.status}, continuing...`);
+        // 其他进行中状态...
+        else {
+          console.log(`[CHAT POLLING] Current status: ${data.status}, continuing...`);
+          // Optional: Update loading text based on status message
+          const lastMessage = messages[messages.length - 1];
+          if (lastMessage && lastMessage.type === 'loading' && data.statusMessage) {
+            setMessages(prev => {
+              const newMessages = [...prev];
+              newMessages[newMessages.length - 1].loadingText = data.statusMessage;
+              return newMessages;
+            });
+          }
+        }
 
       } catch (error) {
         console.error("Polling error:", error);

@@ -1,12 +1,30 @@
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
-import { getStyleSuggestionFromAI, generateFinalImage } from '@/lib/ai';
+import {
+  getStyleSuggestionFromAI,
+  generateStyledImage,
+  generateTryOnImage,
+  performFaceSwapAndSave
+} from '@/lib/ai';
 import { saveLookToDB, PastLook } from '@/lib/database';
+
+// Define the Job Statuses for our state machine
+type JobStatus =
+  | 'pending'
+  | 'processing' // General initial processing state
+  | 'suggestion_generated'
+  | 'processing_stylization'
+  | 'stylization_completed'
+  | 'processing_tryon'
+  | 'tryon_completed'
+  | 'processing_faceswap'
+  | 'completed'
+  | 'failed';
 
 // Define the Job type for better type safety
 interface Job {
   jobId: string;
-  status: 'pending' | 'processing' | 'suggestion_generated' | 'completed' | 'failed';
+  status: JobStatus;
   statusMessage: string;
   humanImage: { url: string; type: string; name: string };
   garmentImage: { url: string; type: string; name: string };
@@ -15,6 +33,10 @@ interface Job {
       image_prompt: string;
       [key: string]: any;
   };
+  processImages?: {
+    styledImage?: string;
+    tryOnImage?: string;
+  };
   result?: {
     imageUrl: string;
   };
@@ -22,6 +44,19 @@ interface Job {
   createdAt: string;
   updatedAt: string;
 }
+
+// Helper to handle errors consistently
+async function handleJobError(job: Job, error: any, message: string, status: JobStatus = 'failed') {
+    const jobId = job.jobId;
+    console.error(`[Job ${jobId}] Error during '${job.status}':`, error);
+    job.status = status;
+    job.statusMessage = message;
+    job.error = error instanceof Error ? error.message : 'An unknown error occurred';
+    job.updatedAt = new Date().toISOString();
+    await kv.set(jobId, job);
+    return NextResponse.json(job, { status: 500 });
+}
+
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -32,140 +67,131 @@ export async function GET(request: Request) {
   }
 
   try {
-    const job = await kv.get<Job>(jobId);
+    let job = await kv.get<Job>(jobId);
 
     if (!job) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    // 如果任务已经处于最终状态（完成或失败），则直接返回，不执行任何操作。
-    // 这是防止客户端重复轮询已完成任务的关键。
+    // If job is already in a terminal state, just return it.
     if (job.status === 'completed' || job.status === 'failed') {
-        console.log(`[Job ${jobId}] Polling for an already terminal job (status: ${job.status}). Returning current state.`);
         return NextResponse.json(job);
     }
 
-    // This is the core of the state machine.
-    // We check the status and trigger the next step.
-    if (job.status === 'pending') {
-      try {
-        // --- Step 1: Update status to 'processing' (Optimistic Update) ---
-        console.log(`[Job ${jobId}] Status 'pending'. Starting suggestion generation.`);
-        job.status = 'processing';
-        job.statusMessage = 'Analyzing your images and occasion to generate personalized style advice...';
-        job.updatedAt = new Date().toISOString();
-        await kv.set(jobId, job);
-
-        // --- Step 2: Perform the actual work ---
-        const suggestion = await getStyleSuggestionFromAI({
-          humanImageUrl: job.humanImage.url,
-          garmentImageUrl: job.garmentImage.url,
-          occasion: job.occasion,
-        });
-
-        // --- Step 3: Update job with result and new status ---
-        job.status = 'suggestion_generated';
-        job.statusMessage = 'Style advice generated. Preparing to create your final look...';
-        job.suggestion = suggestion;
-        job.updatedAt = new Date().toISOString();
-        await kv.set(jobId, job);
-        console.log(`[Job ${jobId}] Status 'suggestion_generated'. Suggestion stored.`);
-
-        // Return the updated job so the client knows what's happening
-        return NextResponse.json(job);
-
-      } catch (aiError) {
-        console.error(`[Job ${jobId}] AI Suggestion failed:`, aiError);
-        job.status = 'failed';
-        job.statusMessage = 'Failed to generate style advice.';
-        job.error = aiError instanceof Error ? aiError.message : 'Unknown AI error';
-        job.updatedAt = new Date().toISOString();
-        await kv.set(jobId, job);
-        return NextResponse.json(job, { status: 500 });
-      }
-    } else if (job.status === 'suggestion_generated') {
-        try {
-            // --- Step 1: Update status to 'processing' ---
-            console.log(`[Job ${jobId}] Status 'suggestion_generated'. Starting final image generation.`);
-            job.status = 'processing';
-            job.statusMessage = 'Style advice complete. Generating your final, high-resolution look... this is the longest step.';
-            job.updatedAt = new Date().toISOString();
-            await kv.set(jobId, job);
-
-            // --- Step 2: Perform the actual work ---
-            if (!job.suggestion?.image_prompt) {
-                throw new Error("Cannot generate final image without an 'image_prompt' in the job suggestion.");
-            }
-            const finalImageUrl = await generateFinalImage({
-                jobId: job.jobId,
-                humanImageUrl: job.humanImage.url,
-                humanImageType: job.humanImage.type,
-                humanImageName: job.humanImage.name,
-                garmentImageUrl: job.garmentImage.url,
-                garmentImageType: job.garmentImage.type,
-                garmentImageName: job.garmentImage.name,
-                imagePrompt: job.suggestion.image_prompt,
-            });
-
-            // --- Step 3: Update job with result and 'completed' status ---
-            job.status = 'completed';
-            job.statusMessage = 'Your new look is ready!';
-            job.result = { imageUrl: finalImageUrl };
-            job.updatedAt = new Date().toISOString();
-
-            console.log(`[Job ${jobId}] Status 'completed'. Final image URL stored. Now saving to My Looks...`);
-
-            // --- Step 4: Save the completed look to the user's "My Looks" ---
+    // --- State Machine ---
+    switch (job.status) {
+        case 'pending':
             try {
-              const lookToSave: PastLook = {
-                id: job.jobId,
-                imageUrl: finalImageUrl,
-                style: job.suggestion?.style_alignment || 'AI Generated',
-                timestamp: Date.now(),
-                originalHumanSrc: job.humanImage.url,
-                originalGarmentSrc: job.garmentImage.url,
-                garmentDescription: job.suggestion?.material_silhouette, // Example mapping
-                personaProfile: null, // This can be enriched if available
-                processImages: {
-                  humanImage: job.humanImage.url,
-                  garmentImage: job.garmentImage.url,
-                  finalImage: finalImageUrl,
-                  styleSuggestion: job.suggestion,
-                },
-              };
+                console.log(`[Job ${jobId}] Status 'pending'. Starting suggestion generation.`);
+                job.status = 'processing';
+                job.statusMessage = 'Analyzing your images and occasion...';
+                await kv.set(jobId, job);
 
-              // The user ID can be passed from the client or managed via session in a real app
-              await saveLookToDB(lookToSave, 'default');
-              console.log(`[Job ${jobId}] Successfully saved to My Looks.`);
-            } catch (dbError) {
-              console.error(`[Job ${jobId}] Failed to save look to database:`, dbError);
-              // Do not fail the whole request, just log the error.
-              // The user can still see the result on the chat page.
+                const suggestion = await getStyleSuggestionFromAI({
+                    humanImageUrl: job.humanImage.url,
+                    garmentImageUrl: job.garmentImage.url,
+                    occasion: job.occasion,
+                });
+
+                job.status = 'suggestion_generated';
+                job.statusMessage = 'Style advice generated. Preparing to create your look...';
+                job.suggestion = suggestion;
+                job.updatedAt = new Date().toISOString();
+                await kv.set(jobId, job);
+                console.log(`[Job ${jobId}] Status 'suggestion_generated'. Suggestion stored.`);
+            } catch (err) {
+                return handleJobError(job, err, 'Failed to generate style advice.');
             }
+            break;
 
-            // Finally, save the final job state
-            await kv.set(jobId, job);
+        case 'suggestion_generated':
+            try {
+                console.log(`[Job ${jobId}] Status 'suggestion_generated'. Starting stylization.`);
+                job.status = 'processing_stylization';
+                job.statusMessage = 'Step 1: Creating a stylized scene...';
+                await kv.set(jobId, job);
 
-            return NextResponse.json(job);
+                const styledImageUrl = await generateStyledImage(job);
 
-        } catch (finalGenError) {
-            console.error(`[Job ${jobId}] Final Image Generation failed:`, finalGenError);
-            job.status = 'failed';
-            job.statusMessage = 'There was an issue creating the final image.';
-            job.error = finalGenError instanceof Error ? finalGenError.message : 'Unknown final generation error';
-            job.updatedAt = new Date().toISOString();
-            await kv.set(jobId, job);
-            return NextResponse.json(job, { status: 500 });
-        }
+                job.status = 'stylization_completed';
+                job.statusMessage = 'Stylized scene created.';
+                job.processImages = { ...job.processImages, styledImage: styledImageUrl };
+                job.updatedAt = new Date().toISOString();
+                await kv.set(jobId, job);
+            } catch (err) {
+                return handleJobError(job, err, 'Failed during image stylization.');
+            }
+            break;
+
+        case 'stylization_completed':
+            try {
+                console.log(`[Job ${jobId}] Status 'stylization_completed'. Starting virtual try-on.`);
+                job.status = 'processing_tryon';
+                job.statusMessage = 'Step 2: Performing virtual try-on...';
+                await kv.set(jobId, job);
+
+                const tryOnImageUrl = await generateTryOnImage(job);
+
+                job.status = 'tryon_completed';
+                job.statusMessage = 'Virtual try-on complete.';
+                job.processImages = { ...job.processImages, tryOnImage: tryOnImageUrl };
+                job.updatedAt = new Date().toISOString();
+                await kv.set(jobId, job);
+            } catch (err) {
+                return handleJobError(job, err, 'Failed during virtual try-on.');
+            }
+            break;
+
+        case 'tryon_completed':
+            try {
+                console.log(`[Job ${jobId}] Status 'tryon_completed'. Starting face swap.`);
+                job.status = 'processing_faceswap';
+                job.statusMessage = 'Step 3: Adding the final magic touch...';
+                await kv.set(jobId, job);
+
+                const finalImageUrl = await performFaceSwapAndSave(job);
+
+                job.status = 'completed';
+                job.statusMessage = 'Your new look is ready!';
+                job.result = { imageUrl: finalImageUrl };
+                job.updatedAt = new Date().toISOString();
+
+                // Save to DB
+                try {
+                    const lookToSave: PastLook = {
+                        id: job.jobId,
+                        imageUrl: finalImageUrl,
+                        style: job.suggestion?.style_alignment || 'AI Generated',
+                        timestamp: Date.now(),
+                        originalHumanSrc: job.humanImage.url,
+                        originalGarmentSrc: job.garmentImage.url,
+                        garmentDescription: job.suggestion?.material_silhouette,
+                        personaProfile: null,
+                        processImages: {
+                          humanImage: job.humanImage.url,
+                          garmentImage: job.garmentImage.url,
+                          finalImage: finalImageUrl,
+                          styleSuggestion: job.suggestion,
+                        },
+                      };
+                    await saveLookToDB(lookToSave, 'default');
+                    console.log(`[Job ${jobId}] Successfully saved to My Looks.`);
+                } catch(dbError) {
+                    console.error(`[Job ${jobId}] Failed to save look to DB, but continuing.`, dbError);
+                }
+
+                await kv.set(jobId, job);
+            } catch (err) {
+                return handleJobError(job, err, 'Failed during the final step.');
+            }
+            break;
     }
 
-    // If the status is not one that triggers an action,
-    // just return the current job state.
     return NextResponse.json(job);
 
   } catch (error) {
-    console.error('Error fetching job status:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return NextResponse.json({ error: 'Failed to fetch job status', details: errorMessage }, { status: 500 });
+    console.error('Unhandled error in GET /api/generation/status:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
+    return NextResponse.json({ error: 'Failed to process job status', details: errorMessage }, { status: 500 });
   }
 }

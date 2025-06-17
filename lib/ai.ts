@@ -349,135 +349,90 @@ async function faceSwap(sourceFile: File, targetFile: File, retries: number = 2)
 }
 
 
-// --- Main Exported Orchestration Function ---
+// --- Main Exported Orchestration Functions (Refactored) ---
 
-interface FinalImageInput {
+// This interface needs to be in sync with the one in the status route
+interface Job {
   jobId: string;
-  humanImageUrl: string;
-  humanImageType: string;
-  humanImageName: string;
-  garmentImageUrl: string;
-  garmentImageType: string;
-  garmentImageName: string;
-  imagePrompt: string;
+  humanImage: { url: string; type: string; name: string };
+  garmentImage: { url: string; type: string; name: string };
+  suggestion?: { image_prompt: string; [key: string]: any; };
+  processImages?: { styledImage?: string; tryOnImage?: string; };
 }
 
-export async function generateFinalImage({
-  jobId,
-  humanImageUrl,
-  humanImageType,
-  humanImageName,
-  garmentImageUrl,
-  garmentImageType,
-  garmentImageName,
-  imagePrompt,
-}: FinalImageInput): Promise<string> {
-  console.log("--- Starting final image generation pipeline ---");
-
-  // Step 1: Convert input URLs to File objects for later use
-  console.log("[1/7] Converting URLs to File objects...");
-  const humanImageFile = await urlToFile(humanImageUrl, humanImageName, humanImageType);
-  const garmentImageFile = await urlToFile(garmentImageUrl, garmentImageName, garmentImageType);
-
-  // Step 2: Convert original human image to Base64 for the stylization step
-  console.log("[2/7] Converting human image to Base64 for stylization...");
-  const humanImageBase64 = await fileToBase64(humanImageFile);
-
-  // Step 3: (NEW) Generate a stylized background/pose image using kling-v2
-  console.log("[3/7] Generating stylized image with kling-v2...");
-  const stylizeRequestBody = buildRequestBody("kling-v2", imagePrompt, humanImageBase64);
-  const styledImageUrl = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, stylizeRequestBody);
-
-  // --- Progress Update: styled image ready ---
-  try {
-    const job: any = await kv.get(jobId);
-    if (job) {
-      job.processImages = {
-        ...(job.processImages || {}),
-        styledImage: styledImageUrl,
-      };
-      job.statusMessage = "Base style image generated. Performing virtual try-on...";
-      job.updatedAt = new Date().toISOString();
-      await kv.set(jobId, job);
-    }
-  } catch (kvErr) {
-    console.warn("[generateFinalImage] Failed to update KV with styled image:", kvErr);
+/**
+ * Step 1: Generates a stylized base image using a prompt.
+ */
+export async function generateStyledImage(job: Job): Promise<string> {
+  console.log("[AI Pipeline - Step 1/3] Generating stylized image...");
+  if (!job.suggestion?.image_prompt) {
+    throw new Error("Cannot generate styled image without 'image_prompt'.");
   }
 
-  // Step 4: Convert the new stylized image and the garment to Base64 for virtual try-on
-  console.log("[4/7] Converting stylized image and garment to Base64 for try-on...");
-  const styledImageFile = await urlToFile(styledImageUrl, "styled.jpg", "image/jpeg");
+  const humanImageFile = await urlToFile(job.humanImage.url, job.humanImage.name, job.humanImage.type);
+  const humanImageBase64 = await fileToBase64(humanImageFile);
+
+  const stylizeRequestBody = buildRequestBody("kling-v2", job.suggestion.image_prompt, humanImageBase64);
+  const styledImageUrl = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, stylizeRequestBody);
+
+  console.log("[AI Pipeline - Step 1/3] Stylized image generated:", styledImageUrl.substring(0, 100));
+  return styledImageUrl;
+}
+
+/**
+ * Step 2: Performs virtual try-on using the stylized image and the garment.
+ */
+export async function generateTryOnImage(job: Job): Promise<string> {
+  console.log("[AI Pipeline - Step 2/3] Performing virtual try-on...");
+  if (!job.processImages?.styledImage) {
+      throw new Error("Cannot perform try-on without a styled image URL in the job.");
+  }
+
+  // Convert stylized image and garment to files/base64
+  const styledImageFile = await urlToFile(job.processImages.styledImage, "styled.jpg", "image/jpeg");
   const styledImageBase64 = await fileToBase64(styledImageFile);
+  const garmentImageFile = await urlToFile(job.garmentImage.url, job.garmentImage.name, job.garmentImage.type);
   const garmentImageBase64 = await fileToBase64(garmentImageFile);
 
-  // Step 5: Submit the virtual try-on task
-  console.log("[5/7] Submitting virtual try-on task...");
   const tryOnRequestBody = {
     model_name: "kolors-virtual-try-on-v1-5",
     human_image: styledImageBase64,
     cloth_image: garmentImageBase64,
   };
+
   const tryOnImageUrl = await executeKlingTask(KOLORS_VIRTUAL_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, tryOnRequestBody);
 
-  // --- Progress Update: try-on image ready ---
-  try {
-    const job: any = await kv.get(jobId);
-    if (job) {
-      job.processImages = {
-        ...(job.processImages || {}),
-        tryOnImage: tryOnImageUrl,
-      };
-      job.statusMessage = "Virtual try-on complete. Swapping faces for final magic...";
-      job.updatedAt = new Date().toISOString();
-      await kv.set(jobId, job);
-    }
-  } catch (kvErr) {
-    console.warn("[generateFinalImage] Failed to update KV with try-on image:", kvErr);
+  console.log("[AI Pipeline - Step 2/3] Virtual try-on complete:", tryOnImageUrl.substring(0, 100));
+  return tryOnImageUrl;
+}
+
+/**
+ * Step 3: Performs face swap and saves the final image to blob storage.
+ */
+export async function performFaceSwapAndSave(job: Job): Promise<string> {
+  console.log("[AI Pipeline - Step 3/3] Performing face swap and saving...");
+  if (!job.processImages?.tryOnImage) {
+    throw new Error("Cannot perform face swap without a try-on image URL in the job.");
   }
 
-  // Step 6: Perform face swap
-  console.log("[6/7] Performing face swap...");
+  // Convert images to files
+  const humanImageFile = await urlToFile(job.humanImage.url, job.humanImage.name, job.humanImage.type);
+  const tryOnImageFile = await urlToFile(job.processImages.tryOnImage, "tryon.jpg", "image/jpeg");
 
-  // --- Progress Update: starting face swap ---
-  try {
-    const job: any = await kv.get(jobId);
-    if (job) {
-      job.statusMessage = "Performing advanced face swap for perfect results... this may take a few minutes.";
-      job.updatedAt = new Date().toISOString();
-      await kv.set(jobId, job);
-    }
-  } catch (kvErr) {
-    console.warn("[generateFinalImage] Failed to update KV with face swap start:", kvErr);
-  }
-
-  const tryOnImageFile = await urlToFile(tryOnImageUrl, "tryon.jpg", "image/jpeg");
-  // Use original human file for the face source, and the try-on result as the target
+  // Perform face swap
   const swappedHttpUrl = await faceSwap(humanImageFile, tryOnImageFile);
+  console.log("[AI Pipeline - Step 3/3] Face swap complete. Persisting to storage...");
 
-  // --- Progress Update: face swap complete ---
-  try {
-    const job: any = await kv.get(jobId);
-    if (job) {
-      job.statusMessage = "Face swap complete! Finalizing your look...";
-      job.updatedAt = new Date().toISOString();
-      await kv.set(jobId, job);
-    }
-  } catch (kvErr) {
-    console.warn("[generateFinalImage] Failed to update KV with face swap complete:", kvErr);
-  }
-
-  // Step 7: Persist final image to Vercel Blob and get a secure URL
-  console.log("[7/7] Persisting final image to secure storage...");
+  // Persist final image to Vercel Blob
   const finalImageResponse = await fetch(swappedHttpUrl);
   const finalImageBlob = await finalImageResponse.blob();
-  const finalImageName = `final-look-${jobId}.png`;
+  const finalImageName = `final-look-${job.jobId}.png`;
+
   const { url: finalSecureUrl } = await put(finalImageName, finalImageBlob, {
     access: 'public',
     addRandomSuffix: true,
   });
 
-
-  console.log("--- Final image generation pipeline complete ---");
-  // Final progress will be saved by status route after this function returns
+  console.log("[AI Pipeline - Step 3/3] Final image saved to blob storage:", finalSecureUrl);
   return finalSecureUrl;
 }
