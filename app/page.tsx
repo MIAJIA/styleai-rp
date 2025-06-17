@@ -629,66 +629,69 @@ export default function HomePage() {
               </div>
 
               {/* Step 4: Generation Mode Selection */}
-              {hasRequiredImages && (
-                <div className="space-y-4">
-                  <h3 className="text-base font-semibold tracking-tight text-center">
-                    <span className="text-primary font-bold">Step 4:</span> Choose Generation Mode
-                  </h3>
-                  <div className="grid grid-cols-1 gap-3">
-                    {/* Traditional Mode */}
-                    <button
-                      onClick={handleTraditionalMode}
-                      disabled={isLoading}
-                      className={cn(
-                        "flex items-center justify-between p-4 rounded-xl transition-all border-2",
-                        "bg-gradient-to-r from-[#FF6EC7]/10 to-[#D5F500]/10",
-                        "border-[#FF6EC7]/30 hover:border-[#FF6EC7]/50",
-                        "hover:shadow-lg transform hover:scale-[1.02]",
-                        isLoading && "opacity-50 cursor-not-allowed"
-                      )}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#FF6EC7] to-[#D5F500] rounded-full flex items-center justify-center">
-                          <Zap className="text-white" size={20} />
-                        </div>
-                        <div className="text-left">
-                          <h4 className="font-semibold text-gray-800">Classic Mode</h4>
-                          <p className="text-sm text-gray-600">Traditional generation process</p>
-                        </div>
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold tracking-tight text-center">
+                  <span className="text-primary font-bold">Step 4:</span> Choose Generation Mode
+                </h3>
+                <div className="grid grid-cols-1 gap-3">
+                  {/* Traditional Mode */}
+                  <button
+                    onClick={handleTraditionalMode}
+                    disabled={!hasRequiredImages || isLoading}
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl transition-all border-2",
+                      "bg-gradient-to-r from-[#FF6EC7]/10 to-[#D5F500]/10",
+                      "border-[#FF6EC7]/30 hover:border-[#FF6EC7]/50",
+                      "hover:shadow-lg transform hover:scale-[1.02]",
+                      (!hasRequiredImages || isLoading) && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#FF6EC7] to-[#D5F500] rounded-full flex items-center justify-center">
+                        <Zap className="text-white" size={20} />
                       </div>
-                      <ArrowLeft className="text-gray-400 rotate-180" size={20} />
-                    </button>
-
-                    {/* Chat Mode */}
-                    <button
-                      onClick={handleChatMode}
-                      className={cn(
-                        "flex items-center justify-between p-4 rounded-xl transition-all border-2",
-                        "bg-gradient-to-r from-purple-500/10 to-pink-500/10",
-                        "border-purple-500/30 hover:border-purple-500/50",
-                        "hover:shadow-lg transform hover:scale-[1.02]"
-                      )}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                          <MessageCircle className="text-white" size={20} />
-                        </div>
-                        <div className="text-left">
-                          <h4 className="font-semibold text-gray-800">Chat Experience</h4>
-                          <p className="text-sm text-gray-600">Step-by-step conversation</p>
-                        </div>
+                      <div className="text-left">
+                        <h4 className="font-semibold text-gray-800">Classic Mode</h4>
+                        <p className="text-sm text-gray-600">Traditional generation process</p>
                       </div>
-                      <ArrowLeft className="text-gray-400 rotate-180" size={20} />
-                    </button>
-                  </div>
+                    </div>
+                    <ArrowLeft className="text-gray-400 rotate-180" size={20} />
+                  </button>
 
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500">
-                      Choose how you'd like to generate your style
-                    </p>
-                  </div>
+                  {/* Chat Mode */}
+                  <button
+                    onClick={handleChatMode}
+                    disabled={!hasRequiredImages}
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl transition-all border-2",
+                      "bg-gradient-to-r from-purple-500/10 to-pink-500/10",
+                      "border-purple-500/30 hover:border-purple-500/50",
+                      "hover:shadow-lg transform hover:scale-[1.02]",
+                      !hasRequiredImages && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                        <MessageCircle className="text-white" size={20} />
+                      </div>
+                      <div className="text-left">
+                        <h4 className="font-semibold text-gray-800">Chat Experience</h4>
+                        <p className="text-sm text-gray-600">Step-by-step conversation</p>
+                      </div>
+                    </div>
+                    <ArrowLeft className="text-gray-400 rotate-180" size={20} />
+                  </button>
                 </div>
-              )}
+
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">
+                    {hasRequiredImages
+                      ? "Choose how you'd like to generate your style"
+                      : "Complete Steps 1-3 to unlock generation modes"
+                    }
+                  </p>
+                </div>
+              </div>
 
               {/* 移除原来的Generate Style按钮，因为现在通过模式选择来触发 */}
               {pollingError && (
