@@ -28,6 +28,30 @@ export async function getStyleSuggestionFromAI({
   }
 
   try {
+    // Fetch images and convert to base64 data URLs in parallel
+    // This makes the process more robust by avoiding OpenAI timeout issues when fetching from our blob storage.
+    const [humanImageResponse, garmentImageResponse] = await Promise.all([
+      fetch(humanImageUrl),
+      fetch(garmentImageUrl)
+    ]);
+
+    if (!humanImageResponse.ok || !garmentImageResponse.ok) {
+      throw new Error('Failed to download one of the images for AI suggestion.');
+    }
+
+    const [humanImageBlob, garmentImageBlob] = await Promise.all([
+      humanImageResponse.blob(),
+      garmentImageResponse.blob()
+    ]);
+
+    const [humanImageBuffer, garmentImageBuffer] = await Promise.all([
+      humanImageBlob.arrayBuffer(),
+      garmentImageBlob.arrayBuffer()
+    ]);
+
+    const humanImageBase64 = `data:${humanImageBlob.type};base64,${Buffer.from(humanImageBuffer).toString('base64')}`;
+    const garmentImageBase64 = `data:${garmentImageBlob.type};base64,${Buffer.from(garmentImageBuffer).toString('base64')}`;
+
     // Build additional context from user profile if provided
     const userProfileContext = userProfile
       ? `以下是我的风格档案 JSON：\n\n\`${JSON.stringify(userProfile)}\``
@@ -49,13 +73,13 @@ export async function getStyleSuggestionFromAI({
             {
               type: "image_url",
               image_url: {
-                url: humanImageUrl,
+                url: humanImageBase64,
               },
             },
             {
               type: "image_url",
               image_url: {
-                url: garmentImageUrl,
+                url: garmentImageBase64,
               },
             },
           ],
@@ -359,11 +383,19 @@ export interface Job {
   humanImage: { url: string; type: string; name: string };
   garmentImage: { url: string; type: string; name: string };
   generationMode: GenerationMode;
+  occasion: string;
+  status: string;
+  statusMessage: string;
+  createdAt: string;
+  updatedAt: string;
   suggestion?: { image_prompt: string; [key: string]: any; };
   processImages?: {
     styledImage?: string;
     tryOnImage?: string;
   };
+  result?: { imageUrl: string };
+  error?: string;
+  [key: string]: any; // Index signature for Vercel KV compatibility
 }
 
 /**
