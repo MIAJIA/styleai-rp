@@ -1,4 +1,5 @@
 {
+  "regions": ["hkg1"],
   "functions": {
     "app/api/generation/status/route.ts": {
       "maxDuration": 300
