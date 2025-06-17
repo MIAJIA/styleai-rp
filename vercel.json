@@ -1,5 +1,5 @@
 {
-  "regions": ["tok1"],
+  "regions": ["hnd1"],
   "functions": {
     "app/api/generation/status/route.ts": {
       "maxDuration": 300
