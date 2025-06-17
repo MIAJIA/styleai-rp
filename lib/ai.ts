@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import * as jwt from "jsonwebtoken";
 import { put } from "@vercel/blob";
+import { kv } from "@vercel/kv";
 import { type OnboardingData } from "@/lib/onboarding-storage";
 
 // Initialize the OpenAI client
@@ -168,6 +169,7 @@ const buildRequestBody = (
     image: humanImageBase64,
   };
   console.log("!!! build request body with modelVersion:", modelVersion);
+  console.log("!!! baseBody prompt:", baseBody.prompt);
   switch (modelVersion) {
     case 'kling-v1-5':
       return {
@@ -346,6 +348,22 @@ export async function generateFinalImage({
   const stylizeRequestBody = buildRequestBody("kling-v2", imagePrompt, humanImageBase64);
   const styledImageUrl = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, stylizeRequestBody);
 
+  // --- Progress Update: styled image ready ---
+  try {
+    const job: any = await kv.get(jobId);
+    if (job) {
+      job.processImages = {
+        ...(job.processImages || {}),
+        styledImage: styledImageUrl,
+      };
+      job.statusMessage = "Base style image generated. Performing virtual try-on...";
+      job.updatedAt = new Date().toISOString();
+      await kv.set(jobId, job);
+    }
+  } catch (kvErr) {
+    console.warn("[generateFinalImage] Failed to update KV with styled image:", kvErr);
+  }
+
   // Step 4: Convert the new stylized image and the garment to Base64 for virtual try-on
   console.log("[4/7] Converting stylized image and garment to Base64 for try-on...");
   const styledImageFile = await urlToFile(styledImageUrl, "styled.jpg", "image/jpeg");
@@ -360,6 +378,22 @@ export async function generateFinalImage({
     cloth_image: garmentImageBase64,
   };
   const tryOnImageUrl = await executeKlingTask(KOLORS_VIRTUAL_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, tryOnRequestBody);
+
+  // --- Progress Update: try-on image ready ---
+  try {
+    const job: any = await kv.get(jobId);
+    if (job) {
+      job.processImages = {
+        ...(job.processImages || {}),
+        tryOnImage: tryOnImageUrl,
+      };
+      job.statusMessage = "Virtual try-on complete. Swapping faces for final magic...";
+      job.updatedAt = new Date().toISOString();
+      await kv.set(jobId, job);
+    }
+  } catch (kvErr) {
+    console.warn("[generateFinalImage] Failed to update KV with try-on image:", kvErr);
+  }
 
   // Step 6: Perform face swap
   console.log("[6/7] Performing face swap...");
@@ -378,5 +412,6 @@ export async function generateFinalImage({
 
 
   console.log("--- Final image generation pipeline complete ---");
+  // Final progress will be saved by status route after this function returns
   return finalSecureUrl;
 }

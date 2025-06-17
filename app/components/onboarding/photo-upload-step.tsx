@@ -150,7 +150,7 @@ export default function PhotoUploadStep({
               reject(new Error("Image compression failed"));
               return;
             }
-            const reader = new FileReader();
+    const reader = new FileReader();
             reader.onloadend = () => {
               resolve(reader.result as string);
               URL.revokeObjectURL(url);

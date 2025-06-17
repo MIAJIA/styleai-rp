@@ -100,25 +100,25 @@ export default function ResultsPage() {
             )}
           </div>
 
-          {pastLooks.length > 0 ? (
+            {pastLooks.length > 0 ? (
             <>
               <div className="grid grid-cols-2 gap-4">
                 {displayedLooks.map((pastLook) => (
                   <div key={pastLook.id} className="bg-white rounded-xl shadow-sm border border-gray-100">
                     {/* Main Image */}
                     <div className="relative aspect-[3/4] rounded-t-xl overflow-hidden">
-                      <img
-                        src={pastLook.imageUrl}
+                    <img
+                      src={pastLook.imageUrl}
                         alt="Generated look"
-                        className="w-full h-full object-cover"
-                      />
-                      <button
+                      className="w-full h-full object-cover"
+                    />
+                  <button
                         onClick={() => handleDeleteLook(pastLook.id)}
                         className="absolute top-2 right-2 p-2 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
 
                     {/* Look Details */}
                     <div className="p-3 space-y-2">
@@ -212,8 +212,8 @@ export default function ResultsPage() {
                 </button>
               )}
             </>
-          ) : (
-            // Empty placeholder boxes
+            ) : (
+              // Empty placeholder boxes
             <div className="grid grid-cols-2 gap-3">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
@@ -228,7 +228,7 @@ export default function ResultsPage() {
                   </div>
                 </div>
               ))}
-            </div>
+          </div>
           )}
 
           {pastLooks.length === 0 && (

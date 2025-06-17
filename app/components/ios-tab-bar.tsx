@@ -1,12 +1,13 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Info, GalleryVerticalEnd, User } from "lucide-react";
+import { Home, Info, GalleryVerticalEnd, User, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "StyleMe", icon: Home },
   { href: "/results", label: "My Looks", icon: GalleryVerticalEnd },
+  { href: "/chat", label: "👗 Chat", icon: MessageCircle },
   { href: "/my-style", label: "My Style", icon: User },
 ];
 
