@@ -5,7 +5,21 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import IOSTabBar from "../components/ios-tab-bar";
 import ImageModal from "../components/image-modal";
-import { ArrowLeft, Download, Share2, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Download,
+  Share2,
+  Loader2,
+  Sparkles,
+  BookOpen,
+  Footprints,
+  Coffee,
+  Mic,
+  Palmtree,
+  PartyPopper,
+  Heart,
+  Star,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   getChatWelcomeMessage,
@@ -14,18 +28,18 @@ import {
   getChatCompletionMessage,
 } from "@/lib/prompts";
 
-// 消息类型定义
+// Chat message type definition
 type ChatMessage = {
   id: string;
-  type: 'text' | 'image' | 'loading';
-  role: 'ai' | 'user';
+  type: "text" | "image" | "loading";
+  role: "ai" | "user";
   content?: string;
   imageUrl?: string;
   loadingText?: string;
   timestamp: Date;
 };
 
-// 从主页传递的数据类型
+// Data type passed from the main page
 type ChatModeData = {
   selfiePreview: string;
   clothingPreview: string;
@@ -37,95 +51,107 @@ type ChatModeData = {
   timestamp: number;
 };
 
-// AI 头像组件
+type ChatStep = "suggestion" | "generating" | "complete" | "error";
+
+const styles = [
+  { id: "fashion-magazine", name: "Magazine", icon: BookOpen },
+  { id: "running-outdoors", name: "Outdoors", icon: Footprints },
+  { id: "coffee-shop", name: "Coffee", icon: Coffee },
+  { id: "music-show", name: "Music Show", icon: Mic },
+  { id: "date-night", name: "Date Night", icon: Heart },
+  { id: "beach-day", name: "Beach Day", icon: Palmtree },
+  { id: "casual-chic", name: "Casual Chic", icon: Sparkles },
+  { id: "party-glam", name: "Party Glam", icon: PartyPopper },
+];
+
+const stylePrompts = {
+  "fashion-magazine":
+    "standing in a semi-surreal environment blending organic shapes and architectural elements. The background features dreamlike washes of indigo and burnt orange, with subtle floating geometric motifs inspired by Ukiyo-e clouds. Lighting combines soft studio strobes with atmospheric glow, creating dimensional shadows. Composition balances realistic human proportions with slightly exaggerated fabric movement, evoking a living oil painting. Texture details: fine wool fibers visible, slight film grain. Style fusion: Richard Avedon's fashion realism + Egon Schiele's expressive lines + niji's color vibrancy (but photorealistic), 4k resolution.",
+  "running-outdoors":
+    "A vibrant, sun-drenched hillside with lush greenery under a clear blue sky, capturing an adventure lifestyle mood. The scene is bathed in soft, natural light, creating a sense of cinematic realism. Shot with the professional quality of a Canon EOS R5, emphasizing realistic textures and high definition, 4k resolution.",
+  "coffee-shop":
+    "A cozy, sunlit coffee shop with the warm aroma of freshly ground beans. The person is sitting at a rustic wooden table by a large window, holding a ceramic mug. The background shows soft, blurred details of a barista and an espresso machine. The style should be intimate and warm, with natural light creating soft shadows, reminiscent of a lifestyle magazine photograph, 4k resolution.",
+  "casual-chic":
+    "trendy Brooklyn street with colorful murals, chic coffee shop with exposed brick walls, urban rooftop garden with city views, stylish boutique district, contemporary art gallery setting, natural daylight with artistic shadows, street style fashion photography, 4k resolution",
+  "music-show":
+    "Group idol style, performing on stage, spotlight and dreamy lighting, high-definition portrait, soft glow and bokeh, dynamic hair movement, glamorous makeup, K-pop inspired outfit (shiny, fashionable), expressive pose, cinematic stage background, lens flare, fantasy concert vibe, ethereal lighting, 4k resolution.",
+  "date-night":
+    "A realistic romantic evening on a backyard patio--string lights overhead, wine glasses, laughing mid-conversation with friend. Subtle body language, soft bokeh lights, hint of connection. Created using: Sony Alpha A7R IV, cinematic lighting, shallow depth of field, natural expressions, sunset color grading Shot in kodak gold 200 with a canon EOS R6, 4k resolution.",
+  "beach-day":
+    "On the beach, soft sunlight, gentle waves in the background, highly detailed, lifelike textures, natural lighting, vivid colors, 4k resolution",
+  "party-glam":
+    "opulent ballroom with crystal chandeliers, luxurious velvet curtains and gold accents, dramatic spotlight effects with rich jewel tones, champagne bar with marble countertops, exclusive VIP lounge atmosphere, professional event photography with glamorous lighting, 4k resolution",
+};
+
+// Helper for creating chat messages
+const createChatMessage = (
+  type: "text" | "image" | "loading",
+  role: "ai" | "user",
+  content?: string,
+  imageUrl?: string,
+  loadingText?: string,
+): ChatMessage => ({
+  id: `msg-${Date.now()}-${Math.random()}`,
+  type,
+  role,
+  content,
+  imageUrl,
+  loadingText,
+  timestamp: new Date(),
+});
+
+// AI Avatar component
 function AIAvatar() {
   return (
-    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center flex-shrink-0">
-      <span className="text-white text-sm">✨</span>
+    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-orange-300 flex items-center justify-center shadow-md flex-shrink-0">
+      <Sparkles className="w-5 h-5 text-white" />
     </div>
   );
 }
 
-// 消息气泡组件
-function ChatBubble({ message, onImageClick }: {
+// Chat Bubble component
+function ChatBubble({
+  message,
+  onImageClick,
+}: {
   message: ChatMessage;
   onImageClick: (imageUrl: string) => void;
 }) {
-  const isAI = message.role === 'ai';
+  const isAI = message.role === "ai";
 
-  if (message.type === 'loading') {
-    return (
-      <div className="flex items-start gap-3 mb-4">
-        <AIAvatar />
-        <div className="bg-gray-100 rounded-2xl rounded-tl-md px-4 py-3 max-w-[80%]">
+  return (
+    <div className={`flex items-start gap-3 my-4 ${!isAI ? "flex-row-reverse" : ""}`}>
+      {isAI && <AIAvatar />}
+      <div
+        className={`
+          px-4 py-3 rounded-2xl max-w-[80%]
+          ${isAI ? "bg-white shadow-sm border border-gray-100" : "bg-[#FF6EC7] text-white"}
+        `}
+      >
+        {message.type === "loading" && (
           <div className="flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin text-pink-500" />
-            <span className="text-sm text-gray-600">{message.loadingText || "AI正在思考中..."}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (message.type === 'text') {
-    return (
-      <div className={`flex items-start gap-3 mb-4 ${isAI ? '' : 'flex-row-reverse'}`}>
-        {isAI ? (
-          <AIAvatar />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-sm">👤</span>
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-150"></div>
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-300"></div>
+            {message.loadingText && <span className="text-sm text-gray-600">{message.loadingText}</span>}
           </div>
         )}
-        <div className={`rounded-2xl px-4 py-3 max-w-[80%] shadow-sm border ${isAI
-          ? 'bg-white rounded-tl-md border-gray-100'
-          : 'bg-blue-500 text-white rounded-tr-md border-blue-500'
-          }`}>
-          <p className={`text-sm leading-relaxed whitespace-pre-line ${isAI ? 'text-gray-800' : 'text-white'
-            }`}>{message.content}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (message.type === 'image') {
-    return (
-      <div className={`flex items-start gap-3 mb-4 ${isAI ? '' : 'flex-row-reverse'}`}>
-        {isAI ? (
-          <AIAvatar />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-sm">👤</span>
-          </div>
+        {message.type === "text" && (
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
         )}
-        <div className={`rounded-2xl p-2 max-w-[80%] shadow-sm border ${isAI
-          ? 'bg-white rounded-tl-md border-gray-100'
-          : 'bg-blue-50 rounded-tr-md border-blue-200'
-          }`}>
+        {message.type === "image" && message.imageUrl && (
           <img
             src={message.imageUrl}
             alt="Generated image"
-            className="w-full rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={() => onImageClick(message.imageUrl!)}
+            width={300}
+            height={400}
+            className="rounded-lg cursor-pointer"
+            onClick={() => message.imageUrl && onImageClick(message.imageUrl)}
           />
-          {isAI && (
-            <div className="flex gap-2 mt-2 px-2">
-              <Button size="sm" variant="ghost" className="text-xs">
-                <Download className="w-3 h-3 mr-1" />
-                保存
-              </Button>
-              <Button size="sm" variant="ghost" className="text-xs">
-                <Share2 className="w-3 h-3 mr-1" />
-                分享
-              </Button>
-            </div>
-          )}
-        </div>
+        )}
       </div>
-    );
-  }
-
-  return null;
+    </div>
+  );
 }
 
 export default function ChatPage() {
@@ -134,38 +160,33 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [currentStep, setCurrentStep] = useState<'suggestion' | 'tryon' | 'scene' | 'complete'>('suggestion');
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [currentStep, setCurrentStep] = useState<ChatStep>("suggestion");
   const [messageIdCounter, setMessageIdCounter] = useState(0);
   const [chatData, setChatData] = useState<ChatModeData | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false); // 新增：防止重复初始化
-  const [hasProcessedCompletion, setHasProcessedCompletion] = useState(false); // 新增：防止重复处理完成状态
-  const processedStatusesRef = useRef<Set<string>>(new Set()); // Ref to track processed statuses
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [hasProcessedCompletion, setHasProcessedCompletion] = useState(false);
+  const processedStatusesRef = useRef<Set<string>>(new Set());
   const [pollingIntervalId, setPollingIntervalId] = useState<NodeJS.Timeout | null>(null);
-  const [isDisplayingSuggestion, setIsDisplayingSuggestion] = useState(false); // 新增：防止在建议显示期间重复触发
+  const [isDisplayingSuggestion, setIsDisplayingSuggestion] = useState(false);
   const [intermediateImageDisplayed, setIntermediateImageDisplayed] = useState(false);
 
-  // 新增：用于API集成的状态
   const [jobId, setJobId] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
 
-  // 图片预览 Modal 状态
   const [modalImage, setModalImage] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 处理图片点击
   const handleImageClick = (imageUrl: string) => {
     setModalImage(imageUrl);
     setIsModalOpen(true);
   };
 
-  // 关闭 Modal
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setModalImage(null);
   };
 
-  // 自动滚动到底部
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -174,200 +195,198 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  // 生成唯一 ID
   const generateUniqueId = () => {
-    const newCounter = messageIdCounter + 1;
-    setMessageIdCounter(newCounter);
-    return `msg-${Date.now()}-${newCounter}`;
+    setMessageIdCounter((prev) => prev + 1);
+    return `msg-${Date.now()}-${messageIdCounter}-${Math.random().toString(36).substr(2, 9)}`;
   };
 
-  // 添加消息的辅助函数
-  const addMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
-    // 使用函数式更新来确保我们总是有最新的状态
-    setMessages(prev => {
-      const newId = `msg-${Date.now()}-${prev.length + 1}`;
-      const newMessage: ChatMessage = {
-        ...message,
-        id: newId,
-        timestamp: new Date(),
-      };
-      // 检查重复的消息ID
-      if (prev.some(m => m.id === newId)) {
-        console.warn("Duplicate message ID detected:", newId);
-        // 可以选择在这里返回原状态，或者生成一个新的唯一ID
-        return prev;
-      }
-      return [...prev, newMessage];
-    });
+  const addMessage = (message: Omit<ChatMessage, "id" | "timestamp">) => {
+    const newMessage: ChatMessage = {
+      ...message,
+      id: generateUniqueId(),
+      timestamp: new Date(),
+    };
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
   };
 
-  // 更新或添加消息的辅助函数
-  const upsertMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>, targetId?: string) => {
-    setMessages(prev => {
-      const existingMsgIndex = targetId ? prev.findIndex(m => m.id === targetId) : -1;
-
+  const upsertMessage = (message: Omit<ChatMessage, "id" | "timestamp">, targetId?: string) => {
+    setMessages((prevMessages) => {
+      const existingMsgIndex = targetId ? prevMessages.findIndex((m) => m.id === targetId) : -1;
       if (existingMsgIndex !== -1) {
-        // 更新现有消息
-        const updatedMessages = [...prev];
-        updatedMessages[existingMsgIndex] = {
-          ...message,
-          id: prev[existingMsgIndex].id, // 保持ID
-          timestamp: new Date(),
-        };
+        const updatedMessages = [...prevMessages];
+        updatedMessages[existingMsgIndex] = { ...updatedMessages[existingMsgIndex], ...message };
         return updatedMessages;
       } else {
-        // 添加新消息
-        const newId = `msg-${Date.now()}-${prev.length + 1}`;
-        const newMessage: ChatMessage = {
-          ...message,
-          id: newId,
-          timestamp: new Date(),
-        };
-        return [...prev, newMessage];
+        return [...prevMessages, { ...message, id: generateUniqueId(), timestamp: new Date() }];
       }
     });
   };
 
-  // 替换最后一条 loading 消息
-  const replaceLastLoadingMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
-    setMessages(prev => {
-      const newMessages = [...prev];
-      const lastIndex = newMessages.length - 1;
-      if (lastIndex >= 0 && newMessages[lastIndex].type === 'loading') {
-        // 保持原有的 ID 以避免 React key 冲突
-        newMessages[lastIndex] = {
+  const replaceLastLoadingMessage = (message: Omit<ChatMessage, "id" | "timestamp">) => {
+    setMessages((prevMessages) => {
+      const newMessages = [...prevMessages];
+      const lastMessageIndex = newMessages.findLastIndex((m) => m.type === "loading");
+
+      if (lastMessageIndex !== -1) {
+        newMessages[lastMessageIndex] = {
           ...message,
-          id: newMessages[lastIndex].id,
+          id: newMessages[lastMessageIndex].id,
           timestamp: new Date(),
         };
+        return newMessages;
       }
-      // 如果最后一条不是loading，则直接添加
-      const newId = `msg-${Date.now()}-${prev.length + 1}`;
-      return [...prev, { ...message, id: newId, timestamp: new Date() }];
+      return [...newMessages, { ...message, id: generateUniqueId(), timestamp: new Date() }];
     });
   };
 
-  // 新增：按顺序显示AI建议
   const displaySuggestionSequentially = async (suggestion: any) => {
-    if (isDisplayingSuggestion) return; // 防止重复执行
+    if (!suggestion) return;
+
+    console.log("[SUGGESTION DEBUG] Starting displaySuggestionSequentially");
     setIsDisplayingSuggestion(true);
-    console.log('[CHAT UI] Received full suggestion object. Beginning sequential display.', suggestion);
 
-    const suggestionOrder = [
-      { key: 'scene_fit', title: '🎯 场合适配度' },
-      { key: 'style_alignment', title: '👗 风格搭配建议' },
-      { key: 'personal_match', title: '👤 个性化匹配' },
-      { key: 'visual_focus', title: '✨ 视觉焦点' },
-      { key: 'material_silhouette', title: '👚 材质与版型' },
-      { key: 'color_combination', title: '🎨 色彩搭配' },
-      { key: 'reuse_versatility', title: '💡 延展搭配性' },
-    ];
+    const suggestionKeyToTitleMap = {
+      scene_fit: "🎯 Occasion Fit",
+      style_alignment: "👗 Styling Suggestions",
+      personal_match: "💫 Personal Match",
+      visual_focus: "👀 Visual Focus",
+      material_silhouette: "👚 Material & Silhouette",
+      color_combination: "🎨 Color Palette",
+      reuse_versatility: "✨ Reuse & Versatility",
+    };
 
-    for (const item of suggestionOrder) {
-      if (suggestion[item.key]) {
-        await new Promise(resolve => setTimeout(resolve, 1200)); // 等待1.2秒
-        console.log(`[CHAT UI] Displaying bubble: ${item.title}`);
-        addMessage({
-          type: 'text',
-          role: 'ai',
-          content: `**${item.title}**\n\n${suggestion[item.key]}`,
-        });
+    let suggestionMessageId: string | null = null;
+
+    // First, try to replace the last loading message with the initial text
+    setMessages((prev) => {
+      const newMessages = [...prev];
+      const lastMessageIndex = newMessages.findLastIndex((m) => m.type === "loading");
+
+      if (lastMessageIndex !== -1) {
+        const newId = generateUniqueId();
+        suggestionMessageId = newId;
+        console.log("[SUGGESTION DEBUG] Replacing loading message");
+        newMessages[lastMessageIndex] = {
+          id: newId,
+          role: "ai",
+          type: "text",
+          content: "Ok, I've had a look. Here are some of my thoughts:\n\n",
+          timestamp: new Date(),
+        };
+        return newMessages;
+      } else {
+        console.log("[SUGGESTION DEBUG] No loading message found, will add new message");
       }
+      return prev;
+    });
+
+    // If we couldn't find a loading message to replace, add a new one
+    if (!suggestionMessageId) {
+      console.log("[SUGGESTION DEBUG] Adding new suggestion message");
+      const newId = generateUniqueId();
+      suggestionMessageId = newId;
+      setMessages((prev) => [...prev, {
+        id: newId,
+        role: "ai",
+        type: "text",
+        content: "Ok, I've had a look. Here are some of my thoughts:\n\n",
+        timestamp: new Date(),
+      }]);
     }
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('[CHAT UI] All suggestion bubbles displayed. Adding final loading message.');
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Short pause
 
-    // 添加最后的"生成中"消息
-    addMessage({
-      type: 'loading',
-      role: 'ai',
-      loadingText: 'AI正在生成你的专属造型图片...',
-    });
+    const currentSuggestionMessageId = suggestionMessageId;
+
+    for (const key of Object.keys(suggestionKeyToTitleMap)) {
+      if (suggestion[key]) {
+        const title = suggestionKeyToTitleMap[key as keyof typeof suggestionKeyToTitleMap];
+
+        setMessages((prev) => {
+          const msgIndex = prev.findIndex((m) => m.id === currentSuggestionMessageId);
+          if (msgIndex !== -1) {
+            const updatedMessages = [...prev];
+            const oldMessage = updatedMessages[msgIndex];
+            const newContent = (oldMessage.content || "") + `${title}\n${suggestion[key]}\n\n`;
+            updatedMessages[msgIndex] = {
+              ...oldMessage,
+              content: newContent,
+            };
+            return updatedMessages;
+          }
+          return prev;
+        });
+        await new Promise((resolve) => setTimeout(resolve, 800)); // Pause between points
+      }
+    }
+    console.log("[SUGGESTION DEBUG] Finished displaying suggestion");
     setIsDisplayingSuggestion(false);
   };
 
-  // 获取场合的中文名称
   const getOccasionName = (occasionId: string) => {
-    const occasionMap: { [key: string]: string } = {
-      'fashion-magazine': '时尚杂志风',
-      'running-outdoors': '户外运动',
-      'coffee-shop': '咖啡厅约会',
-      'music-show': '音乐演出',
-      'date-night': '浪漫约会',
-      'beach-day': '海滩度假',
-      'casual-chic': '休闲时尚',
-      'party-glam': '派对魅力'
-    };
-    return occasionMap[occasionId] || occasionId;
+    const style = styles.find((s) => s.id === occasionId);
+    return style ? style.name : "Unknown Occasion";
   };
 
-  // 将预览URL转换为File对象的辅助函数
-  const getFileFromPreview = async (previewUrl: string, defaultName: string): Promise<File | null> => {
+  const getFileFromPreview = async (
+    previewUrl: string,
+    defaultName: string,
+  ): Promise<File | null> => {
+    if (!previewUrl) return null;
     try {
-      if (previewUrl.startsWith("data:image")) {
-        // Data URL转换为File
-        const response = await fetch(previewUrl);
-        const blob = await response.blob();
-        return new File([blob], `${defaultName}-${Date.now()}.png`, { type: blob.type });
-      } else if (previewUrl.startsWith("/")) {
-        // 本地路径转换为File
-        const response = await fetch(previewUrl);
-        const blob = await response.blob();
-        return new File([blob], `${defaultName}-${Date.now()}.jpg`, { type: blob.type });
-      } else if (previewUrl.startsWith("blob:")) {
-        // Blob URL转换为File
-        const response = await fetch(previewUrl);
-        const blob = await response.blob();
-        return new File([blob], `${defaultName}-${Date.now()}.jpg`, { type: blob.type });
-      }
-      return null;
+      const response = await fetch(previewUrl);
+      const blob = await response.blob();
+      const fileType = blob.type || "image/jpeg";
+      const fileName = defaultName;
+      return new File([blob], fileName, { type: fileType });
     } catch (error) {
-      console.error('Error converting preview to file:', error);
+      console.error("Error converting preview to file:", error);
       return null;
     }
   };
 
-  // 真实的生成流程 - 集成现有API
   const startGeneration = async () => {
     if (!chatData) {
-      console.error("Chat data is not available to start generation.");
-      // todo: show error to user
+      addMessage({
+        type: "text",
+        role: "ai",
+        content: "Error: Chat data is missing. Please start over.",
+      });
       return;
     }
-    console.log("Starting generation process...");
+
     setIsGenerating(true);
+    setCurrentStep("generating");
     setPollingError(null);
     processedStatusesRef.current.clear();
-    setHasProcessedCompletion(false);
-    setIsDisplayingSuggestion(false);
     setIntermediateImageDisplayed(false);
+    setHasProcessedCompletion(false);
 
     addMessage({
-      role: 'ai',
-      type: 'loading',
-      loadingText: '正在准备你的专属造型分析...',
+      type: "loading",
+      role: "ai",
+      loadingText: "Analyzing your request, please wait...",
     });
 
     try {
-      const humanImage = await getFileFromPreview(chatData.selfiePreview, "selfie");
-      const garmentImage = await getFileFromPreview(chatData.clothingPreview, "garment");
+      const selfieFile = await getFileFromPreview(chatData.selfiePreview, "user_selfie.jpg");
+      const clothingFile = await getFileFromPreview(chatData.clothingPreview, "user_clothing.jpg");
 
-      if (!humanImage || !garmentImage) {
-        throw new Error("无法处理图片，请返回重试。");
+      if (!selfieFile || !clothingFile) {
+        throw new Error("Could not prepare image files for upload.");
       }
 
       const formData = new FormData();
-      formData.append("human_image", humanImage);
-      formData.append("garment_image", garmentImage);
+      formData.append("human_image", selfieFile);
+      formData.append("garment_image", clothingFile);
       formData.append("occasion", chatData.occasion);
       formData.append("generation_mode", chatData.generationMode);
-      // Hardcode 'advanced-scene' if not present
-      // formData.append("generation_mode", chatData.generationMode || "advanced-scene");
 
-
-      console.log('[CHAT] Starting generation with mode:', chatData.generationMode);
-
+      if (stylePrompts[chatData.occasion as keyof typeof stylePrompts]) {
+        formData.append("style_prompt", stylePrompts[chatData.occasion as keyof typeof stylePrompts]);
+      } else {
+        console.warn(`No style prompt found for occasion: ${chatData.occasion}`);
+      }
 
       const response = await fetch("/api/generation/start", {
         method: "POST",
@@ -375,187 +394,130 @@ export default function ChatPage() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`启动生成失败: ${errorText}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to start the generation job.");
       }
 
-      const { jobId: newJobId } = await response.json();
-      console.log(`[CHAT] Generation started. Job ID: ${newJobId}`);
-      setJobId(newJobId);
-      // 轮询将在 jobId 的 useEffect 中启动
-    } catch (error) {
-      console.error("[CHAT] Error starting generation:", error);
-      const errorMessage = error instanceof Error ? error.message : "发生未知错误";
+      const data = await response.json();
+      setJobId(data.jobId);
+      console.log("[API] Generation started, Job ID:", data.jobId);
+
       replaceLastLoadingMessage({
-        type: 'text',
-        role: 'ai',
-        content: `抱歉，启动时遇到问题: ${errorMessage}`,
+        type: "text",
+        role: "ai",
+        content:
+          "Great! Your request has been sent. I'm starting the design process now. This might take a minute or two.",
+      });
+      addMessage({
+        type: "loading",
+        role: "ai",
+        loadingText: "Generating suggestions for you...",
+      });
+    } catch (error) {
+      console.error("Error in startGeneration:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      replaceLastLoadingMessage({
+        type: "text",
+        role: "ai",
+        content: `Sorry, something went wrong: ${errorMessage}`,
       });
       setIsGenerating(false);
+      setCurrentStep("error");
     }
   };
 
-  // 轮询状态的函数
   const startPolling = (jobId: string) => {
-    console.log(`[POLLING] Starting polling for Job ID: ${jobId}`);
-
-    // 清除任何可能存在的旧轮询
-    if (pollingIntervalId) {
-      clearInterval(pollingIntervalId);
-    }
-
     const interval = setInterval(async () => {
-      // 如果已经处理完，或者正在显示建议，则暂时不轮询
-      if (hasProcessedCompletion || isDisplayingSuggestion) {
-        console.log(`[POLLING] Skipping poll because task is complete or suggestion is being displayed.`);
-        return;
-      }
       try {
         const response = await fetch(`/api/generation/status?jobId=${jobId}`);
         if (!response.ok) {
-          // 对 404 Not Found 等情况进行更温和的处理
-          if (response.status === 404) {
-            console.warn(`[POLLING] Job ${jobId} not found. It might be pending creation. Will retry.`);
-            return;
-          }
-          throw new Error(`轮询失败，状态码: ${response.status}`);
+          throw new Error(`The server responded with status: ${response.status}`);
         }
-
         const data = await response.json();
-        const statusKey = `${data.status}-${data.timestamp}`; // Create a unique key for the status update
+        console.log("[POLLING] Received status:", data.status, data);
 
-        // 使用Ref来防止因React重渲染导致的重复处理
-        if (processedStatusesRef.current.has(statusKey) || processedStatusesRef.current.has(data.status)) {
+        const statusKey = data.status;
+        console.log("[POLLING DEBUG] Current statusKey:", statusKey);
+        console.log("[POLLING DEBUG] processedStatusesRef contents:", Array.from(processedStatusesRef.current));
+
+        if (processedStatusesRef.current.has(statusKey)) {
+          console.log("[POLLING DEBUG] Status already processed, skipping:", statusKey);
           return;
         }
 
-        console.log('[POLLING] Received data:', data);
+        // Mark status as processed immediately to prevent concurrent processing
+        processedStatusesRef.current.add(statusKey);
+        console.log("[POLLING DEBUG] Marked status as processed:", statusKey);
 
-        // 根据状态更新UI
         switch (data.status) {
-          case 'pending':
-            setCurrentStep('suggestion');
+          case "suggestion_generated":
+            console.log("[POLLING DEBUG] Processing suggestion_generated status");
+            await displaySuggestionSequentially(data.suggestion);
+            console.log("[POLLING DEBUG] Replacing loading message after suggestion display");
             replaceLastLoadingMessage({
-              type: 'loading',
-              role: 'ai',
-              loadingText: '已收到请求，正在排队等待处理...'
+              role: "ai",
+              type: "loading",
+              loadingText: "Creating a suitable scene and pose for you...",
             });
             break;
-          case 'processing_style_suggestion':
-            setCurrentStep('suggestion');
-            replaceLastLoadingMessage({
-              type: 'loading',
-              role: 'ai',
-              loadingText: 'AI正在分析你的风格并生成建议...'
-            });
-            break;
-          case 'suggestion_generated':
-            // 确保只处理一次
-            if (!processedStatusesRef.current.has('suggestion_generated')) {
-              setCurrentStep('tryon');
-              processedStatusesRef.current.add('suggestion_generated'); // 标记为已处理
-              replaceLastLoadingMessage({ type: 'text', role: 'ai', content: '太棒了！我为你准备了一些专属的造型建议：' });
+          case "stylization_completed":
+            if (!intermediateImageDisplayed) {
+              const styledImageUrl = data.styledImage;
+              if (!styledImageUrl) break;
 
-              // Fire-and-forget: Do not await. Let it run in the background
-              // while polling continues.
-              displaySuggestionSequentially(data.suggestion);
-            }
-            break;
-          case 'processing_stylization':
-            setCurrentStep('scene');
-            // Only update the loading message if the suggestion display is finished.
-            if (!isDisplayingSuggestion) {
-              replaceLastLoadingMessage({
-                type: 'loading',
-                role: 'ai',
-                loadingText: '正在应用场景风格化...'
-              });
-            }
-            break;
-          case 'processing_tryon':
-            setCurrentStep('tryon');
-            if (!isDisplayingSuggestion) {
-              replaceLastLoadingMessage({
-                type: 'loading',
-                role: 'ai',
-                loadingText: '正在进行虚拟试穿...'
-              });
-            }
-            break;
-          case 'processing_faceswap':
-            setCurrentStep('scene');
-            if (!isDisplayingSuggestion) {
-              replaceLastLoadingMessage({
-                type: 'loading',
-                role: 'ai',
-                loadingText: '正在进行最后的面部融合处理...'
-              });
-            }
-            break;
-          case 'stylization_completed':
-            // Defensive check for the image URL at the root of the data object
-            const styledImageUrl = data.styledImage;
-            if (styledImageUrl && !intermediateImageDisplayed) {
-              console.log('[CHAT UI] Intermediate image received. Displaying scene...');
-
-              // 标记为已显示
               setIntermediateImageDisplayed(true);
-              processedStatusesRef.current.add('stylization_completed');
+              processedStatusesRef.current.add("stylization_completed");
 
-              // 1. 替换加载消息为提示文本
               replaceLastLoadingMessage({
-                role: 'ai',
-                type: 'text',
-                content: "这是为您设计的场景和姿态，正在为您穿上最终的服装...",
+                role: "ai",
+                type: "text",
+                content: "Here is the designed scene and pose, now putting on the final outfit for you...",
               });
 
-              // 2. 显示中间图片
               addMessage({
-                role: 'ai',
-                type: 'image',
+                role: "ai",
+                type: "image",
                 imageUrl: styledImageUrl,
               });
 
-              // 3. 添加新的加载消息，为下一步做准备
               addMessage({
-                role: 'ai',
-                type: 'loading',
-                loadingText: "正在进行最终合成，请稍候...",
+                role: "ai",
+                type: "loading",
+                loadingText: "Performing final composition, please wait...",
               });
             }
             break;
-          case 'completed':
+          case "completed":
             if (!hasProcessedCompletion) {
-              setCurrentStep('complete');
+              setCurrentStep("complete");
 
               const showCompletion = () => {
-                setHasProcessedCompletion(true); // 关键：设置标志位
-                console.log('[POLLING] Status is completed. Final URL:', data.result?.imageUrl);
+                setHasProcessedCompletion(true);
+                console.log("[POLLING] Status is completed. Final URL:", data.result?.imageUrl);
                 const finalImageUrl = data.result?.imageUrl;
                 if (finalImageUrl) {
                   replaceLastLoadingMessage({
-                    type: 'text',
-                    role: 'ai',
-                    content: getChatCompletionMessage(getOccasionName(chatData!.occasion))
+                    type: "text",
+                    role: "ai",
+                    content: getChatCompletionMessage(getOccasionName(chatData!.occasion)),
                   });
                   addMessage({
-                    type: 'image',
-                    role: 'ai',
+                    type: "image",
+                    role: "ai",
                     imageUrl: finalImageUrl,
                   });
                 } else {
                   replaceLastLoadingMessage({
-                    type: 'text',
-                    role: 'ai',
-                    content: "抱歉，生成完成了，但图片链接丢失了。",
+                    type: "text",
+                    role: "ai",
+                    content: "Sorry, the generation is complete, but the image link was lost.",
                   });
                 }
-                console.log('[POLLING] Stopping polling because job is complete.');
+                console.log("[POLLING] Stopping polling because job is complete.");
                 clearInterval(interval);
                 setPollingIntervalId(null);
-              }
+              };
 
-              // If suggestions are still being displayed, wait until they are finished.
               if (isDisplayingSuggestion) {
                 const waitInterval = setInterval(() => {
                   if (!isDisplayingSuggestion) {
@@ -568,25 +530,19 @@ export default function ChatPage() {
               }
             }
             break;
-          case 'failed':
-            throw new Error(data.statusMessage || '生成失败，未提供具体原因。');
+          case "failed":
+            throw new Error(data.statusMessage || "Generation failed without a specific reason.");
           default:
             console.log(`[POLLING] Unhandled status: ${data.status}`);
         }
-
-        // Do not add the general status key for 'suggestion_generated' as it has its own logic
-        if (data.status !== 'suggestion_generated') {
-          processedStatusesRef.current.add(statusKey); // 标记为已处理
-        }
-
       } catch (error) {
         console.error("[POLLING] Polling error:", error);
-        const errorMessage = error instanceof Error ? error.message : "发生未知错误";
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
         setPollingError(errorMessage);
         replaceLastLoadingMessage({
-          type: 'text',
-          role: 'ai',
-          content: `抱歉，处理过程中遇到问题: ${errorMessage}`,
+          type: "text",
+          role: "ai",
+          content: `Sorry, we ran into a problem: ${errorMessage}`,
         });
         clearInterval(interval);
         setPollingIntervalId(null);
@@ -597,151 +553,136 @@ export default function ChatPage() {
     setPollingIntervalId(interval);
   };
 
-  // 页面初始化
   useEffect(() => {
-    // 防止重复初始化
     if (isInitialized) {
-      console.log('[CHAT DEBUG] Already initialized, skipping...');
+      console.log("[CHAT DEBUG] Already initialized, skipping...");
       return;
     }
 
-    console.log('[CHAT DEBUG] Page initialized, reading sessionStorage...');
+    console.log("[CHAT DEBUG] Page initialized, reading sessionStorage...");
 
-    // 尝试从sessionStorage读取数据
     try {
-      const storedData = sessionStorage.getItem('chatModeData');
-      console.log('[CHAT DEBUG] Raw sessionStorage data:', storedData);
+      const storedData = sessionStorage.getItem("chatModeData");
+      console.log("[CHAT DEBUG] Raw sessionStorage data:", storedData);
 
       if (storedData) {
         const parsedData = JSON.parse(storedData);
-        console.log('[CHAT DEBUG] Parsed chat data:', parsedData);
+        console.log("[CHAT DEBUG] Parsed chat data:", parsedData);
         setChatData(parsedData);
 
-        // 添加个性化欢迎消息
         const welcomeMessage = getChatWelcomeMessage(getOccasionName(parsedData.occasion));
 
-        console.log('[CHAT DEBUG] Adding welcome message:', welcomeMessage);
+        console.log("[CHAT DEBUG] Adding welcome message:", welcomeMessage);
 
-        // 使用一个数组来批量添加所有初始消息，避免多次状态更新
         const initialMessages: ChatMessage[] = [];
         let idCounter = 0;
 
-        const createMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>): ChatMessage => ({
+        const createMessage = (message: Omit<ChatMessage, "id" | "timestamp">): ChatMessage => ({
           ...message,
           id: `msg-${Date.now()}-${++idCounter}`,
           timestamp: new Date(),
         });
 
-        // 1. AI 欢迎消息
-        initialMessages.push(createMessage({
-          type: 'text',
-          role: 'ai',
-          content: welcomeMessage
-        }));
+        initialMessages.push(
+          createMessage({
+            type: "text",
+            role: "ai",
+            content: welcomeMessage,
+          }),
+        );
 
-        // 2. 用户照片文本
-        initialMessages.push(createMessage({
-          type: 'text',
-          role: 'user',
-          content: '这是我的照片：'
-        }));
+        initialMessages.push(
+          createMessage({
+            type: "text",
+            role: "user",
+            content: "Here is my photo:",
+          }),
+        );
 
-        // 3. 用户照片
-        initialMessages.push(createMessage({
-          type: 'image',
-          role: 'user',
-          imageUrl: parsedData.selfiePreview
-        }));
+        initialMessages.push(
+          createMessage({
+            type: "image",
+            role: "user",
+            imageUrl: parsedData.selfiePreview,
+          }),
+        );
 
-        // 4. 用户服装文本
-        initialMessages.push(createMessage({
-          type: 'text',
-          role: 'user',
-          content: '我想试穿这件衣服：'
-        }));
+        initialMessages.push(
+          createMessage({
+            type: "text",
+            role: "user",
+            content: "I want to try on this piece of clothing:",
+          }),
+        );
 
-        // 5. 用户服装图片
-        initialMessages.push(createMessage({
-          type: 'image',
-          role: 'user',
-          imageUrl: parsedData.clothingPreview
-        }));
+        initialMessages.push(
+          createMessage({
+            type: "image",
+            role: "user",
+            imageUrl: parsedData.clothingPreview,
+          }),
+        );
 
-        // 6. AI 确认消息
-        initialMessages.push(createMessage({
-          type: 'text',
-          role: 'ai',
-          content: getChatConfirmationMessage(getOccasionName(parsedData.occasion))
-        }));
+        initialMessages.push(
+          createMessage({
+            type: "text",
+            role: "ai",
+            content: getChatConfirmationMessage(getOccasionName(parsedData.occasion)),
+          }),
+        );
 
-        // 一次性设置所有消息
         setMessages(initialMessages);
         setMessageIdCounter(idCounter);
-
       } else {
-        console.log('[CHAT DEBUG] No sessionStorage data found, showing default message');
-        // 如果没有数据，显示提示消息
+        console.log("[CHAT DEBUG] No sessionStorage data found, showing default message");
         const defaultMessage: ChatMessage = {
           id: `msg-${Date.now()}-1`,
-          type: 'text',
-          role: 'ai',
-          content: '你好！我是你的专属AI造型师 ✨\n\n请先在主页选择你的照片和服装，然后我就可以为你生成专属的穿搭建议了！',
+          type: "text",
+          role: "ai",
+          content:
+            "Hello! I'm your personal AI stylist ✨\n\nPlease select your photo and clothing on the homepage first, and then I can generate exclusive outfit suggestions for you!",
           timestamp: new Date(),
         };
         setMessages([defaultMessage]);
         setMessageIdCounter(1);
       }
     } catch (error) {
-      console.error('[CHAT DEBUG] Error reading chat data:', error);
+      console.error("[CHAT DEBUG] Error reading chat data:", error);
       const errorMessage: ChatMessage = {
         id: `msg-${Date.now()}-1`,
-        type: 'text',
-        role: 'ai',
-        content: '你好！我是你的专属AI造型师 ✨\n\n请先在主页选择你的照片和服装，然后我就可以为你生成专属的穿搭建议了！',
+        type: "text",
+        role: "ai",
+        content:
+          "Hello! I'm your personal AI stylist ✨\n\nPlease select your photo and clothing on the homepage first, and then I can generate exclusive outfit suggestions for you!",
         timestamp: new Date(),
       };
       setMessages([errorMessage]);
       setMessageIdCounter(1);
     }
 
-    // 标记为已初始化
     setIsInitialized(true);
-  }, []); // 空依赖数组，确保只在组件挂载时运行一次
+  }, []);
 
-  // 当获取到 jobId 后，开始轮询
   useEffect(() => {
     if (jobId) {
       startPolling(jobId);
     }
   }, [jobId]);
 
-  // 添加状态变化的调试日志
   useEffect(() => {
-    console.log('[CHAT DEBUG] State changed:', {
+    console.log("[CHAT DEBUG] State changed:", {
       isGenerating,
       currentStep,
-      chatData: chatData ? 'exists' : 'null',
+      chatData: chatData ? "exists" : "null",
       messagesLength: messages.length,
-      pollingError
+      pollingError,
     });
   }, [isGenerating, currentStep, chatData, messages.length, pollingError]);
 
-  // 移除消息变化的调试日志以避免额外的渲染
-  // useEffect(() => {
-  //   console.log('[CHAT DEBUG] Messages updated:', messages.map(m => ({
-  //     id: m.id,
-  //     type: m.type,
-  //     role: m.role,
-  //     content: m.content?.substring(0, 50) + '...',
-  //     loadingText: m.loadingText
-  //   })));
-  // }, [messages]);
-
-  // 组件卸载时清理轮询
   useEffect(() => {
     return () => {
       if (pollingIntervalId) {
-        console.log('[LIFECYCLE] Component unmounting, clearing polling interval.');
+        console.log("[LIFECYCLE] Component unmounting, clearing polling interval.");
         clearInterval(pollingIntervalId);
       }
     };
@@ -749,68 +690,68 @@ export default function ChatPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 pb-20">
-      {/* 顶部标题栏 */}
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-gray-200">
         <div className="flex items-center justify-between px-4 py-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-            className="p-2"
-          >
+          <Button variant="ghost" size="sm" onClick={() => router.back()} className="p-2">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="font-playfair text-lg font-bold text-gray-800">AI造型师</h1>
-          <div className="w-9" /> {/* 占位符，保持标题居中 */}
+          <h1 className="font-playfair text-lg font-bold text-gray-800">AI Stylist</h1>
+          <div className="w-9" />
         </div>
       </header>
 
-      {/* 对话流区域 */}
       <div className="flex-1 px-4 py-6 space-y-4">
         <div className="max-w-2xl mx-auto">
           {messages.map((message) => (
-            <ChatBubble
-              key={message.id}
-              message={message}
-              onImageClick={handleImageClick}
-            />
+            <ChatBubble key={message.id} message={message} onImageClick={handleImageClick} />
           ))}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* 调试信息显示 */}
-        {process.env.NODE_ENV === 'development' && (
+        {process.env.NODE_ENV === "development" && (
           <div className="max-w-2xl mx-auto mt-4 p-4 bg-gray-100 rounded-lg text-xs">
             <h3 className="font-bold mb-2">Debug Info:</h3>
             <div>isGenerating: {String(isGenerating)}</div>
             <div>currentStep: {String(currentStep)}</div>
-            <div>chatData: {chatData ? 'exists' : 'null'}</div>
+            <div>chatData: {chatData ? "exists" : "null"}</div>
             <div>messages.length: {String(messages.length)}</div>
-            <div>pollingError: {pollingError || 'none'}</div>
+            <div>pollingError: {pollingError || "none"}</div>
             <div>hasProcessedCompletion: {String(hasProcessedCompletion)}</div>
-            <div>pollingActive: {pollingIntervalId ? 'yes' : 'no'}</div>
-            <div>Show start button: {String(!isGenerating && currentStep === 'suggestion' && chatData && messages.length === 6)}</div>
-            <div>Raw chatData: {chatData ? JSON.stringify({
-              ...chatData,
-              selfiePreview: chatData.selfiePreview?.startsWith('data:image')
-                ? `${chatData.selfiePreview.substring(0, 30)}... [base64 data truncated]`
-                : chatData.selfiePreview,
-              clothingPreview: chatData.clothingPreview?.startsWith('data:image')
-                ? `${chatData.clothingPreview.substring(0, 30)}... [base64 data truncated]`
-                : chatData.clothingPreview
-            }, null, 2) : 'null'}</div>
+            <div>pollingActive: {pollingIntervalId ? "yes" : "no"}</div>
+            <div>
+              Show start button:{" "}
+              {String(!isGenerating && currentStep === "suggestion" && chatData && messages.length === 6)}
+            </div>
+            <div>
+              Raw chatData:{" "}
+              {chatData
+                ? JSON.stringify(
+                  {
+                    ...chatData,
+                    selfiePreview: chatData.selfiePreview?.startsWith("data:image")
+                      ? `${chatData.selfiePreview.substring(0, 30)}... [base64 data truncated]`
+                      : chatData.selfiePreview,
+                    clothingPreview: chatData.clothingPreview?.startsWith("data:image")
+                      ? `${chatData.clothingPreview.substring(0, 30)}... [base64 data truncated]`
+                      : chatData.clothingPreview,
+                  },
+                  null,
+                  2,
+                )
+                : "null"}
+            </div>
           </div>
         )}
 
-        {/* 如果有数据且没有在生成中，显示开始按钮 */}
         {(() => {
-          const shouldShowButton = !isGenerating && currentStep === 'suggestion' && chatData && messages.length === 6;
-          console.log('[CHAT DEBUG] Button visibility check:', {
+          const shouldShowButton =
+            !isGenerating && currentStep === "suggestion" && chatData && messages.length === 6;
+          console.log("[CHAT DEBUG] Button visibility check:", {
             isGenerating,
             currentStep,
             hasChatData: !!chatData,
             messagesLength: messages.length,
-            shouldShowButton
+            shouldShowButton,
           });
 
           return shouldShowButton;
@@ -818,28 +759,27 @@ export default function ChatPage() {
             <div className="max-w-2xl mx-auto mt-8">
               <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
                 <p className="text-sm text-gray-600 mb-4 text-center">
-                  准备好开始生成你的专属造型了吗？
+                  Ready to generate your personalized style?
                 </p>
                 <Button
                   onClick={() => {
-                    console.log('[CHAT DEBUG] Start generation button clicked');
+                    console.log("[CHAT DEBUG] Start generation button clicked");
                     startGeneration();
                   }}
                   className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
                 >
-                  开始生成我的造型
+                  Generate My Style
                 </Button>
               </div>
             </div>
           )}
 
-        {/* 如果没有数据，显示返回主页按钮 */}
         {(() => {
           const shouldShowReturnButton = !chatData && messages.length === 1;
-          console.log('[CHAT DEBUG] Return button visibility check:', {
+          console.log("[CHAT DEBUG] Return button visibility check:", {
             hasChatData: !!chatData,
             messagesLength: messages.length,
-            shouldShowReturnButton
+            shouldShowReturnButton,
           });
 
           return shouldShowReturnButton;
@@ -847,26 +787,26 @@ export default function ChatPage() {
             <div className="max-w-2xl mx-auto mt-8">
               <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
                 <p className="text-sm text-gray-600 mb-4 text-center">
-                  请先选择你的照片和服装
+                  Please select your photo and clothing first
                 </p>
                 <Button
                   onClick={() => {
-                    console.log('[CHAT DEBUG] Return to home button clicked');
-                    router.push('/');
+                    console.log("[CHAT DEBUG] Return to home button clicked");
+                    router.push("/");
                   }}
                   className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
                 >
-                  返回主页选择
+                  Return to Homepage
                 </Button>
               </div>
             </div>
           )}
 
-        {/* 显示错误信息 */}
         {pollingError && (
           <div className="max-w-2xl mx-auto mt-4">
             <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
               <p className="text-sm text-red-600 text-center">{pollingError}</p>
+
               <Button
                 onClick={() => {
                   setPollingError(null);
@@ -875,32 +815,27 @@ export default function ChatPage() {
                 variant="outline"
                 className="w-full mt-3"
               >
-                重试
+                Retry
               </Button>
             </div>
           </div>
         )}
 
-        {/* 完成状态的操作按钮 */}
-        {currentStep === 'complete' && (
+        {currentStep === "complete" && (
           <div className="max-w-2xl mx-auto mt-8">
             <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
               <p className="text-sm text-gray-600 mb-4 text-center">
-                🎉 你的专属造型已经完成！
+                🎉 Your personalized style is complete!
               </p>
               <div className="flex gap-3">
-                <Button
-                  onClick={() => router.push('/')}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  再试一套
+                <Button onClick={() => router.push("/")} variant="outline" className="flex-1">
+                  Try Another Set
                 </Button>
                 <Button
-                  onClick={() => router.push('/results')}
+                  onClick={() => router.push("/results")}
                   className="flex-1 bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
                 >
-                  查看我的造型
+                  View My Styles
                 </Button>
               </div>
             </div>
@@ -908,15 +843,13 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* 图片预览 Modal */}
       <ImageModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        imageUrl={modalImage || ''}
-        title="AI生成的造型图"
+        imageUrl={modalImage || ""}
+        title="AI-Generated Style Image"
       />
 
-      {/* 底部导航栏 */}
       <IOSTabBar />
     </div>
   );
