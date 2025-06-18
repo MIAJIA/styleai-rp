@@ -12,12 +12,37 @@ interface ScenarioStepProps {
 }
 
 const SCENARIOS = [
-  { id: "work", label: "工作职场", emoji: "💼", description: "办公室会议、演讲、商务社交" },
-  { id: "date", label: "约会社交", emoji: "💕", description: "晚餐约会、聚会、社交活动" },
-  { id: "casual", label: "日常休闲", emoji: "☀️", description: "日常出行、咖啡约会、周末外出" },
-  { id: "special", label: "特殊活动", emoji: "✨", description: "婚礼、晚宴、重要场合" },
-  { id: "travel", label: "旅行度假", emoji: "🌴", description: "旅游、观光、度假活动" },
-  { id: "creative", label: "创意表达", emoji: "🎨", description: "艺术活动、创意工作、自我表达" },
+  {
+    id: "work",
+    label: "Work/Professional",
+    emoji: "💼",
+    description: "Office meetings, presentations, business socials",
+  },
+  {
+    id: "date",
+    label: "Social & Dating",
+    emoji: "💕",
+    description: "Dinner dates, parties, social events",
+  },
+  { id: "casual", label: "Daily Casual", emoji: "☀️", description: "Everyday outings, coffee dates, weekend trips" },
+  {
+    id: "special",
+    label: "Special Events",
+    emoji: "✨",
+    description: "Weddings, dinners, important occasions",
+  },
+  {
+    id: "travel",
+    label: "Travel/Vacation",
+    emoji: "🌴",
+    description: "Tourism, sightseeing, vacation activities",
+  },
+  {
+    id: "creative",
+    label: "Creative Expression",
+    emoji: "🎨",
+    description: "Art events, creative work, self-expression",
+  },
 ];
 
 export default function ScenarioStep({ data, onUpdate, onValidationChange }: ScenarioStepProps) {
@@ -52,8 +77,8 @@ export default function ScenarioStep({ data, onUpdate, onValidationChange }: Sce
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-gray-800">使用场景</h2>
-        <p className="text-gray-600">明确搭配需求背景，提升风格实用性</p>
+        <h2 className="text-2xl font-bold text-gray-800">Usage Scenarios</h2>
+        <p className="text-gray-600">Clarify the context of your needs to enhance style practicality.</p>
       </div>
 
       {/* Scenario Options */}
@@ -61,11 +86,10 @@ export default function ScenarioStep({ data, onUpdate, onValidationChange }: Sce
         {SCENARIOS.map((scenario) => (
           <Card
             key={scenario.id}
-            className={`p-4 cursor-pointer transition-all ${
-              selectedScenario === scenario.id
-                ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
-                : "border-gray-200 hover:border-pink-200"
-            }`}
+            className={`p-4 cursor-pointer transition-all ${selectedScenario === scenario.id
+              ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
+              : "border-gray-200 hover:border-pink-200"
+              }`}
             onClick={() => selectScenario(scenario.id)}
           >
             <div className="flex items-center space-x-3">
@@ -94,9 +118,9 @@ export default function ScenarioStep({ data, onUpdate, onValidationChange }: Sce
 
       {/* Custom Scenario Input */}
       <Card className="p-4">
-        <h3 className="font-semibold text-gray-800 mb-3">🎯 或描述你的具体需求</h3>
+        <h3 className="font-semibold text-gray-800 mb-3">🎯 Or describe your specific needs</h3>
         <Input
-          placeholder="例如：求职面试、妈妈日常、学生活动..."
+          placeholder="e.g., Job interview, mom's daily life, student activities..."
           value={customScenario}
           onChange={(e) => setCustomScenario(e.target.value)}
           className="text-sm"

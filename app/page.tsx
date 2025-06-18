@@ -140,7 +140,7 @@ export default function HomePage() {
   const [isWardrobeOpen, setIsWardrobeOpen] = useState(false);
   const [isPortraitSheetOpen, setIsPortraitSheetOpen] = useState(false);
   const [stage, setStage] = useState<"initial" | "loading" | "suggestion" | "result">("initial");
-  const [occasion, setOccasion] = useState("日常通勤");
+  const [occasion, setOccasion] = useState("fashion-magazine");
   const [styleSuggestion, setStyleSuggestion] = useState<any>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isGeneratingFinalImage, setIsGeneratingFinalImage] = useState(false);
@@ -224,7 +224,7 @@ export default function HomePage() {
     setPollingError(null);
     setStyleSuggestion(null);
 
-    // 初始化process images，显示用户输入的图片
+    // Initialize process images to show user-input images
     setProcessImages({
       humanImage: selfiePreview,
       garmentImage: clothingPreview,
@@ -291,7 +291,7 @@ export default function HomePage() {
           setStyleSuggestion(data.suggestion);
           setStage("suggestion");
 
-          // 更新styled image（如果API返回了中间结果图片）
+          // Update styled image (if API returns intermediate result image)
           if (data.styledImageUrl) {
             setProcessImages(prev => ({
               ...prev,
@@ -308,7 +308,7 @@ export default function HomePage() {
             setStage("result");
             setIsLoading(false);
 
-            // 更新try-on image
+            // Update try-on image
             setProcessImages(prev => ({
               ...prev,
               tryOnImage: finalImageUrl
@@ -521,7 +521,7 @@ export default function HomePage() {
 
   const hasRequiredImages = selfiePreview && clothingPreview;
 
-  // 新增：处理Chat模式的函数
+  // New: Handle Chat mode function
   const handleChatMode = () => {
     console.log('[MAIN DEBUG] Chat mode button clicked');
     console.log('[MAIN DEBUG] Current state:', {
@@ -533,7 +533,7 @@ export default function HomePage() {
       hasRequiredImages
     });
 
-    // 将当前选择的数据存储到sessionStorage，供Chat页面使用
+    // Store current selection data to sessionStorage for Chat page to use
     const chatData = {
       selfiePreview,
       clothingPreview,
@@ -556,16 +556,16 @@ export default function HomePage() {
     console.log('[MAIN DEBUG] Storing chat data to sessionStorage:', chatData);
     sessionStorage.setItem('chatModeData', JSON.stringify(chatData));
 
-    // 验证存储是否成功
+    // Verify if storage was successful
     const storedData = sessionStorage.getItem('chatModeData');
     console.log('[MAIN DEBUG] Verification - stored data:', storedData);
 
-    // 导航到Chat页面
+    // Navigate to Chat page
     console.log('[MAIN DEBUG] Navigating to /chat');
     router.push('/chat');
   };
 
-  // 修改原有的handleStartGeneration函数，用于传统模式
+  // Modify original handleStartGeneration function for traditional mode
   const handleTraditionalMode = async () => {
     setExperienceMode("traditional");
     await handleStartGeneration();
@@ -802,7 +802,7 @@ export default function HomePage() {
                     Generating personalized advice just for you...
                   </p>
 
-                  {/* 2×2 缩略图网格 - Loading阶段显示输入图片 */}
+                  {/* 2x2 thumbnail grid - Loading stage displays input images */}
                   <div className="max-w-sm mx-auto">
                     <div className="grid grid-cols-2 gap-3">
                       {/* Human Image */}
@@ -852,7 +852,7 @@ export default function HomePage() {
                     Your Personal Style Guide
                   </h2>
 
-                  {/* 2×2 缩略图网格 - Suggestion阶段显示更多进度 */}
+                  {/* 2x2 thumbnail grid - Suggestion stage shows more progress */}
                   <div className="max-w-sm mx-auto mb-6">
                     <div className="grid grid-cols-2 gap-3">
                       {/* Human Image */}
@@ -918,7 +918,7 @@ export default function HomePage() {
                       </div>
                     </div>
 
-                    {/* 进度标签 */}
+                    {/* Progress labels */}
                     <div className="grid grid-cols-2 gap-3 mt-2">
                       <p className="text-xs text-center text-gray-500">Your Photo</p>
                       <p className="text-xs text-center text-gray-500">Garment</p>

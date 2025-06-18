@@ -154,13 +154,13 @@ export default function OnboardingPage() {
 
   const getStepTitle = () => {
     const titles = [
-      "照片上传", // Step 0
-      "身体结构识别", // Step 1
-      "面容结构判断", // Step 1.5
-      "风格偏好选择", // Step 2
-      "使用场景", // Step 3
-      "风格边界", // Step 4
-      "风格总结", // Step 5
+      "Photo Upload", // Step 0
+      "Body Analysis", // Step 1
+      "Facial Analysis", // Step 1.5
+      "Style Preference", // Step 2
+      "Usage Scenario", // Step 3
+      "Style Boundaries", // Step 4
+      "Style Summary", // Step 5
     ];
     return titles[currentStep];
   };
@@ -193,9 +193,8 @@ export default function OnboardingPage() {
             {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
               <div
                 key={index}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  currentStep === index ? "bg-pink-500 w-4" : "bg-gray-300"
-                }`}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${currentStep === index ? "bg-pink-500 w-4" : "bg-gray-300"
+                  }`}
               />
             ))}
           </div>
@@ -209,7 +208,7 @@ export default function OnboardingPage() {
                 onClick={handleSkip}
                 className="text-gray-500 text-sm px-1"
               >
-                跳过
+                Skip
               </Button>
             )}
           </div>
@@ -230,7 +229,7 @@ export default function OnboardingPage() {
             className="w-full h-12 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50"
           >
             <span className="flex items-center justify-center space-x-2">
-              <span>{currentStep === TOTAL_STEPS - 1 ? "完成设置" : "继续"}</span>
+              <span>{currentStep === TOTAL_STEPS - 1 ? "Complete Setup" : "Continue"}</span>
               {currentStep < TOTAL_STEPS - 1 && <ChevronRight className="w-4 h-4" />}
             </span>
           </Button>

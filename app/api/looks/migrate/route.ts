@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { migrateLooksFromLocalStorage, type PastLook } from '@/lib/database';
 
-// POST /api/looks/migrate - 从 localStorage 迁移数据到数据库
+// POST /api/looks/migrate - Migrate data from localStorage to the database
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     let failureCount = 0;
     const errors: string[] = [];
 
-    // 逐个迁移每个 look
+    // Migrate each look one by one
     for (const look of looks as PastLook[]) {
       try {
         const { saveLookToDB } = await import('@/lib/database');

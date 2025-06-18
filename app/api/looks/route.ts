@@ -9,7 +9,7 @@ import {
   type PastLook
 } from '@/lib/database';
 
-// GET /api/looks - 获取用户的所有 looks
+// GET /api/looks - Get all of a user's looks
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     const dbLooks = await getUserLooks(userId, limit);
 
-    // 转换为 PastLook 格式以保持兼容性
+    // Convert to PastLook format for compatibility
     const pastLooks = dbLooks.map(dbLookToPastLook);
 
     return NextResponse.json({
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/looks - 保存新的 look
+// POST /api/looks - Save a new look
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error saving look:', error);
 
-    // 检查是否是 blob 存储冲突错误
+    // Check if it's a blob storage conflict error
     if (error instanceof Error && error.message.includes('blob already exists')) {
       console.log('Blob conflict detected, but this is expected for duplicate saves');
       return NextResponse.json({
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 检查是否是重复 look 错误
+    // Check if it's a duplicate look error
     if (error instanceof Error && error.message.includes('already exists')) {
       return NextResponse.json({
         success: true,
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE /api/looks - 删除 look(s)
+// DELETE /api/looks - Delete look(s)
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

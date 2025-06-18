@@ -76,7 +76,7 @@ const garmentDescriptions = new Map<string, string>([
     "/cloth/whiteblazer.png",
     "A sharp, tailored white blazer that adds sophistication to any outfit.",
   ],
-  ["/cloth/黑皮衣.png", "A classic black leather biker jacket, adding an edgy and cool vibe."],
+  ["/cloth/black-leather-jacket.png", "A classic black leather biker jacket, adding an edgy and cool vibe."],
 ]);
 // --- End: New garment description mapping ---
 

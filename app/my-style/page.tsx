@@ -158,13 +158,13 @@ export default function MyStylePage() {
     if (profileData?.boneStructure === "delicate" && profileData?.upperBodyType === "curved") {
       labels.push("Soft Feminine");
     }
-    if (profileData?.stylePreferences?.includes("酷感锐利")) {
+    if (profileData?.stylePreferences?.includes("Edgy Cool")) {
       labels.push("Edgy Cool");
     }
-    if (profileData?.stylePreferences?.includes("优雅精致")) {
+    if (profileData?.stylePreferences?.includes("Elegant Refined")) {
       labels.push("Elegant Refined");
     }
-    if (profileData?.stylePreferences?.includes("清新青春")) {
+    if (profileData?.stylePreferences?.includes("Fresh & Vibrant")) {
       labels.push("Fresh & Vibrant");
     }
     return labels.length > 0 ? labels : ["Unique Style"];
@@ -175,12 +175,12 @@ export default function MyStylePage() {
       return profileData.styleProfile.recommendedKeywords;
     }
     const keywords = [];
-    if (profileData?.bodyAdvantages?.includes("腰细")) keywords.push("High Waistline");
-    if (profileData?.bodyAdvantages?.includes("腿长")) keywords.push("Cropped Tops");
+    if (profileData?.bodyAdvantages?.includes("Slim Waist")) keywords.push("High Waistline");
+    if (profileData?.bodyAdvantages?.includes("Long Legs")) keywords.push("Cropped Tops");
     if (profileData?.facialIntensity === "light") keywords.push("Soft Colors");
     if (profileData?.boneStructure === "delicate") keywords.push("Delicate Details");
-    if (profileData?.stylePreferences?.includes("清新青春")) keywords.push("Bright Tones");
-    if (profileData?.primaryScenario === "工作职场") keywords.push("Professional");
+    if (profileData?.stylePreferences?.includes("Fresh & Vibrant")) keywords.push("Bright Tones");
+    if (profileData?.primaryScenario === "Workplace") keywords.push("Professional");
     return keywords.length > 0 ? keywords : ["Comfortable", "Natural"];
   };
 

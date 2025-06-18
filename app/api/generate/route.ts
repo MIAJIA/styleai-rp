@@ -13,7 +13,7 @@ const garmentDescriptions = new Map<string, string>([
     "/cloth/whiteblazer.png",
     "A sharp, tailored white blazer that adds sophistication to any outfit.",
   ],
-  ["/cloth/黑皮衣.png", "A classic black leather biker jacket, adding an edgy and cool vibe."],
+  ["/cloth/black-leather-jacket.png", "A classic black leather biker jacket, adding an edgy and cool vibe."],
 ]);
 
 // TODO: The client-side image pre-processing is causing the AI to return cropped images.
@@ -80,19 +80,19 @@ export async function POST(request: Request) {
 
   try {
     const formData = await request.formData();
-    // ● 支持上传服饰商品图或服饰白底图，支持上装upper、下装lower、与连体装dress
-    // ● 支持传入图片Base64编码或图片URL（确保可访问）
-    // ● 图片格式支持.jpg / .jpeg / .png
-    // ● 图片文件大小不能超过10MB，图片宽高尺寸不小于300px
-    // ● 其中 kolors - virtual -try-on - v1 - 5 模型不仅支持单个服装输入，还支持"上装 + 下装"形式服装组合输入，即：
-    // 	○ 输入单个服饰图片（上装 or 下装 or 连体装）-> 生成试穿的单品图片
-    // 	○ 输入组合服饰图片（您可以将多个单品服饰白底图拼接到同一张图片）
-    // 		■ 模型检测为"上装 + 下装" -> 生成试穿的"上装 + 下装"图片
-    // 		■ 模型检测为"上装 + 上装" -> 生成失败
-    // 		■ 模型检测为"下装 + 下装" -> 生成失败
-    // 		■ 模型检测为"连体装 + 连体装" -> 生成失败
-    // 		■ 模型检测为"上装 + 连体装" -> 生成失败
-    // 		■ 模型检测为"下装 + 连体装" -> 生成失败
+    // ● Supports uploading clothing product images or clothing on a white background, supports upper body, lower body, and one-piece dresses.
+    // ● Supports passing in Base64 encoded images or image URLs (ensure they are accessible).
+    // ● Image formats supported: .jpg / .jpeg / .png.
+    // ● Image file size cannot exceed 10MB, and image dimensions should be at least 300px.
+    // ● The kolors-virtual-try-on-v1-5 model not only supports single garment input but also "upper + lower" garment combination input, i.e.:
+    // 	○ Input a single garment image (upper, lower, or dress) -> generate a try-on image of the single item.
+    // 	○ Input a combined garment image (you can stitch multiple single-item images with white backgrounds into one picture).
+    // 		■ Model detects "upper + lower" -> generate "upper + lower" try-on image.
+    // 		■ Model detects "upper + upper" -> generation fails.
+    // 		■ Model detects "lower + lower" -> generation fails.
+    // 		■ Model detects "dress + dress" -> generation fails.
+    // 		■ Model detects "upper + dress" -> generation fails.
+    // 		■ Model detects "lower + dress" -> generation fails.
 
     const humanImageBlob = formData.get("human_image") as Blob | null;
     const garmentImageBlob = formData.get("garment_image") as Blob | null;

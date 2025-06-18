@@ -31,7 +31,7 @@ export default function ImageModal({ isOpen, onClose, imageUrl, title }: ImageMo
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download failed:', error);
-      // 降级方案：直接打开图片
+      // Fallback: open image directly
       window.open(imageUrl, '_blank');
     }
   };
@@ -55,22 +55,22 @@ export default function ImageModal({ isOpen, onClose, imageUrl, title }: ImageMo
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
-      // TODO: 显示复制成功提示
+      // TODO: Show success message on copy
       console.log('Link copied to clipboard');
     });
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* 背景遮罩 */}
+      {/* Background overlay */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal 内容 */}
+      {/* Modal content */}
       <div className="relative z-10 w-full max-w-lg mx-4">
-        {/* 关闭按钮 */}
+        {/* Close button */}
         <Button
           variant="ghost"
           size="sm"
@@ -80,7 +80,7 @@ export default function ImageModal({ isOpen, onClose, imageUrl, title }: ImageMo
           <X className="w-5 h-5" />
         </Button>
 
-        {/* 图片容器 */}
+        {/* Image container */}
         <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
           <div className="relative">
             {isLoading && (
@@ -100,7 +100,7 @@ export default function ImageModal({ isOpen, onClose, imageUrl, title }: ImageMo
             />
           </div>
 
-          {/* 操作按钮 */}
+          {/* Action buttons */}
           <div className="p-4 border-t border-gray-100">
             <div className="flex gap-3">
               <Button
@@ -109,14 +109,14 @@ export default function ImageModal({ isOpen, onClose, imageUrl, title }: ImageMo
                 className="flex-1"
               >
                 <Download className="w-4 h-4 mr-2" />
-                保存图片
+                Save Image
               </Button>
               <Button
                 onClick={handleShare}
                 className="flex-1 bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
               >
                 <Share2 className="w-4 h-4 mr-2" />
-                分享
+                Share
               </Button>
             </div>
 

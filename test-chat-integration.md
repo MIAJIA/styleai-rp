@@ -1,74 +1,74 @@
-# Chat页面API集成测试指南
+# Chat Page API Integration Testing Guide
 
-## 测试步骤
+## Testing Steps
 
-### 1. 基础功能测试
-1. 启动开发服务器：`npm run dev`
-2. 访问主页：`http://localhost:3000`
-3. 上传自拍照片和服装图片
-4. 选择场合（如"咖啡厅约会"）
-5. 在Step 4中选择"Chat Experience"
-6. 验证数据是否正确传递到Chat页面
+### 1. Basic Functionality Test
+1. Start the development server: `npm run dev`
+2. Visit the homepage: `http://localhost:3000`
+3. Upload a selfie and a clothing image
+4. Select an occasion (e.g., "Coffee Shop Date")
+5. Select "Chat Experience" in Step 4
+6. Verify that the data is correctly passed to the Chat page
 
-### 2. API集成测试
-1. 在Chat页面点击"开始生成我的造型"
-2. 验证以下流程：
-   - 显示"AI正在分析你的穿搭需求..."loading状态
-   - 调用`/api/generation/start`成功创建job
-   - 开始轮询`/api/generation/status`
-   - 当status为`suggestion_generated`时显示穿搭建议文本
-   - 显示"AI正在生成你的专属造型图片..."loading状态
-   - 当status为`completed`时显示最终生成的图片
-   - 显示完成消息和操作按钮
+### 2. API Integration Test
+1. Click "Start Generating My Style" on the Chat page
+2. Verify the following process:
+   - The "AI is analyzing your outfit needs..." loading status is displayed
+   - A job is successfully created by calling `/api/generation/start`
+   - Polling starts for `/api/generation/status`
+   - When the status is `suggestion_generated`, the outfit suggestions are displayed
+   - The "AI is generating your exclusive style image..." loading status is displayed
+   - When the status is `completed`, the final generated image is displayed
+   - Completion messages and action buttons are displayed
 
-### 3. 错误处理测试
-1. 测试网络错误情况
-2. 测试API返回错误的情况
-3. 验证重试功能是否正常
-4. 验证超时处理（5分钟）
+### 3. Error Handling Test
+1. Test for network error scenarios
+2. Test for scenarios where the API returns an error
+3. Verify that the retry function works correctly
+4. Verify timeout handling (5 minutes)
 
-### 4. 用户体验测试
-1. 验证消息自动滚动到底部
-2. 验证图片点击放大功能
-3. 验证loading动画效果
-4. 验证响应式布局
+### 4. User Experience Test
+1. Verify that messages automatically scroll to the bottom
+2. Verify the image click-to-enlarge function
+3. Verify the loading animation effects
+4. Verify the responsive layout
 
-## 预期结果
+## Expected Results
 
-### 成功流程
-1. 用户选择图片和场合 → Chat页面显示个性化欢迎消息
-2. 点击开始生成 → 显示loading状态
-3. API调用成功 → 显示AI生成的穿搭建议（包含场合适配度、风格搭配等）
-4. 继续生成 → 显示最终造型图片
-5. 完成 → 显示操作按钮（再试一套、查看我的造型）
+### Success Flow
+1. User selects images and occasion → Chat page displays a personalized welcome message
+2. Click to start generation → Loading status is displayed
+3. API call is successful → AI-generated outfit suggestions are displayed (including occasion fit, style matching, etc.)
+4. Continue generation → The final style image is displayed
+5. Completion → Action buttons are displayed (Try another set, View my styles)
 
-### API数据流
+### API Data Flow
 ```
-用户操作 → FormData(human_image, garment_image, occasion)
+User action → FormData(human_image, garment_image, occasion)
        → POST /api/generation/start
-       → 返回jobId
-       → 轮询 GET /api/generation/status?jobId=xxx
-       → status: suggestion_generated → 显示文字建议
-       → status: completed → 显示最终图片
+       → Returns jobId
+       → Poll GET /api/generation/status?jobId=xxx
+       → status: suggestion_generated → Display text suggestions
+       → status: completed → Display final image
 ```
 
-## 调试信息
+## Debug Information
 
-在浏览器控制台查看以下日志：
-- `[CHAT POLLING] Received data:` - 轮询返回的数据
-- `[CHAT POLLING] Suggestion generated` - 建议生成完成
-- `[CHAT POLLING] Generation completed` - 图片生成完成
-- 任何错误信息和堆栈跟踪
+Check the following logs in the browser console:
+- `[CHAT POLLING] Received data:` - Data returned from polling
+- `[CHAT POLLING] Suggestion generated` - Suggestion generation complete
+- `[CHAT POLLING] Generation completed` - Image generation complete
+- Any error messages and stack traces
 
-## 已知问题
+## Known Issues
 
-1. 图片格式转换可能在某些浏览器中有兼容性问题
-2. 长时间生成可能触发超时机制
-3. 网络不稳定可能导致轮询失败
+1. Image format conversion may have compatibility issues in some browsers
+2. Long generation times may trigger the timeout mechanism
+3. Unstable network may cause polling to fail
 
-## 下一步优化
+## Next Steps for Optimization
 
-1. 添加更详细的进度指示器
-2. 优化错误消息的用户友好性
-3. 添加生成历史保存功能
-4. 实现更智能的重试机制
+1. Add a more detailed progress indicator
+2. Optimize the user-friendliness of error messages
+3. Add a feature to save generation history
+4. Implement a smarter retry mechanism

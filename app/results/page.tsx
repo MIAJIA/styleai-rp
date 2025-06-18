@@ -35,7 +35,7 @@ export default function ResultsPage() {
   useEffect(() => {
     const loadLooks = async () => {
       try {
-        // 首先尝试从数据库加载
+        // First, try to load from the database
         const response = await fetch('/api/looks?userId=default&limit=50');
         const result = await response.json();
 
@@ -45,16 +45,16 @@ export default function ResultsPage() {
           return;
         }
 
-        // 如果数据库没有数据，尝试从 localStorage 迁移
+        // If there is no data in the database, try to migrate from localStorage
         const storedLooks = localStorage.getItem("pastLooks");
         if (storedLooks) {
           const localLooks = JSON.parse(storedLooks);
           console.log(`Found ${localLooks.length} looks in localStorage, migrating...`);
 
-          // 先显示本地数据
+          // Display local data first
           setPastLooks(localLooks);
 
-          // 后台迁移到数据库
+          // Migrate to the database in the background
           try {
             const migrateResponse = await fetch('/api/looks/migrate', {
               method: 'POST',
@@ -71,11 +71,11 @@ export default function ResultsPage() {
             console.log('Migration result:', migrateResult);
 
             if (migrateResult.success) {
-              // 迁移成功后清空 localStorage
+              // Clear localStorage after successful migration
               localStorage.removeItem('pastLooks');
               console.log('Migration completed, localStorage cleared');
 
-              // 重新从数据库加载以确保数据一致性
+              // Reload from the database to ensure data consistency
               const freshResponse = await fetch('/api/looks?userId=default&limit=50');
               const freshResult = await freshResponse.json();
               if (freshResult.success) {
@@ -84,7 +84,7 @@ export default function ResultsPage() {
             }
           } catch (migrateError) {
             console.error('Migration failed:', migrateError);
-            // 迁移失败，继续使用本地数据
+            // Migration failed, continue to use local data
           }
         } else {
           console.log('No looks found in database or localStorage');
@@ -93,7 +93,7 @@ export default function ResultsPage() {
       } catch (error) {
         console.error('Error loading looks:', error);
 
-        // 如果所有方法都失败，尝试从 localStorage 读取
+        // If all methods fail, try to read from localStorage
         try {
           const storedLooks = localStorage.getItem("pastLooks");
           if (storedLooks) {
@@ -112,7 +112,7 @@ export default function ResultsPage() {
 
   const handleDeleteLook = async (lookId: string) => {
     try {
-      // 尝试从数据库删除
+      // Try to delete from the database
       const response = await fetch(`/api/looks?lookId=${lookId}&userId=default`, {
         method: 'DELETE',
       });
@@ -127,7 +127,7 @@ export default function ResultsPage() {
     } catch (error) {
       console.error('Failed to delete from database:', error);
 
-      // 回退到 localStorage 删除
+      // Fallback to deleting from localStorage
       try {
         const storedLooks = localStorage.getItem("pastLooks");
         if (storedLooks) {
@@ -140,14 +140,14 @@ export default function ResultsPage() {
       }
     }
 
-    // 无论如何都更新 UI
+    // Update the UI anyway
     const updatedLooks = pastLooks.filter((look) => look.id !== lookId);
     setPastLooks(updatedLooks);
   };
 
   const handleClearRecentLooks = async () => {
     try {
-      // 尝试从数据库清空
+      // Try to clear from the database
       const response = await fetch('/api/looks?clearAll=true&userId=default', {
         method: 'DELETE',
       });
@@ -162,7 +162,7 @@ export default function ResultsPage() {
     } catch (error) {
       console.error('Failed to clear database:', error);
 
-      // 回退到 localStorage 清空
+      // Fallback to clearing localStorage
       try {
         localStorage.removeItem("pastLooks");
       } catch (localError) {
@@ -170,7 +170,7 @@ export default function ResultsPage() {
       }
     }
 
-    // 无论如何都更新 UI
+    // Update the UI anyway
     setPastLooks([]);
   };
 
@@ -182,7 +182,7 @@ export default function ResultsPage() {
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('zh-CN', {
+    return new Date(timestamp).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',

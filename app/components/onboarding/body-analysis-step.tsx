@@ -13,9 +13,23 @@ interface BodyAnalysisStepProps {
   onValidationChange: (isValid: boolean) => void;
 }
 
-const BODY_ADVANTAGES = ["腿长", "腰细", "比例好", "肩颈线条好", "肩膀有型", "身材匀称"];
+const BODY_ADVANTAGES = [
+  "Long legs",
+  "Slim waist",
+  "Good proportions",
+  "Good shoulder & neck line",
+  "Defined shoulders",
+  "Well-proportioned body",
+];
 
-const BODY_CHALLENGES = ["胯宽", "腿短", "无腰线", "脖子短", "肩膀宽", "肩膀窄"];
+const BODY_CHALLENGES = [
+  "Wide hips",
+  "Short legs",
+  "No defined waistline",
+  "Short neck",
+  "Broad shoulders",
+  "Narrow shoulders",
+];
 
 export default function BodyAnalysisStep({
   data,
@@ -103,9 +117,9 @@ export default function BodyAnalysisStep({
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-gray-800">身体结构识别</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Body Structure Recognition</h2>
         <p className="text-sm text-pink-600 font-medium">
-          💖 每个身体都是美丽的！我们帮助你发现独特魅力
+          💖 Every body is beautiful! We help you discover your unique charm
         </p>
 
         {/* Expandable Details */}
@@ -117,7 +131,7 @@ export default function BodyAnalysisStep({
             className="text-xs text-gray-500 hover:text-gray-700 p-1 h-auto"
           >
             <span className="flex items-center space-x-1">
-              <span>了解更多</span>
+              <span>Learn more</span>
               {showDetails ? (
                 <ChevronUp className="w-3 h-3" />
               ) : (
@@ -129,7 +143,8 @@ export default function BodyAnalysisStep({
           {showDetails && (
             <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
               <p className="text-xs text-gray-600">
-                帮助我们了解你的身体优势与挑战，补充AI无法判断的主观感知
+                Help us understand your body's strengths and challenges, supplementing what AI
+                can't perceive subjectively.
               </p>
             </div>
           )}
@@ -138,14 +153,16 @@ export default function BodyAnalysisStep({
 
       {/* Body Advantages */}
       <Card className="p-4">
-        <h3 className="font-semibold text-gray-800 mb-3">✨ 你的身体优势</h3>
-        <p className="text-sm text-gray-600 mb-4">选择所有适用的 - 我们会在造型中突出这些优势！</p>
+        <h3 className="font-semibold text-gray-800 mb-3">✨ Your Body's Strengths</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Select all that apply - we'll highlight these strengths in your styling!
+        </p>
 
         {data.aiAnalysis?.bodyAdvantages && data.aiAnalysis.bodyAdvantages.length > 0 && (
           <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
             <p className="text-xs text-green-700 flex items-center">
               <span className="mr-1">🤖</span>
-              AI已为你预选了一些优势，你可以自由调整
+              AI has pre-selected some strengths for you, feel free to adjust.
             </p>
           </div>
         )}
@@ -157,11 +174,10 @@ export default function BodyAnalysisStep({
               variant="outline"
               size="sm"
               onClick={() => toggleAdvantage(advantage)}
-              className={`text-sm px-3 py-1 h-auto whitespace-nowrap ${
-                selectedAdvantages.includes(advantage)
-                  ? "bg-pink-100 border-pink-300 text-pink-700"
-                  : "border-gray-200 text-gray-600"
-              }`}
+              className={`text-sm px-3 py-1 h-auto whitespace-nowrap ${selectedAdvantages.includes(advantage)
+                ? "bg-pink-100 border-pink-300 text-pink-700"
+                : "border-gray-200 text-gray-600"
+                }`}
             >
               {advantage}
             </Button>
@@ -176,11 +192,10 @@ export default function BodyAnalysisStep({
                 variant="outline"
                 size="sm"
                 onClick={() => toggleAdvantage(advantage)}
-                className={`text-sm px-3 py-1 h-auto whitespace-nowrap ${
-                  selectedAdvantages.includes(advantage)
-                    ? "bg-green-100 border-green-300 text-green-700"
-                    : "border-green-200 text-green-600"
-                }`}
+                className={`text-sm px-3 py-1 h-auto whitespace-nowrap ${selectedAdvantages.includes(advantage)
+                  ? "bg-green-100 border-green-300 text-green-700"
+                  : "border-green-200 text-green-600"
+                  }`}
               >
                 <span className="mr-1 text-xs">🤖</span>
                 {advantage}
@@ -189,7 +204,7 @@ export default function BodyAnalysisStep({
         </div>
 
         <Input
-          placeholder="其他优势..."
+          placeholder="Other strengths..."
           value={customAdvantages}
           onChange={(e) => setCustomAdvantages(e.target.value)}
           className="text-sm"
@@ -198,8 +213,10 @@ export default function BodyAnalysisStep({
 
       {/* Body Challenges */}
       <Card className="p-4">
-        <h3 className="font-semibold text-gray-800 mb-3">🎯 你希望弱化的部位</h3>
-        <p className="text-sm text-gray-600 mb-4">我们会建议能创造美好比例的造型！</p>
+        <h3 className="font-semibold text-gray-800 mb-3">🎯 Areas You'd Like to Downplay</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          We'll suggest styles that create beautiful proportions!
+        </p>
 
         <div className="flex flex-wrap gap-2 mb-4">
           {BODY_CHALLENGES.map((challenge) => (
@@ -208,11 +225,10 @@ export default function BodyAnalysisStep({
               variant="outline"
               size="sm"
               onClick={() => toggleChallenge(challenge)}
-              className={`text-sm px-3 py-1 h-auto whitespace-nowrap ${
-                selectedChallenges.includes(challenge)
-                  ? "bg-orange-100 border-orange-300 text-orange-700"
-                  : "border-gray-200 text-gray-600"
-              }`}
+              className={`text-sm px-3 py-1 h-auto whitespace-nowrap ${selectedChallenges.includes(challenge)
+                ? "bg-orange-100 border-orange-300 text-orange-700"
+                : "border-gray-200 text-gray-600"
+                }`}
             >
               {challenge}
             </Button>
@@ -220,7 +236,7 @@ export default function BodyAnalysisStep({
         </div>
 
         <Input
-          placeholder="其他希望弱化的部位..."
+          placeholder="Other areas to downplay..."
           value={customChallenges}
           onChange={(e) => setCustomChallenges(e.target.value)}
           className="text-sm"
@@ -229,64 +245,62 @@ export default function BodyAnalysisStep({
 
       {/* Bone Structure */}
       <Card className="p-4">
-        <h3 className="font-semibold text-gray-800 mb-3">🦴 骨架类型：</h3>
-        <p className="text-sm text-gray-600 mb-4">整体骨骼框架的感觉</p>
+        <h3 className="font-semibold text-gray-800 mb-3">🦴 Body Frame Type:</h3>
+        <p className="text-sm text-gray-600 mb-4">The overall feel of your bone structure</p>
         <div className="space-y-2">
           <Button
             variant="outline"
             onClick={() => setBoneStructure("strong")}
-            className={`w-full justify-start text-sm p-3 h-auto ${
-              boneStructure === "strong"
-                ? "bg-blue-100 border-blue-300 text-blue-700"
-                : "border-gray-200 text-gray-600"
-            }`}
+            className={`w-full justify-start text-sm p-3 h-auto ${boneStructure === "strong"
+              ? "bg-blue-100 border-blue-300 text-blue-700"
+              : "border-gray-200 text-gray-600"
+              }`}
           >
             <span className="mr-2">💪</span>
-            大骨架（肩宽、手腕粗、整体框架大）
+            Large frame (broad shoulders, thick wrists, large overall frame)
           </Button>
           <Button
             variant="outline"
             onClick={() => setBoneStructure("delicate")}
-            className={`w-full justify-start text-sm p-3 h-auto ${
-              boneStructure === "delicate"
-                ? "bg-blue-100 border-blue-300 text-blue-700"
-                : "border-gray-200 text-gray-600"
-            }`}
+            className={`w-full justify-start text-sm p-3 h-auto ${boneStructure === "delicate"
+              ? "bg-blue-100 border-blue-300 text-blue-700"
+              : "border-gray-200 text-gray-600"
+              }`}
           >
-            <span className="mr-2">🌸</span>
-            小骨架（肩窄、手腕细、整体框架小）
+            <span className="mr-2">✨</span>
+            Small frame (narrow shoulders, thin wrists, small overall frame)
           </Button>
         </div>
       </Card>
 
-      {/* Upper Body Type */}
+      {/* Upper Body Shape */}
       <Card className="p-4">
-        <h3 className="font-semibold text-gray-800 mb-3">📐 身材曲线：</h3>
-        <p className="text-sm text-gray-600 mb-4">身体的立体感和曲线分布</p>
+        <h3 className="font-semibold text-gray-800 mb-3">💃 Upper Body Type:</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Fullness of the upper body when viewed from the side
+        </p>
         <div className="space-y-2">
           <Button
             variant="outline"
             onClick={() => setUpperBodyType("straight")}
-            className={`w-full justify-start text-sm p-3 h-auto ${
-              upperBodyType === "straight"
-                ? "bg-purple-100 border-purple-300 text-purple-700"
-                : "border-gray-200 text-gray-600"
-            }`}
+            className={`w-full justify-start text-sm p-3 h-auto ${upperBodyType === "straight"
+              ? "bg-blue-100 border-blue-300 text-blue-700"
+              : "border-gray-200 text-gray-600"
+              }`}
           >
             <span className="mr-2">📏</span>
-            直线型（身体平坦，缺乏起伏曲线）
+            Straight (flatter from the side, less curve)
           </Button>
           <Button
             variant="outline"
             onClick={() => setUpperBodyType("curved")}
-            className={`w-full justify-start text-sm p-3 h-auto ${
-              upperBodyType === "curved"
-                ? "bg-purple-100 border-purple-300 text-purple-700"
-                : "border-gray-200 text-gray-600"
-            }`}
+            className={`w-full justify-start text-sm p-3 h-auto ${upperBodyType === "curved"
+              ? "bg-blue-100 border-blue-300 text-blue-700"
+              : "border-gray-200 text-gray-600"
+              }`}
           >
-            <span className="mr-2">🌙</span>
-            曲线型（身体有明显的凹凸起伏）
+            <span className="mr-2">🌸</span>
+            Curvy (fuller from the side, with noticeable curves)
           </Button>
         </div>
       </Card>

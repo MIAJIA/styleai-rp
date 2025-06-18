@@ -41,7 +41,7 @@ const DEFAULT_PHOTOS: Wardrobe = {
   ],
   outerwear: [
     { id: "default-outerwear-1", imageSrc: "/cloth/whiteblazer.png" },
-    { id: "default-outerwear-2", imageSrc: "/cloth/黑皮衣.png" },
+    { id: "default-outerwear-2", imageSrc: "/cloth/black-leather-jacket.png" },
   ],
 };
 
@@ -277,16 +277,16 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg, image/png"
+        accept="image/png, image/jpeg"
         onChange={handleFileChange}
         className="hidden"
       />
       {/* Container to ensure vertical stacking */}
       <div className="flex flex-col gap-y-4">
-        {renderCategory("tops", "Tops", "👕", "bg-pink-200")}
-        {renderCategory("bottoms", "Bottoms", "👖", "bg-blue-200")}
-        {renderCategory("dresses", "Dresses", "👗", "bg-purple-200")}
-        {renderCategory("outerwear", "Outerwear", "🧥", "bg-yellow-200")}
+        {renderCategory("tops", "Tops", "👚", "bg-rose-400")}
+        {renderCategory("bottoms", "Bottoms", "👖", "bg-sky-400")}
+        {renderCategory("dresses", "Dresses", "👗", "bg-amber-400")}
+        {renderCategory("outerwear", "Outerwear", "🧥", "bg-emerald-400")}
       </div>
     </div>
   );

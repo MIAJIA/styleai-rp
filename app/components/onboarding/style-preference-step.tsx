@@ -12,12 +12,37 @@ interface StylePreferenceStepProps {
 }
 
 const STYLE_OPTIONS = [
-  { id: "fresh", label: "清新青春", emoji: "🌸", description: "甜美、活力、少女感" },
-  { id: "elegant", label: "优雅精致", emoji: "👑", description: "精致、温柔、知性美" },
-  { id: "cool", label: "酷感锐利", emoji: "🖤", description: "自信、时尚、个性强" },
-  { id: "sweet", label: "甜辣并存", emoji: "🔥", description: "吸睛、妩媚、有魅力" },
-  { id: "professional", label: "专业干练", emoji: "💼", description: "利落、有气场、职场感" },
-  { id: "minimalist", label: "极简艺术", emoji: "🎨", description: "克制、深思、高级感" },
+  {
+    id: "fresh",
+    label: "Fresh & Youthful",
+    emoji: "🌸",
+    description: "Sweet, vibrant, girly",
+  },
+  {
+    id: "elegant",
+    label: "Elegant & Refined",
+    emoji: "👑",
+    description: "Exquisite, gentle, intellectual beauty",
+  },
+  { id: "cool", label: "Cool & Sharp", emoji: "🖤", description: "Confident, fashionable, strong personality" },
+  {
+    id: "sweet",
+    label: "Sweet & Spicy",
+    emoji: "🔥",
+    description: "Eye-catching, charming, attractive",
+  },
+  {
+    id: "professional",
+    label: "Professional & Capable",
+    emoji: "💼",
+    description: "Neat, charismatic, business-like",
+  },
+  {
+    id: "minimalist",
+    label: "Minimalist & Artistic",
+    emoji: "🎨",
+    description: "Restrained, thoughtful, high-class feel",
+  },
 ];
 
 export default function StylePreferenceStep({
@@ -58,8 +83,11 @@ export default function StylePreferenceStep({
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-gray-800">风格偏好选择</h2>
-        <p className="text-gray-600">确定你"想要成为谁"的穿搭方向，可以选择多个风格！</p>
+        <h2 className="text-2xl font-bold text-gray-800">Style Preference Selection</h2>
+        <p className="text-gray-600">
+          Determine the direction of who you "want to be" with your outfits, you can choose
+          multiple styles!
+        </p>
       </div>
 
       {/* Style Options */}
@@ -67,11 +95,10 @@ export default function StylePreferenceStep({
         {STYLE_OPTIONS.map((style) => (
           <Card
             key={style.id}
-            className={`p-4 cursor-pointer transition-all ${
-              selectedStyles.includes(style.id)
-                ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
-                : "border-gray-200 hover:border-pink-200"
-            }`}
+            className={`p-4 cursor-pointer transition-all ${selectedStyles.includes(style.id)
+              ? "bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300 shadow-md"
+              : "border-gray-200 hover:border-pink-200"
+              }`}
             onClick={() => toggleStyle(style.id)}
           >
             <div className="flex items-center space-x-3">
@@ -100,9 +127,9 @@ export default function StylePreferenceStep({
 
       {/* Custom Style Input */}
       <Card className="p-4">
-        <h3 className="font-semibold text-gray-800 mb-3">✨ 描述你的独特风格</h3>
+        <h3 className="font-semibold text-gray-800 mb-3">✨ Describe your unique style</h3>
         <Input
-          placeholder="例如：波西米亚风、复古港风、运动优雅..."
+          placeholder="e.g., Bohemian, retro Hong Kong style, sporty elegance..."
           value={customStyle}
           onChange={(e) => setCustomStyle(e.target.value)}
           className="text-sm"

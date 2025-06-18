@@ -7,53 +7,53 @@ const openai = new OpenAI({
 });
 
 const face_style_map = {
-  元气少女脸: {
-    feature_keywords: ["清纯", "亲和"],
-    style_suggestion: ["纯欲", "邻家少女风"],
+  vitality_girl_face: {
+    feature_keywords: ["Pure", "Approachable"],
+    style_suggestion: ["Innocent & Sultry", "Girl-Next-Door"],
   },
-  优雅学姐脸: {
-    feature_keywords: ["温暖", "端庄"],
-    style_suggestion: ["知性", "质感", "轻熟女"],
+  elegant_senior_face: {
+    feature_keywords: ["Warm", "Dignified"],
+    style_suggestion: ["Intellectual", "Sophisticated", "Young Professional"],
   },
-  清新古典脸: {
-    feature_keywords: ["中式", "干净"],
-    style_suggestion: ["新中式", "古典风"],
+  fresh_classical_face: {
+    feature_keywords: ["Chinese Style", "Clean"],
+    style_suggestion: ["Modern Chinese", "Classical"],
   },
-  高级时尚脸: {
-    feature_keywords: ["飒冷", "个性"],
-    style_suggestion: ["模特感", "御姐风"],
+  high_fashion_face: {
+    feature_keywords: ["Cool & Chic", "Individualistic"],
+    style_suggestion: ["Model-like", "Mature & Cool"],
   },
-  清纯校花脸: {
-    feature_keywords: ["白月光", "自然"],
-    style_suggestion: ["明艳端庄", "甜美"],
+  pure_campus_belle_face: {
+    feature_keywords: ["Unforgettable First Love", "Natural"],
+    style_suggestion: ["Bright & Dignified", "Sweet"],
   },
-  温婉港姐脸: {
-    feature_keywords: ["知性", "圆润"],
-    style_suggestion: ["港风", "大女人风"],
+  gentle_hk_pageant_face: {
+    feature_keywords: ["Intellectual", "Soft"],
+    style_suggestion: ["Hong Kong Style", "Elegant & Powerful"],
   },
-  复仇千金脸: {
-    feature_keywords: ["冷艳", "宅女感"],
-    style_suggestion: ["冷贵风", "性冷淡风"],
+  vengeful_heiress_face: {
+    feature_keywords: ["Cold & Glamorous", "Introverted"],
+    style_suggestion: ["Cold & Noble", "Minimalist"],
   },
-  飒爽姐妻脸: {
-    feature_keywords: ["酷", "第一眼美女"],
-    style_suggestion: ["高级", "酷感御姐风"],
+  cool_wife_face: {
+    feature_keywords: ["Cool", "Striking Beauty"],
+    style_suggestion: ["High-End", "Cool & Mature"],
   },
-  甜美混血脸: {
-    feature_keywords: ["芭比感", "明艳"],
-    style_suggestion: ["韩系女团风", "芭比甜妹"],
+  sweet_mixed_face: {
+    feature_keywords: ["Barbie-like", "Vivid"],
+    style_suggestion: ["K-Pop Idol", "Sweet Barbie"],
   },
-  优雅阔太脸: {
-    feature_keywords: ["富贵花", "大气"],
-    style_suggestion: ["华丽", "贵气女人风"],
+  elegant_rich_wife_face: {
+    feature_keywords: ["Peony-like", "Grand"],
+    style_suggestion: ["Gorgeous", "Noble & Womanly"],
   },
-  调性甜酷脸: {
-    feature_keywords: ["攻击性高", "混血感"],
-    style_suggestion: ["厌世风", "恶女风"],
+  sweet_and_cool_face: {
+    feature_keywords: ["Edgy", "Mixed-race Look"],
+    style_suggestion: ["Jaded-Chic", "Femme Fatale"],
   },
-  总裁御姐脸: {
-    feature_keywords: ["冷艳", "强气场"],
-    style_suggestion: ["大女人风", "御姐风"],
+  ceo_mature_sister_face: {
+    feature_keywords: ["Cold & Glamorous", "Strong Aura"],
+    style_suggestion: ["Powerful Woman", "Mature & Cool"],
   },
 };
 
@@ -89,18 +89,18 @@ const aiAnalysisSchema = {
       properties: {
         type_name: {
           type: "string",
-          description: "The name of the face style type from the provided map, e.g., '元气少女脸'.",
+          description: "The name of the face style type from the provided map, e.g., 'vitality_girl_face'.",
         },
         feature_keywords: {
           type: "array",
           items: { type: "string" },
-          description: "The feature keywords for the matched face style, e.g., ['清纯', '亲和'].",
+          description: "The feature keywords for the matched face style, e.g., ['Pure', 'Approachable'].",
         },
         style_recommendation: {
           type: "array",
           items: { type: "string" },
           description:
-            "The style recommendations for the matched face type, e.g., ['纯欲', '邻家少女风'].",
+            "The style recommendations for the matched face type, e.g., ['Innocent & Sultry', 'Girl-Next-Door'].",
         },
       },
       required: ["type_name", "feature_keywords", "style_recommendation"],
