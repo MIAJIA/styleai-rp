@@ -15,13 +15,12 @@ import {
 // Import step components
 import PhotoUploadStep from "../components/onboarding/photo-upload-step";
 import BodyAnalysisStep from "../components/onboarding/body-analysis-step";
-import FacialAnalysisStep from "../components/onboarding/facial-analysis-step";
 import StylePreferenceStep from "../components/onboarding/style-preference-step";
 import ScenarioStep from "../components/onboarding/scenario-step";
 import StyleBoundariesStep from "../components/onboarding/style-boundaries-step";
 import StyleSummaryStep from "../components/onboarding/style-summary-step";
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 6;
 
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -83,8 +82,8 @@ export default function OnboardingPage() {
   };
 
   const handleSkip = () => {
-    // Allow skipping for optional steps (5 and 6)
-    if (currentStep >= 5) {
+    // Allow skipping for optional steps (4 and 5)
+    if (currentStep >= 4) {
       handleNext();
     }
   };
@@ -109,7 +108,7 @@ export default function OnboardingPage() {
         );
       case 2:
         return (
-          <FacialAnalysisStep
+          <StylePreferenceStep
             data={onboardingData}
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
@@ -117,7 +116,7 @@ export default function OnboardingPage() {
         );
       case 3:
         return (
-          <StylePreferenceStep
+          <ScenarioStep
             data={onboardingData}
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
@@ -125,21 +124,13 @@ export default function OnboardingPage() {
         );
       case 4:
         return (
-          <ScenarioStep
-            data={onboardingData}
-            onUpdate={updateOnboardingData}
-            onValidationChange={handleValidationChange}
-          />
-        );
-      case 5:
-        return (
           <StyleBoundariesStep
             data={onboardingData}
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
           />
         );
-      case 6:
+      case 5:
         return (
           <StyleSummaryStep
             data={onboardingData}
@@ -156,7 +147,6 @@ export default function OnboardingPage() {
     const titles = [
       "Photo Upload", // Step 0
       "Body Analysis", // Step 1
-      "Facial Analysis", // Step 1.5
       "Style Preference", // Step 2
       "Usage Scenario", // Step 3
       "Style Boundaries", // Step 4
@@ -166,7 +156,7 @@ export default function OnboardingPage() {
   };
 
   const getStepEmoji = () => {
-    const emojis = ["📸", "💪", "👩‍🎨", "🎨", "🎯", "🚫", "✨"];
+    const emojis = ["📸", "💪", "🎨", "🎯", "🚫", "✨"];
     return emojis[currentStep];
   };
 
@@ -201,7 +191,7 @@ export default function OnboardingPage() {
 
           {/* Skip Button (or placeholder) */}
           <div className="w-14 text-right">
-            {currentStep >= 5 && currentStep < TOTAL_STEPS - 1 && (
+            {currentStep >= 4 && currentStep < TOTAL_STEPS - 1 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -225,7 +215,7 @@ export default function OnboardingPage() {
         <div className="max-w-md mx-auto">
           <Button
             onClick={handleNext}
-            disabled={!isStepValid && currentStep < 5}
+            disabled={!isStepValid && currentStep < 4}
             className="w-full h-12 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50"
           >
             <span className="flex items-center justify-center space-x-2">

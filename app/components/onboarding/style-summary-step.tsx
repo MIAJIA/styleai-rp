@@ -40,27 +40,15 @@ export default function StyleSummaryStep({
   }, [styleProfile, isGenerating, onUpdate]);
 
   const generateStructureCombination = () => {
-    const face =
-      data.facialIntensity === "strong"
-        ? "Strong features"
-        : data.facialIntensity === "light"
-          ? "Delicate features"
-          : "Balanced features";
-
-    return `${face}`;
+    // Generate structure combination based on body analysis and preferences
+    if (data.bodyAdvantages?.length) {
+      return `Highlighting ${data.bodyAdvantages[0].toLowerCase()}`;
+    }
+    return "Balanced proportions";
   };
 
   const generateStyleLabels = () => {
     const labels = [];
-
-    // Based on facial analysis
-    if (data.facialIntensity === "strong" && data.facialMaturity === "youthful") {
-      labels.push("Sweet & cool girly face");
-    } else if (data.facialIntensity === "light" && data.facialLines === "curved") {
-      labels.push("Gentle delicate face");
-    } else if (data.facialMaturity === "mature" && data.facialLines === "straight") {
-      labels.push("Elegant and cool");
-    }
 
     // Based on style preferences
     if (data.stylePreferences?.includes("elegant")) {
@@ -72,12 +60,17 @@ export default function StyleSummaryStep({
     if (data.stylePreferences?.includes("fresh")) {
       labels.push("Fresh and vibrant");
     }
+    if (data.stylePreferences?.includes("minimalist")) {
+      labels.push("Clean and minimal");
+    }
 
     // Based on scenario
     if (data.primaryScenario === "work") {
       labels.push("Business elite");
     } else if (data.primaryScenario === "casual") {
       labels.push("Daily comfort");
+    } else if (data.primaryScenario === "social") {
+      labels.push("Social butterfly");
     }
 
     return labels.length > 0 ? labels : ["Unique personality", "Diverse style"];
@@ -93,6 +86,9 @@ export default function StyleSummaryStep({
     if (data.bodyAdvantages?.includes("Long legs")) {
       keywords.push("Crop top");
     }
+    if (data.bodyAdvantages?.includes("Broad shoulders")) {
+      keywords.push("V-neck", "Statement sleeves");
+    }
 
     // Based on style preferences
     if (data.stylePreferences?.includes("minimalist")) {
@@ -104,12 +100,15 @@ export default function StyleSummaryStep({
     if (data.stylePreferences?.includes("fresh")) {
       keywords.push("Bright colors", "Lightweight fabrics");
     }
+    if (data.stylePreferences?.includes("edgy")) {
+      keywords.push("Bold patterns", "Statement pieces");
+    }
 
-    // Based on facial analysis
-    if (data.facialIntensity === "strong") {
-      keywords.push("Simple design");
-    } else if (data.facialIntensity === "light") {
-      keywords.push("Delicate decoration");
+    // Based on scenario
+    if (data.primaryScenario === "work") {
+      keywords.push("Professional", "Structured");
+    } else if (data.primaryScenario === "casual") {
+      keywords.push("Comfortable", "Relaxed fit");
     }
 
     return keywords.length > 0 ? keywords : ["Individual expression", "Comfortable and at ease", "Fashion-forward"];

@@ -19,11 +19,6 @@ export interface OnboardingData {
   customAdvantages?: string;
   customChallenges?: string;
 
-  // Step 1.5: Facial Analysis
-  facialIntensity?: "strong" | "light" | "medium";
-  facialLines?: "straight" | "curved";
-  facialMaturity?: "mature" | "youthful";
-
   // Step 2: Style Preferences
   stylePreferences?: string[];
   customStyle?: string;
@@ -159,9 +154,6 @@ export const saveUserProfile = (data: OnboardingData): boolean => {
     // Drop potentially large custom text fields
     bodyAdvantages: data.bodyAdvantages,
     bodyChallenges: data.bodyChallenges,
-    facialIntensity: data.facialIntensity,
-    facialLines: data.facialLines,
-    facialMaturity: data.facialMaturity,
     stylePreferences: data.stylePreferences,
     primaryScenario: data.primaryScenario,
     avoidElements: data.avoidElements,
