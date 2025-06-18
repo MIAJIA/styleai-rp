@@ -271,6 +271,7 @@ export default function ChatPage() {
       material_silhouette: "👚 Material & Silhouette",
       color_combination: "🎨 Color Palette",
       reuse_versatility: "✨ Reuse & Versatility",
+      confident_note: "💪 Confidence Boost",
     };
 
     // 动态获取有内容的建议部分

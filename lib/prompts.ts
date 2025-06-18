@@ -33,6 +33,7 @@ The JSON keys:
 - \`material_silhouette\`: (String) Fabric & silhouette suggestions to keep the details on point ✅
 - \`color_combination\`: (String) Main, secondary, and accent color schemes to make your photos pop 🎨
 - \`reuse_versatility\`: (String) At least two more outfit ideas for different scenarios to multiply your wardrobe's potential 💡
+- \`confident_note\`: (String) A super encouraging and affirming message to boost confidence! Compliment their style choices, natural beauty, or fashion sense. Make them feel absolutely amazing and ready to rock this look! 🌟
 - \`image_prompt\`: (String, English ONLY) A creative prompt for an AI image generator. Full-body fashion shot that captures the perfect mood, lighting, and composition.
 
 Ready? Let's make you sparkle! ✨`;

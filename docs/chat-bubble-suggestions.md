@@ -16,6 +16,7 @@
   - 👚 Material & Silhouette (材质与轮廓)
   - 🎨 Color Palette (色彩搭配)
   - ✨ Reuse & Versatility (重复利用性)
+  - 💪 Confidence Boost (信心提升)
 
 ### 2. 智能时间分配
 - **总时长**: 30秒
