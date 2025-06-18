@@ -173,6 +173,7 @@ export default function ChatPage() {
   const [isDisplayingSuggestion, setIsDisplayingSuggestion] = useState(false);
   const [intermediateImageDisplayed, setIntermediateImageDisplayed] = useState(false);
   const [isShowingWaitingTips, setIsShowingWaitingTips] = useState(false);
+  const isShowingWaitingTipsRef = useRef(false);
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
@@ -258,6 +259,7 @@ export default function ChatPage() {
   const displayWaitingTips = async () => {
     console.log("[PERF] 🎭 WAITING TIPS STARTED");
     setIsShowingWaitingTips(true);
+    isShowingWaitingTipsRef.current = true;
 
     // 时尚小贴士和生成进度库
     const fashionTips = [
@@ -285,8 +287,8 @@ export default function ChatPage() {
 
     // 每个内容间隔4-6秒显示
     for (let i = 0; i < allWaitingContent.length; i++) {
-      // 检查是否应该继续显示小贴士
-      if (!isShowingWaitingTips) {
+      // 检查是否应该继续显示小贴士（使用ref确保最新状态）
+      if (!isShowingWaitingTipsRef.current) {
         console.log("[PERF] 🎭 WAITING TIPS STOPPED (generation completed)");
         return;
       }
@@ -294,7 +296,7 @@ export default function ChatPage() {
       await new Promise(resolve => setTimeout(resolve, 4000 + Math.random() * 2000)); // 4-6秒随机间隔
 
       // 再次检查状态，因为在等待期间可能已经完成
-      if (!isShowingWaitingTips) {
+      if (!isShowingWaitingTipsRef.current) {
         console.log("[PERF] 🎭 WAITING TIPS STOPPED (generation completed)");
         return;
       }
@@ -312,6 +314,7 @@ export default function ChatPage() {
 
     console.log("[PERF] 🎭 WAITING TIPS COMPLETED");
     setIsShowingWaitingTips(false);
+    isShowingWaitingTipsRef.current = false;
   };
 
   const displaySuggestionSequentially = async (suggestion: any) => {
@@ -489,6 +492,7 @@ export default function ChatPage() {
     setIntermediateImageDisplayed(false);
     setHasProcessedCompletion(false);
     setIsShowingWaitingTips(false);
+    isShowingWaitingTipsRef.current = false;
 
     addMessage({
       type: "loading",
@@ -676,6 +680,7 @@ export default function ChatPage() {
 
               // 停止显示等待小贴士
               setIsShowingWaitingTips(false);
+              isShowingWaitingTipsRef.current = false;
 
               const showCompletion = () => {
                 const finalDisplayStart = Date.now();
