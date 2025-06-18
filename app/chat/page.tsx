@@ -233,7 +233,14 @@ export default function ChatPage() {
   const replaceLastLoadingMessage = (message: Omit<ChatMessage, "id" | "timestamp">) => {
     setMessages((prevMessages) => {
       const newMessages = [...prevMessages];
-      const lastMessageIndex = newMessages.findLastIndex((m) => m.type === "loading");
+      // 使用传统方法查找最后一个loading消息
+      let lastMessageIndex = -1;
+      for (let i = newMessages.length - 1; i >= 0; i--) {
+        if (newMessages[i].type === "loading") {
+          lastMessageIndex = i;
+          break;
+        }
+      }
 
       if (lastMessageIndex !== -1) {
         newMessages[lastMessageIndex] = {
@@ -266,86 +273,92 @@ export default function ChatPage() {
       reuse_versatility: "✨ Reuse & Versatility",
     };
 
-    let suggestionMessageId: string | null = null;
+    // 动态获取有内容的建议部分
+    const availableSuggestions = Object.entries(suggestionKeyToTitleMap)
+      .filter(([key, _]) => suggestion[key] && suggestion[key].trim().length > 0)
+      .map(([key, title]) => ({
+        key,
+        title,
+        content: suggestion[key]
+      }));
 
-    // First, try to replace the last loading message with the initial text
+    console.log(`[PERF] 💭 Found ${availableSuggestions.length} suggestion parts to display`);
+
+    // 动态计算延迟时间：30秒总时长，均匀分布
+    const totalDisplayTime = 30000; // 30秒
+    const delayBetweenBubbles = availableSuggestions.length > 1
+      ? Math.floor(totalDisplayTime / availableSuggestions.length)
+      : 1000; // 如果只有一个建议，延迟1秒
+
+    console.log(`[PERF] 💭 Calculated delay between bubbles: ${delayBetweenBubbles}ms`);
+
+    // 首先替换或添加欢迎消息
     const messageSetupStart = Date.now();
     setMessages((prev) => {
       const newMessages = [...prev];
-      const lastMessageIndex = newMessages.findLastIndex((m) => m.type === "loading");
+      // 使用传统方法查找最后一个loading消息
+      let lastMessageIndex = -1;
+      for (let i = newMessages.length - 1; i >= 0; i--) {
+        if (newMessages[i].type === "loading") {
+          lastMessageIndex = i;
+          break;
+        }
+      }
 
       if (lastMessageIndex !== -1) {
-        const newId = generateUniqueId();
-        suggestionMessageId = newId;
-        console.log("[SUGGESTION DEBUG] Replacing loading message");
+        console.log("[SUGGESTION DEBUG] Replacing loading message with welcome");
         newMessages[lastMessageIndex] = {
-          id: newId,
+          id: generateUniqueId(),
           role: "ai",
           type: "text",
-          content: "Ok, I've had a look. Here are some of my thoughts:\n\n",
+          content: "✨ I've analyzed your style! Let me share my insights with you:",
           timestamp: new Date(),
         };
         return newMessages;
       } else {
-        console.log("[SUGGESTION DEBUG] No loading message found, will add new message");
+        console.log("[SUGGESTION DEBUG] Adding new welcome message");
+        return [...newMessages, {
+          id: generateUniqueId(),
+          role: "ai",
+          type: "text",
+          content: "✨ I've analyzed your style! Let me share my insights with you:",
+          timestamp: new Date(),
+        }];
       }
-      return prev;
     });
-
-    // If we couldn't find a loading message to replace, add a new one
-    if (!suggestionMessageId) {
-      console.log("[SUGGESTION DEBUG] Adding new suggestion message");
-      const newId = generateUniqueId();
-      suggestionMessageId = newId;
-      setMessages((prev) => [...prev, {
-        id: newId,
-        role: "ai",
-        type: "text",
-        content: "Ok, I've had a look. Here are some of my thoughts:\n\n",
-        timestamp: new Date(),
-      }]);
-    }
 
     const messageSetupEnd = Date.now();
     const messageSetupTime = messageSetupEnd - messageSetupStart;
     console.log(`[PERF] 💭 Message setup took ${messageSetupTime}ms`);
 
-    console.log(`[PERF] 💭 Starting initial delay (100ms)...`);
-    await new Promise((resolve) => setTimeout(resolve, 100)); // 优化：减少初始延迟从500ms到100ms
+    // 等待一小段时间让欢迎消息显示
+    await new Promise((resolve) => setTimeout(resolve, 800));
 
-    const currentSuggestionMessageId = suggestionMessageId;
-    const suggestionKeys = Object.keys(suggestionKeyToTitleMap).filter(key => suggestion[key]);
-    console.log(`[PERF] 💭 Processing ${suggestionKeys.length} suggestion items`);
+    // 逐个显示建议气泡
+    for (let i = 0; i < availableSuggestions.length; i++) {
+      const { title, content } = availableSuggestions[i];
+      const bubbleStartTime = Date.now();
 
-    let itemCount = 0;
-    for (const key of suggestionKeys) {
-      if (suggestion[key]) {
-        const itemStart = Date.now();
-        itemCount++;
-        const title = suggestionKeyToTitleMap[key as keyof typeof suggestionKeyToTitleMap];
+      console.log(`[PERF] 💭 Displaying bubble ${i + 1}/${availableSuggestions.length}: ${title}`);
 
-        console.log(`[PERF] 💭 Processing item ${itemCount}/${suggestionKeys.length}: ${title}`);
+      // 添加新的聊天气泡
+      const bubbleId = generateUniqueId();
+      setMessages((prev) => [...prev, {
+        id: bubbleId,
+        role: "ai",
+        type: "text",
+        content: `${title}\n\n${content}`,
+        timestamp: new Date(),
+      }]);
 
-        setMessages((prev) => {
-          const msgIndex = prev.findIndex((m) => m.id === currentSuggestionMessageId);
-          if (msgIndex !== -1) {
-            const updatedMessages = [...prev];
-            const oldMessage = updatedMessages[msgIndex];
-            const newContent = (oldMessage.content || "") + `${title}\n${suggestion[key]}\n\n`;
-            updatedMessages[msgIndex] = {
-              ...oldMessage,
-              content: newContent,
-            };
-            return updatedMessages;
-          }
-          return prev;
-        });
+      const bubbleEndTime = Date.now();
+      const bubbleDisplayTime = bubbleEndTime - bubbleStartTime;
+      console.log(`[PERF] 💭 Bubble ${i + 1} displayed in ${bubbleDisplayTime}ms`);
 
-        const itemEnd = Date.now();
-        const itemTime = itemEnd - itemStart;
-        console.log(`[PERF] 💭 Item ${itemCount} displayed in ${itemTime}ms, starting delay (200ms)...`);
-
-        await new Promise((resolve) => setTimeout(resolve, 200)); // 优化：减少每项延迟从800ms到200ms
+      // 如果不是最后一个气泡，等待延迟时间
+      if (i < availableSuggestions.length - 1) {
+        console.log(`[PERF] 💭 Waiting ${delayBetweenBubbles}ms before next bubble...`);
+        await new Promise((resolve) => setTimeout(resolve, delayBetweenBubbles));
       }
     }
 
@@ -353,13 +366,21 @@ export default function ChatPage() {
     const totalSuggestionTime = suggestionEndTime - suggestionStartTime;
     console.log(`[PERF] 💭 SUGGESTION DISPLAY COMPLETED: Total time ${totalSuggestionTime}ms`);
     console.log(`[PERF] 💭 - Message setup: ${messageSetupTime}ms`);
-    console.log(`[PERF] 💭 - Initial delay: 100ms`);
-    console.log(`[PERF] 💭 - Items processed: ${itemCount}`);
-    console.log(`[PERF] 💭 - Item delays: ${itemCount * 200}ms`);
-    console.log(`[PERF] 💭 - Actual processing time: ${totalSuggestionTime - 100 - (itemCount * 200)}ms`);
+    console.log(`[PERF] 💭 - Bubbles displayed: ${availableSuggestions.length}`);
+    console.log(`[PERF] 💭 - Average delay between bubbles: ${delayBetweenBubbles}ms`);
+    console.log(`[PERF] 💭 - Target time: 30000ms, Actual time: ${totalSuggestionTime}ms`);
 
-    console.log("[SUGGESTION DEBUG] Finished displaying suggestion");
+    console.log("[SUGGESTION DEBUG] All suggestion bubbles displayed, ready for image generation");
     setIsDisplayingSuggestion(false);
+
+    // 立即添加下一阶段的加载消息，不等待
+    setMessages((prev) => [...prev, {
+      id: generateUniqueId(),
+      role: "ai",
+      type: "loading",
+      loadingText: "Now creating your personalized style images...",
+      timestamp: new Date(),
+    }]);
   };
 
   const getOccasionName = (occasionId: string) => {
