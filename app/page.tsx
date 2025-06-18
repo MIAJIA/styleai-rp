@@ -278,7 +278,7 @@ export default function HomePage() {
               <h3 className="text-base font-semibold tracking-tight text-center">
                 <span className="text-primary font-bold">Step 4:</span> Choose Generation Mode
               </h3>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="grid grid-cols-3 gap-2 md:gap-3">
                 <ModeButton
                   title="Try-On Only"
                   description="Fastest results"
@@ -287,15 +287,15 @@ export default function HomePage() {
                   onClick={() => setGenerationMode('tryon-only')}
                 />
                 <ModeButton
-                  title="Simple Scene"
-                  description="New background & pose"
+                  title="Best Performance"
+                  description="Recommended ⭐"
                   icon={Sparkles}
                   isSelected={generationMode === 'simple-scene'}
                   onClick={() => setGenerationMode('simple-scene')}
                 />
                 <ModeButton
-                  title="Advanced Scene"
-                  description="Full generation"
+                  title="Pro Mode"
+                  description="Working on it 🚧"
                   icon={Layers}
                   isSelected={generationMode === 'advanced-scene'}
                   onClick={() => setGenerationMode('advanced-scene')}
@@ -387,7 +387,7 @@ const ModeButton = ({ title, description, icon: Icon, isSelected, onClick }: {
   <button
     onClick={onClick}
     className={cn(
-      "flex flex-col items-center justify-center p-4 rounded-xl transition-all text-center",
+      "flex flex-col items-center justify-center p-3 md:p-4 rounded-xl transition-all text-center",
       "border-2",
       isSelected
         ? "bg-purple-50 border-purple-300 shadow-md"
@@ -395,12 +395,12 @@ const ModeButton = ({ title, description, icon: Icon, isSelected, onClick }: {
     )}
   >
     <div className={cn(
-      "w-10 h-10 rounded-full flex items-center justify-center mb-2",
+      "w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center mb-1.5 md:mb-2",
       isSelected ? "bg-purple-500 text-white" : "bg-gray-100 text-gray-500"
     )}>
-      <Icon size={20} />
+      <Icon size={16} className="md:w-5 md:h-5" />
     </div>
-    <h4 className="font-semibold text-sm text-gray-800">{title}</h4>
-    <p className="text-xs text-gray-500">{description}</p>
+    <h4 className="font-semibold text-xs md:text-sm text-gray-800 leading-tight">{title}</h4>
+    <p className="text-xs text-gray-500 leading-tight">{description}</p>
   </button>
 );
