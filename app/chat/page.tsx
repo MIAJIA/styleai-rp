@@ -248,6 +248,9 @@ export default function ChatPage() {
   };
 
   const displaySuggestionSequentially = async (suggestion: any) => {
+    const suggestionStartTime = Date.now();
+    console.log(`[PERF] 💭 SUGGESTION DISPLAY STARTED at ${new Date().toISOString()}`);
+
     if (!suggestion) return;
 
     console.log("[SUGGESTION DEBUG] Starting displaySuggestionSequentially");
@@ -266,6 +269,7 @@ export default function ChatPage() {
     let suggestionMessageId: string | null = null;
 
     // First, try to replace the last loading message with the initial text
+    const messageSetupStart = Date.now();
     setMessages((prev) => {
       const newMessages = [...prev];
       const lastMessageIndex = newMessages.findLastIndex((m) => m.type === "loading");
@@ -302,13 +306,25 @@ export default function ChatPage() {
       }]);
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Short pause
+    const messageSetupEnd = Date.now();
+    const messageSetupTime = messageSetupEnd - messageSetupStart;
+    console.log(`[PERF] 💭 Message setup took ${messageSetupTime}ms`);
+
+    console.log(`[PERF] 💭 Starting initial delay (100ms)...`);
+    await new Promise((resolve) => setTimeout(resolve, 100)); // 优化：减少初始延迟从500ms到100ms
 
     const currentSuggestionMessageId = suggestionMessageId;
+    const suggestionKeys = Object.keys(suggestionKeyToTitleMap).filter(key => suggestion[key]);
+    console.log(`[PERF] 💭 Processing ${suggestionKeys.length} suggestion items`);
 
-    for (const key of Object.keys(suggestionKeyToTitleMap)) {
+    let itemCount = 0;
+    for (const key of suggestionKeys) {
       if (suggestion[key]) {
+        const itemStart = Date.now();
+        itemCount++;
         const title = suggestionKeyToTitleMap[key as keyof typeof suggestionKeyToTitleMap];
+
+        console.log(`[PERF] 💭 Processing item ${itemCount}/${suggestionKeys.length}: ${title}`);
 
         setMessages((prev) => {
           const msgIndex = prev.findIndex((m) => m.id === currentSuggestionMessageId);
@@ -324,9 +340,24 @@ export default function ChatPage() {
           }
           return prev;
         });
-        await new Promise((resolve) => setTimeout(resolve, 800)); // Pause between points
+
+        const itemEnd = Date.now();
+        const itemTime = itemEnd - itemStart;
+        console.log(`[PERF] 💭 Item ${itemCount} displayed in ${itemTime}ms, starting delay (200ms)...`);
+
+        await new Promise((resolve) => setTimeout(resolve, 200)); // 优化：减少每项延迟从800ms到200ms
       }
     }
+
+    const suggestionEndTime = Date.now();
+    const totalSuggestionTime = suggestionEndTime - suggestionStartTime;
+    console.log(`[PERF] 💭 SUGGESTION DISPLAY COMPLETED: Total time ${totalSuggestionTime}ms`);
+    console.log(`[PERF] 💭 - Message setup: ${messageSetupTime}ms`);
+    console.log(`[PERF] 💭 - Initial delay: 100ms`);
+    console.log(`[PERF] 💭 - Items processed: ${itemCount}`);
+    console.log(`[PERF] 💭 - Item delays: ${itemCount * 200}ms`);
+    console.log(`[PERF] 💭 - Actual processing time: ${totalSuggestionTime - 100 - (itemCount * 200)}ms`);
+
     console.log("[SUGGESTION DEBUG] Finished displaying suggestion");
     setIsDisplayingSuggestion(false);
   };
@@ -354,6 +385,9 @@ export default function ChatPage() {
   };
 
   const startGeneration = async () => {
+    const startTime = Date.now();
+    console.log(`[PERF] 🚀 GENERATION STARTED at ${new Date().toISOString()}`);
+
     if (!chatData) {
       addMessage({
         type: "text",
@@ -377,12 +411,24 @@ export default function ChatPage() {
     });
 
     try {
+      // Phase 1: Image File Preparation
+      const filePreparationStart = Date.now();
+      console.log(`[PERF] 📁 Phase 1: Starting image file preparation at ${new Date().toISOString()}`);
+
       const selfieFile = await getFileFromPreview(chatData.selfiePreview, "user_selfie.jpg");
       const clothingFile = await getFileFromPreview(chatData.clothingPreview, "user_clothing.jpg");
 
       if (!selfieFile || !clothingFile) {
         throw new Error("Could not prepare image files for upload.");
       }
+
+      const filePreparationEnd = Date.now();
+      const filePreparationTime = filePreparationEnd - filePreparationStart;
+      console.log(`[PERF] 📁 Phase 1 COMPLETED: File preparation took ${filePreparationTime}ms`);
+
+      // Phase 2: FormData Assembly & API Request
+      const apiRequestStart = Date.now();
+      console.log(`[PERF] 🌐 Phase 2: Starting API request preparation at ${new Date().toISOString()}`);
 
       const formData = new FormData();
       formData.append("human_image", selfieFile);
@@ -396,6 +442,7 @@ export default function ChatPage() {
         console.warn(`No style prompt found for occasion: ${chatData.occasion}`);
       }
 
+      console.log(`[PERF] 🌐 Phase 2: Sending API request to /api/generation/start`);
       const response = await fetch("/api/generation/start", {
         method: "POST",
         body: formData,
@@ -408,7 +455,14 @@ export default function ChatPage() {
 
       const data = await response.json();
       setJobId(data.jobId);
-      console.log("[API] Generation started, Job ID:", data.jobId);
+
+      const apiRequestEnd = Date.now();
+      const apiRequestTime = apiRequestEnd - apiRequestStart;
+      const totalInitTime = apiRequestEnd - startTime;
+
+      console.log(`[PERF] 🌐 Phase 2 COMPLETED: API request took ${apiRequestTime}ms`);
+      console.log(`[PERF] ⚡ INITIALIZATION COMPLETE: Total init time ${totalInitTime}ms (File prep: ${filePreparationTime}ms + API: ${apiRequestTime}ms)`);
+      console.log(`[PERF] 🔄 Phase 3: Starting polling for Job ID: ${data.jobId}`);
 
       replaceLastLoadingMessage({
         type: "text",
@@ -422,7 +476,10 @@ export default function ChatPage() {
         loadingText: "Generating suggestions for you...",
       });
     } catch (error) {
-      console.error("Error in startGeneration:", error);
+      const errorTime = Date.now();
+      const totalErrorTime = errorTime - startTime;
+      console.error(`[PERF] ❌ GENERATION FAILED after ${totalErrorTime}ms:`, error);
+
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       replaceLastLoadingMessage({
         type: "text",
@@ -435,14 +492,21 @@ export default function ChatPage() {
   };
 
   const startPolling = (jobId: string) => {
+    const pollingStartTime = Date.now();
+    console.log(`[PERF] 🔄 POLLING STARTED for job ${jobId} at ${new Date().toISOString()}`);
+
     const interval = setInterval(async () => {
       try {
+        const pollRequestStart = Date.now();
         const response = await fetch(`/api/generation/status?jobId=${jobId}`);
         if (!response.ok) {
           throw new Error(`The server responded with status: ${response.status}`);
         }
         const data = await response.json();
-        console.log("[POLLING] Received status:", data.status, data);
+        const pollRequestEnd = Date.now();
+        const pollRequestTime = pollRequestEnd - pollRequestStart;
+
+        console.log(`[PERF] 📡 Poll request took ${pollRequestTime}ms, received status: ${data.status}`);
 
         const statusKey = data.status;
         console.log("[POLLING DEBUG] Current statusKey:", statusKey);
@@ -457,10 +521,23 @@ export default function ChatPage() {
         processedStatusesRef.current.add(statusKey);
         console.log("[POLLING DEBUG] Marked status as processed:", statusKey);
 
+        const statusProcessStart = Date.now();
+
         switch (data.status) {
           case "suggestion_generated":
+            console.log(`[PERF] 💡 Phase 4: SUGGESTION_GENERATED received at ${new Date().toISOString()}`);
+            const suggestionDisplayStart = Date.now();
+
             console.log("[POLLING DEBUG] Processing suggestion_generated status");
             await displaySuggestionSequentially(data.suggestion);
+
+            const suggestionDisplayEnd = Date.now();
+            const suggestionDisplayTime = suggestionDisplayEnd - suggestionDisplayStart;
+            const totalSuggestionTime = suggestionDisplayEnd - pollingStartTime;
+
+            console.log(`[PERF] 💡 Phase 4 COMPLETED: Suggestion display took ${suggestionDisplayTime}ms`);
+            console.log(`[PERF] 💡 Total time from polling start to suggestion complete: ${totalSuggestionTime}ms`);
+
             console.log("[POLLING DEBUG] Replacing loading message after suggestion display");
             replaceLastLoadingMessage({
               role: "ai",
@@ -468,10 +545,14 @@ export default function ChatPage() {
               loadingText: "Creating a suitable scene and pose for you...",
             });
             break;
+
           case "stylization_completed":
             if (!intermediateImageDisplayed) {
               const styledImageUrl = data.styledImage;
               if (!styledImageUrl) break;
+
+              const stylizationTime = Date.now() - pollingStartTime;
+              console.log(`[PERF] 🎨 Phase 5: STYLIZATION_COMPLETED received after ${stylizationTime}ms`);
 
               setIntermediateImageDisplayed(true);
               processedStatusesRef.current.add("stylization_completed");
@@ -493,13 +574,21 @@ export default function ChatPage() {
                 type: "loading",
                 loadingText: "Performing final composition, please wait...",
               });
+
+              console.log(`[PERF] 🎨 Phase 5: Intermediate image displayed, continuing to final generation...`);
             }
             break;
+
           case "completed":
             if (!hasProcessedCompletion) {
+              const completionTime = Date.now();
+              const totalGenerationTime = completionTime - pollingStartTime;
+
+              console.log(`[PERF] 🎉 Phase 6: GENERATION COMPLETED after ${totalGenerationTime}ms total`);
               setCurrentStep("complete");
 
               const showCompletion = () => {
+                const finalDisplayStart = Date.now();
                 setHasProcessedCompletion(true);
                 console.log("[POLLING] Status is completed. Final URL:", data.result?.imageUrl);
                 const finalImageUrl = data.result?.imageUrl;
@@ -514,37 +603,53 @@ export default function ChatPage() {
                     role: "ai",
                     imageUrl: finalImageUrl,
                   });
+
+                  const finalDisplayEnd = Date.now();
+                  const finalDisplayTime = finalDisplayEnd - finalDisplayStart;
+                  const grandTotalTime = finalDisplayEnd - pollingStartTime;
+
+                  console.log(`[PERF] 🎉 FINAL IMAGE DISPLAYED: Display took ${finalDisplayTime}ms`);
+                  console.log(`[PERF] 🏁 GENERATION FLOW COMPLETE: Grand total ${grandTotalTime}ms`);
+                  console.log(`[PERF] 📊 PERFORMANCE SUMMARY:`);
+                  console.log(`[PERF] 📊 - Total generation time: ${grandTotalTime}ms (${(grandTotalTime / 1000).toFixed(1)}s)`);
+                  console.log(`[PERF] 📊 - Suggestion phase: ${suggestionDisplayTime || 'N/A'}ms`);
+                  console.log(`[PERF] 📊 - Final display: ${finalDisplayTime}ms`);
                 } else {
                   replaceLastLoadingMessage({
                     type: "text",
                     role: "ai",
                     content: "Sorry, the generation is complete, but the image link was lost.",
                   });
+                  console.log(`[PERF] ❌ Generation completed but image URL missing after ${totalGenerationTime}ms`);
                 }
                 console.log("[POLLING] Stopping polling because job is complete.");
                 clearInterval(interval);
                 setPollingIntervalId(null);
               };
 
-              if (isDisplayingSuggestion) {
-                const waitInterval = setInterval(() => {
-                  if (!isDisplayingSuggestion) {
-                    clearInterval(waitInterval);
-                    showCompletion();
-                  }
-                }, 100);
-              } else {
-                showCompletion();
-              }
+              // 优化：移除等待机制，立即显示最终图片，不等待建议显示完成
+              showCompletion();
             }
             break;
+
           case "failed":
+            const failureTime = Date.now() - pollingStartTime;
+            console.log(`[PERF] ❌ GENERATION FAILED after ${failureTime}ms`);
             throw new Error(data.statusMessage || "Generation failed without a specific reason.");
+
           default:
             console.log(`[POLLING] Unhandled status: ${data.status}`);
         }
+
+        const statusProcessEnd = Date.now();
+        const statusProcessTime = statusProcessEnd - statusProcessStart;
+        console.log(`[PERF] ⚙️ Status processing took ${statusProcessTime}ms for status: ${data.status}`);
+
       } catch (error) {
-        console.error("[POLLING] Polling error:", error);
+        const errorTime = Date.now();
+        const totalErrorTime = errorTime - pollingStartTime;
+        console.error(`[PERF] ❌ POLLING ERROR after ${totalErrorTime}ms:`, error);
+
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
         setPollingError(errorMessage);
         replaceLastLoadingMessage({
