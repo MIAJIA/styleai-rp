@@ -19,6 +19,8 @@ import {
   PartyPopper,
   Heart,
   Star,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -176,6 +178,9 @@ export default function ChatPage() {
 
   const [modalImage, setModalImage] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Debug panel state - collapsed by default
+  const [isDebugExpanded, setIsDebugExpanded] = useState(false);
 
   const handleImageClick = (imageUrl: string) => {
     setModalImage(imageUrl);
@@ -709,37 +714,56 @@ export default function ChatPage() {
         </div>
 
         {process.env.NODE_ENV === "development" && (
-          <div className="max-w-2xl mx-auto mt-4 p-4 bg-gray-100 rounded-lg text-xs">
-            <h3 className="font-bold mb-2">Debug Info:</h3>
-            <div>isGenerating: {String(isGenerating)}</div>
-            <div>currentStep: {String(currentStep)}</div>
-            <div>chatData: {chatData ? "exists" : "null"}</div>
-            <div>messages.length: {String(messages.length)}</div>
-            <div>pollingError: {pollingError || "none"}</div>
-            <div>hasProcessedCompletion: {String(hasProcessedCompletion)}</div>
-            <div>pollingActive: {pollingIntervalId ? "yes" : "no"}</div>
-            <div>
-              Show start button:{" "}
-              {String(!isGenerating && currentStep === "suggestion" && chatData && messages.length === 6)}
+          <div className="max-w-2xl mx-auto mt-4">
+            <div
+              className="bg-gray-100 rounded-lg cursor-pointer select-none"
+              onClick={() => setIsDebugExpanded(!isDebugExpanded)}
+            >
+              <div className="flex items-center justify-between p-3 border-b border-gray-200">
+                <h3 className="font-bold text-sm text-gray-700">Debug Info</h3>
+                {isDebugExpanded ? (
+                  <ChevronUp className="w-4 h-4 text-gray-500" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                )}
+              </div>
             </div>
-            <div>
-              Raw chatData:{" "}
-              {chatData
-                ? JSON.stringify(
-                  {
-                    ...chatData,
-                    selfiePreview: chatData.selfiePreview?.startsWith("data:image")
-                      ? `${chatData.selfiePreview.substring(0, 30)}... [base64 data truncated]`
-                      : chatData.selfiePreview,
-                    clothingPreview: chatData.clothingPreview?.startsWith("data:image")
-                      ? `${chatData.clothingPreview.substring(0, 30)}... [base64 data truncated]`
-                      : chatData.clothingPreview,
-                  },
-                  null,
-                  2,
-                )
-                : "null"}
-            </div>
+
+            {isDebugExpanded && (
+              <div className="bg-gray-100 rounded-b-lg p-4 text-xs space-y-1">
+                <div>isGenerating: {String(isGenerating)}</div>
+                <div>currentStep: {String(currentStep)}</div>
+                <div>chatData: {chatData ? "exists" : "null"}</div>
+                <div>messages.length: {String(messages.length)}</div>
+                <div>pollingError: {pollingError || "none"}</div>
+                <div>hasProcessedCompletion: {String(hasProcessedCompletion)}</div>
+                <div>pollingActive: {pollingIntervalId ? "yes" : "no"}</div>
+                <div>
+                  Show start button:{" "}
+                  {String(!isGenerating && currentStep === "suggestion" && chatData && messages.length === 6)}
+                </div>
+                <div className="pt-2">
+                  <div className="font-semibold mb-1">Raw chatData:</div>
+                  <pre className="bg-gray-200 p-2 rounded text-xs overflow-auto max-h-40">
+                    {chatData
+                      ? JSON.stringify(
+                        {
+                          ...chatData,
+                          selfiePreview: chatData.selfiePreview?.startsWith("data:image")
+                            ? `${chatData.selfiePreview.substring(0, 30)}... [base64 data truncated]`
+                            : chatData.selfiePreview,
+                          clothingPreview: chatData.clothingPreview?.startsWith("data:image")
+                            ? `${chatData.clothingPreview.substring(0, 30)}... [base64 data truncated]`
+                            : chatData.clothingPreview,
+                        },
+                        null,
+                        2,
+                      )
+                      : "null"}
+                  </pre>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

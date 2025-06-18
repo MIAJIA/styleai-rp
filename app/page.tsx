@@ -252,7 +252,7 @@ export default function HomePage() {
               <h3 className="text-base font-semibold tracking-tight text-center">
                 <span className="text-primary font-bold">Step 3:</span> Choose Your Scene
               </h3>
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <div className="grid grid-cols-4 gap-2 md:grid-cols-4">
                 {styles.map((style) => {
                   const Icon = style.icon;
                   return (
@@ -260,13 +260,13 @@ export default function HomePage() {
                       key={style.id}
                       onClick={() => setOccasion(style.id)}
                       className={cn(
-                        "flex flex-col items-center justify-center p-4 rounded-xl transition-all",
+                        "flex flex-col items-center justify-center p-3 rounded-xl transition-all",
                         occasion === style.id ? style.color : "bg-white hover:bg-gray-50",
                         "border border-gray-200"
                       )}
                     >
-                      <Icon className="w-6 h-6 mb-2" />
-                      <span className="text-sm font-medium">{style.name}</span>
+                      <Icon className="w-5 h-5 mb-1.5" />
+                      <span className="text-xs font-medium text-center leading-tight">{style.name}</span>
                     </button>
                   );
                 })}
