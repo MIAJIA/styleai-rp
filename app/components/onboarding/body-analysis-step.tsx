@@ -40,12 +40,6 @@ export default function BodyAnalysisStep({
   const [selectedChallenges, setSelectedChallenges] = useState<string[]>(data.bodyChallenges || []);
   const [customAdvantages, setCustomAdvantages] = useState(data.customAdvantages || "");
   const [customChallenges, setCustomChallenges] = useState(data.customChallenges || "");
-  const [boneStructure, setBoneStructure] = useState<"strong" | "delicate" | "">(
-    data.boneStructure || "",
-  );
-  const [upperBodyType, setUpperBodyType] = useState<"straight" | "curved" | "">(
-    data.upperBodyType || "",
-  );
   const [showDetails, setShowDetails] = useState(false);
   const isInitialMount = useRef(true);
 
@@ -58,21 +52,18 @@ export default function BodyAnalysisStep({
 
   // Check validation whenever relevant state changes
   useEffect(() => {
-    const isValid =
+    const isValid = Boolean(
       selectedAdvantages.length > 0 ||
       selectedChallenges.length > 0 ||
       customAdvantages.trim() ||
-      customChallenges.trim() ||
-      boneStructure !== "" ||
-      upperBodyType !== "";
+      customChallenges.trim()
+    );
     onValidationChange(isValid);
   }, [
     selectedAdvantages.length,
     selectedChallenges.length,
     customAdvantages,
     customChallenges,
-    boneStructure,
-    upperBodyType,
     onValidationChange,
   ]);
 
@@ -89,16 +80,12 @@ export default function BodyAnalysisStep({
       bodyChallenges: selectedChallenges,
       customAdvantages,
       customChallenges,
-      boneStructure: boneStructure as "strong" | "delicate" | undefined,
-      upperBodyType: upperBodyType as "straight" | "curved" | undefined,
     });
   }, [
     selectedAdvantages,
     selectedChallenges,
     customAdvantages,
     customChallenges,
-    boneStructure,
-    upperBodyType,
     onUpdate,
   ]);
 
@@ -241,68 +228,6 @@ export default function BodyAnalysisStep({
           onChange={(e) => setCustomChallenges(e.target.value)}
           className="text-sm"
         />
-      </Card>
-
-      {/* Bone Structure */}
-      <Card className="p-4">
-        <h3 className="font-semibold text-gray-800 mb-3">🦴 Body Frame Type:</h3>
-        <p className="text-sm text-gray-600 mb-4">The overall feel of your bone structure</p>
-        <div className="space-y-2">
-          <Button
-            variant="outline"
-            onClick={() => setBoneStructure("strong")}
-            className={`w-full justify-start text-sm p-3 h-auto ${boneStructure === "strong"
-              ? "bg-blue-100 border-blue-300 text-blue-700"
-              : "border-gray-200 text-gray-600"
-              }`}
-          >
-            <span className="mr-2">💪</span>
-            Large frame (broad shoulders, thick wrists, large overall frame)
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setBoneStructure("delicate")}
-            className={`w-full justify-start text-sm p-3 h-auto ${boneStructure === "delicate"
-              ? "bg-blue-100 border-blue-300 text-blue-700"
-              : "border-gray-200 text-gray-600"
-              }`}
-          >
-            <span className="mr-2">✨</span>
-            Small frame (narrow shoulders, thin wrists, small overall frame)
-          </Button>
-        </div>
-      </Card>
-
-      {/* Upper Body Shape */}
-      <Card className="p-4">
-        <h3 className="font-semibold text-gray-800 mb-3">💃 Upper Body Type:</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Fullness of the upper body when viewed from the side
-        </p>
-        <div className="space-y-2">
-          <Button
-            variant="outline"
-            onClick={() => setUpperBodyType("straight")}
-            className={`w-full justify-start text-sm p-3 h-auto ${upperBodyType === "straight"
-              ? "bg-blue-100 border-blue-300 text-blue-700"
-              : "border-gray-200 text-gray-600"
-              }`}
-          >
-            <span className="mr-2">📏</span>
-            Straight (flatter from the side, less curve)
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setUpperBodyType("curved")}
-            className={`w-full justify-start text-sm p-3 h-auto ${upperBodyType === "curved"
-              ? "bg-blue-100 border-blue-300 text-blue-700"
-              : "border-gray-200 text-gray-600"
-              }`}
-          >
-            <span className="mr-2">🌸</span>
-            Curvy (fuller from the side, with noticeable curves)
-          </Button>
-        </div>
       </Card>
     </div>
   );

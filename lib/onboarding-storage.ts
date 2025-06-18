@@ -4,12 +4,9 @@
 export interface OnboardingData {
   // Step 0: Photo Upload
   fullBodyPhoto?: string;
-  headPhoto?: string;
   aiAnalysis?: {
     bodyType?: string;
     faceShape?: string;
-    skinTone?: string;
-    proportions?: string;
     styleInitialSense?: string;
     bodyAdvantages?: string[];
     boneStructure?: string;
@@ -21,8 +18,6 @@ export interface OnboardingData {
   bodyChallenges?: string[];
   customAdvantages?: string;
   customChallenges?: string;
-  boneStructure?: "strong" | "delicate";
-  upperBodyType?: "straight" | "curved";
 
   // Step 1.5: Facial Analysis
   facialIntensity?: "strong" | "light" | "medium";
@@ -41,7 +36,13 @@ export interface OnboardingData {
   avoidElements?: string[];
   customAvoid?: string;
 
-  // Step 5: Style Summary (generated)
+  // Step 5: Personalization
+  sustainableFashion?: boolean;
+  accessoryMatching?: boolean;
+  specificStyles?: string[];
+  customSpecificStyle?: string;
+
+  // Step 6: Style Summary (generated)
   styleProfile?: {
     structureCombination?: string;
     styleLabels?: string[];
@@ -89,13 +90,6 @@ export const loadCompleteOnboardingData = (): OnboardingData => {
     }
   }
 
-  if (!data.headPhoto) {
-    const headPhoto = safeGetLocalStorage("styleMe_headPhoto");
-    if (headPhoto) {
-      data.headPhoto = headPhoto;
-    }
-  }
-
   return data;
 };
 
@@ -103,16 +97,13 @@ export const saveOnboardingData = (data: OnboardingData): boolean => {
   const dataToSave = JSON.stringify(data);
   if (!safeSetLocalStorage("styleMe_onboarding_data", dataToSave)) {
     // If saving fails due to quota, try saving without photos
-    const { fullBodyPhoto, headPhoto, ...dataWithoutPhotos } = data;
+    const { fullBodyPhoto, ...dataWithoutPhotos } = data;
     const reducedData = JSON.stringify(dataWithoutPhotos);
     const success = safeSetLocalStorage("styleMe_onboarding_data", reducedData);
 
     // Store photos separately if they exist
     if (fullBodyPhoto) {
       safeSetLocalStorage("styleMe_fullBodyPhoto", fullBodyPhoto);
-    }
-    if (headPhoto) {
-      safeSetLocalStorage("styleMe_headPhoto", headPhoto);
     }
 
     return success;
@@ -122,12 +113,11 @@ export const saveOnboardingData = (data: OnboardingData): boolean => {
 
 export const createUserProfile = (data: OnboardingData) => {
   // Create a profile without the large photo data
-  const { fullBodyPhoto, headPhoto, ...profileData } = data;
+  const { fullBodyPhoto, ...profileData } = data;
 
   // Store photos separately with metadata
   const photoMetadata = {
     hasFullBodyPhoto: !!fullBodyPhoto,
-    hasHeadPhoto: !!headPhoto,
     photosStoredSeparately: true,
   };
 
@@ -140,12 +130,11 @@ export const createUserProfile = (data: OnboardingData) => {
 export const saveUserProfile = (data: OnboardingData): boolean => {
   // --- STRATEGY 1: IDEAL ---
   // Save profile (without photos) and photos separately.
-  const { fullBodyPhoto, headPhoto, ...profileData } = data;
+  const { fullBodyPhoto, ...profileData } = data;
   const userProfile = {
     ...profileData,
     photoMetadata: {
       hasFullBodyPhoto: !!fullBodyPhoto,
-      hasHeadPhoto: !!headPhoto,
     },
     savedAt: new Date().toISOString(),
   };
@@ -156,9 +145,6 @@ export const saveUserProfile = (data: OnboardingData): boolean => {
   // Try to save photos, but don't let failure block success
   if (fullBodyPhoto) {
     safeSetLocalStorage("styleMe_fullBodyPhoto", fullBodyPhoto);
-  }
-  if (headPhoto) {
-    safeSetLocalStorage("styleMe_headPhoto", headPhoto);
   }
 
   if (profileSaveSuccess) {
@@ -173,8 +159,6 @@ export const saveUserProfile = (data: OnboardingData): boolean => {
     // Drop potentially large custom text fields
     bodyAdvantages: data.bodyAdvantages,
     bodyChallenges: data.bodyChallenges,
-    boneStructure: data.boneStructure,
-    upperBodyType: data.upperBodyType,
     facialIntensity: data.facialIntensity,
     facialLines: data.facialLines,
     facialMaturity: data.facialMaturity,
@@ -229,14 +213,12 @@ export const saveUserProfile = (data: OnboardingData): boolean => {
 export const getUserPhotos = () => {
   return {
     fullBodyPhoto: safeGetLocalStorage("styleMe_fullBodyPhoto"),
-    headPhoto: safeGetLocalStorage("styleMe_headPhoto"),
   };
 };
 
 export const clearOnboardingData = () => {
   localStorage.removeItem("styleMe_onboarding_data");
   localStorage.removeItem("styleMe_fullBodyPhoto");
-  localStorage.removeItem("styleMe_headPhoto");
   localStorage.removeItem("styleMe_user_profile");
   localStorage.removeItem("styleMe_onboarding_completed");
 };

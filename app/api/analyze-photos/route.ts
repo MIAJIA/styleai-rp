@@ -118,9 +118,9 @@ const aiAnalysisSchema = {
 
 export async function POST(request: Request) {
   try {
-    const { fullBodyPhoto, headPhoto } = await request.json();
+    const { fullBodyPhoto } = await request.json();
 
-    if (!fullBodyPhoto || !headPhoto) {
+    if (!fullBodyPhoto) {
       return NextResponse.json({ error: "Missing required photo data" }, { status: 400 });
     }
 
@@ -164,13 +164,6 @@ ${JSON.stringify(aiAnalysisSchema, null, 2)}
                 detail: "low",
               },
             },
-            {
-              type: "image_url",
-              image_url: {
-                url: headPhoto,
-                detail: "low",
-              },
-            },
           ],
         },
       ],
@@ -194,6 +187,6 @@ ${JSON.stringify(aiAnalysisSchema, null, 2)}
     return NextResponse.json({ aiAnalysis });
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
-    return NextResponse.json({ error: "Failed to analyze photos" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to analyze photo" }, { status: 500 });
   }
 }

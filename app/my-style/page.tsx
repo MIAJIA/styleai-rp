@@ -27,16 +27,14 @@ interface UserProfile extends OnboardingData {
   savedAt?: string;
   photoMetadata?: {
     hasFullBodyPhoto: boolean;
-    hasHeadPhoto: boolean;
     photosStoredSeparately?: boolean;
   };
 }
 
 export default function MyStylePage() {
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
-  const [photos, setPhotos] = useState<{ fullBodyPhoto: string | null; headPhoto: string | null }>({
+  const [photos, setPhotos] = useState<{ fullBodyPhoto: string | null }>({
     fullBodyPhoto: null,
-    headPhoto: null,
   });
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -64,7 +62,6 @@ export default function MyStylePage() {
 
         profile.photoMetadata = {
           hasFullBodyPhoto: !!userPhotos.fullBodyPhoto || !!onboardingData.fullBodyPhoto,
-          hasHeadPhoto: !!userPhotos.headPhoto || !!onboardingData.headPhoto,
           photosStoredSeparately: true,
         };
 
@@ -96,8 +93,7 @@ export default function MyStylePage() {
 
   const hasCompletedOnboarding =
     profileData &&
-    (profileData.boneStructure ||
-      profileData.stylePreferences?.length ||
+    (profileData.stylePreferences?.length ||
       profileData.primaryScenario ||
       Object.keys(profileData).length > 2);
 
@@ -136,15 +132,13 @@ export default function MyStylePage() {
 
   const getStructureCombination = () => {
     if (!profileData) return "";
-    const bone = profileData.boneStructure === "strong" ? "Strong Frame" : "Delicate Frame";
-    const body = profileData.upperBodyType === "curved" ? "Curved" : "Straight";
     const face =
       profileData.facialIntensity === "strong"
         ? "Bold Features"
         : profileData.facialIntensity === "light"
           ? "Soft Features"
           : "Balanced Features";
-    return `${bone} × ${body} × ${face}`;
+    return `${face}`;
   };
 
   const getStyleLabels = () => {
@@ -154,9 +148,6 @@ export default function MyStylePage() {
     const labels = [];
     if (profileData?.facialIntensity === "light" && profileData?.facialMaturity === "youthful") {
       labels.push("Fresh & Youthful");
-    }
-    if (profileData?.boneStructure === "delicate" && profileData?.upperBodyType === "curved") {
-      labels.push("Soft Feminine");
     }
     if (profileData?.stylePreferences?.includes("Edgy Cool")) {
       labels.push("Edgy Cool");
@@ -178,7 +169,6 @@ export default function MyStylePage() {
     if (profileData?.bodyAdvantages?.includes("Slim Waist")) keywords.push("High Waistline");
     if (profileData?.bodyAdvantages?.includes("Long Legs")) keywords.push("Cropped Tops");
     if (profileData?.facialIntensity === "light") keywords.push("Soft Colors");
-    if (profileData?.boneStructure === "delicate") keywords.push("Delicate Details");
     if (profileData?.stylePreferences?.includes("Fresh & Vibrant")) keywords.push("Bright Tones");
     if (profileData?.primaryScenario === "Workplace") keywords.push("Professional");
     return keywords.length > 0 ? keywords : ["Comfortable", "Natural"];
@@ -279,55 +269,13 @@ export default function MyStylePage() {
                       </div>
                     )}
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-center text-gray-600">Headshot</p>
-                    {photos.headPhoto ? (
-                      <img
-                        src={photos.headPhoto}
-                        alt="Headshot"
-                        className="w-full h-auto object-cover rounded-lg border"
-                      />
-                    ) : (
-                      <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-400">
-                        No Photo
-                      </div>
-                    )}
-                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Grid Layout for Key Information */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Body Structure */}
-            <Card className="shadow-lg">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-1 mb-2">
-                  <User className="w-3 h-3 text-[#FF6EC7]" />
-                  <h3 className="font-medium text-xs">Body Structure</h3>
-                </div>
-                <div className="space-y-1 text-xs">
-                  {profileData?.boneStructure && (
-                    <div>
-                      <span className="text-gray-600">Frame:</span>
-                      <span className="ml-1 font-medium">
-                        {profileData.boneStructure === "strong" ? "Strong" : "Delicate"}
-                      </span>
-                    </div>
-                  )}
-                  {profileData?.upperBodyType && (
-                    <div>
-                      <span className="text-gray-600">Upper:</span>
-                      <span className="ml-1 font-medium">
-                        {profileData.upperBodyType === "curved" ? "Curved" : "Straight"}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
+          <div className="grid grid-cols-1 gap-3">
             {/* Facial Features */}
             <Card className="shadow-lg">
               <CardContent className="p-3">

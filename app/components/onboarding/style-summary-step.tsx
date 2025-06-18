@@ -40,18 +40,6 @@ export default function StyleSummaryStep({
   }, [styleProfile, isGenerating, onUpdate]);
 
   const generateStructureCombination = () => {
-    const bone =
-      data.boneStructure === "strong"
-        ? "Large bone structure"
-        : data.boneStructure === "delicate"
-          ? "Small bone structure"
-          : "Medium bone structure";
-    const body =
-      data.upperBodyType === "straight"
-        ? "Straight body"
-        : data.upperBodyType === "curved"
-          ? "Curvy body"
-          : "Medium build";
     const face =
       data.facialIntensity === "strong"
         ? "Strong features"
@@ -59,7 +47,7 @@ export default function StyleSummaryStep({
           ? "Delicate features"
           : "Balanced features";
 
-    return `${bone} × ${body} × ${face}`;
+    return `${face}`;
   };
 
   const generateStyleLabels = () => {

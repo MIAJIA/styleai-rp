@@ -44,3 +44,10 @@ To solve this, the image pre-processing logic needs a fundamental redesign.
 
 - **`app/results/page.tsx`:**
   - **TODO:** The current `object-contain` display is appropriate for now. If the image generation is fixed, and the resulting images have a consistent, correct aspect ratio, re-evaluate if this "letterbox" display is still needed or if the container can be sized to the image directly. See `OPEN_ISSUES.md` for full context.
+
+删除 onboarding flow 的下面几个 component：Facial Structure Assessment页面；Usage Scenarios页面；Style Boundaries页面
+
+
+
+
+

@@ -18,13 +18,11 @@ export default function PhotoUploadStep({
   onValidationChange,
 }: PhotoUploadStepProps) {
   const [fullBodyPhoto, setFullBodyPhoto] = useState<string>("");
-  const [headPhoto, setHeadPhoto] = useState<string>("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const fullBodyInputRef = useRef<HTMLInputElement>(null);
-  const headPhotoInputRef = useRef<HTMLInputElement>(null);
 
   // Load photos from data or separate localStorage on mount
   useEffect(() => {
@@ -39,25 +37,15 @@ export default function PhotoUploadStep({
       }
     }
 
-    if (data.headPhoto) {
-      setHeadPhoto(data.headPhoto);
-    } else {
-      // Try to load from separate localStorage
-      const savedHeadPhoto = localStorage.getItem("styleMe_headPhoto");
-      if (savedHeadPhoto) {
-        setHeadPhoto(savedHeadPhoto);
-      }
-    }
-
     // Check if analysis was already completed
     if (data.aiAnalysis) {
       setAnalysisComplete(true);
     }
-  }, [data.fullBodyPhoto, data.headPhoto, data.aiAnalysis]);
+  }, [data.fullBodyPhoto, data.aiAnalysis]);
 
   // New function to call the backend API for analysis
   const runAIAnalysis = useCallback(async () => {
-    if (isAnalyzing || analysisComplete || !fullBodyPhoto || !headPhoto) return;
+    if (isAnalyzing || analysisComplete || !fullBodyPhoto) return;
 
     setIsAnalyzing(true);
     setAnalysisError(null);
@@ -68,7 +56,7 @@ export default function PhotoUploadStep({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ fullBodyPhoto, headPhoto }),
+        body: JSON.stringify({ fullBodyPhoto }),
       });
 
       if (!response.ok) {
@@ -88,25 +76,24 @@ export default function PhotoUploadStep({
     } catch (error) {
       console.error("AI Analysis failed:", error);
       setAnalysisError(
-        "Sorry, we couldn't analyze the photos. Please try again or use different images.",
+        "Sorry, we couldn't analyze the photo. Please try again or use a different image.",
       );
     } finally {
       setIsAnalyzing(false);
     }
-  }, [fullBodyPhoto, headPhoto, onUpdate, isAnalyzing, analysisComplete]);
+  }, [fullBodyPhoto, onUpdate, isAnalyzing, analysisComplete]);
 
   // Handle validation and trigger analysis
   useEffect(() => {
-    const isValid = Boolean(fullBodyPhoto && headPhoto);
+    const isValid = Boolean(fullBodyPhoto);
     onValidationChange(isValid);
 
-    // Automatically trigger analysis once both photos are uploaded and there's no error
+    // Automatically trigger analysis once photo is uploaded and there's no error
     if (isValid && !analysisComplete && !isAnalyzing && !analysisError) {
       runAIAnalysis();
     }
   }, [
     fullBodyPhoto,
-    headPhoto,
     onValidationChange,
     analysisComplete,
     isAnalyzing,
@@ -114,15 +101,14 @@ export default function PhotoUploadStep({
     runAIAnalysis,
   ]);
 
-  // Update parent data when photos change
+  // Update parent data when photo changes
   useEffect(() => {
-    if (fullBodyPhoto || headPhoto) {
+    if (fullBodyPhoto) {
       onUpdate({
         fullBodyPhoto,
-        headPhoto,
       });
     }
-  }, [fullBodyPhoto, headPhoto, onUpdate]);
+  }, [fullBodyPhoto, onUpdate]);
 
   // Helper: compress image to dataURL (JPEG) to fit localStorage quota
   const compressImageToDataUrl = async (
@@ -166,7 +152,7 @@ export default function PhotoUploadStep({
     });
   };
 
-  const handleFileUpload = async (file: File, type: "fullBody" | "head") => {
+  const handleFileUpload = async (file: File) => {
     try {
       const result = await compressImageToDataUrl(file);
 
@@ -174,20 +160,11 @@ export default function PhotoUploadStep({
       setAnalysisComplete(false);
       setAnalysisError(null);
 
-      if (type === "fullBody") {
         setFullBodyPhoto(result);
         try {
           localStorage.setItem("styleMe_fullBodyPhoto", result);
         } catch (error) {
           console.warn("Failed to save full body photo to localStorage:", error);
-        }
-      } else {
-        setHeadPhoto(result);
-        try {
-          localStorage.setItem("styleMe_headPhoto", result);
-        } catch (error) {
-          console.warn("Failed to save head photo to localStorage:", error);
-        }
       }
     } catch (err) {
       console.error("Error processing image:", err);
@@ -195,14 +172,9 @@ export default function PhotoUploadStep({
     }
   };
 
-  const removePhoto = (type: "fullBody" | "head") => {
-    if (type === "fullBody") {
+  const removePhoto = () => {
       setFullBodyPhoto("");
       localStorage.removeItem("styleMe_fullBodyPhoto");
-    } else {
-      setHeadPhoto("");
-      localStorage.removeItem("styleMe_headPhoto");
-    }
     // Reset the analysis state
     setAnalysisComplete(false);
     setAnalysisError(null);
@@ -213,12 +185,12 @@ export default function PhotoUploadStep({
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold text-gray-800">Let's Get to Know You</h2>
         <p className="text-gray-600">
-          Upload your photos so our AI can analyze your unique features and create personalized
+          Upload your photo so our AI can analyze your unique features and create personalized
           recommendations.
         </p>
       </div>
 
-      {/* Photo Upload Cards */}
+      {/* Photo Upload Card */}
       <div className="space-y-4">
         {/* Full Body Photo */}
         <Card className="p-4">
@@ -249,7 +221,7 @@ export default function PhotoUploadStep({
                 <Button
                   size="sm"
                   variant="destructive"
-                  onClick={() => removePhoto("fullBody")}
+                  onClick={removePhoto}
                   className="absolute top-2 right-2 w-8 h-8 p-0 rounded-full"
                 >
                   <X className="w-4 h-4" />
@@ -264,57 +236,7 @@ export default function PhotoUploadStep({
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) handleFileUpload(file, "fullBody");
-              }}
-            />
-          </div>
-        </Card>
-
-        {/* Head Photo */}
-        <Card className="p-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-gray-800">Head & Shoulders Photo</h3>
-              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full">
-                Required
-              </span>
-            </div>
-
-            {!headPhoto ? (
-              <div
-                onClick={() => headPhotoInputRef.current?.click()}
-                className="border-2 border-dashed border-pink-200 rounded-xl p-8 text-center cursor-pointer hover:border-pink-300 transition-colors"
-              >
-                <Camera className="w-8 h-8 text-pink-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600 mb-1">Tap to upload head photo</p>
-                <p className="text-xs text-gray-400">For face shape & style analysis</p>
-              </div>
-            ) : (
-              <div className="relative">
-                <img
-                  src={headPhoto || "/placeholder.svg"}
-                  alt="Head photo"
-                  className="w-full h-48 object-cover rounded-xl"
-                />
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => removePhoto("head")}
-                  className="absolute top-2 right-2 w-8 h-8 p-0 rounded-full"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
-
-            <input
-              ref={headPhotoInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileUpload(file, "head");
+                if (file) handleFileUpload(file);
               }}
             />
           </div>
@@ -322,13 +244,13 @@ export default function PhotoUploadStep({
       </div>
 
       {/* AI Analysis Status */}
-      {fullBodyPhoto && headPhoto && (
+      {fullBodyPhoto && (
         <Card className="p-4 bg-gradient-to-r from-pink-50 to-rose-50 border-pink-200">
           <div className="flex items-center space-x-3">
             {isAnalyzing ? (
               <>
                 <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-sm text-pink-700 font-medium">AI is analyzing your photos...</p>
+                <p className="text-sm text-pink-700 font-medium">AI is analyzing your photo...</p>
               </>
             ) : analysisComplete ? (
               <>
@@ -356,14 +278,6 @@ export default function PhotoUploadStep({
                 <div>
                   <span className="text-gray-600">Face Shape:</span>
                   <span className="ml-2 font-medium">{data.aiAnalysis.faceShape}</span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Skin Tone:</span>
-                  <span className="ml-2 font-medium">{data.aiAnalysis.skinTone}</span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Proportions:</span>
-                  <span className="ml-2 font-medium">{data.aiAnalysis.proportions}</span>
                 </div>
               </div>
             </div>
