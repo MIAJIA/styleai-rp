@@ -172,6 +172,7 @@ export default function ChatPage() {
   const [pollingIntervalId, setPollingIntervalId] = useState<NodeJS.Timeout | null>(null);
   const [isDisplayingSuggestion, setIsDisplayingSuggestion] = useState(false);
   const [intermediateImageDisplayed, setIntermediateImageDisplayed] = useState(false);
+  const [isShowingWaitingTips, setIsShowingWaitingTips] = useState(false);
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
@@ -252,6 +253,65 @@ export default function ChatPage() {
       }
       return [...newMessages, { ...message, id: generateUniqueId(), timestamp: new Date() }];
     });
+  };
+
+  const displayWaitingTips = async () => {
+    console.log("[PERF] 🎭 WAITING TIPS STARTED");
+    setIsShowingWaitingTips(true);
+
+    // 时尚小贴士和生成进度库
+    const fashionTips = [
+      "💡 小贴士：拍照时稍微侧身45度，会让身材线条更优美哦！",
+      "✨ 穿搭秘籍：同色系深浅搭配可以让造型更有层次感！",
+      "🌟 拍照技巧：自然光下拍摄，肤色会更加亮丽动人！",
+      "💫 搭配心得：配饰不要超过3样，简约就是时尚！",
+      "🎨 色彩搭配：暖色调让人看起来更亲和，冷色调更显专业！"
+    ];
+
+    const generationSteps = [
+      "🎨 AI正在分析你的风格特征...",
+      "✨ 创建专属的场景氛围...",
+      "🌟 调整光线和构图...",
+      "💫 添加时尚细节...",
+      "🎯 进行最后的完美调色..."
+    ];
+
+    // 随机选择2-3个小贴士
+    const selectedTips = fashionTips.sort(() => 0.5 - Math.random()).slice(0, 2);
+    const selectedSteps = generationSteps.slice(0, 2);
+
+    // 合并小贴士和生成步骤
+    const allWaitingContent = [...selectedTips, ...selectedSteps];
+
+    // 每个内容间隔4-6秒显示
+    for (let i = 0; i < allWaitingContent.length; i++) {
+      // 检查是否应该继续显示小贴士
+      if (!isShowingWaitingTips) {
+        console.log("[PERF] 🎭 WAITING TIPS STOPPED (generation completed)");
+        return;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 4000 + Math.random() * 2000)); // 4-6秒随机间隔
+
+      // 再次检查状态，因为在等待期间可能已经完成
+      if (!isShowingWaitingTips) {
+        console.log("[PERF] 🎭 WAITING TIPS STOPPED (generation completed)");
+        return;
+      }
+
+      console.log(`[PERF] 🎭 Displaying waiting content ${i + 1}/${allWaitingContent.length}: ${allWaitingContent[i].substring(0, 20)}...`);
+
+      setMessages((prev) => [...prev, {
+        id: generateUniqueId(),
+        role: "ai",
+        type: "text",
+        content: allWaitingContent[i],
+        timestamp: new Date(),
+      }]);
+    }
+
+    console.log("[PERF] 🎭 WAITING TIPS COMPLETED");
+    setIsShowingWaitingTips(false);
   };
 
   const displaySuggestionSequentially = async (suggestion: any) => {
@@ -382,6 +442,9 @@ export default function ChatPage() {
       loadingText: "Now creating your personalized style images...",
       timestamp: new Date(),
     }]);
+
+    // 开始显示等待期间的小贴士
+    displayWaitingTips();
   };
 
   const getOccasionName = (occasionId: string) => {
@@ -425,6 +488,7 @@ export default function ChatPage() {
     processedStatusesRef.current.clear();
     setIntermediateImageDisplayed(false);
     setHasProcessedCompletion(false);
+    setIsShowingWaitingTips(false);
 
     addMessage({
       type: "loading",
@@ -609,6 +673,9 @@ export default function ChatPage() {
 
               console.log(`[PERF] 🎉 Phase 6: GENERATION COMPLETED after ${totalGenerationTime}ms total`);
               setCurrentStep("complete");
+
+              // 停止显示等待小贴士
+              setIsShowingWaitingTips(false);
 
               const showCompletion = () => {
                 const finalDisplayStart = Date.now();
