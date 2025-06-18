@@ -182,6 +182,9 @@ export default function ChatPage() {
   // Debug panel state - collapsed by default
   const [isDebugExpanded, setIsDebugExpanded] = useState(false);
 
+  // Track if auto-generation has been triggered to prevent multiple calls
+  const [hasAutoStarted, setHasAutoStarted] = useState(false);
+
   const handleImageClick = (imageUrl: string) => {
     setModalImage(imageUrl);
     setIsModalOpen(true);
@@ -638,6 +641,11 @@ export default function ChatPage() {
 
         setMessages(initialMessages);
         setMessageIdCounter(idCounter);
+
+        // Mark that auto-start should happen, but let useEffect handle it
+        console.log("[CHAT DEBUG] Marking for auto-start generation...");
+        setHasAutoStarted(true);
+
       } else {
         console.log("[CHAT DEBUG] No sessionStorage data found, showing default message");
         const defaultMessage: ChatMessage = {
@@ -673,6 +681,14 @@ export default function ChatPage() {
       startPolling(jobId);
     }
   }, [jobId]);
+
+  // Auto-start generation when chatData is ready and auto-start is requested
+  useEffect(() => {
+    if (chatData && hasAutoStarted && !isGenerating && currentStep === "suggestion") {
+      console.log("[CHAT DEBUG] Auto-starting generation with chatData:", chatData);
+      startGeneration();
+    }
+  }, [chatData, hasAutoStarted, isGenerating, currentStep]);
 
   useEffect(() => {
     console.log("[CHAT DEBUG] State changed:", {
@@ -769,12 +785,17 @@ export default function ChatPage() {
 
         {(() => {
           const shouldShowButton =
-            !isGenerating && currentStep === "suggestion" && chatData && messages.length === 6;
+            !isGenerating &&
+            currentStep === "suggestion" &&
+            chatData &&
+            messages.length === 6 &&
+            !hasAutoStarted; // Don't show button if auto-generation has started
           console.log("[CHAT DEBUG] Button visibility check:", {
             isGenerating,
             currentStep,
             hasChatData: !!chatData,
             messagesLength: messages.length,
+            hasAutoStarted,
             shouldShowButton,
           });
 

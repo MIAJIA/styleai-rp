@@ -125,7 +125,7 @@ export default function HomePage() {
   const [isWardrobeOpen, setIsWardrobeOpen] = useState(false);
   const [isPortraitSheetOpen, setIsPortraitSheetOpen] = useState(false);
   const [occasion, setOccasion] = useState("fashion-magazine");
-  const [generationMode, setGenerationMode] = useState<"tryon-only" | "simple-scene" | "advanced-scene">("advanced-scene");
+  const [generationMode, setGenerationMode] = useState<"tryon-only" | "simple-scene" | "advanced-scene">("simple-scene");
   const router = useRouter();
 
   const hasRequiredImages = Boolean(selfiePreview && clothingPreview);
@@ -162,6 +162,40 @@ export default function HomePage() {
     setSelectedPersona(persona || null);
     setSelfieFile(null);
     setIsPortraitSheetOpen(false);
+  };
+
+  // Auto-navigate to chat when generation mode is selected
+  const handleGenerationModeSelect = (mode: "tryon-only" | "simple-scene" | "advanced-scene") => {
+    setGenerationMode(mode);
+
+    // Auto-navigate if both images are selected
+    if (hasRequiredImages) {
+      // Store current selection data to sessionStorage for Chat page to use
+      const chatData = {
+        selfiePreview,
+        clothingPreview,
+        occasion,
+        generationMode: mode, // Use the newly selected mode
+        selectedPersona,
+        selfieFile: selfieFile ? {
+          name: selfieFile.name,
+          type: selfieFile.type,
+          size: selfieFile.size
+        } : null,
+        clothingFile: clothingFile ? {
+          name: clothingFile.name,
+          type: clothingFile.type,
+          size: clothingFile.size
+        } : null,
+        timestamp: Date.now()
+      };
+
+      console.log('[MAIN DEBUG] Auto-navigating to chat with data:', chatData);
+      sessionStorage.setItem('chatModeData', JSON.stringify(chatData));
+
+      // Navigate to Chat page
+      router.push('/chat');
+    }
   };
 
   // Simplified generation handler - directly go to Chat Experience
@@ -284,49 +318,22 @@ export default function HomePage() {
                   description="Fastest results"
                   icon={Shirt}
                   isSelected={generationMode === 'tryon-only'}
-                  onClick={() => setGenerationMode('tryon-only')}
+                  onClick={() => handleGenerationModeSelect('tryon-only')}
                 />
                 <ModeButton
                   title="Best Performance"
                   description="Recommended ⭐"
                   icon={Sparkles}
                   isSelected={generationMode === 'simple-scene'}
-                  onClick={() => setGenerationMode('simple-scene')}
+                  onClick={() => handleGenerationModeSelect('simple-scene')}
                 />
                 <ModeButton
                   title="Pro Mode"
                   description="Working on it 🚧"
                   icon={Layers}
                   isSelected={generationMode === 'advanced-scene'}
-                  onClick={() => setGenerationMode('advanced-scene')}
+                  onClick={() => handleGenerationModeSelect('advanced-scene')}
                 />
-              </div>
-            </div>
-
-            {/* Generate Button */}
-            <div className="space-y-4">
-              <Button
-                onClick={handleStartGeneration}
-                disabled={!hasRequiredImages}
-                className={cn(
-                  "w-full h-16 text-lg font-bold rounded-xl transition-all",
-                  "bg-gradient-to-r from-[#FF6EC7] to-[#D5F500]",
-                  "hover:shadow-lg transform hover:scale-[1.02]",
-                  "text-white border-0",
-                  !hasRequiredImages && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                <MessageCircle className="mr-3 h-6 w-6" />
-                Start AI Styling Chat
-              </Button>
-
-              <div className="text-center">
-                <p className="text-xs text-gray-500">
-                  {hasRequiredImages
-                    ? "Ready to create your personalized style with AI guidance"
-                    : "Complete Steps 1-4 to start your styling session"
-                  }
-                </p>
               </div>
             </div>
           </div>
@@ -367,6 +374,15 @@ export default function HomePage() {
               </Drawer.Content>
             </Drawer.Portal>
           </Drawer.Root>
+
+          {/* Status Message - Show when images are missing */}
+          {!hasRequiredImages && (
+            <div className="text-center">
+              <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-4">
+                📸 Please complete Steps 1-2 first, then select your preferred mode in Step 4 to start your styling session
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
