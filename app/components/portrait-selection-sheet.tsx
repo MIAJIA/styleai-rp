@@ -371,6 +371,23 @@ export default function PortraitSelectionSheet({ onPortraitSelect }: PortraitSel
         onChange={handlePhotoUpload}
         className="hidden"
       />
+
+      {/* Upload guidance section */}
+      <div className="mb-4 p-3 bg-pink-50 rounded-2xl border border-pink-200">
+        <div className="flex items-start gap-2">
+          <div className="w-5 h-5 rounded-full bg-pink-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-white text-xs">📷</span>
+          </div>
+          <div className="text-xs space-y-1">
+            <p className="font-medium text-pink-900">Photo Tips for Best Results:</p>
+            <p className="text-pink-700">✅ Full-body standing pose with clear background</p>
+            <p className="text-pink-700">✅ Good lighting, face visible, arms and legs not cropped</p>
+            <p className="text-pink-700">✅ Front-facing pose, minimal accessories</p>
+            <p className="text-red-600">❌ Avoid sitting, lying down, or heavily cropped photos</p>
+          </div>
+        </div>
+      </div>
+
       {/* Container to ensure vertical stacking */}
       <div className="flex flex-col gap-y-4">
         {renderCategory("myPhotos")}
