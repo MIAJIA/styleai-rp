@@ -16,11 +16,10 @@ import {
 import PhotoUploadStep from "../components/onboarding/photo-upload-step";
 import BodyAnalysisStep from "../components/onboarding/body-analysis-step";
 import StylePreferenceStep from "../components/onboarding/style-preference-step";
-import ScenarioStep from "../components/onboarding/scenario-step";
 import StyleBoundariesStep from "../components/onboarding/style-boundaries-step";
 import StyleSummaryStep from "../components/onboarding/style-summary-step";
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 5;
 
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -82,8 +81,8 @@ export default function OnboardingPage() {
   };
 
   const handleSkip = () => {
-    // Allow skipping for optional steps (4 and 5)
-    if (currentStep >= 4) {
+    // Allow skipping for optional steps (3 and 4)
+    if (currentStep >= 3) {
       handleNext();
     }
   };
@@ -116,21 +115,13 @@ export default function OnboardingPage() {
         );
       case 3:
         return (
-          <ScenarioStep
-            data={onboardingData}
-            onUpdate={updateOnboardingData}
-            onValidationChange={handleValidationChange}
-          />
-        );
-      case 4:
-        return (
           <StyleBoundariesStep
             data={onboardingData}
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
           />
         );
-      case 5:
+      case 4:
         return (
           <StyleSummaryStep
             data={onboardingData}
@@ -148,15 +139,14 @@ export default function OnboardingPage() {
       "Photo Upload", // Step 0
       "Body Analysis", // Step 1
       "Style Preference", // Step 2
-      "Usage Scenario", // Step 3
-      "Style Boundaries", // Step 4
-      "Style Summary", // Step 5
+      "Style Boundaries", // Step 3
+      "Style Summary", // Step 4
     ];
     return titles[currentStep];
   };
 
   const getStepEmoji = () => {
-    const emojis = ["📸", "💪", "🎨", "🎯", "🚫", "✨"];
+    const emojis = ["📸", "💪", "🎨", "🚫", "✨"];
     return emojis[currentStep];
   };
 
@@ -191,7 +181,7 @@ export default function OnboardingPage() {
 
           {/* Skip Button (or placeholder) */}
           <div className="w-14 text-right">
-            {currentStep >= 4 && currentStep < TOTAL_STEPS - 1 && (
+            {currentStep >= 3 && currentStep < TOTAL_STEPS - 1 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -215,7 +205,7 @@ export default function OnboardingPage() {
         <div className="max-w-md mx-auto">
           <Button
             onClick={handleNext}
-            disabled={!isStepValid && currentStep < 4}
+            disabled={!isStepValid && currentStep < 3}
             className="w-full h-12 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50"
           >
             <span className="flex items-center justify-center space-x-2">

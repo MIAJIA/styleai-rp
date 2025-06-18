@@ -206,7 +206,6 @@ export default function MyStylePage() {
 
   const hasCompletedOnboarding = profileData && (
     profileData.stylePreferences?.length ||
-    profileData.primaryScenario ||
     Object.keys(profileData).length > 2
   );
 

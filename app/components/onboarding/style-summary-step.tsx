@@ -64,15 +64,6 @@ export default function StyleSummaryStep({
       labels.push("Clean and minimal");
     }
 
-    // Based on scenario
-    if (data.primaryScenario === "work") {
-      labels.push("Business elite");
-    } else if (data.primaryScenario === "casual") {
-      labels.push("Daily comfort");
-    } else if (data.primaryScenario === "social") {
-      labels.push("Social butterfly");
-    }
-
     return labels.length > 0 ? labels : ["Unique personality", "Diverse style"];
   };
 
@@ -102,13 +93,6 @@ export default function StyleSummaryStep({
     }
     if (data.stylePreferences?.includes("edgy")) {
       keywords.push("Bold patterns", "Statement pieces");
-    }
-
-    // Based on scenario
-    if (data.primaryScenario === "work") {
-      keywords.push("Professional", "Structured");
-    } else if (data.primaryScenario === "casual") {
-      keywords.push("Comfortable", "Relaxed fit");
     }
 
     return keywords.length > 0 ? keywords : ["Individual expression", "Comfortable and at ease", "Fashion-forward"];

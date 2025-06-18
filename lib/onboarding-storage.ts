@@ -23,21 +23,17 @@ export interface OnboardingData {
   stylePreferences?: string[];
   customStyle?: string;
 
-  // Step 3: Scenario
-  primaryScenario?: string;
-  customScenario?: string;
-
-  // Step 4: Style Boundaries
+  // Step 3: Style Boundaries
   avoidElements?: string[];
   customAvoid?: string;
 
-  // Step 5: Personalization
+  // Step 4: Personalization
   sustainableFashion?: boolean;
   accessoryMatching?: boolean;
   specificStyles?: string[];
   customSpecificStyle?: string;
 
-  // Step 6: Style Summary (generated)
+  // Step 5: Style Summary (generated)
   styleProfile?: {
     structureCombination?: string;
     styleLabels?: string[];
@@ -155,8 +151,6 @@ export const saveUserProfile = (data: OnboardingData): boolean => {
     bodyAdvantages: data.bodyAdvantages,
     bodyChallenges: data.bodyChallenges,
     stylePreferences: data.stylePreferences,
-    primaryScenario: data.primaryScenario,
-    avoidElements: data.avoidElements,
     photoMetadata: userProfile.photoMetadata,
     savedAt: userProfile.savedAt,
   };
@@ -173,7 +167,6 @@ export const saveUserProfile = (data: OnboardingData): boolean => {
   console.warn("Storage Strategy 2 failed. Trying Strategy 3: Minimal Data.");
   const minimalProfile = {
     stylePreferences: data.stylePreferences,
-    primaryScenario: data.primaryScenario,
     photoMetadata: userProfile.photoMetadata,
     savedAt: userProfile.savedAt,
   };
