@@ -6,20 +6,11 @@ import { Button } from "@/components/ui/button";
 import CompactUpload from "./components/compact-upload";
 import FashionHeader from "./components/fashion-header";
 import StylishWardrobe from "./components/stylish-wardrobe";
+import PortraitSelectionSheet from "./components/portrait-selection-sheet";
 import IOSTabBar from "./components/ios-tab-bar";
 import { Drawer } from "vaul";
-import PortraitSelectionSheet from "./components/portrait-selection-sheet";
-import GenerationAnimation from "./components/generation-animation";
-import StyleSelector from "./components/style-selector";
 import {
-  Palette,
-  Wand2,
   Heart,
-  Star,
-  ArrowLeft,
-  Share2,
-  Download,
-  Loader2,
   BookOpen,
   Footprints,
   Coffee,
@@ -28,7 +19,6 @@ import {
   Sparkles,
   PartyPopper,
   MessageCircle,
-  Zap,
   Shirt,
   Layers
 } from "lucide-react";
@@ -131,31 +121,14 @@ export default function HomePage() {
   const [clothingFile, setClothingFile] = useState<File | null>(null);
   const [selfiePreview, setSelfiePreview] = useState<string>("");
   const [clothingPreview, setClothingPreview] = useState<string>("");
-  const [selectedStyle, setSelectedStyle] = useState<string>("fashion-magazine");
   const [selectedPersona, setSelectedPersona] = useState<object | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showAnimation, setShowAnimation] = useState(false);
-  const [isApiFinished, setIsApiFinished] = useState(false);
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isWardrobeOpen, setIsWardrobeOpen] = useState(false);
   const [isPortraitSheetOpen, setIsPortraitSheetOpen] = useState(false);
-  const [stage, setStage] = useState<"initial" | "loading" | "suggestion" | "result">("initial");
   const [occasion, setOccasion] = useState("fashion-magazine");
-  const [styleSuggestion, setStyleSuggestion] = useState<any>(null);
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const [isGeneratingFinalImage, setIsGeneratingFinalImage] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [pollingError, setPollingError] = useState<string | null>(null);
-  const [experienceMode, setExperienceMode] = useState<"traditional" | "chat" | null>(null);
   const [generationMode, setGenerationMode] = useState<"tryon-only" | "simple-scene" | "advanced-scene">("advanced-scene");
-  const [processImages, setProcessImages] = useState({
-    humanImage: "",
-    garmentImage: "",
-    styledImage: "",
-    tryOnImage: ""
-  });
   const router = useRouter();
+
+  const hasRequiredImages = Boolean(selfiePreview && clothingPreview);
 
   const handleSelfieUpload = (file: File) => {
     setSelfieFile(file);
@@ -191,347 +164,12 @@ export default function HomePage() {
     setIsPortraitSheetOpen(false);
   };
 
-  const handleStyleSelect = (styleId: string) => {
-    console.log(`Style selected: ${styleId}`);
-    setSelectedStyle(styleId);
-  };
-
-  // Helper function to prepare image files for upload
-  const getFileFromPreview = async (
-    previewUrl: string,
-    defaultName: string,
-  ): Promise<File | null> => {
-    if (previewUrl.startsWith("data:image")) {
-      return dataURLtoFile(previewUrl, `${defaultName}-${Date.now()}.png`);
-    } else if (previewUrl.startsWith("/")) {
-      const response = await fetch(previewUrl);
-      const blob = await response.blob();
-      return new File([blob], `${defaultName}-${Date.now()}.jpg`, { type: blob.type });
-    } else if (previewUrl.startsWith("blob:")) {
-      const response = await fetch(previewUrl);
-      const blob = await response.blob();
-      return new File([blob], `${defaultName}-${Date.now()}.jpg`, { type: blob.type });
-    }
-    return null;
-  };
-
-  // New handler for the entire generation process
-  const handleStartGeneration = async () => {
-    if (!selfiePreview || !clothingPreview) return;
-    setIsLoading(true);
-    setStage("loading"); // Move to loading stage
-    setJobId(null);
-    setPollingError(null);
-    setStyleSuggestion(null);
-
-    // Initialize process images to show user-input images
-    setProcessImages({
-      humanImage: selfiePreview,
-      garmentImage: clothingPreview,
-      styledImage: "",
-      tryOnImage: ""
-    });
-
-    try {
-      const humanImage = await getFileFromPreview(selfiePreview, "selfie");
-      const garmentImage = await getFileFromPreview(clothingPreview, "garment");
-
-      if (!humanImage || !garmentImage) {
-        throw new Error("Could not process one of the images.");
-      }
-
-      const formData = new FormData();
-      formData.append("human_image", humanImage);
-      formData.append("garment_image", garmentImage);
-      formData.append("occasion", occasion);
-      // Add the selected generation pipeline mode
-      formData.append("generation_mode", generationMode);
-
-      // Add the style prompt if available
-      if (stylePrompts[occasion as keyof typeof stylePrompts]) {
-        formData.append("style_prompt", stylePrompts[occasion as keyof typeof stylePrompts]);
-      }
-
-      const response = await fetch("/api/generation/start", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to start generation: ${errorText}`);
-      }
-
-      const { jobId: newJobId } = await response.json();
-      setJobId(newJobId);
-      // Polling will be initiated by the useEffect hook
-    } catch (error) {
-      console.error(error);
-      setPollingError(error instanceof Error ? error.message : String(error));
-      setIsLoading(false);
-      setStage("initial"); // Revert stage on error
-    }
-  };
-
-  useEffect(() => {
-    if (!jobId) return;
-
-    const intervalId = setInterval(async () => {
-      try {
-        const response = await fetch(`/api/generation/status?jobId=${jobId}`);
-        if (!response.ok) {
-          throw new Error(`Polling failed with status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('[POLLING] Received data:', data);
-
-        if (data.status === 'suggestion_generated') {
-          console.log('[POLLING] Status is suggestion_generated. Setting stage to "suggestion".');
-          setStyleSuggestion(data.suggestion);
-          setStage("suggestion");
-
-          // Update styled image (if API returns intermediate result image)
-          if (data.styledImageUrl) {
-            setProcessImages(prev => ({
-              ...prev,
-              styledImage: data.styledImageUrl
-            }));
-          }
-
-        } else if (data.status === 'completed') {
-          const finalImageUrl = data.result?.imageUrl;
-          console.log('[POLLING] Status is completed. Final URL:', finalImageUrl);
-          if (finalImageUrl) {
-            console.log('[POLLING] Setting stage to "result" and updating image URL.');
-            setGeneratedImageUrl(finalImageUrl);
-            setStage("result");
-            setIsLoading(false);
-
-            // Update try-on image
-            setProcessImages(prev => ({
-              ...prev,
-              tryOnImage: finalImageUrl
-            }));
-
-            // Save only the final look with all process images
-            const finalLook: PastLook = {
-              id: jobId,
-              imageUrl: finalImageUrl,
-              style: occasion,
-              timestamp: Date.now(),
-              originalHumanSrc: selfiePreview,
-              originalGarmentSrc: clothingPreview,
-              personaProfile: selectedPersona ? JSON.stringify(selectedPersona) : null,
-              processImages: {
-                humanImage: selfiePreview,
-                garmentImage: clothingPreview,
-                finalImage: finalImageUrl,
-                styleSuggestion: data.suggestion
-              }
-            };
-            console.log('Saving final look:', finalLook);
-            saveLook(finalLook);
-
-            clearInterval(intervalId);
-          } else {
-            console.error('[POLLING] Error: Job completed but finalImageUrl is missing in the response.');
-          }
-        } else if (data.status === 'failed') {
-          throw new Error(data.statusMessage || 'Generation failed.');
-        }
-        console.log(`[POLLING] Current job status: ${data.status}. Polling will continue.`);
-
-      } catch (error) {
-        console.error("Polling error:", error);
-        setPollingError(error instanceof Error ? error.message : String(error));
-        setIsLoading(false);
-        setStage("initial");
-        clearInterval(intervalId);
-      }
-    }, 3000);
-
-    return () => clearInterval(intervalId);
-  }, [jobId, occasion, selfiePreview, clothingPreview, selectedPersona, styleSuggestion]);
-
-  const handleGenerate = async () => {
-    if (!selfiePreview) {
-      alert("Please select a portrait.");
+  // Simplified generation handler - directly go to Chat Experience
+  const handleStartGeneration = () => {
+    if (!hasRequiredImages) {
+      alert("Please select both a photo and garment to continue.");
       return;
     }
-    if (!clothingPreview) {
-      alert("Please select a garment.");
-      return;
-    }
-
-    setIsGenerating(true);
-    setShowAnimation(true);
-    setIsApiFinished(false);
-    setGeneratedImageUrl(null);
-
-    try {
-      const formData = new FormData();
-
-      // --- Smartly handle the selfie image source ---
-      let finalSelfieFile = selfieFile;
-
-      // Scenario 1: Selfie is a Data URL from localStorage (My Photos)
-      if (!finalSelfieFile && selfiePreview.startsWith("data:image")) {
-        finalSelfieFile = dataURLtoFile(selfiePreview, `selfie-${Date.now()}.png`);
-      }
-      // Scenario 2: Selfie is a local URL from /public (Idols)
-      else if (!finalSelfieFile && selfiePreview.startsWith("/")) {
-        const response = await fetch(selfiePreview);
-        const blob = await response.blob();
-        finalSelfieFile = new File([blob], `idol-${Date.now()}.jpg`, { type: blob.type });
-      }
-
-      if (finalSelfieFile) {
-        formData.append("human_image", finalSelfieFile);
-      } else {
-        alert("Could not process the selected portrait. Please try again.");
-        setIsGenerating(false);
-        return;
-      }
-
-      // --- Smartly handle the garment image source (now fully robust) ---
-      let finalGarmentFile = clothingFile;
-      // Scenario 1: Garment is a Data URL from localStorage (custom items)
-      if (!finalGarmentFile && clothingPreview && clothingPreview.startsWith("data:image")) {
-        finalGarmentFile = dataURLtoFile(clothingPreview, `wardrobe-item-${Date.now()}.png`);
-      }
-      // Scenario 2: Garment is a local URL from /public (default items)
-      else if (!finalGarmentFile && clothingPreview.startsWith("/")) {
-        const response = await fetch(clothingPreview);
-        const blob = await response.blob();
-        const fileName = clothingPreview.split("/").pop() || `default-garment-${Date.now()}.png`;
-        finalGarmentFile = new File([blob], fileName, { type: blob.type });
-      }
-
-      if (finalGarmentFile) {
-        formData.append("garment_image", finalGarmentFile);
-        if (clothingPreview) {
-          formData.append("garment_src", clothingPreview);
-        }
-      } else {
-        alert("Please select a garment to try on.");
-        setIsGenerating(false);
-        return;
-      }
-
-      if (selectedPersona) {
-        formData.append("persona_profile", JSON.stringify(selectedPersona));
-      }
-      formData.append("style_name", selectedStyle);
-
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to generate image: ${await response.text()}`);
-      }
-
-      const data = await response.json();
-      if (data.imageUrl) {
-        setGeneratedImageUrl(data.imageUrl);
-        setIsApiFinished(true);
-        if (generatedImageUrl) {
-          setStage("result");
-        }
-      } else {
-        throw new Error("Generation succeeded but no image URL was returned.");
-      }
-    } catch (error) {
-      console.error(error);
-      if (error instanceof Error) {
-        alert(error.message);
-      }
-      setShowAnimation(false);
-      setIsGenerating(false);
-    }
-  };
-
-  const handleAnimationAndNavigation = () => {
-    if (generatedImageUrl) {
-      setStage("result");
-    }
-    setShowAnimation(false);
-    setIsApiFinished(false);
-    setIsGenerating(false);
-    setGeneratedImageUrl(null);
-  };
-
-  const handleCreateAnother = () => {
-    setStage("initial");
-    setSelfiePreview("");
-    setClothingPreview("");
-    setSelfieFile(null);
-    setClothingFile(null);
-    setSelectedPersona(null);
-    setGeneratedImageUrl(null);
-  };
-
-  const handleShare = () => {
-    if (navigator.share && generatedImageUrl) {
-      // Use the Web Share API on supported devices
-      fetch(generatedImageUrl)
-        .then((res) => res.blob())
-        .then((blob) => {
-          const file = new File([blob], "styleai-look.png", { type: "image/png" });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator
-              .share({
-                title: "My StyleAI Look",
-                text: "Check out the new look I generated with StyleAI!",
-                files: [file],
-              })
-              .catch(console.error);
-          } else {
-            // Fallback for when file sharing is not supported but API exists
-            navigator
-              .share({
-                title: "My StyleAI Look",
-                text: "Check out the new look I generated with StyleAI!",
-                url: generatedImageUrl,
-              })
-              .catch(console.error);
-          }
-        });
-    } else if (generatedImageUrl) {
-      // Fallback for desktop browsers
-      navigator.clipboard
-        .writeText(generatedImageUrl)
-        .then(() => alert("Image URL copied to clipboard! You can paste it to share."))
-        .catch(console.error);
-    }
-  };
-
-  const handleDownload = () => {
-    if (generatedImageUrl) {
-      const link = document.createElement("a");
-      link.href = generatedImageUrl;
-      link.download = `styleai-look-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
-
-  const hasRequiredImages = selfiePreview && clothingPreview;
-
-  // New: Handle Chat mode function
-  const handleChatMode = () => {
-    console.log('[MAIN DEBUG] Chat mode button clicked');
-    console.log('[MAIN DEBUG] Current state:', {
-      selfiePreview,
-      clothingPreview,
-      occasion,
-      generationMode,
-      selectedPersona,
-      hasRequiredImages
-    });
 
     // Store current selection data to sessionStorage for Chat page to use
     const chatData = {
@@ -556,28 +194,13 @@ export default function HomePage() {
     console.log('[MAIN DEBUG] Storing chat data to sessionStorage:', chatData);
     sessionStorage.setItem('chatModeData', JSON.stringify(chatData));
 
-    // Verify if storage was successful
-    const storedData = sessionStorage.getItem('chatModeData');
-    console.log('[MAIN DEBUG] Verification - stored data:', storedData);
-
     // Navigate to Chat page
     console.log('[MAIN DEBUG] Navigating to /chat');
     router.push('/chat');
   };
 
-  // Modify original handleStartGeneration function for traditional mode
-  const handleTraditionalMode = async () => {
-    setExperienceMode("traditional");
-    await handleStartGeneration();
-  };
-
-  console.log(`[RENDER] Component rendering with stage: "${stage}" and generatedImageUrl: ${generatedImageUrl ? "Exists" : "null"}`);
-
   return (
     <div className="min-h-full pb-20 relative overflow-hidden">
-      {/* This animation component might be repurposed or removed depending on the new flow */}
-      {/* <GenerationAnimation ... /> */}
-
       {/* Gradient background elements */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-[#D5F500] rounded-full opacity-50 blur-xl -translate-y-1/2 translate-x-1/2"></div>
       <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#FF6EC7] rounded-full opacity-50 blur-xl translate-y-1/2 -translate-x-1/2"></div>
@@ -591,169 +214,124 @@ export default function HomePage() {
 
         {/* Main content area */}
         <div className="px-5 space-y-8">
-          {/* Stage 1: Input Selection */}
-          {stage === "initial" && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Upload Grids */}
-              <div className="flex w-full gap-4">
-                <div className="w-full space-y-2">
-                  <h2 className="text-base font-semibold tracking-tight text-center">
-                    <span className="text-primary font-bold">Step 1:</span> Your Photo
-                  </h2>
-                  <div onClick={() => setIsPortraitSheetOpen(true)} className="w-full">
-                    <CompactUpload
-                      preview={selfiePreview}
-                      required
-                      helpText="Full-body photo"
-                      variant="portrait"
-                      isTrigger
-                    />
-                  </div>
-                </div>
-                <div className="w-full space-y-2">
-                  <h2 className="text-base font-semibold tracking-tight text-center">
-                    <span className="text-primary font-bold">Step 2:</span> Garment
-                  </h2>
-                  <div onClick={() => setIsWardrobeOpen(true)} className="w-full">
-                    <CompactUpload
-                      preview={clothingPreview}
-                      helpText="Item to try on"
-                      variant="garment"
-                      isTrigger
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Occasion Selector */}
-              <div className="space-y-3">
-                <h3 className="text-base font-semibold tracking-tight text-center">
-                  <span className="text-primary font-bold">Step 3:</span> Choose Your Scene
-                </h3>
-                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                  {styles.map((style) => {
-                    const Icon = style.icon;
-                    return (
-                      <button
-                        key={style.id}
-                        onClick={() => setOccasion(style.id)}
-                        className={cn(
-                          "flex flex-col items-center justify-center p-4 rounded-xl transition-all",
-                          occasion === style.id ? style.color : "bg-white hover:bg-gray-50",
-                          "border border-gray-200"
-                        )}
-                      >
-                        <Icon className="w-6 h-6 mb-2" />
-                        <span className="text-sm font-medium">{style.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Step 4: Generation Pipeline Mode Selection */}
-              <div className="space-y-3">
-                <h3 className="text-base font-semibold tracking-tight text-center">
-                  <span className="text-primary font-bold">Step 4:</span> Choose Generation Mode
-                </h3>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                  <ModeButton
-                    title="Try-On Only"
-                    description="Fastest results"
-                    icon={Shirt}
-                    isSelected={generationMode === 'tryon-only'}
-                    onClick={() => setGenerationMode('tryon-only')}
-                  />
-                  <ModeButton
-                    title="Simple Scene"
-                    description="New background & pose"
-                    icon={Sparkles}
-                    isSelected={generationMode === 'simple-scene'}
-                    onClick={() => setGenerationMode('simple-scene')}
-                  />
-                  <ModeButton
-                    title="Advanced Scene"
-                    description="Full generation"
-                    icon={Layers}
-                    isSelected={generationMode === 'advanced-scene'}
-                    onClick={() => setGenerationMode('advanced-scene')}
+          {/* Input Selection Interface */}
+          <div className="space-y-6 animate-fade-in">
+            {/* Upload Grids */}
+            <div className="flex w-full gap-4">
+              <div className="w-full space-y-2">
+                <h2 className="text-base font-semibold tracking-tight text-center">
+                  <span className="text-primary font-bold">Step 1:</span> Your Photo
+                </h2>
+                <div onClick={() => setIsPortraitSheetOpen(true)} className="w-full">
+                  <CompactUpload
+                    preview={selfiePreview}
+                    required
+                    helpText="Full-body photo"
+                    variant="portrait"
+                    isTrigger
                   />
                 </div>
               </div>
-
-              {/* Step 5: Generation Experience Selection */}
-              <div className="space-y-4">
-                <h3 className="text-base font-semibold tracking-tight text-center">
-                  <span className="text-primary font-bold">Step 5:</span> Choose Experience
-                </h3>
-                <div className="grid grid-cols-1 gap-3">
-                  {/* Traditional Mode */}
-                  <button
-                    onClick={handleTraditionalMode}
-                    disabled={!hasRequiredImages || isLoading}
-                    className={cn(
-                      "flex items-center justify-between p-4 rounded-xl transition-all border-2",
-                      "bg-gradient-to-r from-[#FF6EC7]/10 to-[#D5F500]/10",
-                      "border-[#FF6EC7]/30 hover:border-[#FF6EC7]/50",
-                      "hover:shadow-lg transform hover:scale-[1.02]",
-                      (!hasRequiredImages || isLoading) && "opacity-50 cursor-not-allowed"
-                    )}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-[#FF6EC7] to-[#D5F500] rounded-full flex items-center justify-center">
-                        <Zap className="text-white" size={20} />
-                      </div>
-                      <div className="text-left">
-                        <h4 className="font-semibold text-gray-800">Classic Mode</h4>
-                        <p className="text-sm text-gray-600">Traditional generation process</p>
-                      </div>
-                    </div>
-                    <ArrowLeft className="text-gray-400 rotate-180" size={20} />
-                  </button>
-
-                  {/* Chat Mode */}
-                  <button
-                    onClick={handleChatMode}
-                    disabled={!hasRequiredImages}
-                    className={cn(
-                      "flex items-center justify-between p-4 rounded-xl transition-all border-2",
-                      "bg-gradient-to-r from-purple-500/10 to-pink-500/10",
-                      "border-purple-500/30 hover:border-purple-500/50",
-                      "hover:shadow-lg transform hover:scale-[1.02]",
-                      !hasRequiredImages && "opacity-50 cursor-not-allowed"
-                    )}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                        <MessageCircle className="text-white" size={20} />
-                      </div>
-                      <div className="text-left">
-                        <h4 className="font-semibold text-gray-800">Chat Experience</h4>
-                        <p className="text-sm text-gray-600">Step-by-step conversation</p>
-                      </div>
-                    </div>
-                    <ArrowLeft className="text-gray-400 rotate-180" size={20} />
-                  </button>
-                </div>
-
-                <div className="text-center">
-                  <p className="text-xs text-gray-500">
-                    {hasRequiredImages
-                      ? "Choose how you'd like to generate your style"
-                      : "Complete Steps 1-3 to unlock generation modes"
-                    }
-                  </p>
+              <div className="w-full space-y-2">
+                <h2 className="text-base font-semibold tracking-tight text-center">
+                  <span className="text-primary font-bold">Step 2:</span> Garment
+                </h2>
+                <div onClick={() => setIsWardrobeOpen(true)} className="w-full">
+                  <CompactUpload
+                    preview={clothingPreview}
+                    helpText="Item to try on"
+                    variant="garment"
+                    isTrigger
+                  />
                 </div>
               </div>
-
-              {/* 移除原来的Generate Style按钮，因为现在通过模式选择来触发 */}
-              {pollingError && (
-                <p className="text-sm text-red-500 text-center mt-2">{pollingError}</p>
-              )}
             </div>
-          )}
 
-          {/* Drawers are part of the Input stage */}
+            {/* Occasion Selector */}
+            <div className="space-y-3">
+              <h3 className="text-base font-semibold tracking-tight text-center">
+                <span className="text-primary font-bold">Step 3:</span> Choose Your Scene
+              </h3>
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                {styles.map((style) => {
+                  const Icon = style.icon;
+                  return (
+                    <button
+                      key={style.id}
+                      onClick={() => setOccasion(style.id)}
+                      className={cn(
+                        "flex flex-col items-center justify-center p-4 rounded-xl transition-all",
+                        occasion === style.id ? style.color : "bg-white hover:bg-gray-50",
+                        "border border-gray-200"
+                      )}
+                    >
+                      <Icon className="w-6 h-6 mb-2" />
+                      <span className="text-sm font-medium">{style.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Generation Mode Selection */}
+            <div className="space-y-3">
+              <h3 className="text-base font-semibold tracking-tight text-center">
+                <span className="text-primary font-bold">Step 4:</span> Choose Generation Mode
+              </h3>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <ModeButton
+                  title="Try-On Only"
+                  description="Fastest results"
+                  icon={Shirt}
+                  isSelected={generationMode === 'tryon-only'}
+                  onClick={() => setGenerationMode('tryon-only')}
+                />
+                <ModeButton
+                  title="Simple Scene"
+                  description="New background & pose"
+                  icon={Sparkles}
+                  isSelected={generationMode === 'simple-scene'}
+                  onClick={() => setGenerationMode('simple-scene')}
+                />
+                <ModeButton
+                  title="Advanced Scene"
+                  description="Full generation"
+                  icon={Layers}
+                  isSelected={generationMode === 'advanced-scene'}
+                  onClick={() => setGenerationMode('advanced-scene')}
+                />
+              </div>
+            </div>
+
+            {/* Generate Button */}
+            <div className="space-y-4">
+              <Button
+                onClick={handleStartGeneration}
+                disabled={!hasRequiredImages}
+                className={cn(
+                  "w-full h-16 text-lg font-bold rounded-xl transition-all",
+                  "bg-gradient-to-r from-[#FF6EC7] to-[#D5F500]",
+                  "hover:shadow-lg transform hover:scale-[1.02]",
+                  "text-white border-0",
+                  !hasRequiredImages && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <MessageCircle className="mr-3 h-6 w-6" />
+                Start AI Styling Chat
+              </Button>
+
+              <div className="text-center">
+                <p className="text-xs text-gray-500">
+                  {hasRequiredImages
+                    ? "Ready to create your personalized style with AI guidance"
+                    : "Complete Steps 1-4 to start your styling session"
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Drawers for selection */}
           <Drawer.Root open={isWardrobeOpen} onOpenChange={setIsWardrobeOpen}>
             {/* @ts-ignore */}
             <Drawer.Portal>
@@ -779,223 +357,16 @@ export default function HomePage() {
               <Drawer.Content className="bg-zinc-100 flex flex-col rounded-t-[10px] h-[90%] fixed bottom-0 left-0 right-0 z-50">
                 <div className="p-4 bg-white rounded-t-[10px] flex-1 overflow-y-auto">
                   <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-zinc-300 mb-4" />
-                  <Drawer.Title className="sr-only">Select a Portrait</Drawer.Title>
-                  <PortraitSelectionSheet onPortraitSelect={handlePortraitSelect} />
+                  <div className="max-w-md mx-auto">
+                    <Drawer.Title className="font-medium mb-4 text-center">
+                      Choose Your Portrait
+                    </Drawer.Title>
+                    <PortraitSelectionSheet onPortraitSelect={handlePortraitSelect} />
+                  </div>
                 </div>
               </Drawer.Content>
             </Drawer.Portal>
           </Drawer.Root>
-
-          {/* Stage 2 & 3 combined: Loading, Suggestions, and Result */}
-          {(stage === "loading" || stage === "suggestion") && (
-            <div className="py-8 text-center space-y-6 animate-fade-in">
-              {/* Loading state (before suggestion) */}
-              {stage === "loading" && !styleSuggestion && (
-                <>
-                  <div className="w-16 h-16 mx-auto bg-gradient-to-br from-[#FF6EC7] to-[#D5F500] rounded-full flex items-center justify-center shadow-xl animate-pulse">
-                    <Wand2 className="text-white" size={28} />
-                  </div>
-                  <h2 className="text-xl font-bold text-gray-800 font-playfair">
-                    Analyzing Your Style...
-                  </h2>
-                  <p className="text-sm text-gray-600">
-                    Generating personalized advice just for you...
-                  </p>
-
-                  {/* 2x2 thumbnail grid - Loading stage displays input images */}
-                  <div className="max-w-sm mx-auto">
-                    <div className="grid grid-cols-2 gap-3">
-                      {/* Human Image */}
-                      <div className="aspect-square bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <img
-                          src={processImages.humanImage}
-                          alt="Your photo"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/5"></div>
-                      </div>
-
-                      {/* Garment Image */}
-                      <div className="aspect-square bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <img
-                          src={processImages.garmentImage}
-                          alt="Selected garment"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/5"></div>
-                      </div>
-
-                      {/* Styled Image Placeholder */}
-                      <div className="aspect-square bg-gray-100 rounded-xl shadow-sm border border-gray-200 flex items-center justify-center">
-                        <div className="text-center">
-                          <Loader2 className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
-                          <p className="text-xs text-gray-500">Styling...</p>
-                        </div>
-                      </div>
-
-                      {/* Try-On Image Placeholder */}
-                      <div className="aspect-square bg-gray-100 rounded-xl shadow-sm border border-gray-200 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="w-6 h-6 bg-gray-300 rounded-full mx-auto mb-2"></div>
-                          <p className="text-xs text-gray-500">Waiting...</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Suggestion state (after suggestion, before final image) */}
-              {stage === "suggestion" && styleSuggestion && (
-                <div className="text-left space-y-6">
-                  <h2 className="text-2xl font-bold text-center text-gray-800 font-playfair mb-6">
-                    Your Personal Style Guide
-                  </h2>
-
-                  {/* 2x2 thumbnail grid - Suggestion stage shows more progress */}
-                  <div className="max-w-sm mx-auto mb-6">
-                    <div className="grid grid-cols-2 gap-3">
-                      {/* Human Image */}
-                      <div className="aspect-square bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
-                        <img
-                          src={processImages.humanImage}
-                          alt="Your photo"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded">✓</div>
-                      </div>
-
-                      {/* Garment Image */}
-                      <div className="aspect-square bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
-                        <img
-                          src={processImages.garmentImage}
-                          alt="Selected garment"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded">✓</div>
-                      </div>
-
-                      {/* Styled Image */}
-                      <div className="aspect-square bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
-                        {processImages.styledImage ? (
-                          <>
-                            <img
-                              src={processImages.styledImage}
-                              alt="Styled result"
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded">✓</div>
-                          </>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-50 to-rose-50">
-                            <div className="text-center">
-                              <Loader2 className="w-6 h-6 animate-spin text-pink-500 mx-auto mb-2" />
-                              <p className="text-xs text-gray-600">Styling...</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Try-On Image */}
-                      <div className="aspect-square bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
-                        {processImages.tryOnImage ? (
-                          <>
-                            <img
-                              src={processImages.tryOnImage}
-                              alt="Try-on result"
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded">✓</div>
-                          </>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
-                            <div className="text-center">
-                              <Loader2 className="w-6 h-6 animate-spin text-purple-500 mx-auto mb-2" />
-                              <p className="text-xs text-gray-600">Try-On...</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Progress labels */}
-                    <div className="grid grid-cols-2 gap-3 mt-2">
-                      <p className="text-xs text-center text-gray-500">Your Photo</p>
-                      <p className="text-xs text-center text-gray-500">Garment</p>
-                      <p className="text-xs text-center text-gray-500">Styled</p>
-                      <p className="text-xs text-center text-gray-500">Try-On</p>
-                    </div>
-                  </div>
-
-                  {/* Style suggestions */}
-                  {Object.entries(styleSuggestion)
-                    .filter(([key]) => key !== "image_prompt")
-                    .map(([key, value]) => (
-                      <div
-                        key={key}
-                        className="bg-white/80 p-4 rounded-xl shadow-sm border border-black/5"
-                      >
-                        <h3 className="font-semibold text-primary mb-1 capitalize">
-                          {key.replace(/_/g, " ")}
-                        </h3>
-                        <p className="text-gray-700 text-sm">{value as string}</p>
-                      </div>
-                    ))}
-                  <div className="flex flex-col items-center justify-center pt-6 space-y-3">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <p className="text-md font-semibold text-gray-700">Generating your look...</p>
-                    <p className="text-sm text-gray-500">This may take a moment.</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Stage 3: Final Result */}
-          {stage === "result" && generatedImageUrl && (
-            <div className="animate-fade-in space-y-6">
-              {/* Result Image */}
-              <div className="w-full aspect-[3/4] bg-neutral-100 rounded-2xl shadow-lg overflow-hidden relative">
-                <img
-                  src={generatedImageUrl}
-                  alt="Generated fashion look"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute top-4 right-4 flex flex-col gap-3">
-                  <button
-                    onClick={handleShare}
-                    className="h-11 w-11 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center ios-btn shadow-md"
-                  >
-                    <Share2 size={22} className="text-gray-800" />
-                  </button>
-                  <button
-                    onClick={handleDownload}
-                    className="h-11 w-11 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center ios-btn shadow-md"
-                  >
-                    <Download size={22} className="text-gray-800" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-3">
-                <Button
-                  onClick={handleCreateAnother}
-                  className="w-full h-14 bg-[#FF6EC7] hover:bg-[#FF6EC7]/90 text-white rounded-full font-playfair text-lg font-bold shadow-lg btn-bounce"
-                >
-                  <ArrowLeft className="mr-2 h-5 w-5" />
-                  Create Another Look
-                </Button>
-                <Button
-                  onClick={() => router.push("/results")}
-                  variant="ghost"
-                  className="w-full h-12 text-gray-700 font-semibold"
-                >
-                  View All My Looks
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
