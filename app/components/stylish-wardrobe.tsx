@@ -281,6 +281,22 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
         onChange={handleFileChange}
         className="hidden"
       />
+
+      {/* Upload guidance section */}
+      <div className="mb-4 p-3 bg-blue-50 rounded-2xl border border-blue-200">
+        <div className="flex items-start gap-2">
+          <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-white text-xs">💡</span>
+          </div>
+          <div className="text-xs space-y-1">
+            <p className="font-medium text-blue-900">Upload Tips for Best Results:</p>
+            <p className="text-blue-700">✅ Product photos or clothing on white/clean background</p>
+            <p className="text-blue-700">✅ Clear, well-lit clothing items without people</p>
+            <p className="text-red-600">❌ Avoid photos with people wearing the clothes</p>
+          </div>
+        </div>
+      </div>
+
       {/* Container to ensure vertical stacking */}
       <div className="flex flex-col gap-y-4">
         {renderCategory("tops", "Tops", "👚", "bg-rose-400")}

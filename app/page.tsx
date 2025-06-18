@@ -278,6 +278,15 @@ export default function HomePage() {
                     isTrigger
                   />
                 </div>
+                {/* Guidance text for garment upload */}
+                <div className="text-center space-y-1 mt-2">
+                  <p className="text-xs text-gray-600 leading-tight">
+                    📸 <span className="font-medium">Best results:</span> Product photos or clothing on white background
+                  </p>
+                  <p className="text-xs text-gray-500 leading-tight">
+                    ❌ Avoid: Photos with people wearing the clothes
+                  </p>
+                </div>
               </div>
             </div>
 

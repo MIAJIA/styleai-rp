@@ -261,21 +261,71 @@ export default function ChatPage() {
     setIsShowingWaitingTips(true);
     isShowingWaitingTipsRef.current = true;
 
-    // 时尚小贴士和生成进度库
+    // Fashion tips and generation progress library
     const fashionTips = [
-      "💡 小贴士：拍照时稍微侧身45度，会让身材线条更优美哦！",
-      "✨ 穿搭秘籍：同色系深浅搭配可以让造型更有层次感！",
-      "🌟 拍照技巧：自然光下拍摄，肤色会更加亮丽动人！",
-      "💫 搭配心得：配饰不要超过3样，简约就是时尚！",
-      "🎨 色彩搭配：暖色调让人看起来更亲和，冷色调更显专业！"
+      "💡 Tip: Angle your body 45 degrees for more flattering silhouettes!",
+      "✨ Style Secret: Mix different shades of the same color for depth!",
+      "🌟 Photo Hack: Natural lighting makes your skin glow beautifully!",
+      "💫 Styling Tip: Keep accessories to 3 or less for a clean look!",
+      "🎨 Color Theory: Warm tones appear friendly, cool tones look professional!",
+      "👗 Fashion Rule: A belt can instantly define your waistline!",
+      "💄 Beauty Tip: Match your lipstick undertone to your outfit's mood!",
+      "🌈 Pattern Play: Mix patterns by keeping one element consistent!",
+      "👠 Shoe Game: Nude shoes elongate your legs instantly!",
+      "💎 Jewelry Wisdom: Layer necklaces in odd numbers for visual interest!",
+      "🧥 Layering Art: Start with fitted pieces, add loose layers on top!",
+      "👜 Bag Balance: Large bags with fitted outfits, small bags with flowy looks!",
+      "🌸 Seasonal Style: Pastels in spring, jewel tones in fall!",
+      "✂️ Fit First: Perfect fit matters more than designer labels!",
+      "🎭 Confidence Boost: Good posture is your best accessory!",
+      "🌟 Mirror Magic: Check your outfit from all angles before leaving!",
+      "💝 Color Pop: Add one bright accent to neutral outfits!",
+      "👑 Hair Harmony: Match your hairstyle to your outfit's formality!",
+      "🎪 Texture Mix: Combine smooth and textured fabrics for interest!",
+      "💫 Proportion Play: Balance loose tops with fitted bottoms!",
+      "🌺 Seasonal Swap: Light fabrics in summer, rich textures in winter!",
+      "👗 Dress Code: When in doubt, slightly overdress rather than under!",
+      "🎨 Monochrome Magic: All-black or all-white looks are always chic!",
+      "💍 Metal Matching: Stick to one metal tone for jewelry cohesion!",
+      "🌟 Statement Piece: Let one bold item be the star of your outfit!",
+      "👠 Comfort First: You'll look better when you feel comfortable!",
+      "🎯 Body Love: Highlight your favorite features with strategic styling!",
+      "✨ Fabric Care: Well-maintained clothes always look more expensive!",
+      "🌈 Mood Dressing: Choose colors that match how you want to feel!",
+      "💫 Style Evolution: Don't be afraid to try new trends gradually!"
     ];
 
     const generationSteps = [
-      "🎨 AI正在分析你的风格特征...",
-      "✨ 创建专属的场景氛围...",
-      "🌟 调整光线和构图...",
-      "💫 添加时尚细节...",
-      "🎯 进行最后的完美调色..."
+      "🎨 AI is analyzing your unique style characteristics...",
+      "✨ Creating your personalized scene atmosphere...",
+      "🌟 Adjusting lighting and composition perfectly...",
+      "💫 Adding sophisticated fashion details...",
+      "🎯 Applying final color grading and polish...",
+      "🔍 Examining fabric textures and materials...",
+      "🌈 Balancing color harmony and contrast...",
+      "💎 Enhancing jewelry and accessory details...",
+      "🎭 Perfecting facial expressions and poses...",
+      "🌸 Fine-tuning background elements...",
+      "✂️ Adjusting garment fit and draping...",
+      "🎪 Creating depth and dimensional effects...",
+      "💫 Optimizing skin tone and complexion...",
+      "🌟 Adding realistic shadow and highlight...",
+      "🎨 Refining artistic style and mood...",
+      "💄 Enhancing makeup and beauty details...",
+      "🌺 Adjusting seasonal lighting effects...",
+      "👑 Perfecting hair texture and movement...",
+      "🎯 Fine-tuning proportions and symmetry...",
+      "✨ Adding cinematic quality touches...",
+      "🌈 Calibrating color temperature and mood...",
+      "💎 Polishing metallic and reflective surfaces...",
+      "🎭 Creating natural body language flow...",
+      "🌟 Enhancing fabric shine and texture...",
+      "💫 Adjusting atmospheric perspective...",
+      "🎨 Applying professional retouching...",
+      "✂️ Finalizing composition and framing...",
+      "🌸 Adding subtle artistic filters...",
+      "💄 Perfecting overall visual impact...",
+      "🎯 Completing your stunning transformation..."
     ];
 
     // 随机选择2-3个小贴士
