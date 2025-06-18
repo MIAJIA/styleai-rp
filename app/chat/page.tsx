@@ -493,6 +493,7 @@ export default function ChatPage() {
 
   const startPolling = (jobId: string) => {
     const pollingStartTime = Date.now();
+    let suggestionDisplayTime = 0; // 在轮询开始时初始化
     console.log(`[PERF] 🔄 POLLING STARTED for job ${jobId} at ${new Date().toISOString()}`);
 
     const interval = setInterval(async () => {
@@ -532,7 +533,7 @@ export default function ChatPage() {
             await displaySuggestionSequentially(data.suggestion);
 
             const suggestionDisplayEnd = Date.now();
-            const suggestionDisplayTime = suggestionDisplayEnd - suggestionDisplayStart;
+            suggestionDisplayTime = suggestionDisplayEnd - suggestionDisplayStart; // 更新外部作用域的变量
             const totalSuggestionTime = suggestionDisplayEnd - pollingStartTime;
 
             console.log(`[PERF] 💡 Phase 4 COMPLETED: Suggestion display took ${suggestionDisplayTime}ms`);
@@ -612,7 +613,7 @@ export default function ChatPage() {
                   console.log(`[PERF] 🏁 GENERATION FLOW COMPLETE: Grand total ${grandTotalTime}ms`);
                   console.log(`[PERF] 📊 PERFORMANCE SUMMARY:`);
                   console.log(`[PERF] 📊 - Total generation time: ${grandTotalTime}ms (${(grandTotalTime / 1000).toFixed(1)}s)`);
-                  console.log(`[PERF] 📊 - Suggestion phase: ${suggestionDisplayTime || 'N/A'}ms`);
+                  console.log(`[PERF] 📊 - Suggestion phase: ${suggestionDisplayTime}ms`);
                   console.log(`[PERF] 📊 - Final display: ${finalDisplayTime}ms`);
                 } else {
                   replaceLastLoadingMessage({
