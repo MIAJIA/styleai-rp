@@ -21,6 +21,9 @@ import {
   Star,
   ChevronDown,
   ChevronUp,
+  MessageCircle,
+  Settings,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -186,6 +189,12 @@ export default function ChatPage() {
 
   // Track if auto-generation has been triggered to prevent multiple calls
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
+
+  // 🆕 NEW: Free chat mode state
+  const [isFreeMode, setIsFreeMode] = useState(false);
+  const [userInput, setUserInput] = useState('');
+  const [sessionId, setSessionId] = useState<string>('');
+  const [isFreeChatLoading, setIsFreeChatLoading] = useState(false);
 
   const handleImageClick = (imageUrl: string) => {
     setModalImage(imageUrl);
@@ -728,6 +737,9 @@ export default function ChatPage() {
               console.log(`[PERF] 🎉 Phase 6: GENERATION COMPLETED after ${totalGenerationTime}ms total`);
               setCurrentStep("complete");
 
+              // 🔧 FIX: Reset isGenerating to false when generation is complete
+              setIsGenerating(false);
+
               // 停止显示等待小贴士
               setIsShowingWaitingTips(false);
               isShowingWaitingTipsRef.current = false;
@@ -738,6 +750,15 @@ export default function ChatPage() {
                 console.log("[POLLING] Status is completed. Final URL:", data.result?.imageUrl);
                 const finalImageUrl = data.result?.imageUrl;
                 if (finalImageUrl) {
+                  // 🆕 SMART: Add context message if user switched to free mode during generation
+                  if (isFreeMode) {
+                    addMessage({
+                      type: 'text',
+                      role: 'ai',
+                      content: '🎉 您之前的穿搭生成已完成！这是为您生成的结果：'
+                    });
+                  }
+
                   replaceLastLoadingMessage({
                     type: "text",
                     role: "ai",
@@ -780,6 +801,11 @@ export default function ChatPage() {
           case "failed":
             const failureTime = Date.now() - pollingStartTime;
             console.log(`[PERF] ❌ GENERATION FAILED after ${failureTime}ms`);
+
+            // 🔧 FIX: Reset isGenerating to false when generation fails
+            setIsGenerating(false);
+            setCurrentStep("error");
+
             throw new Error(data.statusMessage || "Generation failed without a specific reason.");
 
           default:
@@ -804,6 +830,8 @@ export default function ChatPage() {
         });
         clearInterval(interval);
         setPollingIntervalId(null);
+
+        // 🔧 FIX: Reset isGenerating to false when there's an error
         setIsGenerating(false);
       }
     }, 3000);
@@ -959,6 +987,174 @@ export default function ChatPage() {
     };
   }, [pollingIntervalId]);
 
+  // 🆕 NEW: Generate session ID
+  const generateSessionId = () => {
+    return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  };
+
+  // Initialize session ID
+  useEffect(() => {
+    if (!sessionId) {
+      setSessionId(generateSessionId());
+    }
+  }, []);
+
+  // 🆕 NEW: Free chat handler
+  const handleFreeChat = async () => {
+    if (!userInput.trim() || isFreeChatLoading) return;
+
+    const currentInput = userInput.trim();
+    setUserInput('');
+    setIsFreeChatLoading(true);
+
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: generateUniqueId(),
+      type: 'text',
+      role: 'user',
+      content: currentInput,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+
+    // Add loading message
+    const loadingMessage: ChatMessage = {
+      id: generateUniqueId(),
+      type: 'loading',
+      role: 'ai',
+      loadingText: 'AI正在思考中...',
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, loadingMessage]);
+
+    try {
+      const response = await fetch('/api/chat/simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: currentInput,
+          sessionId: sessionId
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.response) {
+        // Replace loading message with AI response
+        setMessages(prev => {
+          const newMessages = [...prev];
+          const lastLoadingIndex = newMessages.findLastIndex(msg => msg.type === 'loading');
+          if (lastLoadingIndex !== -1) {
+            newMessages[lastLoadingIndex] = {
+              id: newMessages[lastLoadingIndex].id,
+              type: 'text',
+              role: 'ai',
+              content: data.response,
+              timestamp: new Date(),
+            };
+          }
+          return newMessages;
+        });
+      } else {
+        throw new Error(data.error || 'Unknown error');
+      }
+    } catch (error) {
+      console.error('Free chat error:', error);
+      // Replace loading message with error
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const lastLoadingIndex = newMessages.findLastIndex(msg => msg.type === 'loading');
+        if (lastLoadingIndex !== -1) {
+          newMessages[lastLoadingIndex] = {
+            id: newMessages[lastLoadingIndex].id,
+            type: 'text',
+            role: 'ai',
+            content: '抱歉，出现了一些问题，请稍后再试。如果问题持续，请检查您的网络连接。',
+            timestamp: new Date(),
+          };
+        }
+        return newMessages;
+      });
+    } finally {
+      setIsFreeChatLoading(false);
+    }
+  };
+
+  // 🆕 NEW: Handle enter key press
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleFreeChat();
+    }
+  };
+
+  // 🆕 NEW: Enhanced mode switcher with intelligent state management
+  const handleModeSwitch = () => {
+    try {
+      if (isFreeMode) {
+        // Switching from free mode to guided mode
+        setIsFreeMode(false);
+        setUserInput(''); // Clear any pending input
+
+        // Stop any ongoing free chat loading
+        setIsFreeChatLoading(false);
+
+        // If no chat data exists, show instruction message
+        if (!chatData) {
+          addMessage({
+            type: 'text',
+            role: 'ai',
+            content: '👋 欢迎使用引导模式！\n\n请先返回首页选择您的照片和服装，然后我就可以为您生成专属的穿搭建议啦！'
+          });
+        }
+      } else {
+        // Switching from guided mode to free mode
+        // If generation is in progress, handle gracefully
+        if (isGenerating) {
+          handleGenerationInterruption();
+        }
+
+        switchToFreeMode();
+      }
+    } catch (error) {
+      console.error('[MODE SWITCH] Error during mode switch:', error);
+    }
+  };
+
+  // 🆕 NEW: Handle interruption of ongoing generation
+  const handleGenerationInterruption = () => {
+    // Add a message explaining the interruption
+    addMessage({
+      type: 'text',
+      role: 'ai',
+      content: '⏸️ 生成过程已暂停，切换到自由对话模式。\n\n如需继续生成，请切换回引导模式。生成进度已保存，您可以随时继续。'
+    });
+
+    // Note: We intentionally DON'T stop the generation process
+    // This allows users to switch back and see the results
+    // The generation will continue in the background
+  };
+
+  // 🆕 NEW: Switch to free mode with welcome message
+  const switchToFreeMode = () => {
+    setIsFreeMode(true);
+
+    // Add welcome message for free mode if messages are mostly guided content
+    const shouldAddWelcome = messages.length === 0 ||
+      (messages.length > 0 && !messages.some(msg =>
+        msg.content?.includes('专业穿搭顾问') ||
+        msg.content?.includes('随时问我任何关于穿搭的问题')
+      ));
+
+    if (shouldAddWelcome) {
+      addMessage({
+        type: 'text',
+        role: 'ai',
+        content: '👋 切换到自由对话模式！我是你的专业穿搭顾问！\n\n我可以帮你：\n• 分析你的穿搭风格\n• 推荐适合的服装搭配\n• 解答时尚穿搭问题\n• 提供场合着装建议\n\n随时问我任何关于穿搭的问题吧！'
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 pb-20">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-gray-200">
@@ -971,6 +1167,73 @@ export default function ChatPage() {
         </div>
       </header>
 
+      {/* 🆕 FIXED: Always visible mode switcher with improved event handling */}
+      <div className="sticky top-16 z-20 px-4 py-2 bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 shadow-lg border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full transition-all duration-300 ${isFreeMode ? 'bg-blue-500 animate-pulse shadow-lg shadow-blue-200' : 'bg-green-500 shadow-lg shadow-green-200'
+                  }`}></div>
+                <div>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {isFreeMode ? '🗣️ 自由对话模式' : '🎯 引导生成模式'}
+                  </span>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    {isFreeMode
+                      ? '随意提问任何穿搭问题，AI会智能回答'
+                      : '按流程上传照片，AI生成个性化穿搭建议'
+                    }
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleModeSwitch}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 hover:bg-gray-50 active:bg-gray-100 transition-all duration-200 border-2 px-4 py-2 min-w-[100px]"
+                disabled={isFreeChatLoading}
+                type="button"
+              >
+                {isFreeMode ? (
+                  <>
+                    <Settings className="w-4 h-4" />
+                    <span className="hidden sm:inline font-medium">引导模式</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="w-4 h-4" />
+                    <span className="hidden sm:inline font-medium">自由对话</span>
+                    {isGenerating && (
+                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse ml-1" title="生成进行中，可以切换但进程将在后台继续"></div>
+                    )}
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Enhanced status indicator */}
+            {(isGenerating || isFreeChatLoading) && (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                    <span className="text-xs text-gray-600 font-medium">
+                      {isGenerating ? '正在生成穿搭建议...' : '正在处理您的问题...'}
+                    </span>
+                  </div>
+                  {isGenerating && (
+                    <span className="text-xs text-gray-500">
+                      可随时切换模式 →
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="flex-1 px-4 py-6 space-y-4">
         <div className="max-w-2xl mx-auto">
           {messages.map((message) => (
@@ -978,6 +1241,63 @@ export default function ChatPage() {
           ))}
           <div ref={messagesEndRef} />
         </div>
+
+        {/* 🆕 UPDATED: Free chat input area with better positioning */}
+        {isFreeMode && (
+          <div className="max-w-2xl mx-auto mt-6">
+            <div className="bg-white/90 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <textarea
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="问我任何穿搭问题... (按Enter发送，Shift+Enter换行)"
+                    className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-transparent resize-none bg-white/70"
+                    rows={3}
+                    disabled={isFreeChatLoading}
+                  />
+                </div>
+                <Button
+                  onClick={handleFreeChat}
+                  disabled={!userInput.trim() || isFreeChatLoading}
+                  className="bg-[#FF6EC7] hover:bg-[#FF6EC7]/90 p-3 transition-all"
+                >
+                  {isFreeChatLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Send className="w-5 h-5" />
+                  )}
+                </Button>
+              </div>
+
+              {/* Enhanced quick suggestions */}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {[
+                  '推荐一些时尚单品',
+                  '分析我的穿搭风格',
+                  '约会怎么穿？',
+                  '职场穿搭建议',
+                  '季节性搭配技巧',
+                  '色彩搭配原理'
+                ].map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setUserInput(suggestion);
+                      // Auto-send the suggestion
+                      setTimeout(() => handleFreeChat(), 100);
+                    }}
+                    className="px-3 py-1.5 bg-pink-100 hover:bg-pink-200 text-pink-700 rounded-full text-xs transition-colors disabled:opacity-50"
+                    disabled={isFreeChatLoading}
+                  >
+                    💡 {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {process.env.NODE_ENV === "development" && (
           <div className="max-w-2xl mx-auto mt-4">
@@ -997,19 +1317,22 @@ export default function ChatPage() {
 
             {isDebugExpanded && (
               <div className="bg-gray-100 rounded-b-lg p-4 text-xs space-y-1">
-                <div>isGenerating: {String(isGenerating)}</div>
-                <div>currentStep: {String(currentStep)}</div>
+                <div className="font-semibold text-gray-800 mb-2">🎯 Mode & UI States:</div>
+                <div>isFreeMode: <span className="font-bold">{String(isFreeMode)}</span></div>
+                <div>sessionId: {sessionId}</div>
+                <div>isFreeChatLoading: <span className="font-bold">{String(isFreeChatLoading)}</span></div>
+                <div className="font-semibold text-gray-800 mt-3 mb-2">📊 Generation States:</div>
+                <div>isGenerating: <span className="font-bold">{String(isGenerating)}</span></div>
+                <div>currentStep: <span className="font-bold">{String(currentStep)}</span></div>
+                <div>hasAutoStarted: {String(hasAutoStarted)}</div>
+                <div>hasProcessedCompletion: {String(hasProcessedCompletion)}</div>
+                <div>pollingActive: {pollingIntervalId ? "yes" : "no"}</div>
+                <div className="font-semibold text-gray-800 mt-3 mb-2">💾 Data States:</div>
                 <div>chatData: {chatData ? "exists" : "null"}</div>
                 <div>messages.length: {String(messages.length)}</div>
                 <div>pollingError: {pollingError || "none"}</div>
-                <div>hasProcessedCompletion: {String(hasProcessedCompletion)}</div>
-                <div>pollingActive: {pollingIntervalId ? "yes" : "no"}</div>
-                <div>
-                  Show start button:{" "}
-                  {String(!isGenerating && currentStep === "suggestion" && chatData && messages.length === 6)}
-                </div>
                 <div className="pt-2">
-                  <div className="font-semibold mb-1">Raw chatData:</div>
+                  <div className="font-semibold mb-1">📁 Raw chatData:</div>
                   <pre className="bg-gray-200 p-2 rounded text-xs overflow-auto max-h-40">
                     {chatData
                       ? JSON.stringify(
@@ -1033,7 +1356,8 @@ export default function ChatPage() {
           </div>
         )}
 
-        {(() => {
+        {/* Only show guided mode buttons when NOT in free mode */}
+        {!isFreeMode && (() => {
           const shouldShowButton =
             !isGenerating &&
             currentStep === "suggestion" &&
@@ -1069,8 +1393,9 @@ export default function ChatPage() {
             </div>
           )}
 
-        {(() => {
-          const shouldShowReturnButton = !chatData && messages.length === 1;
+        {!isFreeMode && (() => {
+          const shouldShowReturnButton = !chatData && messages.length >= 1 &&
+            messages.some(msg => msg.content?.includes('请先返回首页选择'));
           console.log("[CHAT DEBUG] Return button visibility check:", {
             hasChatData: !!chatData,
             messagesLength: messages.length,

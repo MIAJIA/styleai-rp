@@ -16,10 +16,9 @@ import {
 import PhotoUploadStep from "../components/onboarding/photo-upload-step";
 import BodyAnalysisStep from "../components/onboarding/body-analysis-step";
 import StylePreferenceStep from "../components/onboarding/style-preference-step";
-import StyleBoundariesStep from "../components/onboarding/style-boundaries-step";
 import StyleSummaryStep from "../components/onboarding/style-summary-step";
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -81,10 +80,8 @@ export default function OnboardingPage() {
   };
 
   const handleSkip = () => {
-    // Allow skipping for optional steps (3 and 4)
-    if (currentStep >= 3) {
-      handleNext();
-    }
+    // No optional steps remaining
+    handleNext();
   };
 
   const renderCurrentStep = () => {
@@ -115,14 +112,6 @@ export default function OnboardingPage() {
         );
       case 3:
         return (
-          <StyleBoundariesStep
-            data={onboardingData}
-            onUpdate={updateOnboardingData}
-            onValidationChange={handleValidationChange}
-          />
-        );
-      case 4:
-        return (
           <StyleSummaryStep
             data={onboardingData}
             onUpdate={updateOnboardingData}
@@ -139,14 +128,13 @@ export default function OnboardingPage() {
       "Photo Upload", // Step 0
       "Body Analysis", // Step 1
       "Style Preference", // Step 2
-      "Style Boundaries", // Step 3
-      "Style Summary", // Step 4
+      "Style Summary", // Step 3
     ];
     return titles[currentStep];
   };
 
   const getStepEmoji = () => {
-    const emojis = ["📸", "💪", "🎨", "🚫", "✨"];
+    const emojis = ["📸", "💪", "🎨", "✨"];
     return emojis[currentStep];
   };
 
@@ -181,16 +169,7 @@ export default function OnboardingPage() {
 
           {/* Skip Button (or placeholder) */}
           <div className="w-14 text-right">
-            {currentStep >= 3 && currentStep < TOTAL_STEPS - 1 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSkip}
-                className="text-gray-500 text-sm px-1"
-              >
-                Skip
-              </Button>
-            )}
+            {/* No skip button needed since no optional steps */}
           </div>
         </div>
       </div>
@@ -205,7 +184,7 @@ export default function OnboardingPage() {
         <div className="max-w-md mx-auto">
           <Button
             onClick={handleNext}
-            disabled={!isStepValid && currentStep < 3}
+            disabled={!isStepValid}
             className="w-full h-12 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50"
           >
             <span className="flex items-center justify-center space-x-2">

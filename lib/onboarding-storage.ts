@@ -23,17 +23,13 @@ export interface OnboardingData {
   stylePreferences?: string[];
   customStyle?: string;
 
-  // Step 3: Style Boundaries
-  avoidElements?: string[];
-  customAvoid?: string;
-
-  // Step 4: Personalization
+  // Step 3: Personalization
   sustainableFashion?: boolean;
   accessoryMatching?: boolean;
   specificStyles?: string[];
   customSpecificStyle?: string;
 
-  // Step 5: Style Summary (generated)
+  // Step 4: Style Summary (generated)
   styleProfile?: {
     structureCombination?: string;
     styleLabels?: string[];
