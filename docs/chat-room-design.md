@@ -18,8 +18,8 @@
 │  └─────────────┘  └─────────────┘  └─────────────────────┘  │
 │                                                             │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │  File       │  │  Voice      │  │  Style Preference   │  │
-│  │  Upload     │  │  Input      │  │  Panel              │  │
+│  │  Voice      │  │  Style      │  │  Smart Suggestion   │  │
+│  │  Input      │  │  Preference │  │  Panel              │  │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -31,13 +31,13 @@
 │                    Next.js API Layer                        │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │  WebSocket  │  │  Chat API   │  │  File Upload API    │  │
-│  │  Handler    │  │  Endpoints  │  │  Endpoints          │  │
+│  │  WebSocket  │  │  Chat API   │  │  Session            │  │
+│  │  Handler    │  │  Endpoints  │  │  Management         │  │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘  │
 │                                                             │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │  LangChain  │  │  Message    │  │  Session            │  │
-│  │  Integration│  │  Queue      │  │  Management         │  │
+│  │  LangChain  │  │  Message    │  │  Content            │  │
+│  │  Integration│  │  Queue      │  │  Filter             │  │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -68,12 +68,11 @@
 // 扩展现有的ChatMessage类型
 interface ChatMessage {
   id: string;
-  type: 'text' | 'image' | 'loading' | 'audio' | 'file' | 'suggestion';
+  type: 'text' | 'image' | 'loading' | 'audio' | 'suggestion';
   role: 'ai' | 'user' | 'system';
   content?: string;
   imageUrl?: string;
   audioUrl?: string;
-  fileUrl?: string;
   metadata?: {
     suggestions?: string[];
     confidence?: number;
@@ -87,7 +86,7 @@ interface ChatMessage {
 interface StyleAnalysis {
   bodyType: string;
   colorPalette: string[];
-  preferredStyles: string[];
+  currentStyles: string[];
   occasion: string;
   season: string;
 }
@@ -172,11 +171,6 @@ class StyleChatAgent:
                 func=self.generate_outfit
             ),
             Tool(
-                name="trend_lookup",
-                description="查询最新的时尚趋势和流行元素",
-                func=self.lookup_trends
-            ),
-            Tool(
                 name="color_matcher",
                 description="提供色彩搭配建议",
                 func=self.match_colors
@@ -199,14 +193,12 @@ class StyleChatAgent:
 // components/chat/SmartInputBox.tsx
 interface SmartInputBoxProps {
   onSendMessage: (message: string) => void;
-  onFileUpload: (file: File) => void;
   onVoiceRecording: (audio: Blob) => void;
   suggestions?: string[];
 }
 
 const SmartInputBox: React.FC<SmartInputBoxProps> = ({
   onSendMessage,
-  onFileUpload,
   onVoiceRecording,
   suggestions = []
 }) => {
@@ -242,7 +234,6 @@ const SmartInputBox: React.FC<SmartInputBoxProps> = ({
 
         {/* 功能按钮 */}
         <div className="action-buttons">
-          <FileUploadButton onUpload={onFileUpload} />
           <VoiceRecordButton
             isRecording={isRecording}
             onRecording={onVoiceRecording}
@@ -348,38 +339,6 @@ export async function GET(request: Request) {
 
   // WebSocket连接处理逻辑
   // ...
-}
-```
-
-### 2. 文件上传和分析API
-
-```typescript
-// app/api/chat/upload/route.ts
-export async function POST(request: Request) {
-  const formData = await request.formData();
-  const file = formData.get('file') as File;
-  const sessionId = formData.get('sessionId') as string;
-
-  try {
-    // 上传到Vercel Blob
-    const blob = await put(file.name, file, {
-      access: 'public',
-    });
-
-    // 分析图片内容
-    const analysis = await analyzeImage(blob.url);
-
-    return Response.json({
-      success: true,
-      fileUrl: blob.url,
-      analysis
-    });
-  } catch (error) {
-    return Response.json({
-      success: false,
-      error: error.message
-    }, { status: 500 });
-  }
 }
 ```
 
