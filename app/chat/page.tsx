@@ -263,23 +263,76 @@ export default function ChatPage() {
   const [sessionId, setSessionId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const [isImageProcessing, setIsImageProcessing] = useState(false);
+
   // --- START: Image Handling Functions ---
   const handleImageUploadClick = () => {
     imageInputRef.current?.click();
   };
 
-  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      console.log('[ChatPage] Image selected:', { name: file.name, size: file.size, type: file.type });
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        console.log('[ChatPage] Image converted to Data URL. Length:', result.length);
-        setStagedImage(result);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    console.log(`[ChatPage] Image selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+
+    // 文件类型检查
+    if (!file.type.startsWith('image/')) {
+      alert('请选择图片文件');
+      return;
     }
+
+    // 文件大小预警
+    if (file.size > 50 * 1024 * 1024) { // >50MB
+      alert('图片过大(>50MB)，请选择更小的图片');
+      return;
+    }
+
+    setIsImageProcessing(true);
+
+    try {
+      // 根据文件大小选择压缩策略
+      let compressionResult;
+      if (file.size > 10 * 1024 * 1024) { // >10MB
+        console.log('[ChatPage] Using aggressive compression for large file');
+        compressionResult = await import('@/lib/image-compression').then(m => m.compressForChat(file));
+      } else if (file.size > 5 * 1024 * 1024) { // >5MB
+        console.log('[ChatPage] Using standard compression for medium file');
+        compressionResult = await import('@/lib/image-compression').then(m => m.compressForChat(file));
+      } else {
+        console.log('[ChatPage] Using standard compression for small file');
+        compressionResult = await import('@/lib/image-compression').then(m => m.compressForChat(file));
+      }
+
+      console.log(`[ChatPage] 图片压缩完成: ${(file.size / 1024).toFixed(1)}KB → ${(compressionResult.compressedSize / 1024).toFixed(1)}KB (减少${(compressionResult.compressionRatio * 100).toFixed(1)}%)`);
+
+      setStagedImage(compressionResult.dataUrl);
+
+      // 显示压缩结果给用户
+      if (compressionResult.compressionRatio > 0.5) {
+        console.log(`[ChatPage] 图片已优化: 大小减少${(compressionResult.compressionRatio * 100).toFixed(1)}%，提升传输速度`);
+      }
+
+    } catch (error) {
+      console.error('[ChatPage] 图片压缩失败:', error);
+
+      // 降级处理：对于小图片，仍然允许使用原图
+      if (file.size < 5 * 1024 * 1024) { // <5MB
+        console.log('[ChatPage] 压缩失败，使用原图');
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          console.log('[ChatPage] 原图 Data URL 长度:', result.length);
+          setStagedImage(result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        alert('图片处理失败，请重试或选择更小的图片');
+      }
+    } finally {
+      setIsImageProcessing(false);
+    }
+
     // Reset file input to allow selecting the same file again
     event.target.value = '';
   };
@@ -495,6 +548,21 @@ export default function ChatPage() {
       const data = await response.json();
       console.log('[ChatPage] Received response from API:', data);
 
+      // 🔍 添加详细的agentInfo调试日志
+      console.log('🤖 [AGENT DEBUG] API返回的agentInfo:', data.agentInfo);
+      console.log('🤖 [AGENT DEBUG] agentInfo类型:', typeof data.agentInfo);
+      console.log('🤖 [AGENT DEBUG] agentInfo内容:', JSON.stringify(data.agentInfo, null, 2));
+
+      if (data.agentInfo) {
+        console.log('✅ [AGENT DEBUG] agentInfo存在:', {
+          id: data.agentInfo.id,
+          name: data.agentInfo.name,
+          emoji: data.agentInfo.emoji
+        });
+      } else {
+        console.warn('❌ [AGENT DEBUG] agentInfo不存在或为空');
+      }
+
       if (!response.ok) {
         throw new Error(data.error || "API request failed");
       }
@@ -509,6 +577,9 @@ export default function ChatPage() {
           suggestions: generateSmartSuggestions(data.response),
         }
       });
+
+      // 🔍 添加消息添加后的调试日志
+      console.log('📝 [AGENT DEBUG] 消息已添加，agentInfo应该显示:', data.agentInfo);
 
     } catch (error: any) {
       console.error("[ChatPage] Free chat API error:", error);
@@ -1050,11 +1121,41 @@ export default function ChatPage() {
                     role: "ai",
                     content: getChatCompletionMessage(getOccasionName(chatData!.occasion)),
                   });
+
                   addMessage({
                     type: "image",
                     role: "ai",
                     imageUrl: finalImageUrl,
+                    agentInfo: {
+                      id: "style",
+                      name: "小雅",
+                      emoji: "👗"
+                    }
                   });
+
+                  // 🆕 通知ChatAgent将生成的图片添加到上下文中
+                  const sessionId = localStorage.getItem("chat_session_id");
+                  if (sessionId) {
+                    fetch('/api/chat/simple', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        sessionId,
+                        imageUrl: finalImageUrl,
+                        action: 'add_generated_image'
+                      })
+                    }).then(response => response.json())
+                      .then(result => {
+                        if (result.success) {
+                          console.log('[ChatPage] ✅ Generated image added to ChatAgent context');
+                        } else {
+                          console.warn('[ChatPage] ⚠️ Failed to add generated image to context:', result);
+                        }
+                      })
+                      .catch(error => {
+                        console.error('[ChatPage] ❌ Error adding generated image to context:', error);
+                      });
+                  }
 
                   const finalDisplayEnd = Date.now();
                   const finalDisplayTime = finalDisplayEnd - finalDisplayStart;
@@ -1149,14 +1250,16 @@ export default function ChatPage() {
       </header>
 
       {/* Status indicator for ongoing processes */}
-      {(isGenerating || isLoading) && (
+      {(isGenerating || isLoading || isImageProcessing) && (
         <div className="sticky top-16 z-20 px-4 py-2 bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50">
           <div className="max-w-2xl mx-auto">
             <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-3 shadow-lg border border-gray-200">
               <div className="flex items-center gap-3">
                 <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                 <span className="text-sm text-gray-600 font-medium">
-                  {isGenerating ? '🎨 正在生成您的专属穿搭效果...' : '💭 AI正在思考中...'}
+                  {isImageProcessing ? '🖼️ 正在压缩图片以提升传输效率...' :
+                    isGenerating ? '🎨 正在生成您的专属穿搭效果...' :
+                      '💭 AI正在思考中...'}
                 </span>
               </div>
             </div>
@@ -1195,6 +1298,17 @@ export default function ChatPage() {
                 </button>
               </div>
             )}
+
+            {/* Image processing indicator */}
+            {isImageProcessing && (
+              <div className="mb-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                  <span className="text-sm text-blue-700">正在优化图片...</span>
+                </div>
+              </div>
+            )}
+
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -1212,8 +1326,19 @@ export default function ChatPage() {
                 className="hidden"
                 accept="image/*"
               />
-              <Button type="button" variant="ghost" size="icon" onClick={handleImageUploadClick} aria-label="Upload image">
-                <ImageIcon className="w-5 h-5 text-gray-500" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleImageUploadClick}
+                disabled={isImageProcessing}
+                aria-label="Upload image"
+              >
+                {isImageProcessing ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                ) : (
+                  <ImageIcon className="w-5 h-5 text-gray-500" />
+                )}
               </Button>
               <input
                 name="message"

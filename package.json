@@ -51,6 +51,7 @@
     "date-fns": "4.1.0",
     "embla-carousel-react": "latest",
     "input-otp": "latest",
+    "is-extglob": "^2.1.1",
     "jsonwebtoken": "latest",
     "langchain": "^0.3.29",
     "lucide-react": "^0.454.0",

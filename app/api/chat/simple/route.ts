@@ -13,9 +13,9 @@ function getChatAgent(sessionId: string): ChatAgent {
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, sessionId, imageUrl } = await request.json();
+    const { message, sessionId, imageUrl, action } = await request.json();
 
-    if (!message || !sessionId) {
+    if (!sessionId) {
       return NextResponse.json(
         { error: '缺少必要参数' },
         { status: 400 }
@@ -23,6 +23,25 @@ export async function POST(request: NextRequest) {
     }
 
     const agent = getChatAgent(sessionId);
+
+    // 处理特殊动作：添加生成的图片到上下文
+    if (action === 'add_generated_image' && imageUrl) {
+      // 添加生成的图片到ChatAgent的上下文中
+      agent.addGeneratedImageToContext(imageUrl);
+      return NextResponse.json({
+        success: true,
+        message: 'Generated image added to context'
+      });
+    }
+
+    // 常规聊天处理
+    if (!message) {
+      return NextResponse.json(
+        { error: '缺少必要参数' },
+        { status: 400 }
+      );
+    }
+
     const { aiResponse, agentInfo } = await agent.chat(message, imageUrl);
 
     return NextResponse.json({

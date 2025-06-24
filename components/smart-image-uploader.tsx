@@ -1,0 +1,326 @@
+'use client';
+
+import React, { useState, useCallback, useRef } from 'react';
+import { Upload, X, Image as ImageIcon, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { useImageCompression, useImagePicker } from '@/lib/hooks/use-image-compression';
+import { CompressedImageResult } from '@/lib/image-compression';
+
+interface SmartImageUploaderProps {
+  onImageSelect: (result: CompressedImageResult) => void;
+  onError?: (error: string) => void;
+  maxFiles?: number;
+  preset?: 'chat' | 'thumbnail' | 'preview' | 'highQuality';
+  showPreview?: boolean;
+  showCompressionStats?: boolean;
+  className?: string;
+}
+
+export function SmartImageUploader({
+  onImageSelect,
+  onError,
+  maxFiles = 1,
+  preset = 'chat',
+  showPreview = true,
+  showCompressionStats = true,
+  className = ''
+}: SmartImageUploaderProps) {
+  const [dragActive, setDragActive] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<CompressedImageResult[]>([]);
+
+  const {
+    isCompressing,
+    progress,
+    currentFile,
+    error,
+    compressFile,
+    reset,
+    getSupportedFormats
+  } = useImageCompression({
+    preset,
+    onSuccess: (result, fileName) => {
+      console.log(`✅ 压缩成功: ${fileName}`, {
+        原始大小: `${(result.originalSize / 1024).toFixed(1)}KB`,
+        压缩后: `${(result.compressedSize / 1024).toFixed(1)}KB`,
+        压缩率: `${(result.compressionRatio * 100).toFixed(1)}%`,
+        格式: result.format,
+        处理时间: `${result.processingTime.toFixed(0)}ms`
+      });
+
+      setUploadedImages(prev => [...prev, result]);
+      onImageSelect(result);
+    },
+    onError: (error, fileName) => {
+      console.error(`❌ 压缩失败: ${fileName}`, error.message);
+      if (onError) {
+        onError(`压缩失败: ${error.message}`);
+      }
+    }
+  });
+
+  const { openPicker, createFileInput } = useImagePicker();
+
+  // 处理文件选择
+  const handleFileSelect = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
+
+    // 限制文件数量
+    const filesToProcess = files.slice(0, maxFiles);
+
+    // 重置之前的状态
+    reset();
+    setUploadedImages([]);
+
+    // 压缩文件
+    for (const file of filesToProcess) {
+      try {
+        await compressFile(file);
+      } catch (error) {
+        console.error('压缩失败:', error);
+      }
+    }
+  }, [maxFiles, reset, compressFile]);
+
+  // 拖拽处理
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const files = Array.from(e.dataTransfer.files).filter(file =>
+      file.type.startsWith('image/')
+    );
+
+    if (files.length > 0) {
+      handleFileSelect(files);
+    }
+  }, [handleFileSelect]);
+
+  // 移除图片
+  const removeImage = useCallback((index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // 格式化文件大小
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  };
+
+  const supportedFormats = getSupportedFormats();
+
+  return (
+    <div className={`space-y-4 ${className}`}>
+      {/* 上传区域 */}
+      <Card
+        className={`
+          relative border-2 border-dashed transition-colors duration-200 cursor-pointer
+          ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+          ${isCompressing ? 'pointer-events-none opacity-75' : ''}
+        `}
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+        onClick={() => !isCompressing && openPicker({ multiple: maxFiles > 1 })}
+      >
+        <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+          {isCompressing ? (
+            <div className="space-y-4">
+              <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">{currentFile}</p>
+                <Progress value={progress} className="w-48" />
+                <p className="text-xs text-gray-500">{Math.round(progress)}% 完成</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full">
+                <Upload className="w-8 h-8 text-gray-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700">
+                  点击或拖拽上传图片
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  支持 {supportedFormats.join(', ')} 格式
+                </p>
+                {maxFiles > 1 && (
+                  <p className="text-xs text-gray-500">
+                    最多选择 {maxFiles} 张图片
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* 错误提示 */}
+      {error && (
+        <Card className="p-3 bg-red-50 border-red-200">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4 text-red-500" />
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        </Card>
+      )}
+
+      {/* 上传成功的图片预览 */}
+      {showPreview && uploadedImages.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-gray-700">已上传图片</h4>
+          <div className="grid grid-cols-2 gap-3">
+            {uploadedImages.map((result, index) => (
+              <Card key={index} className="relative overflow-hidden">
+                <div className="aspect-square">
+                  <img
+                    src={result.dataUrl}
+                    alt={`上传图片 ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                {/* 移除按钮 */}
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="absolute top-2 right-2 w-6 h-6 p-0 rounded-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeImage(index);
+                  }}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+
+                {/* 压缩信息 */}
+                {showCompressionStats && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <Badge variant="secondary" className="text-xs">
+                        {result.format.replace('image/', '').toUpperCase()}
+                      </Badge>
+                      <span>
+                        {formatFileSize(result.originalSize)} → {formatFileSize(result.compressedSize)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs mt-1">
+                      <span>压缩率: {(result.compressionRatio * 100).toFixed(1)}%</span>
+                      <span>{result.dimensions.width}×{result.dimensions.height}</span>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 浏览器格式支持信息 */}
+      <Card className="p-3 bg-blue-50 border-blue-200">
+        <div className="flex items-start space-x-2">
+          <ImageIcon className="w-4 h-4 text-blue-500 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-blue-700">智能压缩</p>
+            <p className="text-xs text-blue-600 mt-1">
+              自动选择最优格式 ({supportedFormats.includes('image/avif') ? 'AVIF' :
+                supportedFormats.includes('image/webp') ? 'WebP' : 'JPEG'})
+              ，预设: {preset.toUpperCase()}
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* 隐藏的文件输入 */}
+      {createFileInput(handleFileSelect)}
+    </div>
+  );
+}
+
+// 压缩统计显示组件
+interface CompressionStatsProps {
+  results: CompressedImageResult[];
+  className?: string;
+}
+
+export function CompressionStats({ results, className = '' }: CompressionStatsProps) {
+  if (results.length === 0) return null;
+
+  const totalOriginalSize = results.reduce((sum, result) => sum + result.originalSize, 0);
+  const totalCompressedSize = results.reduce((sum, result) => sum + result.compressedSize, 0);
+  const averageCompressionRatio = results.reduce((sum, result) => sum + result.compressionRatio, 0) / results.length;
+  const totalSavedBytes = totalOriginalSize - totalCompressedSize;
+  const formats = [...new Set(results.map(r => r.format))];
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  };
+
+  return (
+    <Card className={`p-4 bg-green-50 border-green-200 ${className}`}>
+      <div className="flex items-center space-x-2 mb-3">
+        <CheckCircle className="w-5 h-5 text-green-500" />
+        <h3 className="font-semibold text-green-700">压缩统计</h3>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <span className="text-gray-600">总图片数:</span>
+          <span className="ml-2 font-medium">{results.length}</span>
+        </div>
+        <div>
+          <span className="text-gray-600">平均压缩率:</span>
+          <span className="ml-2 font-medium text-green-600">
+            {(averageCompressionRatio * 100).toFixed(1)}%
+          </span>
+        </div>
+        <div>
+          <span className="text-gray-600">原始大小:</span>
+          <span className="ml-2 font-medium">{formatFileSize(totalOriginalSize)}</span>
+        </div>
+        <div>
+          <span className="text-gray-600">压缩后:</span>
+          <span className="ml-2 font-medium">{formatFileSize(totalCompressedSize)}</span>
+        </div>
+        <div className="col-span-2">
+          <span className="text-gray-600">节省空间:</span>
+          <span className="ml-2 font-medium text-green-600">
+            {formatFileSize(totalSavedBytes)}
+          </span>
+        </div>
+        <div className="col-span-2">
+          <span className="text-gray-600">使用格式:</span>
+          <div className="ml-2 flex space-x-1">
+            {formats.map(format => (
+              <Badge key={format} variant="outline" className="text-xs">
+                {format.replace('image/', '').toUpperCase()}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}

@@ -131,6 +131,9 @@ importers:
       input-otp:
         specifier: latest
         version: 1.4.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      is-extglob:
+        specifier: ^2.1.1
+        version: 2.1.1
       jsonwebtoken:
         specifier: latest
         version: 9.0.2

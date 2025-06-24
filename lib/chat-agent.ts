@@ -7,6 +7,7 @@ import {
   ToolMessage,
   MessageContentComplex,
 } from '@langchain/core/messages';
+import { SmartContextManager } from './memory';
 
 // 1. 定义Agent配置的数据结构
 interface AgentConfig {
@@ -103,57 +104,102 @@ const selectAgent = (userMessage: string): AgentConfig => {
 
 export class ChatAgent {
   private llm: ChatOpenAI;
-  private memory: BaseMessage[] = []; // 1. Add back memory property
+  private contextManager: SmartContextManager;
 
   constructor() {
-    this.llm = new ChatOpenAI({ modelName: 'gpt-4o', temperature: 0.7 });
+    this.llm = new ChatOpenAI({
+      modelName: 'gpt-4o',
+      temperature: 0.7,
+      maxTokens: 1000,
+    });
+    this.contextManager = new SmartContextManager();
+  }
+
+  // 新增方法：添加生成的图片到上下文
+  public addGeneratedImageToContext(imageUrl: string) {
+    console.log('[ChatAgent] Adding generated image to context:', imageUrl);
+
+    // 添加AI生成的图片消息到上下文
+    this.contextManager.addMessage('ai', '🎉 您的穿搭生成已完成！', imageUrl, {
+      type: 'style',
+      name: '小雅',
+      emoji: '👗'
+    });
+
+    console.log('[ChatAgent] Generated image added to context successfully');
   }
 
   public async chat(
     message: string,
-    imageUrl?: string, // 2. Remove history parameter
+    imageUrl?: string,
   ): Promise<{ agentInfo: AgentConfig; aiResponse: string }> {
-    console.log(`[ChatAgent] Received chat request. Message: "${message}", Image URL: ${!!imageUrl}`);
+    console.log(`[ChatAgent] Processing message with context awareness`);
 
-    const selectedAgent = this.selectAgent(message);
+    this.contextManager.addMessage('user', message, imageUrl);
+
+    const needsContext = this.contextManager.shouldIncludeContext(message);
+    console.log(`[ChatAgent] Needs context: ${needsContext}`);
+
+    const selectedAgent = this.selectAgent(message, !!imageUrl);
     console.log(`[ChatAgent] Selected agent: ${selectedAgent.name}`);
-    const systemMessage = new SystemMessage(selectedAgent.systemPrompt);
 
-    const pastMessages = this.memory; // 3. Use internal memory
+    let systemPrompt = selectedAgent.systemPrompt;
+    if (needsContext) {
+      const contextPrompt = this.contextManager.generateContextPrompt();
+      systemPrompt += contextPrompt;
+      console.log('[ChatAgent] Including conversation context in prompt');
+    }
+    console.log(`[ChatAgent] Final system prompt: ${systemPrompt}`);
+    const systemMessage = new SystemMessage(systemPrompt);
 
-    // Correctly build the multi-modal message content
     const userMessageContent: MessageContentComplex[] = [{ type: "text", text: message }];
-    if (imageUrl) {
+
+    // 检查是否有图片 - 当前消息或上下文中的图片
+    const hasCurrentImage = !!imageUrl;
+    const hasContextImage = this.contextManager.hasRecentImage();
+    const shouldUseImageTool = hasCurrentImage || hasContextImage;
+
+    if (hasCurrentImage) {
       userMessageContent.push({
         type: "image_url",
         image_url: { url: imageUrl },
       });
+    } else if (hasContextImage && needsContext) {
+      // 如果当前消息没有图片但上下文有图片，添加上下文中的图片
+      const contextImageUrl = this.contextManager.getLastUploadedImage();
+      if (contextImageUrl) {
+        userMessageContent.push({
+          type: "image_url",
+          image_url: { url: contextImageUrl },
+        });
+        console.log('[ChatAgent] Adding context image to current message for analysis');
+      }
     }
+
     const userMessage = new HumanMessage({ content: userMessageContent });
+    const messages: BaseMessage[] = [systemMessage, userMessage];
 
-
-    const messages: BaseMessage[] = [systemMessage, ...pastMessages, userMessage];
-
-    // 4. 如果有图片，动态添加 tool call 相关参数
     const llmOptions: any = {};
-    if (imageUrl) {
+    if (shouldUseImageTool) {
       llmOptions.tools = [analyzeImageTool];
       llmOptions.tool_choice = { type: "function", function: { name: "analyze_outfit_image" } };
-      console.log('[ChatAgent] Image detected. Adding image analysis tool to LLM call.');
+      console.log('[ChatAgent] Image detected (current or context). Adding image analysis tool to LLM call.');
     }
 
-    // 5. 第一次调用 LLM
     const firstResponse = await this.llm.invoke(messages, llmOptions);
     console.log('[ChatAgent] First LLM call complete.');
 
-    // Check and handle tool_calls
     if (firstResponse.tool_calls && firstResponse.tool_calls.length > 0) {
       console.log("[ChatAgent] Tool call detected:", JSON.stringify(firstResponse.tool_calls, null, 2));
       const toolCall = firstResponse.tool_calls[0];
 
-      // 3. Add a guard clause for the tool call ID
       if (!toolCall.id) {
         console.warn("Tool call received without an ID, returning direct response.");
+        this.contextManager.addMessage('ai', firstResponse.content.toString(), undefined, {
+          type: selectedAgent.id,
+          name: selectedAgent.name,
+          emoji: selectedAgent.emoji
+        });
         return {
           agentInfo: selectedAgent,
           aiResponse: firstResponse.content.toString(),
@@ -163,10 +209,6 @@ export class ChatAgent {
       const toolCallId = toolCall.id;
       const toolFunctionName = toolCall.name;
       const toolArgs = toolCall.args;
-
-      // 在真实场景中，这里会调用一个真实的图片分析服务
-      // 在MVP阶段，我们让LLM自己生成分析结果，然后将其作为Tool的输出
-      // 这个 "output" 就是我们之前定义的schema格式的JSON
       const toolOutput = JSON.stringify(toolArgs);
       console.log(`[ChatAgent] Simulated tool output for "${toolFunctionName}":`, toolOutput);
 
@@ -176,22 +218,22 @@ export class ChatAgent {
         content: toolOutput,
       });
 
-      // 7. 将 tool_call 的结果和原始请求一起再次发送给LLM
       const messagesForSecondCall: BaseMessage[] = [
         systemMessage,
-        ...pastMessages,
         userMessage,
-        firstResponse, // 包含 tool_call 请求的 AI 消息
-        toolMessage,   // 包含 tool_call 结果的消息
+        firstResponse,
+        toolMessage,
       ];
 
       console.log('[ChatAgent] Making second LLM call with tool results...');
       const finalResponse = await this.llm.invoke(messagesForSecondCall);
       console.log('[ChatAgent] Second LLM call complete.');
 
-      // 4. Update memory after tool call
-      this.memory.push(userMessage);
-      this.memory.push(finalResponse);
+      this.contextManager.addMessage('ai', finalResponse.content.toString(), undefined, {
+        type: selectedAgent.id,
+        name: selectedAgent.name,
+        emoji: selectedAgent.emoji
+      });
 
       return {
         agentInfo: selectedAgent,
@@ -199,9 +241,11 @@ export class ChatAgent {
       };
     }
 
-    // 5. Update memory for simple response
-    this.memory.push(userMessage);
-    this.memory.push(firstResponse);
+    this.contextManager.addMessage('ai', firstResponse.content.toString(), undefined, {
+      type: selectedAgent.id,
+      name: selectedAgent.name,
+      emoji: selectedAgent.emoji
+    });
 
     console.log(`[ChatAgent] Responding with simple text. Length: ${firstResponse.content.toString().length}`);
     return {
@@ -210,7 +254,9 @@ export class ChatAgent {
     };
   }
 
-  private selectAgent(message: string): AgentConfig {
+  private selectAgent(message: string, hasImage?: boolean): AgentConfig {
+    // Note: The original logic in the file did not use hasImage, so I'm keeping it that way.
+    // The design doc says "现有的Agent选择逻辑保持不变"
     return selectAgent(message);
   }
 }

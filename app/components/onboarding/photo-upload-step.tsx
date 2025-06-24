@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Camera, X, CheckCircle } from "lucide-react";
+import { Camera, X, CheckCircle, Info } from "lucide-react";
 import { OnboardingData } from "@/lib/onboarding-storage";
+import { useImageCompression } from "@/lib/hooks/use-image-compression";
+import { SmartImageUploader } from "@/components/smart-image-uploader";
 
 interface PhotoUploadStepProps {
   data: OnboardingData;
@@ -21,6 +23,7 @@ export default function PhotoUploadStep({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [useSmartUploader, setUseSmartUploader] = useState(true);
 
   const fullBodyInputRef = useRef<HTMLInputElement>(null);
 
@@ -136,7 +139,7 @@ export default function PhotoUploadStep({
               reject(new Error("Image compression failed"));
               return;
             }
-    const reader = new FileReader();
+            const reader = new FileReader();
             reader.onloadend = () => {
               resolve(reader.result as string);
               URL.revokeObjectURL(url);
@@ -160,11 +163,11 @@ export default function PhotoUploadStep({
       setAnalysisComplete(false);
       setAnalysisError(null);
 
-        setFullBodyPhoto(result);
-        try {
-          localStorage.setItem("styleMe_fullBodyPhoto", result);
-        } catch (error) {
-          console.warn("Failed to save full body photo to localStorage:", error);
+      setFullBodyPhoto(result);
+      try {
+        localStorage.setItem("styleMe_fullBodyPhoto", result);
+      } catch (error) {
+        console.warn("Failed to save full body photo to localStorage:", error);
       }
     } catch (err) {
       console.error("Error processing image:", err);
@@ -172,9 +175,23 @@ export default function PhotoUploadStep({
     }
   };
 
+  // Handle smart uploader result
+  const handleSmartUploaderResult = (result: any) => {
+    // Reset the analysis state when a new photo is uploaded
+    setAnalysisComplete(false);
+    setAnalysisError(null);
+
+    setFullBodyPhoto(result.dataUrl);
+    try {
+      localStorage.setItem("styleMe_fullBodyPhoto", result.dataUrl);
+    } catch (error) {
+      console.warn("Failed to save full body photo to localStorage:", error);
+    }
+  };
+
   const removePhoto = () => {
-      setFullBodyPhoto("");
-      localStorage.removeItem("styleMe_fullBodyPhoto");
+    setFullBodyPhoto("");
+    localStorage.removeItem("styleMe_fullBodyPhoto");
     // Reset the analysis state
     setAnalysisComplete(false);
     setAnalysisError(null);
@@ -190,6 +207,31 @@ export default function PhotoUploadStep({
         </p>
       </div>
 
+      {/* Upload Mode Toggle */}
+      <Card className="p-3 bg-blue-50 border-blue-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Info className="w-4 h-4 text-blue-500" />
+            <span className="text-sm font-medium text-blue-700">
+              {useSmartUploader ? '智能压缩模式' : '标准模式'}
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setUseSmartUploader(!useSmartUploader)}
+            className="text-blue-600 border-blue-300 hover:bg-blue-100"
+          >
+            切换至{useSmartUploader ? '标准' : '智能'}模式
+          </Button>
+        </div>
+        <p className="text-xs text-blue-600 mt-1">
+          {useSmartUploader
+            ? '使用现代图像格式，更好的压缩效果和性能监控'
+            : '使用传统JPEG压缩方式'}
+        </p>
+      </Card>
+
       {/* Photo Upload Card */}
       <div className="space-y-4">
         {/* Full Body Photo */}
@@ -203,14 +245,25 @@ export default function PhotoUploadStep({
             </div>
 
             {!fullBodyPhoto ? (
-              <div
-                onClick={() => fullBodyInputRef.current?.click()}
-                className="border-2 border-dashed border-pink-200 rounded-xl p-8 text-center cursor-pointer hover:border-pink-300 transition-colors"
-              >
-                <Camera className="w-8 h-8 text-pink-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600 mb-1">Tap to upload full body photo</p>
-                <p className="text-xs text-gray-400">Best in fitted clothing or swimwear</p>
-              </div>
+              useSmartUploader ? (
+                <SmartImageUploader
+                  onImageSelect={handleSmartUploaderResult}
+                  onError={(error) => setAnalysisError(error)}
+                  preset="highQuality"
+                  maxFiles={1}
+                  showPreview={false}
+                  showCompressionStats={true}
+                />
+              ) : (
+                <div
+                  onClick={() => fullBodyInputRef.current?.click()}
+                  className="border-2 border-dashed border-pink-200 rounded-xl p-8 text-center cursor-pointer hover:border-pink-300 transition-colors"
+                >
+                  <Camera className="w-8 h-8 text-pink-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 mb-1">Tap to upload full body photo</p>
+                  <p className="text-xs text-gray-400">Best in fitted clothing or swimwear</p>
+                </div>
+              )
             ) : (
               <div className="relative">
                 <img
@@ -229,16 +282,18 @@ export default function PhotoUploadStep({
               </div>
             )}
 
-            <input
-              ref={fullBodyInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileUpload(file);
-              }}
-            />
+            {!useSmartUploader && (
+              <input
+                ref={fullBodyInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file);
+                }}
+              />
+            )}
           </div>
         </Card>
       </div>
@@ -293,6 +348,9 @@ export default function PhotoUploadStep({
           <li>• Stand straight with arms at your sides</li>
           <li>• Wear fitted clothing to show your silhouette</li>
           <li>• Keep the background simple and uncluttered</li>
+          {useSmartUploader && (
+            <li>• 智能压缩将自动优化图片质量和文件大小</li>
+          )}
         </ul>
       </Card>
     </div>
