@@ -24,6 +24,8 @@ import {
   MessageCircle,
   Settings,
   Send,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -33,18 +35,30 @@ import {
   getChatCompletionMessage,
 } from "@/lib/prompts";
 
-// Chat message type definition
+// Enhanced Chat message type definition with generation support
 type ChatMessage = {
   id: string;
-  type: "text" | "image" | "loading";
+  type: "text" | "image" | "loading" | "generation-request";
   role: "ai" | "user";
   content?: string;
   imageUrl?: string;
   loadingText?: string;
   timestamp: Date;
+  metadata?: {
+    // Generation-related data
+    generationData?: {
+      selfiePreview?: string;
+      clothingPreview?: string;
+      occasion?: string;
+      generationMode?: string;
+    };
+    // Suggestions for quick replies
+    suggestions?: string[];
+    isGenerationTrigger?: boolean;
+  };
 };
 
-// Data type passed from the main page
+// Data type for generation requests
 type ChatModeData = {
   selfiePreview: string;
   clothingPreview: string;
@@ -90,11 +104,12 @@ const stylePrompts = {
 
 // Helper for creating chat messages
 const createChatMessage = (
-  type: "text" | "image" | "loading",
+  type: "text" | "image" | "loading" | "generation-request",
   role: "ai" | "user",
   content?: string,
   imageUrl?: string,
   loadingText?: string,
+  metadata?: ChatMessage['metadata']
 ): ChatMessage => ({
   id: `msg-${Date.now()}-${Math.random()}`,
   type,
@@ -102,6 +117,7 @@ const createChatMessage = (
   content,
   imageUrl,
   loadingText,
+  metadata,
   timestamp: new Date(),
 });
 
@@ -114,7 +130,7 @@ function AIAvatar() {
   );
 }
 
-// Chat Bubble component
+// Enhanced Chat Bubble component with generation support
 function ChatBubble({
   message,
   onImageClick,
@@ -154,6 +170,29 @@ function ChatBubble({
             onClick={() => message.imageUrl && onImageClick(message.imageUrl)}
           />
         )}
+        {message.type === "generation-request" && (
+          <div className="space-y-2">
+            <p className="text-sm leading-relaxed">{message.content}</p>
+            {message.metadata?.generationData && (
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {message.metadata.generationData.selfiePreview && (
+                  <img
+                    src={message.metadata.generationData.selfiePreview}
+                    alt="Selfie"
+                    className="w-full h-20 object-cover rounded-lg"
+                  />
+                )}
+                {message.metadata.generationData.clothingPreview && (
+                  <img
+                    src={message.metadata.generationData.clothingPreview}
+                    alt="Clothing"
+                    className="w-full h-20 object-cover rounded-lg"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -190,11 +229,10 @@ export default function ChatPage() {
   // Track if auto-generation has been triggered to prevent multiple calls
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
 
-  // 🆕 NEW: Free chat mode state
-  const [isFreeMode, setIsFreeMode] = useState(false);
+  // Unified chat state
   const [userInput, setUserInput] = useState('');
   const [sessionId, setSessionId] = useState<string>('');
-  const [isFreeChatLoading, setIsFreeChatLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleImageClick = (imageUrl: string) => {
     setModalImage(imageUrl);
@@ -263,6 +301,173 @@ export default function ChatPage() {
       }
       return [...newMessages, { ...message, id: generateUniqueId(), timestamp: new Date() }];
     });
+  };
+
+  // Detect if user message is requesting image generation
+  const detectGenerationIntent = (message: string, hasImages: boolean = false): boolean => {
+    const generationKeywords = [
+      '试穿', '搭配', '生成', '换装', '造型', '穿上', '试试', '效果',
+      '图片', '照片', '拍照', '看看', '展示', '模拟', '合成'
+    ];
+
+    const hasGenerationKeywords = generationKeywords.some(keyword =>
+      message.toLowerCase().includes(keyword)
+    );
+
+    // If user has uploaded images or uses generation keywords
+    return hasImages || hasGenerationKeywords;
+  };
+
+  // Generate session ID
+  const generateSessionId = () => {
+    return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  };
+
+  // Initialize session ID
+  useEffect(() => {
+    if (!sessionId) {
+      setSessionId(generateSessionId());
+    }
+  }, []);
+
+  // Unified message handler that supports both chat and generation
+  const handleSendMessage = async (message: string, attachments?: any[]) => {
+    if (!message.trim() || isLoading) return;
+
+    const currentInput = message.trim();
+    setUserInput('');
+    setIsLoading(true);
+
+    // Add user message
+    addMessage({
+      type: 'text',
+      role: 'user',
+      content: currentInput,
+    });
+
+    // Check if this is a generation request
+    const isGenerationRequest = detectGenerationIntent(currentInput, attachments && attachments.length > 0);
+
+    if (isGenerationRequest && chatData) {
+      // Handle image generation request
+      await handleImageGeneration(currentInput);
+    } else if (isGenerationRequest && !chatData) {
+      // User wants generation but no data available
+      addMessage({
+        type: 'text',
+        role: 'ai',
+        content: '🎨 我可以为您生成穿搭效果！\n\n请先返回首页上传您的照片和想要试穿的服装，然后我就可以为您生成专属的穿搭建议了！\n\n或者您也可以继续和我聊穿搭相关的话题～',
+        metadata: {
+          suggestions: ['返回首页上传照片', '穿搭风格分析', '搭配建议', '时尚趋势']
+        }
+      });
+      setIsLoading(false);
+    } else {
+      // Handle regular chat
+      await handleFreeChat(currentInput);
+    }
+  };
+
+  // Handle image generation
+  const handleImageGeneration = async (userMessage: string) => {
+    if (!chatData) return;
+
+    addMessage({
+      type: 'generation-request',
+      role: 'user',
+      content: userMessage,
+      metadata: {
+        generationData: {
+          selfiePreview: chatData.selfiePreview,
+          clothingPreview: chatData.clothingPreview,
+          occasion: chatData.occasion,
+          generationMode: chatData.generationMode,
+        },
+        isGenerationTrigger: true,
+      }
+    });
+
+    // Start the generation process
+    try {
+      await startGeneration();
+    } catch (error) {
+      // Reset loading state if generation fails to start
+      setIsLoading(false);
+      console.error('[IMAGE GENERATION] Failed to start generation:', error);
+    }
+  };
+
+  // Handle regular chat
+  const handleFreeChat = async (message: string) => {
+    // Add loading message
+    addMessage({
+      type: 'loading',
+      role: 'ai',
+      loadingText: 'AI正在思考中...',
+    });
+
+    try {
+      const response = await fetch('/api/chat/simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, sessionId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.response) {
+        replaceLastLoadingMessage({
+          type: 'text',
+          role: 'ai',
+          content: data.response,
+          metadata: {
+            suggestions: generateSmartSuggestions(data.response)
+          }
+        });
+      } else {
+        throw new Error(data.error || 'Unknown error');
+      }
+    } catch (error) {
+      replaceLastLoadingMessage({
+        type: 'text',
+        role: 'ai',
+        content: '抱歉，我遇到了一些问题。请稍后再试。',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Generate smart suggestions based on AI response
+  const generateSmartSuggestions = (aiResponse: string): string[] => {
+    const suggestions = [];
+
+    if (aiResponse.includes('颜色') || aiResponse.includes('色彩')) {
+      suggestions.push('色彩搭配技巧');
+    }
+    if (aiResponse.includes('场合') || aiResponse.includes('约会') || aiResponse.includes('工作')) {
+      suggestions.push('不同场合穿搭');
+    }
+    if (aiResponse.includes('风格') || aiResponse.includes('款式')) {
+      suggestions.push('风格分析');
+    }
+    if (aiResponse.includes('搭配') || aiResponse.includes('组合')) {
+      suggestions.push('搭配建议');
+    }
+
+    // Add some general suggestions
+    suggestions.push('时尚趋势', '购物建议');
+
+    return suggestions.slice(0, 4); // Limit to 4 suggestions
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (userInput.trim()) {
+        handleSendMessage(userInput);
+      }
+    }
   };
 
   const displayWaitingTips = async () => {
@@ -360,20 +565,15 @@ export default function ChatPage() {
         return;
       }
 
-      console.log(`[PERF] 🎭 Displaying waiting content ${i + 1}/${allWaitingContent.length}: ${allWaitingContent[i].substring(0, 20)}...`);
-
-      setMessages((prev) => [...prev, {
-        id: generateUniqueId(),
+      // 显示小贴士或生成步骤
+      replaceLastLoadingMessage({
         role: "ai",
-        type: "text",
-        content: allWaitingContent[i],
-        timestamp: new Date(),
-      }]);
+        type: "loading",
+        loadingText: allWaitingContent[i],
+      });
     }
 
     console.log("[PERF] 🎭 WAITING TIPS COMPLETED");
-    setIsShowingWaitingTips(false);
-    isShowingWaitingTipsRef.current = false;
   };
 
   const displaySuggestionSequentially = async (suggestion: any) => {
@@ -737,8 +937,9 @@ export default function ChatPage() {
               console.log(`[PERF] 🎉 Phase 6: GENERATION COMPLETED after ${totalGenerationTime}ms total`);
               setCurrentStep("complete");
 
-              // 🔧 FIX: Reset isGenerating to false when generation is complete
+              // 🔧 FIX: Reset isGenerating and isLoading to false when generation is complete
               setIsGenerating(false);
+              setIsLoading(false); // Reset loading state for unified chat
 
               // 停止显示等待小贴士
               setIsShowingWaitingTips(false);
@@ -750,14 +951,12 @@ export default function ChatPage() {
                 console.log("[POLLING] Status is completed. Final URL:", data.result?.imageUrl);
                 const finalImageUrl = data.result?.imageUrl;
                 if (finalImageUrl) {
-                  // 🆕 SMART: Add context message if user switched to free mode during generation
-                  if (isFreeMode) {
-                    addMessage({
-                      type: 'text',
-                      role: 'ai',
-                      content: '🎉 您之前的穿搭生成已完成！这是为您生成的结果：'
-                    });
-                  }
+                  // Add completion message
+                  addMessage({
+                    type: 'text',
+                    role: 'ai',
+                    content: '🎉 您的穿搭生成已完成！这是为您生成的结果：'
+                  });
 
                   replaceLastLoadingMessage({
                     type: "text",
@@ -802,8 +1001,9 @@ export default function ChatPage() {
             const failureTime = Date.now() - pollingStartTime;
             console.log(`[PERF] ❌ GENERATION FAILED after ${failureTime}ms`);
 
-            // 🔧 FIX: Reset isGenerating to false when generation fails
+            // 🔧 FIX: Reset both isGenerating and isLoading to false when generation fails
             setIsGenerating(false);
+            setIsLoading(false); // Reset loading state for unified chat
             setCurrentStep("error");
 
             throw new Error(data.statusMessage || "Generation failed without a specific reason.");
@@ -831,8 +1031,9 @@ export default function ChatPage() {
         clearInterval(interval);
         setPollingIntervalId(null);
 
-        // 🔧 FIX: Reset isGenerating to false when there's an error
+        // 🔧 FIX: Reset both isGenerating and isLoading to false when there's an error
         setIsGenerating(false);
+        setIsLoading(false); // Reset loading state for unified chat
       }
     }, 3000);
 
@@ -856,10 +1057,7 @@ export default function ChatPage() {
         console.log("[CHAT DEBUG] Parsed chat data:", parsedData);
         setChatData(parsedData);
 
-        const welcomeMessage = getChatWelcomeMessage(getOccasionName(parsedData.occasion));
-
-        console.log("[CHAT DEBUG] Adding welcome message:", welcomeMessage);
-
+        // Initialize with unified welcome message
         const initialMessages: ChatMessage[] = [];
         let idCounter = 0;
 
@@ -869,60 +1067,31 @@ export default function ChatPage() {
           timestamp: new Date(),
         });
 
+        // Welcome message for unified mode
         initialMessages.push(
           createMessage({
             type: "text",
             role: "ai",
-            content: welcomeMessage,
-          }),
-        );
+            content: `👋 您好！我是您的专业AI穿搭顾问！
 
-        initialMessages.push(
-          createMessage({
-            type: "text",
-            role: "user",
-            content: "Here is my photo:",
-          }),
-        );
+我看到您已经准备好了照片和服装，太棒了！
 
-        initialMessages.push(
-          createMessage({
-            type: "image",
-            role: "user",
-            imageUrl: parsedData.selfiePreview,
-          }),
-        );
+💬 **您可以：**
+• 直接说"帮我试穿"或"生成穿搭效果"来开始图像生成
+• 问我任何穿搭相关的问题
+• 讨论颜色搭配、风格分析等话题
 
-        initialMessages.push(
-          createMessage({
-            type: "text",
-            role: "user",
-            content: "I want to try on this piece of clothing:",
-          }),
-        );
+🎨 **智能生成**：当您提到试穿、搭配、生成等关键词时，我会自动为您创建专属的穿搭效果图！
 
-        initialMessages.push(
-          createMessage({
-            type: "image",
-            role: "user",
-            imageUrl: parsedData.clothingPreview,
-          }),
-        );
-
-        initialMessages.push(
-          createMessage({
-            type: "text",
-            role: "ai",
-            content: getChatConfirmationMessage(getOccasionName(parsedData.occasion)),
+有什么想了解的吗？`,
+            metadata: {
+              suggestions: ['帮我试穿这件衣服', '分析我的穿搭风格', '推荐搭配建议', '颜色搭配技巧']
+            }
           }),
         );
 
         setMessages(initialMessages);
         setMessageIdCounter(idCounter);
-
-        // Mark that auto-start should happen, but let useEffect handle it
-        console.log("[CHAT DEBUG] Marking for auto-start generation...");
-        setHasAutoStarted(true);
 
       } else {
         console.log("[CHAT DEBUG] No sessionStorage data found, showing default message");
@@ -930,9 +1099,22 @@ export default function ChatPage() {
           id: `msg-${Date.now()}-1`,
           type: "text",
           role: "ai",
-          content:
-            "Hello! I'm your personal AI stylist ✨\n\nPlease select your photo and clothing on the homepage first, and then I can generate exclusive outfit suggestions for you!",
+          content: `👋 您好！我是您的专业AI穿搭顾问！
+
+💬 **我可以帮您：**
+• 分析穿搭风格和色彩搭配
+• 提供不同场合的着装建议
+• 解答时尚穿搭问题
+• 推荐时尚单品和搭配技巧
+
+🎨 **想要生成穿搭效果图？**
+请先返回首页上传您的照片和想要试穿的服装，然后回来告诉我"帮我试穿"！
+
+现在就开始聊穿搭吧～`,
           timestamp: new Date(),
+          metadata: {
+            suggestions: ['返回首页上传照片', '穿搭风格分析', '颜色搭配原理', '场合着装建议']
+          }
         };
         setMessages([defaultMessage]);
         setMessageIdCounter(1);
@@ -943,8 +1125,7 @@ export default function ChatPage() {
         id: `msg-${Date.now()}-1`,
         type: "text",
         role: "ai",
-        content:
-          "Hello! I'm your personal AI stylist ✨\n\nPlease select your photo and clothing on the homepage first, and then I can generate exclusive outfit suggestions for you!",
+        content: "Hello! I'm your personal AI stylist ✨\n\nFeel free to ask me anything about fashion and styling!",
         timestamp: new Date(),
       };
       setMessages([errorMessage]);
@@ -959,14 +1140,6 @@ export default function ChatPage() {
       startPolling(jobId);
     }
   }, [jobId]);
-
-  // Auto-start generation when chatData is ready and auto-start is requested
-  useEffect(() => {
-    if (chatData && hasAutoStarted && !isGenerating && currentStep === "suggestion") {
-      console.log("[CHAT DEBUG] Auto-starting generation with chatData:", chatData);
-      startGeneration();
-    }
-  }, [chatData, hasAutoStarted, isGenerating, currentStep]);
 
   useEffect(() => {
     console.log("[CHAT DEBUG] State changed:", {
@@ -987,174 +1160,6 @@ export default function ChatPage() {
     };
   }, [pollingIntervalId]);
 
-  // 🆕 NEW: Generate session ID
-  const generateSessionId = () => {
-    return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  };
-
-  // Initialize session ID
-  useEffect(() => {
-    if (!sessionId) {
-      setSessionId(generateSessionId());
-    }
-  }, []);
-
-  // 🆕 NEW: Free chat handler
-  const handleFreeChat = async () => {
-    if (!userInput.trim() || isFreeChatLoading) return;
-
-    const currentInput = userInput.trim();
-    setUserInput('');
-    setIsFreeChatLoading(true);
-
-    // Add user message
-    const userMessage: ChatMessage = {
-      id: generateUniqueId(),
-      type: 'text',
-      role: 'user',
-      content: currentInput,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMessage]);
-
-    // Add loading message
-    const loadingMessage: ChatMessage = {
-      id: generateUniqueId(),
-      type: 'loading',
-      role: 'ai',
-      loadingText: 'AI正在思考中...',
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, loadingMessage]);
-
-    try {
-      const response = await fetch('/api/chat/simple', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: currentInput,
-          sessionId: sessionId
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success && data.response) {
-        // Replace loading message with AI response
-        setMessages(prev => {
-          const newMessages = [...prev];
-          const lastLoadingIndex = newMessages.findLastIndex(msg => msg.type === 'loading');
-          if (lastLoadingIndex !== -1) {
-            newMessages[lastLoadingIndex] = {
-              id: newMessages[lastLoadingIndex].id,
-              type: 'text',
-              role: 'ai',
-              content: data.response,
-              timestamp: new Date(),
-            };
-          }
-          return newMessages;
-        });
-      } else {
-        throw new Error(data.error || 'Unknown error');
-      }
-    } catch (error) {
-      console.error('Free chat error:', error);
-      // Replace loading message with error
-      setMessages(prev => {
-        const newMessages = [...prev];
-        const lastLoadingIndex = newMessages.findLastIndex(msg => msg.type === 'loading');
-        if (lastLoadingIndex !== -1) {
-          newMessages[lastLoadingIndex] = {
-            id: newMessages[lastLoadingIndex].id,
-            type: 'text',
-            role: 'ai',
-            content: '抱歉，出现了一些问题，请稍后再试。如果问题持续，请检查您的网络连接。',
-            timestamp: new Date(),
-          };
-        }
-        return newMessages;
-      });
-    } finally {
-      setIsFreeChatLoading(false);
-    }
-  };
-
-  // 🆕 NEW: Handle enter key press
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleFreeChat();
-    }
-  };
-
-  // 🆕 NEW: Enhanced mode switcher with intelligent state management
-  const handleModeSwitch = () => {
-    try {
-      if (isFreeMode) {
-        // Switching from free mode to guided mode
-        setIsFreeMode(false);
-        setUserInput(''); // Clear any pending input
-
-        // Stop any ongoing free chat loading
-        setIsFreeChatLoading(false);
-
-        // If no chat data exists, show instruction message
-        if (!chatData) {
-          addMessage({
-            type: 'text',
-            role: 'ai',
-            content: '👋 欢迎使用引导模式！\n\n请先返回首页选择您的照片和服装，然后我就可以为您生成专属的穿搭建议啦！'
-          });
-        }
-      } else {
-        // Switching from guided mode to free mode
-        // If generation is in progress, handle gracefully
-        if (isGenerating) {
-          handleGenerationInterruption();
-        }
-
-        switchToFreeMode();
-      }
-    } catch (error) {
-      console.error('[MODE SWITCH] Error during mode switch:', error);
-    }
-  };
-
-  // 🆕 NEW: Handle interruption of ongoing generation
-  const handleGenerationInterruption = () => {
-    // Add a message explaining the interruption
-    addMessage({
-      type: 'text',
-      role: 'ai',
-      content: '⏸️ 生成过程已暂停，切换到自由对话模式。\n\n如需继续生成，请切换回引导模式。生成进度已保存，您可以随时继续。'
-    });
-
-    // Note: We intentionally DON'T stop the generation process
-    // This allows users to switch back and see the results
-    // The generation will continue in the background
-  };
-
-  // 🆕 NEW: Switch to free mode with welcome message
-  const switchToFreeMode = () => {
-    setIsFreeMode(true);
-
-    // Add welcome message for free mode if messages are mostly guided content
-    const shouldAddWelcome = messages.length === 0 ||
-      (messages.length > 0 && !messages.some(msg =>
-        msg.content?.includes('专业穿搭顾问') ||
-        msg.content?.includes('随时问我任何关于穿搭的问题')
-      ));
-
-    if (shouldAddWelcome) {
-      addMessage({
-        type: 'text',
-        role: 'ai',
-        content: '👋 切换到自由对话模式！我是你的专业穿搭顾问！\n\n我可以帮你：\n• 分析你的穿搭风格\n• 推荐适合的服装搭配\n• 解答时尚穿搭问题\n• 提供场合着装建议\n\n随时问我任何关于穿搭的问题吧！'
-      });
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 pb-20">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-gray-200">
@@ -1167,72 +1172,21 @@ export default function ChatPage() {
         </div>
       </header>
 
-      {/* 🆕 FIXED: Always visible mode switcher with improved event handling */}
-      <div className="sticky top-16 z-20 px-4 py-2 bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 shadow-lg border border-gray-200">
-            <div className="flex items-center justify-between">
+      {/* Status indicator for ongoing processes */}
+      {(isGenerating || isLoading) && (
+        <div className="sticky top-16 z-20 px-4 py-2 bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50">
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-3 shadow-lg border border-gray-200">
               <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full transition-all duration-300 ${isFreeMode ? 'bg-blue-500 animate-pulse shadow-lg shadow-blue-200' : 'bg-green-500 shadow-lg shadow-green-200'
-                  }`}></div>
-                <div>
-                  <span className="text-sm font-semibold text-gray-800">
-                    {isFreeMode ? '🗣️ 自由对话模式' : '🎯 引导生成模式'}
-                  </span>
-                  <p className="text-xs text-gray-600 mt-0.5">
-                    {isFreeMode
-                      ? '随意提问任何穿搭问题，AI会智能回答'
-                      : '按流程上传照片，AI生成个性化穿搭建议'
-                    }
-                  </p>
-                </div>
+                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                <span className="text-sm text-gray-600 font-medium">
+                  {isGenerating ? '🎨 正在生成您的专属穿搭效果...' : '💭 AI正在思考中...'}
+                </span>
               </div>
-              <Button
-                onClick={handleModeSwitch}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 hover:bg-gray-50 active:bg-gray-100 transition-all duration-200 border-2 px-4 py-2 min-w-[100px]"
-                disabled={isFreeChatLoading}
-                type="button"
-              >
-                {isFreeMode ? (
-                  <>
-                    <Settings className="w-4 h-4" />
-                    <span className="hidden sm:inline font-medium">引导模式</span>
-                  </>
-                ) : (
-                  <>
-                    <MessageCircle className="w-4 h-4" />
-                    <span className="hidden sm:inline font-medium">自由对话</span>
-                    {isGenerating && (
-                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse ml-1" title="生成进行中，可以切换但进程将在后台继续"></div>
-                    )}
-                  </>
-                )}
-              </Button>
             </div>
-
-            {/* Enhanced status indicator */}
-            {(isGenerating || isFreeChatLoading) && (
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                    <span className="text-xs text-gray-600 font-medium">
-                      {isGenerating ? '正在生成穿搭建议...' : '正在处理您的问题...'}
-                    </span>
-                  </div>
-                  {isGenerating && (
-                    <span className="text-xs text-gray-500">
-                      可随时切换模式 →
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
-      </div>
+      )}
 
       <div className="flex-1 px-4 py-6 space-y-4">
         <div className="max-w-2xl mx-auto">
@@ -1242,63 +1196,79 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* 🆕 UPDATED: Free chat input area with better positioning */}
-        {isFreeMode && (
-          <div className="max-w-2xl mx-auto mt-6">
-            <div className="bg-white/90 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <textarea
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="问我任何穿搭问题... (按Enter发送，Shift+Enter换行)"
-                    className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-transparent resize-none bg-white/70"
-                    rows={3}
-                    disabled={isFreeChatLoading}
-                  />
-                </div>
-                <Button
-                  onClick={handleFreeChat}
-                  disabled={!userInput.trim() || isFreeChatLoading}
-                  className="bg-[#FF6EC7] hover:bg-[#FF6EC7]/90 p-3 transition-all"
-                >
-                  {isFreeChatLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Send className="w-5 h-5" />
-                  )}
-                </Button>
+        {/* Unified input area - always visible */}
+        <div className="max-w-2xl mx-auto mt-6">
+          <div className="bg-white/90 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <textarea
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={chatData
+                    ? "问我任何穿搭问题，或说'帮我试穿'开始生成... (按Enter发送)"
+                    : "问我任何穿搭问题... (按Enter发送，Shift+Enter换行)"
+                  }
+                  className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-transparent resize-none bg-white/70"
+                  rows={3}
+                  disabled={isLoading}
+                />
               </div>
+              <Button
+                onClick={() => handleSendMessage(userInput)}
+                disabled={!userInput.trim() || isLoading}
+                className="bg-[#FF6EC7] hover:bg-[#FF6EC7]/90 p-3 transition-all"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+              </Button>
+            </div>
 
-              {/* Enhanced quick suggestions */}
-              <div className="mt-3 flex flex-wrap gap-2">
-                {[
+            {/* Smart suggestions based on context */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(() => {
+                const baseSuggestions = [
                   '推荐一些时尚单品',
                   '分析我的穿搭风格',
                   '约会怎么穿？',
                   '职场穿搭建议',
                   '季节性搭配技巧',
                   '色彩搭配原理'
-                ].map((suggestion, index) => (
+                ];
+
+                const generationSuggestions = [
+                  '帮我试穿这件衣服',
+                  '生成穿搭效果',
+                  '换个场景试试',
+                  '调整搭配风格'
+                ];
+
+                const suggestions = chatData
+                  ? [...generationSuggestions.slice(0, 2), ...baseSuggestions.slice(0, 4)]
+                  : [...baseSuggestions.slice(0, 4), '返回首页上传照片'];
+
+                return suggestions.map((suggestion, index) => (
                   <button
                     key={index}
                     onClick={() => {
                       setUserInput(suggestion);
-                      // Auto-send the suggestion
-                      setTimeout(() => handleFreeChat(), 100);
+                      setTimeout(() => handleSendMessage(suggestion), 100);
                     }}
                     className="px-3 py-1.5 bg-pink-100 hover:bg-pink-200 text-pink-700 rounded-full text-xs transition-colors disabled:opacity-50"
-                    disabled={isFreeChatLoading}
+                    disabled={isLoading}
                   >
                     💡 {suggestion}
                   </button>
-                ))}
-              </div>
+                ));
+              })()}
             </div>
           </div>
-        )}
+        </div>
 
+        {/* Debug panel */}
         {process.env.NODE_ENV === "development" && (
           <div className="max-w-2xl mx-auto mt-4">
             <div
@@ -1317,159 +1287,71 @@ export default function ChatPage() {
 
             {isDebugExpanded && (
               <div className="bg-gray-100 rounded-b-lg p-4 text-xs space-y-1">
-                <div className="font-semibold text-gray-800 mb-2">🎯 Mode & UI States:</div>
-                <div>isFreeMode: <span className="font-bold">{String(isFreeMode)}</span></div>
+                <div className="font-semibold text-gray-800 mb-2">🎯 Unified Chat States:</div>
                 <div>sessionId: {sessionId}</div>
-                <div>isFreeChatLoading: <span className="font-bold">{String(isFreeChatLoading)}</span></div>
+                <div>isLoading: <span className="font-bold">{String(isLoading)}</span></div>
                 <div className="font-semibold text-gray-800 mt-3 mb-2">📊 Generation States:</div>
                 <div>isGenerating: <span className="font-bold">{String(isGenerating)}</span></div>
                 <div>currentStep: <span className="font-bold">{String(currentStep)}</span></div>
                 <div>hasAutoStarted: {String(hasAutoStarted)}</div>
-                <div>hasProcessedCompletion: {String(hasProcessedCompletion)}</div>
                 <div>pollingActive: {pollingIntervalId ? "yes" : "no"}</div>
                 <div className="font-semibold text-gray-800 mt-3 mb-2">💾 Data States:</div>
                 <div>chatData: {chatData ? "exists" : "null"}</div>
                 <div>messages.length: {String(messages.length)}</div>
                 <div>pollingError: {pollingError || "none"}</div>
-                <div className="pt-2">
-                  <div className="font-semibold mb-1">📁 Raw chatData:</div>
-                  <pre className="bg-gray-200 p-2 rounded text-xs overflow-auto max-h-40">
-                    {chatData
-                      ? JSON.stringify(
-                        {
-                          ...chatData,
-                          selfiePreview: chatData.selfiePreview?.startsWith("data:image")
-                            ? `${chatData.selfiePreview.substring(0, 30)}... [base64 data truncated]`
-                            : chatData.selfiePreview,
-                          clothingPreview: chatData.clothingPreview?.startsWith("data:image")
-                            ? `${chatData.clothingPreview.substring(0, 30)}... [base64 data truncated]`
-                            : chatData.clothingPreview,
-                        },
-                        null,
-                        2,
-                      )
-                      : "null"}
-                  </pre>
-                </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Only show guided mode buttons when NOT in free mode */}
-        {!isFreeMode && (() => {
-          const shouldShowButton =
-            !isGenerating &&
-            currentStep === "suggestion" &&
-            chatData &&
-            messages.length === 6 &&
-            !hasAutoStarted; // Don't show button if auto-generation has started
-          console.log("[CHAT DEBUG] Button visibility check:", {
-            isGenerating,
-            currentStep,
-            hasChatData: !!chatData,
-            messagesLength: messages.length,
-            hasAutoStarted,
-            shouldShowButton,
-          });
-
-          return shouldShowButton;
-        })() && (
-            <div className="max-w-2xl mx-auto mt-8">
-              <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
-                <p className="text-sm text-gray-600 mb-4 text-center">
-                  Ready to generate your personalized style?
-                </p>
-                <Button
-                  onClick={() => {
-                    console.log("[CHAT DEBUG] Start generation button clicked");
-                    startGeneration();
-                  }}
-                  className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
-                >
-                  Generate My Style
-                </Button>
-              </div>
-            </div>
-          )}
-
-        {!isFreeMode && (() => {
-          const shouldShowReturnButton = !chatData && messages.length >= 1 &&
-            messages.some(msg => msg.content?.includes('请先返回首页选择'));
-          console.log("[CHAT DEBUG] Return button visibility check:", {
-            hasChatData: !!chatData,
-            messagesLength: messages.length,
-            shouldShowReturnButton,
-          });
-
-          return shouldShowReturnButton;
-        })() && (
-            <div className="max-w-2xl mx-auto mt-8">
-              <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
-                <p className="text-sm text-gray-600 mb-4 text-center">
-                  Please select your photo and clothing first
-                </p>
-                <Button
-                  onClick={() => {
-                    console.log("[CHAT DEBUG] Return to home button clicked");
-                    router.push("/");
-                  }}
-                  className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
-                >
-                  Return to Homepage
-                </Button>
-              </div>
-            </div>
-          )}
-
-        {pollingError && (
-          <div className="max-w-2xl mx-auto mt-4">
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
-              <p className="text-sm text-red-600 text-center">{pollingError}</p>
-
+        {/* Generation button for guided mode (when chat data exists but no auto-start) */}
+        {!isGenerating && currentStep === "suggestion" && chatData && messages.length > 0 && !hasAutoStarted && (
+          <div className="max-w-2xl mx-auto mt-8">
+            <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
+              <p className="text-sm text-gray-600 mb-4 text-center">
+                Ready to generate your personalized style?
+              </p>
               <Button
                 onClick={() => {
-                  setPollingError(null);
-                  if (chatData) startGeneration();
+                  console.log("[CHAT DEBUG] Start generation button clicked");
+                  startGeneration();
                 }}
-                variant="outline"
-                className="w-full mt-3"
+                className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
               >
-                Retry
+                Generate My Style
               </Button>
             </div>
           </div>
         )}
 
-        {currentStep === "complete" && (
+        {/* Return to homepage button when no chat data */}
+        {!chatData && messages.length >= 1 && (
           <div className="max-w-2xl mx-auto mt-8">
             <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
               <p className="text-sm text-gray-600 mb-4 text-center">
-                🎉 Your personalized style is complete!
+                Want to generate styling effects? Upload your photos first!
               </p>
-              <div className="flex gap-3">
-                <Button onClick={() => router.push("/")} variant="outline" className="flex-1">
-                  Try Another Set
-                </Button>
-                <Button
-                  onClick={() => router.push("/results")}
-                  className="flex-1 bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
-                >
-                  View My Styles
-                </Button>
-              </div>
+              <Button
+                onClick={() => router.push('/')}
+                variant="outline"
+                className="w-full"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Go to Homepage
+              </Button>
             </div>
           </div>
         )}
       </div>
 
+      {/* Image Modal */}
       <ImageModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        imageUrl={modalImage || ""}
-        title="AI-Generated Style Image"
+        imageUrl={modalImage || ''}
       />
 
+      {/* iOS Tab Bar */}
       <IOSTabBar />
     </div>
   );
