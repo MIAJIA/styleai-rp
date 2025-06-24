@@ -23,10 +23,11 @@ export async function POST(request: NextRequest) {
     }
 
     const agent = getChatAgent(sessionId);
-    const response = await agent.chat(message);
+    const { response, agentInfo } = await agent.chat(message);
 
     return NextResponse.json({
       response,
+      agentInfo,
       success: true
     });
   } catch (error) {

@@ -26,6 +26,7 @@ import {
   Send,
   Upload,
   Image as ImageIcon,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -44,6 +45,11 @@ type ChatMessage = {
   imageUrl?: string;
   loadingText?: string;
   timestamp: Date;
+  agentInfo?: { // 👈 **请手动添加这部分**
+    id: string;
+    name: string;
+    emoji: string;
+  };
   metadata?: {
     // Generation-related data
     generationData?: {
@@ -142,13 +148,26 @@ function ChatBubble({
 
   return (
     <div className={`flex items-start gap-3 my-4 ${!isAI ? "flex-row-reverse" : ""}`}>
-      {isAI && <AIAvatar />}
+      {isAI ? (
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center mr-2 flex-shrink-0">
+          <span className="text-lg">{message.agentInfo?.emoji || '🤖'}</span>
+        </div>
+      ) : (
+        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-2 flex-shrink-0">
+          <User className="w-5 h-5 text-gray-600" />
+        </div>
+      )}
       <div
         className={`
-          px-4 py-3 rounded-2xl max-w-[80%]
+          px-4 py-3 rounded-2xl max-w-[80%] flex flex-col
           ${isAI ? "bg-white shadow-sm border border-gray-100" : "bg-[#FF6EC7] text-white"}
         `}
       >
+        {isAI && message.agentInfo && (
+          <div className="text-xs text-gray-500 mb-1 font-semibold">
+            {message.agentInfo.name}
+          </div>
+        )}
         {message.type === "loading" && (
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
@@ -399,11 +418,10 @@ export default function ChatPage() {
 
   // Handle regular chat
   const handleFreeChat = async (message: string) => {
-    // Add loading message
     addMessage({
       type: 'loading',
       role: 'ai',
-      loadingText: 'AI正在思考中...',
+      loadingText: 'AI 专家正在思考中...',
     });
 
     try {
@@ -415,19 +433,22 @@ export default function ChatPage() {
 
       const data = await response.json();
 
-      if (data.success && data.response) {
+      if (data.success) {
+        // 使用新的 agentInfo 字段
         replaceLastLoadingMessage({
           type: 'text',
           role: 'ai',
           content: data.response,
+          agentInfo: data.agentInfo, // 👈 保存 agentInfo
           metadata: {
-            suggestions: generateSmartSuggestions(data.response)
-          }
+            suggestions: generateSmartSuggestions(data.response),
+          },
         });
       } else {
         throw new Error(data.error || 'Unknown error');
       }
     } catch (error) {
+      console.error('Free chat error:', error);
       replaceLastLoadingMessage({
         type: 'text',
         role: 'ai',
