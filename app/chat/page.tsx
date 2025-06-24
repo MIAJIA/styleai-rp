@@ -168,6 +168,24 @@ function ChatBubble({
             {message.agentInfo.name}
           </div>
         )}
+
+        {/* Render text content if it exists */}
+        {message.content && (
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+        )}
+
+        {/* Render image if it exists, with a margin if text is also present */}
+        {message.imageUrl && (
+          <img
+            src={message.imageUrl}
+            alt={isAI ? "Generated image" : "Uploaded image"}
+            width={300}
+            height={400}
+            className={`rounded-lg cursor-pointer ${message.content ? 'mt-2' : ''}`}
+            onClick={() => message.imageUrl && onImageClick(message.imageUrl)}
+          />
+        )}
+
         {message.type === "loading" && (
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
@@ -176,19 +194,9 @@ function ChatBubble({
             {message.loadingText && <span className="text-sm text-gray-600">{message.loadingText}</span>}
           </div>
         )}
-        {message.type === "text" && (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-        )}
-        {message.type === "image" && message.imageUrl && (
-          <img
-            src={message.imageUrl}
-            alt="Generated image"
-            width={300}
-            height={400}
-            className="rounded-lg cursor-pointer"
-            onClick={() => message.imageUrl && onImageClick(message.imageUrl)}
-          />
-        )}
+
+        {/* The old separate type checks are no longer needed for text/image */}
+
         {message.type === "generation-request" && (
           <div className="space-y-2">
             <p className="text-sm leading-relaxed">{message.content}</p>
@@ -221,8 +229,10 @@ export default function ChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [stagedImage, setStagedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<ChatStep>("suggestion");
   const [messageIdCounter, setMessageIdCounter] = useState(0);
@@ -248,10 +258,36 @@ export default function ChatPage() {
   // Track if auto-generation has been triggered to prevent multiple calls
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
 
-  // Unified chat state
+  // Re-enable state variables that are still in use by other parts of the component
   const [userInput, setUserInput] = useState('');
   const [sessionId, setSessionId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // --- START: Image Handling Functions ---
+  const handleImageUploadClick = () => {
+    imageInputRef.current?.click();
+  };
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      console.log('[ChatPage] Image selected:', { name: file.name, size: file.size, type: file.type });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        console.log('[ChatPage] Image converted to Data URL. Length:', result.length);
+        setStagedImage(result);
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset file input to allow selecting the same file again
+    event.target.value = '';
+  };
+
+  const clearStagedImage = () => {
+    setStagedImage(null);
+  };
+  // --- END: Image Handling Functions ---
 
   const handleImageClick = (imageUrl: string) => {
     setModalImage(imageUrl);
@@ -271,197 +307,221 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  const generateUniqueId = () => {
-    setMessageIdCounter((prev) => prev + 1);
-    return `msg-${Date.now()}-${messageIdCounter}-${Math.random().toString(36).substr(2, 9)}`;
-  };
+  // This effect now handles all client-side initialization
+  useEffect(() => {
+    if (isInitialized) {
+      return;
+    }
 
-  const addMessage = (message: Omit<ChatMessage, "id" | "timestamp">) => {
-    const newMessage: ChatMessage = {
-      ...message,
-      id: generateUniqueId(),
-      timestamp: new Date(),
-    };
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
-  };
+    // 1. Ensure a session ID exists on the client
+    let currentSessionId = localStorage.getItem("chat_session_id");
+    if (!currentSessionId) {
+      currentSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem("chat_session_id", currentSessionId);
+    }
 
-  const upsertMessage = (message: Omit<ChatMessage, "id" | "timestamp">, targetId?: string) => {
-    setMessages((prevMessages) => {
-      const existingMsgIndex = targetId ? prevMessages.findIndex((m) => m.id === targetId) : -1;
-      if (existingMsgIndex !== -1) {
-        const updatedMessages = [...prevMessages];
-        updatedMessages[existingMsgIndex] = { ...updatedMessages[existingMsgIndex], ...message };
-        return updatedMessages;
+    // The rest of the initialization logic remains the same...
+    try {
+      const storedData = sessionStorage.getItem("chatModeData");
+      console.log("[CHAT DEBUG] Raw sessionStorage data:", storedData);
+
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        console.log("[CHAT DEBUG] Parsed chat data:", parsedData);
+        setChatData(parsedData);
+
+        // Initialize with unified welcome message
+        const initialMessages: ChatMessage[] = [];
+        let idCounter = 0;
+
+        const createMessage = (message: Omit<ChatMessage, "id" | "timestamp">): ChatMessage => ({
+          ...message,
+          id: `msg-${Date.now()}-${++idCounter}`,
+          timestamp: new Date(),
+        });
+
+        // Welcome message for unified mode
+        initialMessages.push(
+          createMessage({
+            type: "text",
+            role: "ai",
+            content: `👋 您好！我是您的专业AI穿搭顾问！
+
+我看到您已经准备好了照片和服装，太棒了！
+
+💬 **您可以：**
+• 直接说"帮我试穿"或"生成穿搭效果"来开始图像生成
+• 问我任何穿搭相关的问题
+• 讨论颜色搭配、风格分析等话题
+
+🎨 **智能生成**：当您提到试穿、搭配、生成等关键词时，我会自动为您创建专属的穿搭效果图！
+
+有什么想了解的吗？`,
+            metadata: {
+              suggestions: ['帮我试穿这件衣服', '分析我的穿搭风格', '推荐搭配建议', '颜色搭配技巧']
+            }
+          }),
+        );
+
+        setMessages(initialMessages);
+        setMessageIdCounter(idCounter);
+
       } else {
-        return [...prevMessages, { ...message, id: generateUniqueId(), timestamp: new Date() }];
+        console.log("[CHAT DEBUG] No sessionStorage data found, showing default message");
+        const defaultMessage: ChatMessage = {
+          id: `msg-${Date.now()}-1`,
+          type: "text",
+          role: "ai",
+          content: `👋 您好！我是您的专业AI穿搭顾问！
+
+💬 **我可以帮您：**
+• 分析穿搭风格和色彩搭配
+• 提供不同场合的着装建议
+• 解答时尚穿搭问题
+• 推荐时尚单品和搭配技巧
+
+🎨 **想要生成穿搭效果图？**
+请先返回首页上传您的照片和想要试穿的服装，然后回来告诉我"帮我试穿"！
+
+现在就开始聊穿搭吧～`,
+          timestamp: new Date(),
+          metadata: {
+            suggestions: ['返回首页上传照片', '穿搭风格分析', '颜色搭配原理', '场合着装建议']
+          }
+        };
+        setMessages([defaultMessage]);
+        setMessageIdCounter(1);
       }
-    });
+    } catch (error) {
+      console.error("[CHAT DEBUG] Error reading chat data:", error);
+      const errorMessage: ChatMessage = {
+        id: `msg-${Date.now()}-1`,
+        type: "text",
+        role: "ai",
+        content: "Hello! I'm your personal AI stylist ✨\n\nFeel free to ask me anything about fashion and styling!",
+        timestamp: new Date(),
+      };
+      setMessages([errorMessage]);
+      setMessageIdCounter(1);
+    }
+
+    setIsInitialized(true);
+  }, [isInitialized]); // Dependency array ensures it runs once
+
+  const generateUniqueId = () => {
+    return `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   };
 
+  const addMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+    setMessages(prev => [...prev, { ...message, id: generateUniqueId(), timestamp: new Date() }]);
+  };
+
+  // 1. Re-create the missing helper function
   const replaceLastLoadingMessage = (message: Omit<ChatMessage, "id" | "timestamp">) => {
     setMessages((prevMessages) => {
       const newMessages = [...prevMessages];
-      // 使用传统方法查找最后一个loading消息
-      let lastMessageIndex = -1;
-      for (let i = newMessages.length - 1; i >= 0; i--) {
-        if (newMessages[i].type === "loading") {
-          lastMessageIndex = i;
-          break;
-        }
-      }
+      // Find the index of the last loading message
+      const lastLoadingIndex = newMessages.map(m => m.type).lastIndexOf('loading');
 
-      if (lastMessageIndex !== -1) {
-        newMessages[lastMessageIndex] = {
+      if (lastLoadingIndex !== -1) {
+        // Replace the loading message with the new message
+        newMessages[lastLoadingIndex] = {
           ...message,
-          id: newMessages[lastMessageIndex].id,
+          id: newMessages[lastLoadingIndex].id, // Keep the same ID for smooth UI updates
           timestamp: new Date(),
         };
         return newMessages;
       }
+
+      // If for some reason no loading message is found, just add the new message
       return [...newMessages, { ...message, id: generateUniqueId(), timestamp: new Date() }];
     });
   };
 
-  // Detect if user message is requesting image generation
-  const detectGenerationIntent = (message: string, hasImages: boolean = false): boolean => {
-    const generationKeywords = [
-      '试穿', '搭配', '生成', '换装', '造型', '穿上', '试试', '效果',
-      '图片', '照片', '拍照', '看看', '展示', '模拟', '合成'
-    ];
+  const handleSendMessage = async (message: string) => {
+    console.log(`[ChatPage] handleSendMessage called. Message: "${message}", Has Staged Image: ${!!stagedImage}`);
+    if (message.trim() === "" && !stagedImage) return;
 
-    const hasGenerationKeywords = generationKeywords.some(keyword =>
-      message.toLowerCase().includes(keyword)
-    );
+    // Add user message to UI immediately, including the staged image
+    addMessage({
+      type: "text",
+      role: "user",
+      content: message,
+      imageUrl: stagedImage ?? undefined, // 2. Fix type error (null -> undefined)
+    });
 
-    // If user has uploaded images or uses generation keywords
-    return hasImages || hasGenerationKeywords;
+    const imageToSend = stagedImage;
+    // Clear the staged image immediately after capturing it
+    setStagedImage(null);
+
+    // Show loading indicator
+    addMessage({
+      type: "loading",
+      role: "ai",
+      loadingText: "思考中...",
+    });
+
+    // Pass the captured image to the chat handler
+    await handleFreeChat(message, imageToSend);
   };
 
-  // Generate session ID
-  const generateSessionId = () => {
-    return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  };
-
-  // Initialize session ID
-  useEffect(() => {
+  const handleFreeChat = async (message: string, imageUrl?: string | null) => {
+    const sessionId = localStorage.getItem("chat_session_id");
     if (!sessionId) {
-      setSessionId(generateSessionId());
-    }
-  }, []);
-
-  // Unified message handler that supports both chat and generation
-  const handleSendMessage = async (message: string, attachments?: any[]) => {
-    if (!message.trim() || isLoading) return;
-
-    const currentInput = message.trim();
-    setUserInput('');
-    setIsLoading(true);
-
-    // Add user message
-    addMessage({
-      type: 'text',
-      role: 'user',
-      content: currentInput,
-    });
-
-    // Check if this is a generation request
-    const isGenerationRequest = detectGenerationIntent(currentInput, attachments && attachments.length > 0);
-
-    if (isGenerationRequest && chatData) {
-      // Handle image generation request
-      await handleImageGeneration(currentInput);
-    } else if (isGenerationRequest && !chatData) {
-      // User wants generation but no data available
-      addMessage({
-        type: 'text',
-        role: 'ai',
-        content: '🎨 我可以为您生成穿搭效果！\n\n请先返回首页上传您的照片和想要试穿的服装，然后我就可以为您生成专属的穿搭建议了！\n\n或者您也可以继续和我聊穿搭相关的话题～',
-        metadata: {
-          suggestions: ['返回首页上传照片', '穿搭风格分析', '搭配建议', '时尚趋势']
-        }
+      console.error("[ChatPage] Session ID is missing. Aborting API call.");
+      // 3. Use the recreated function for error handling
+      replaceLastLoadingMessage({
+        type: "text",
+        role: "ai",
+        content: "抱歉，会话已过期，请刷新页面重试。",
       });
-      setIsLoading(false);
-    } else {
-      // Handle regular chat
-      await handleFreeChat(currentInput);
+      return;
     }
-  };
 
-  // Handle image generation
-  const handleImageGeneration = async (userMessage: string) => {
-    if (!chatData) return;
-
-    addMessage({
-      type: 'generation-request',
-      role: 'user',
-      content: userMessage,
-      metadata: {
-        generationData: {
-          selfiePreview: chatData.selfiePreview,
-          clothingPreview: chatData.clothingPreview,
-          occasion: chatData.occasion,
-          generationMode: chatData.generationMode,
-        },
-        isGenerationTrigger: true,
-      }
-    });
-
-    // Start the generation process
-    try {
-      await startGeneration();
-    } catch (error) {
-      // Reset loading state if generation fails to start
-      setIsLoading(false);
-      console.error('[IMAGE GENERATION] Failed to start generation:', error);
-    }
-  };
-
-  // Handle regular chat
-  const handleFreeChat = async (message: string) => {
-    addMessage({
-      type: 'loading',
-      role: 'ai',
-      loadingText: 'AI 专家正在思考中...',
+    const requestBody = { message, sessionId, imageUrl };
+    console.log('[ChatPage] Sending request to /api/chat/simple with body:', {
+      message: requestBody.message,
+      sessionId: requestBody.sessionId,
+      imageUrl: requestBody.imageUrl ? `DataURL of length ${requestBody.imageUrl.length}` : 'null',
     });
 
     try {
-      const response = await fetch('/api/chat/simple', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, sessionId }),
+      const response = await fetch("/api/chat/simple", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody), // Send imageUrl to API
       });
 
       const data = await response.json();
+      console.log('[ChatPage] Received response from API:', data);
 
-      if (data.success) {
-        // 使用新的 agentInfo 字段
-        replaceLastLoadingMessage({
-          type: 'text',
-          role: 'ai',
-          content: data.response,
-          agentInfo: data.agentInfo, // 👈 保存 agentInfo
-          metadata: {
-            suggestions: generateSmartSuggestions(data.response),
-          },
-        });
-      } else {
-        throw new Error(data.error || 'Unknown error');
+      if (!response.ok) {
+        throw new Error(data.error || "API request failed");
       }
-    } catch (error) {
-      console.error('Free chat error:', error);
+
+      // 4. Use the recreated function to display the AI response
       replaceLastLoadingMessage({
-        type: 'text',
-        role: 'ai',
-        content: '抱歉，我遇到了一些问题。请稍后再试。',
+        type: "text",
+        role: "ai",
+        content: data.response,
+        agentInfo: data.agentInfo,
+        metadata: {
+          suggestions: generateSmartSuggestions(data.response),
+        }
       });
-    } finally {
-      setIsLoading(false);
+
+    } catch (error: any) {
+      console.error("[ChatPage] Free chat API error:", error);
+      replaceLastLoadingMessage({
+        type: "text",
+        role: "ai",
+        content: `抱歉，出了一点问题：${error.message}`,
+      });
     }
   };
 
-  // Generate smart suggestions based on AI response
   const generateSmartSuggestions = (aiResponse: string): string[] => {
-    const suggestions = [];
+    const suggestions: string[] = [];
 
     if (aiResponse.includes('颜色') || aiResponse.includes('色彩')) {
       suggestions.push('色彩搭配技巧');
@@ -824,7 +884,8 @@ export default function ChatPage() {
       }
 
       const data = await response.json();
-      setJobId(data.jobId);
+      const newJobId = data.jobId; // Capture new job ID
+      setJobId(newJobId); // Set state
 
       const apiRequestEnd = Date.now();
       const apiRequestTime = apiRequestEnd - apiRequestStart;
@@ -832,8 +893,12 @@ export default function ChatPage() {
 
       console.log(`[PERF] 🌐 Phase 2 COMPLETED: API request took ${apiRequestTime}ms`);
       console.log(`[PERF] ⚡ INITIALIZATION COMPLETE: Total init time ${totalInitTime}ms (File prep: ${filePreparationTime}ms + API: ${apiRequestTime}ms)`);
-      console.log(`[PERF] 🔄 Phase 3: Starting polling for Job ID: ${data.jobId}`);
 
+      // 1. Call startPolling directly instead of relying on useEffect
+      console.log(`[PERF] 🔄 Calling startPolling directly for Job ID: ${newJobId}`);
+      startPolling(newJobId);
+
+      // Restore the proper, multi-step loading messages
       replaceLastLoadingMessage({
         type: "text",
         role: "ai",
@@ -845,6 +910,7 @@ export default function ChatPage() {
         role: "ai",
         loadingText: "Generating suggestions for you...",
       });
+
     } catch (error) {
       const errorTime = Date.now();
       const totalErrorTime = errorTime - startTime;
@@ -1061,125 +1127,14 @@ export default function ChatPage() {
     setPollingIntervalId(interval);
   };
 
-  useEffect(() => {
-    if (isInitialized) {
-      console.log("[CHAT DEBUG] Already initialized, skipping...");
-      return;
-    }
-
-    console.log("[CHAT DEBUG] Page initialized, reading sessionStorage...");
-
-    try {
-      const storedData = sessionStorage.getItem("chatModeData");
-      console.log("[CHAT DEBUG] Raw sessionStorage data:", storedData);
-
-      if (storedData) {
-        const parsedData = JSON.parse(storedData);
-        console.log("[CHAT DEBUG] Parsed chat data:", parsedData);
-        setChatData(parsedData);
-
-        // Initialize with unified welcome message
-        const initialMessages: ChatMessage[] = [];
-        let idCounter = 0;
-
-        const createMessage = (message: Omit<ChatMessage, "id" | "timestamp">): ChatMessage => ({
-          ...message,
-          id: `msg-${Date.now()}-${++idCounter}`,
-          timestamp: new Date(),
-        });
-
-        // Welcome message for unified mode
-        initialMessages.push(
-          createMessage({
-            type: "text",
-            role: "ai",
-            content: `👋 您好！我是您的专业AI穿搭顾问！
-
-我看到您已经准备好了照片和服装，太棒了！
-
-💬 **您可以：**
-• 直接说"帮我试穿"或"生成穿搭效果"来开始图像生成
-• 问我任何穿搭相关的问题
-• 讨论颜色搭配、风格分析等话题
-
-🎨 **智能生成**：当您提到试穿、搭配、生成等关键词时，我会自动为您创建专属的穿搭效果图！
-
-有什么想了解的吗？`,
-            metadata: {
-              suggestions: ['帮我试穿这件衣服', '分析我的穿搭风格', '推荐搭配建议', '颜色搭配技巧']
-            }
-          }),
-        );
-
-        setMessages(initialMessages);
-        setMessageIdCounter(idCounter);
-
-      } else {
-        console.log("[CHAT DEBUG] No sessionStorage data found, showing default message");
-        const defaultMessage: ChatMessage = {
-          id: `msg-${Date.now()}-1`,
-          type: "text",
-          role: "ai",
-          content: `👋 您好！我是您的专业AI穿搭顾问！
-
-💬 **我可以帮您：**
-• 分析穿搭风格和色彩搭配
-• 提供不同场合的着装建议
-• 解答时尚穿搭问题
-• 推荐时尚单品和搭配技巧
-
-🎨 **想要生成穿搭效果图？**
-请先返回首页上传您的照片和想要试穿的服装，然后回来告诉我"帮我试穿"！
-
-现在就开始聊穿搭吧～`,
-          timestamp: new Date(),
-          metadata: {
-            suggestions: ['返回首页上传照片', '穿搭风格分析', '颜色搭配原理', '场合着装建议']
-          }
-        };
-        setMessages([defaultMessage]);
-        setMessageIdCounter(1);
-      }
-    } catch (error) {
-      console.error("[CHAT DEBUG] Error reading chat data:", error);
-      const errorMessage: ChatMessage = {
-        id: `msg-${Date.now()}-1`,
-        type: "text",
-        role: "ai",
-        content: "Hello! I'm your personal AI stylist ✨\n\nFeel free to ask me anything about fashion and styling!",
-        timestamp: new Date(),
-      };
-      setMessages([errorMessage]);
-      setMessageIdCounter(1);
-    }
-
-    setIsInitialized(true);
-  }, []);
-
-  useEffect(() => {
-    if (jobId) {
-      startPolling(jobId);
-    }
-  }, [jobId]);
-
-  useEffect(() => {
-    console.log("[CHAT DEBUG] State changed:", {
-      isGenerating,
-      currentStep,
-      chatData: chatData ? "exists" : "null",
-      messagesLength: messages.length,
-      pollingError,
-    });
-  }, [isGenerating, currentStep, chatData, messages.length, pollingError]);
-
-  useEffect(() => {
-    return () => {
-      if (pollingIntervalId) {
-        console.log("[LIFECYCLE] Component unmounting, clearing polling interval.");
-        clearInterval(pollingIntervalId);
-      }
-    };
-  }, [pollingIntervalId]);
+  // 2. Prevent rendering on server and initial client render to avoid hydration mismatch
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin text-[#FF6EC7]" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 pb-20">
@@ -1209,85 +1164,69 @@ export default function ChatPage() {
         </div>
       )}
 
+      {/* 2. Fix hydration error by rendering page shell and showing loader inside content area */}
       <div className="flex-1 px-4 py-6 space-y-4">
-        <div className="max-w-2xl mx-auto">
-          {messages.map((message) => (
-            <ChatBubble key={message.id} message={message} onImageClick={handleImageClick} />
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Unified input area - always visible */}
-        <div className="max-w-2xl mx-auto mt-6">
-          <div className="bg-white/90 backdrop-blur-lg rounded-2xl p-4 shadow-sm border border-gray-100">
-            <div className="flex items-end gap-3">
-              <div className="flex-1">
-                <textarea
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder={chatData
-                    ? "问我任何穿搭问题，或说'帮我试穿'开始生成... (按Enter发送)"
-                    : "问我任何穿搭问题... (按Enter发送，Shift+Enter换行)"
-                  }
-                  className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-transparent resize-none bg-white/70"
-                  rows={3}
-                  disabled={isLoading}
-                />
-              </div>
-              <Button
-                onClick={() => handleSendMessage(userInput)}
-                disabled={!userInput.trim() || isLoading}
-                className="bg-[#FF6EC7] hover:bg-[#FF6EC7]/90 p-3 transition-all"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
-              </Button>
-            </div>
-
-            {/* Smart suggestions based on context */}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {(() => {
-                const baseSuggestions = [
-                  '推荐一些时尚单品',
-                  '分析我的穿搭风格',
-                  '约会怎么穿？',
-                  '职场穿搭建议',
-                  '季节性搭配技巧',
-                  '色彩搭配原理'
-                ];
-
-                const generationSuggestions = [
-                  '帮我试穿这件衣服',
-                  '生成穿搭效果',
-                  '换个场景试试',
-                  '调整搭配风格'
-                ];
-
-                const suggestions = chatData
-                  ? [...generationSuggestions.slice(0, 2), ...baseSuggestions.slice(0, 4)]
-                  : [...baseSuggestions.slice(0, 4), '返回首页上传照片'];
-
-                return suggestions.map((suggestion, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      setUserInput(suggestion);
-                      setTimeout(() => handleSendMessage(suggestion), 100);
-                    }}
-                    className="px-3 py-1.5 bg-pink-100 hover:bg-pink-200 text-pink-700 rounded-full text-xs transition-colors disabled:opacity-50"
-                    disabled={isLoading}
-                  >
-                    💡 {suggestion}
-                  </button>
-                ));
-              })()}
-            </div>
+        {!isInitialized ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-[#FF6EC7]" />
           </div>
-        </div>
+        ) : (
+          <div className="max-w-2xl mx-auto">
+            {messages.map((message) => (
+              <ChatBubble key={message.id} message={message} onImageClick={handleImageClick} />
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+
+        {/* Chat Input Area */}
+        <footer className="p-4 bg-white border-t border-gray-200">
+          <div className="max-w-2xl mx-auto">
+            {/* Staged image preview */}
+            {stagedImage && (
+              <div className="mb-2 relative w-24 h-24">
+                <img src={stagedImage} alt="Preview" className="w-full h-full object-cover rounded-lg" />
+                <button
+                  onClick={clearStagedImage}
+                  className="absolute -top-2 -right-2 bg-gray-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-lg"
+                  aria-label="Remove image"
+                >
+                  X
+                </button>
+              </div>
+            )}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const message = (e.target as HTMLFormElement).message.value;
+                if (!message.trim() && !stagedImage) return;
+                handleSendMessage(message);
+                (e.target as HTMLFormElement).reset();
+              }}
+              className="flex items-center gap-2"
+            >
+              <input
+                type="file"
+                ref={imageInputRef}
+                onChange={handleImageSelect}
+                className="hidden"
+                accept="image/*"
+              />
+              <Button type="button" variant="ghost" size="icon" onClick={handleImageUploadClick} aria-label="Upload image">
+                <ImageIcon className="w-5 h-5 text-gray-500" />
+              </Button>
+              <input
+                name="message"
+                placeholder="跟你的专属顾问聊聊吧..."
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#FF6EC7] text-sm"
+                autoComplete="off"
+              />
+              <Button type="submit" className="bg-[#FF6EC7] hover:bg-[#ff5bb0] rounded-full" size="icon" aria-label="Send message">
+                <Send className="w-5 h-5 text-white" />
+              </Button>
+            </form>
+          </div>
+        </footer>
 
         {/* Debug panel */}
         {process.env.NODE_ENV === "development" && (

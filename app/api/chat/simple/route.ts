@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SimpleChatAgent } from '@/lib/chat-agent';
+import { ChatAgent } from '@/lib/chat-agent';
 
-// 简单的内存存储，用于保存会话
-const chatAgents = new Map<string, SimpleChatAgent>();
+// Use ChatAgent for session storage
+const chatAgents = new Map<string, ChatAgent>();
 
-function getChatAgent(sessionId: string): SimpleChatAgent {
+function getChatAgent(sessionId: string): ChatAgent {
   if (!chatAgents.has(sessionId)) {
-    chatAgents.set(sessionId, new SimpleChatAgent());
+    chatAgents.set(sessionId, new ChatAgent());
   }
   return chatAgents.get(sessionId)!;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, sessionId } = await request.json();
+    const { message, sessionId, imageUrl } = await request.json();
 
     if (!message || !sessionId) {
       return NextResponse.json(
@@ -23,10 +23,10 @@ export async function POST(request: NextRequest) {
     }
 
     const agent = getChatAgent(sessionId);
-    const { response, agentInfo } = await agent.chat(message);
+    const { aiResponse, agentInfo } = await agent.chat(message, imageUrl);
 
     return NextResponse.json({
-      response,
+      response: aiResponse,
       agentInfo,
       success: true
     });
