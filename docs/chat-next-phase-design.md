@@ -1604,7 +1604,201 @@ const userAgentPreference = {
 4. **快速迭代胜过一次性完美**
 
 ## 🔮 接下来的过程方向
+
 1 调整agent的设计，使得agent可以根据现在的context做分析而不仅根据用户当前发送给他的这一条信息。
 举个例子来讲的话 如果我通过穿搭API生成了一张图片 当用户直接在对话框中输入希望关于这一条件衣服穿搭
 反馈的时候,应该可以让其他的agent意识到用户讨论的是这一张图片
 2 在tool schema里面加入search 最好既可以支持文字,也可以支持图片
+
+---
+
+## V2.0 核心功能扩展：上下文感知与搜索工具
+
+基于 MVP 的成功验证，我们进入下一阶段，目标是让 Agent 更"聪明"，能理解对话的即时上下文，并赋予其搜索能力，同时严格遵循"避免过度工程化"的原则。
+
+### **1. 提升Agent的上下文感知能力**
+
+#### **问题陈述**
+
+当前Agent的分析主要基于用户的单次输入。如果用户刚生成一张穿搭图片，然后问："这套怎么样？" 或 "换个休闲风格的裤子"，Agent无法理解"这套"指的是刚刚生成的图片。
+
+#### **设计理念：极简短期上下文（Short-term Context）**
+
+我们将引入一个轻量级的`ChatContext`对象，由客户端负责维护和传递。它只记录当前会话中最重要的、即时的上下文信息，避免引入复杂的后端记忆数据库（如Redis）。
+
+#### **技术选型与权-衡 (Trade-offs)**
+
+| 方案 | 优点 | 缺点 | 结论 |
+| :--- | :--- | :--- | :--- |
+| **A. 客户端短期上下文 (本次选型)** | **零后端成本**、**实现极快**、完全满足当前需求、无额外技术栈 | 上下文随页面刷新丢失、不适用于跨设备场景 | **MVP最佳选择**。完美契合"不过度工程化"原则。 |
+| **B. 后端会话记忆 (如Redis)** | 上下文持久化、支持跨设备、可扩展性强 | 增加后端复杂度和维护成本、开发周期长 | **过度工程化**。在当前阶段没有必要。 |
+
+#### **实施计划**
+
+**Step 1: 在前端 `app/chat/page.tsx` 维护一个 `ChatContext` 状态**
+
+```typescript
+// app/chat/page.tsx
+
+// 1. 定义上下文状态
+const [chatContext, setChatContext] = useState({
+  lastUserMessage: null,
+  lastAgentResponse: null,
+  lastImageUrl: null, // 可以是用户上传的，也可以是刚生成的
+});
+
+// 2. 在每次交互后更新上下文
+const handleSendMessage = async (message: string, imageUrl?: string) => {
+  // ... existing logic ...
+
+  // 更新上下文
+  setChatContext({
+    lastUserMessage: message,
+    lastAgentResponse: null, // 等待AI回复后更新
+    lastImageUrl: imageUrl || chatContext.lastImageUrl, // 继承或更新图片
+  });
+
+  const aiResponse = await handleFreeChat(message, imageUrl, chatContext); // 传递上下文
+
+  // AI回复后再次更新
+  setChatContext(prev => ({ ...prev, lastAgentResponse: aiResponse.content }));
+};
+
+// 当图片生成完成后，也需要更新上下文
+const onGenerationComplete = (generatedImageUrl: string) => {
+  setChatContext(prev => ({ ...prev, lastImageUrl: generatedImageUrl }));
+};
+```
+
+**Step 2: 修改API和Agent以接收和使用 `ChatContext`**
+
+```typescript
+// app/api/chat/simple/route.ts
+// 从请求体中解析 context
+const { message, sessionId, imageUrl, context } = await request.json();
+// 将 context 传给 agent.chat
+const { aiResponse, agentInfo } = await agent.chat(message, imageUrl, context);
+
+
+// lib/chat-agent.ts
+// chat 方法增加 context 参数
+public async chat(message: string, imageUrl?: string, context?: any) {
+
+  let systemPrompt = selectedAgent.systemPrompt;
+
+  // 动态地将上下文注入到System Prompt中
+  if (context?.lastImageUrl) {
+    systemPrompt += `\n\n--- CURRENT CONTEXT ---
+- The user is likely referring to this image: ${context.lastImageUrl}
+- User's previous message: "${context.lastUserMessage || 'None'}"
+- Your previous response: "${context.lastAgentResponse || 'None'}"
+You MUST consider this context when replying. If the user's message is short, like "what about this?", it is almost certainly about the image provided in the context.`;
+  }
+
+  const systemMessage = new SystemMessage(systemPrompt);
+  // ... a lot of other code
+}
+```
+
+通过这种方式，我们用最小的改动，让Agent"看见"了最近发生的事情，从而能更智能地理解用户的意图。
+
+### **2. 为Agent添加搜索工具**
+
+#### **问题陈述**
+
+Agent的知识来源于其训练数据，无法获取最新的时尚潮流信息，也无法查询我们自己的商品或素材库。
+
+#### **设计理念：模拟驱动开发 (Mock-driven Development)**
+
+我们先完整定义`search`工具的接口（Schema），并让Agent学会何时调用它。后端先用一个**模拟（Mock）接口**来响应调用，返回固定的假数据。这使得前后端可以并行开发，并且能以零成本验证Agent与工具的交互逻辑。
+
+#### **技术选型与权-衡 (Trade-offs)**
+
+| 搜索后端方案 | 优点 | 缺点 | 结论 |
+| :--- | :--- | :--- | :--- |
+| **A. 模拟接口 (本次选型)** | **零成本**、**即时验证Agent逻辑**、无需任何后端开发 | 返回数据是固定的，不是真实搜索结果 | **MVP最佳选择**。先验证流程，再投入实现。 |
+| **B. 关键词/SQL搜索 (如Vercel KV)** | 简单真实、实现较快 | 功能有限，无法处理复杂的语义或图片搜索 | **第二阶段可选**。适合简单的商品库文本搜索。 |
+| **C. 向量数据库 (如Pinecone, Zilliz)** | **功能强大**，支持文搜图、图搜图 | **技术复杂**、成本高、需要额外维护 | **过度工程化**。仅在业务明确需要高级搜索时考虑。 |
+
+#### **实施计划**
+
+**Step 1: 在 `lib/chat-agent.ts` 中定义 `searchTool` Schema**
+
+```typescript
+// lib/chat-agent.ts
+
+// 1. 定义搜索工具 Schema
+const searchTool = {
+  type: "function",
+  function: {
+    name: "search_fashion_items",
+    description: "在内部商品库或时尚数据库中搜索相关的服装、配饰或潮流信息。当用户想寻找特定物品、类似款式或查询最新潮流时使用。",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "用户的搜索查询文本，例如：'80年代复古风格的牛仔夹克' 或 '夏季沙滩派对穿搭'。",
+        },
+        imageUrl: {
+          type: "string",
+          description: "（可选）用户提供的图片URL，用于以图搜图，寻找相似款式的商品。",
+        }
+      },
+      required: ["query"],
+    }
+  }
+};
+
+// 2. 将 searchTool 添加到 agent 的可用工具列表
+if (imageUrl) {
+  llmOptions.tools = [analyzeImageTool, searchTool]; // 同时提供两个工具
+  // ...
+} else {
+  llmOptions.tools = [searchTool];
+}
+```
+
+**Step 2: 更新Agent的System Prompt，指导其使用新工具**
+
+```typescript
+// lib/chat-agent.ts -> AGENTS.style.systemPrompt
+systemPrompt: `你是专业的穿搭顾问小雅...
+...
+- 如果用户想寻找特定商品或潮流（例如 "帮我找找看..."、"有什么推荐的..."），请使用 \`search_fashion_items\` 工具来获取信息，然后基于搜索结果给出建议。`
+```
+
+**Step 3: 在 `chat` 方法中处理 `search_fashion_items` 的调用**
+
+```typescript
+// lib/chat-agent.ts -> chat() method
+
+if (firstResponse.tool_calls && firstResponse.tool_calls.length > 0) {
+  const toolCall = firstResponse.tool_calls[0];
+  const toolFunctionName = toolCall.name;
+
+  let toolOutput = "";
+
+  if (toolFunctionName === "analyze_outfit_image") {
+    // ... 已有的图片分析逻辑 ...
+    toolOutput = JSON.stringify(toolCall.args);
+  }
+  else if (toolFunctionName === "search_fashion_items") {
+    console.log(`[ChatAgent] Executing MOCK search for:`, toolCall.args);
+    // 这是模拟搜索的关键！我们直接返回一个硬编码的JSON字符串。
+    const mockSearchResults = {
+      items: [
+        { id: 'item123', name: '复古水洗牛仔夹克', price: '¥499', score: 0.92, imageUrl: '/images/mock-jacket.jpg' },
+        { id: 'item456', name: '经典款牛仔外套', price: '¥399', score: 0.88, imageUrl: '/images/mock-jacket-2.jpg' },
+      ],
+      summary: "找到了2款高匹配度的复古牛仔夹克。"
+    };
+    toolOutput = JSON.stringify(mockSearchResults);
+  }
+
+  // 后续流程（创建ToolMessage，再次调用LLM）保持不变
+  // ...
+}
+```
+
+通过这三步，我们构建了一个功能完整的、可测试的搜索流程，而无需编写一行真正的搜索后端代码。这让我们能快速验证这个功能对用户体验的提升，并为未来的真实实现铺平了道路。
