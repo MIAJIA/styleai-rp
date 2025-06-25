@@ -62,6 +62,32 @@ const analyzeImageTool = {
   }
 };
 
+// 2. Define search tool Schema for fashion items and trends
+const searchTool = {
+  type: "function",
+  function: {
+    name: "search_fashion_items",
+    // Original Chinese: "在内部商品库或时尚数据库中搜索相关的服装、配饰或潮流信息。当用户想寻找特定物品、类似款式或查询最新潮流时使用。"
+    description: "Search for clothing, accessories, or fashion trend information in our internal product database. Use when users want to find specific items, similar styles, or query latest trends.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          // Original Chinese: "用户的搜索查询文本，例如：'80年代复古风格的牛仔夹克' 或 '夏季沙滩派对穿搭'。"
+          description: "User's search query text, e.g., '80s vintage style denim jacket' or 'summer beach party outfit'.",
+        },
+        imageUrl: {
+          type: "string",
+          // Original Chinese: "（可选）用户提供的图片URL，用于以图搜图，寻找相似款式的商品。"
+          description: "(Optional) User-provided image URL for visual similarity search to find similar style products.",
+        }
+      },
+      required: ["query"],
+    }
+  }
+};
+
 // 2. Create Agent configuration constants
 const AGENTS: Record<string, AgentConfig> = {
   style: {
@@ -82,7 +108,9 @@ Key Behaviors:
 • Offer visual language (e.g., "try a high-waisted A-line skirt to highlight your waist").
 • Invite the user to ask for more details if they're curious.
 
-When users upload images, please use the \`analyze_outfit_image\` tool to assist your analysis, then provide recommendations based on the analysis results and your professional knowledge.
+Tool Usage:
+• When users upload images, use the \`analyze_outfit_image\` tool to assist your analysis, then provide recommendations based on the analysis results and your professional knowledge.
+• When users want to find specific items, similar styles, or ask for shopping recommendations (e.g., "help me find...", "where can I get...", "show me some..."), use the \`search_fashion_items\` tool to search our product database, then provide personalized recommendations based on the results.
 
 ➤ Always prioritize actionable takeaways in a friendly tone. This is a conversation—not a report. Keep it focused and approachable, and expand only if the user asks.`,
     // Original Chinese keywords: ['穿搭', '搭配', '造型', '风格', '衣服', '服装', '时尚']
@@ -106,7 +134,9 @@ Key Behaviors:
 • Use vivid, sensory language to make colors feel tangible and exciting.
 • Let curiosity drive the deeper dive.
 
-When users upload images, please use the \`analyze_outfit_image\` tool to assist your analysis, then provide professional advice focusing on color matching and skin tone compatibility.
+Tool Usage:
+• When users upload images, use the \`analyze_outfit_image\` tool to assist your analysis, then provide professional advice focusing on color matching and skin tone compatibility.
+• When users ask for color-specific items or want to find products in certain shades (e.g., "find me a coral blouse", "show me burgundy accessories"), use the \`search_fashion_items\` tool to find matching products, then provide color advice based on the results.
 
 ➤ Always prioritize actionable takeaways in a friendly tone. This is a conversation—not a report. Keep it focused and approachable, and expand only if the user asks.`,
     // Original Chinese keywords: ['颜色', '色彩', '配色', '肤色', '色调', '色系']
@@ -130,7 +160,9 @@ Key Behaviors:
 • Clarify formality and styling with minimal jargon.
 • Let the user steer deeper exploration if they want.
 
-When users upload images, please use the \`analyze_outfit_image\` tool to assist your analysis, then focus on evaluating the occasion suitability of the outfit.
+Tool Usage:
+• When users upload images, use the \`analyze_outfit_image\` tool to assist your analysis, then focus on evaluating the occasion suitability of the outfit.
+• When users ask for occasion-specific recommendations (e.g., "what should I wear to...", "help me find something for..."), use the \`search_fashion_items\` tool to find appropriate items, then provide occasion-specific styling advice based on the results.
 
 ➤ Always prioritize actionable takeaways in a friendly tone. This is a conversation—not a report. Keep it focused and approachable, and expand only if the user asks.`,
     // Original Chinese keywords: ['约会', '上班', '工作', '聚会', '场合', '婚礼', '面试', '职场', '正式', '休闲']
@@ -239,9 +271,11 @@ export class ChatAgent {
 
     const llmOptions: any = {};
     if (shouldUseImageTool) {
-      llmOptions.tools = [analyzeImageTool];
-      llmOptions.tool_choice = { type: "function", function: { name: "analyze_outfit_image" } };
-      console.log('[ChatAgent] Image detected (current or context). Adding image analysis tool to LLM call.');
+      llmOptions.tools = [analyzeImageTool, searchTool]; // Provide both tools when image is available
+      console.log('[ChatAgent] Image detected (current or context). Adding image analysis and search tools to LLM call.');
+    } else {
+      llmOptions.tools = [searchTool]; // Only search tool when no image
+      console.log('[ChatAgent] No image detected. Adding search tool to LLM call.');
     }
 
     const firstResponse = await this.llm.invoke(messages, llmOptions);
@@ -267,8 +301,123 @@ export class ChatAgent {
       const toolCallId = toolCall.id;
       const toolFunctionName = toolCall.name;
       const toolArgs = toolCall.args;
-      const toolOutput = JSON.stringify(toolArgs);
-      console.log(`[ChatAgent] Simulated tool output for "${toolFunctionName}":`, toolOutput);
+      let toolOutput = "";
+
+      // Handle different tool calls
+      if (toolFunctionName === "analyze_outfit_image") {
+        console.log(`[ChatAgent] Executing image analysis for outfit analysis`);
+        toolOutput = JSON.stringify(toolArgs);
+      }
+      else if (toolFunctionName === "search_fashion_items") {
+        console.log(`[ChatAgent] Executing MOCK search for:`, toolArgs);
+        // Mock search results based on query content
+        const query = toolArgs.query?.toLowerCase() || '';
+        const imageUrl = toolArgs.imageUrl;
+
+        let mockSearchResults;
+
+        // Generate different mock results based on query content
+        if (query.includes('jacket') || query.includes('夹克') || query.includes('外套')) {
+          mockSearchResults = {
+            items: [
+              {
+                id: 'jacket001',
+                name: 'Vintage Denim Jacket',
+                price: '$89',
+                score: 0.95,
+                imageUrl: '/images/mock-denim-jacket.jpg',
+                description: 'Classic 80s-inspired denim jacket with perfect fading'
+              },
+              {
+                id: 'jacket002',
+                name: 'Oversized Blazer',
+                price: '$129',
+                score: 0.88,
+                imageUrl: '/images/mock-blazer.jpg',
+                description: 'Contemporary oversized blazer in neutral tones'
+              },
+            ],
+            summary: "Found 2 highly matching jackets that fit your style preferences.",
+            searchType: imageUrl ? "visual_similarity" : "text_search"
+          };
+        } else if (query.includes('dress') || query.includes('裙子') || query.includes('连衣裙')) {
+          mockSearchResults = {
+            items: [
+              {
+                id: 'dress001',
+                name: 'Midi Wrap Dress',
+                price: '$75',
+                score: 0.92,
+                imageUrl: '/images/mock-wrap-dress.jpg',
+                description: 'Flattering wrap style in flowing fabric'
+              },
+              {
+                id: 'dress002',
+                name: 'A-Line Summer Dress',
+                price: '$65',
+                score: 0.89,
+                imageUrl: '/images/mock-summer-dress.jpg',
+                description: 'Light and breezy for warm weather occasions'
+              },
+            ],
+            summary: "Found 2 beautiful dresses perfect for your occasions.",
+            searchType: imageUrl ? "visual_similarity" : "text_search"
+          };
+        } else if (query.includes('color') || query.includes('颜色') || query.includes('coral') || query.includes('burgundy')) {
+          mockSearchResults = {
+            items: [
+              {
+                id: 'color001',
+                name: 'Coral Silk Blouse',
+                price: '$95',
+                score: 0.94,
+                imageUrl: '/images/mock-coral-blouse.jpg',
+                description: 'Vibrant coral that complements warm undertones'
+              },
+              {
+                id: 'color002',
+                name: 'Burgundy Cashmere Sweater',
+                price: '$145',
+                score: 0.91,
+                imageUrl: '/images/mock-burgundy-sweater.jpg',
+                description: 'Rich burgundy perfect for autumn styling'
+              },
+            ],
+            summary: "Found 2 items in your requested color palette.",
+            searchType: "color_focused"
+          };
+        } else {
+          // Default/general search results
+          mockSearchResults = {
+            items: [
+              {
+                id: 'trend001',
+                name: 'Trending Knit Top',
+                price: '$55',
+                score: 0.87,
+                imageUrl: '/images/mock-knit-top.jpg',
+                description: 'On-trend textured knit in versatile styling'
+              },
+              {
+                id: 'trend002',
+                name: 'Statement Accessories Set',
+                price: '$35',
+                score: 0.84,
+                imageUrl: '/images/mock-accessories.jpg',
+                description: 'Curated accessories to elevate any outfit'
+              },
+            ],
+            summary: "Found 2 trending items that match your search.",
+            searchType: "general_search"
+          };
+        }
+
+        toolOutput = JSON.stringify(mockSearchResults);
+        console.log(`[ChatAgent] Mock search completed. Returned ${mockSearchResults.items.length} items.`);
+      } else {
+        console.warn(`[ChatAgent] Unknown tool function: ${toolFunctionName}`);
+        toolOutput = JSON.stringify({ error: "Unknown tool function" });
+      }
 
       const toolMessage = new ToolMessage({
         tool_call_id: toolCallId,
