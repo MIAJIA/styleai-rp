@@ -986,6 +986,26 @@ Let's start chatting about styling now~`,
               setIntermediateImageDisplayed(true);
               processedStatusesRef.current.add("stylization_completed");
 
+              // 🆕 ADD: Notify ChatAgent about the styled image for context
+              try {
+                const sessionId = localStorage.getItem("chat_session_id");
+                if (sessionId) {
+                  console.log("[ChatPage] Adding styled image to ChatAgent context:", styledImageUrl);
+                  await fetch("/api/chat/simple", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      sessionId,
+                      imageUrl: styledImageUrl,
+                      action: 'add_generated_image'
+                    }),
+                  });
+                  console.log("[ChatPage] Styled image successfully added to ChatAgent context");
+                }
+              } catch (error) {
+                console.error("[ChatPage] Failed to add styled image to ChatAgent context:", error);
+              }
+
               replaceLastLoadingMessage({
                 role: "ai",
                 type: "text",
@@ -1024,8 +1044,31 @@ Let's start chatting about styling now~`,
               setIsShowingWaitingTips(false);
               isShowingWaitingTipsRef.current = false;
 
-              const showCompletion = () => {
+              const showCompletion = async () => {
                 console.log("[POLLING] Generation completed successfully!");
+
+                // 🆕 ADD: Notify ChatAgent about the generated image for context
+                const generatedImageUrl = data.result?.imageUrl;
+                if (generatedImageUrl) {
+                  try {
+                    const sessionId = localStorage.getItem("chat_session_id");
+                    if (sessionId) {
+                      console.log("[ChatPage] Adding generated image to ChatAgent context:", generatedImageUrl);
+                      await fetch("/api/chat/simple", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          sessionId,
+                          imageUrl: generatedImageUrl,
+                          action: 'add_generated_image'
+                        }),
+                      });
+                      console.log("[ChatPage] Generated image successfully added to ChatAgent context");
+                    }
+                  } catch (error) {
+                    console.error("[ChatPage] Failed to add generated image to ChatAgent context:", error);
+                  }
+                }
 
                 // Replace loading message with success message
                 replaceLastLoadingMessage({
@@ -1051,7 +1094,7 @@ Let's start chatting about styling now~`,
               };
 
               // 优化：移除等待机制，立即显示最终图片，不等待建议显示完成
-              showCompletion();
+              await showCompletion();
             }
             break;
 
