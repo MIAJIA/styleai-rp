@@ -20,6 +20,9 @@ import StyleSummaryStep from "../components/onboarding/style-summary-step";
 
 const TOTAL_STEPS = 4;
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({});

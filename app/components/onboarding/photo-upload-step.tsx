@@ -1,12 +1,26 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Camera, X, CheckCircle, Info } from "lucide-react";
+import { Camera, X, CheckCircle, Info, Loader2 } from "lucide-react";
 import { OnboardingData } from "@/lib/onboarding-storage";
 import { useImageCompression } from "@/lib/hooks/use-image-compression";
-import { SmartImageUploader } from "@/components/smart-image-uploader";
+
+// Dynamically import SmartImageUploader to prevent SSR issues
+const SmartImageUploader = dynamic(
+  () => import('@/components/smart-image-uploader').then(mod => ({ default: mod.SmartImageUploader })),
+  {
+    ssr: false,
+    loading: () => (
+      <Card className="p-6 text-center">
+        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-500" />
+        <p className="text-sm text-gray-600">Loading uploader...</p>
+      </Card>
+    )
+  }
+);
 
 interface PhotoUploadStepProps {
   data: OnboardingData;
@@ -119,6 +133,11 @@ export default function PhotoUploadStep({
     maxWidth = 1000,
     quality = 0.75,
   ): Promise<string> => {
+    // Only run on client side
+    if (typeof window === 'undefined') {
+      throw new Error('Image compression is only available on the client side');
+    }
+
     return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
