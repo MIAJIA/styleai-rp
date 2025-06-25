@@ -29,11 +29,11 @@ export default function MigrationTool() {
     setMigration(prev => ({ ...prev, status: 'checking' }));
 
     try {
-      // 检查 localStorage 中的数据
+      // Check localStorage data
       const storedLooks = localStorage.getItem('pastLooks');
       const localLooks = storedLooks ? JSON.parse(storedLooks) : [];
 
-      // 检查数据库中的数据
+      // Check database data
       const response = await fetch('/api/looks?userId=default&limit=1000');
       const result = await response.json();
       const dbLooks = result.success ? result.looks : [];
@@ -78,7 +78,7 @@ export default function MigrationTool() {
       const result = await response.json();
 
       if (result.success) {
-        // 迁移成功，清空 localStorage
+        // Migration successful, clear localStorage
         localStorage.removeItem('pastLooks');
 
         setMigration(prev => ({
@@ -121,15 +121,15 @@ export default function MigrationTool() {
   const getStatusText = () => {
     switch (migration.status) {
       case 'checking':
-        return '正在检查数据...';
+        return 'Checking data...';
       case 'migrating':
-        return '正在迁移数据...';
+        return 'Migrating data...';
       case 'completed':
-        return '迁移完成';
+        return 'Migration complete';
       case 'error':
-        return '迁移失败';
+        return 'Migration failed';
       default:
-        return '数据迁移工具';
+        return 'Data Migration Tool';
     }
   };
 
@@ -141,45 +141,45 @@ export default function MigrationTool() {
           {getStatusText()}
         </CardTitle>
         <CardDescription>
-          将你的造型数据从本地存储迁移到云端数据库
+          Migrate your style data from local storage to cloud database
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* 数据状态显示 */}
+        {/* Data status display */}
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
               <Upload className="w-4 h-4 text-blue-500" />
-              <span className="text-sm font-medium">本地存储</span>
+              <span className="text-sm font-medium">Local Storage</span>
             </div>
             <Badge variant={migration.localStorageCount > 0 ? "default" : "secondary"}>
-              {migration.localStorageCount} 个造型
+              {migration.localStorageCount} styles
             </Badge>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
               <Database className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-medium">云端数据库</span>
+              <span className="text-sm font-medium">Cloud Database</span>
             </div>
             <Badge variant={migration.databaseCount > 0 ? "default" : "secondary"}>
-              {migration.databaseCount} 个造型
+              {migration.databaseCount} styles
             </Badge>
           </div>
         </div>
 
-        {/* 迁移结果 */}
+        {/* Migration results */}
         {migration.migrationResult && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <h4 className="font-medium text-green-800 mb-2">迁移结果</h4>
+            <h4 className="font-medium text-green-800 mb-2">Migration Results</h4>
             <div className="text-sm text-green-700 space-y-1">
-              <div>✅ 成功迁移: {migration.migrationResult.successCount} 个造型</div>
+              <div>✅ Successfully migrated: {migration.migrationResult.successCount} styles</div>
               {migration.migrationResult.failureCount > 0 && (
-                <div>❌ 失败: {migration.migrationResult.failureCount} 个造型</div>
+                <div>❌ Failed: {migration.migrationResult.failureCount} styles</div>
               )}
             </div>
             {migration.migrationResult.errors && migration.migrationResult.errors.length > 0 && (
               <details className="mt-2">
-                <summary className="text-xs text-green-600 cursor-pointer">查看错误详情</summary>
+                <summary className="text-xs text-green-600 cursor-pointer">View error details</summary>
                 <div className="mt-1 text-xs text-red-600 max-h-20 overflow-y-auto">
                   {migration.migrationResult.errors.map((error, index) => (
                     <div key={index}>• {error}</div>
@@ -190,18 +190,18 @@ export default function MigrationTool() {
           </div>
         )}
 
-        {/* 错误信息 */}
+        {/* Error message */}
         {migration.status === 'error' && migration.error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
               <AlertCircle className="w-4 h-4 text-red-500" />
-              <span className="font-medium text-red-800">错误</span>
+              <span className="font-medium text-red-800">Error</span>
             </div>
             <p className="text-sm text-red-700">{migration.error}</p>
           </div>
         )}
 
-        {/* 操作按钮 */}
+        {/* Action buttons */}
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -212,10 +212,10 @@ export default function MigrationTool() {
             {migration.status === 'checking' ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                检查中...
+                Checking...
               </>
             ) : (
-              '检查状态'
+              'Check Status'
             )}
           </Button>
 
@@ -228,20 +228,20 @@ export default function MigrationTool() {
               {migration.status === 'migrating' ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  迁移中...
+                  Migrating...
                 </>
               ) : (
-                '开始迁移'
+                'Start Migration'
               )}
             </Button>
           )}
         </div>
 
-        {/* 说明文字 */}
+        {/* Instructions */}
         <div className="text-xs text-gray-500 space-y-1">
-          <p>• 迁移会将本地数据上传到云端数据库</p>
-          <p>• 迁移完成后本地数据会被清空</p>
-          <p>• 云端存储不受浏览器清理影响</p>
+          <p>• Migration will upload local data to cloud database</p>
+          <p>• Local data will be cleared after successful migration</p>
+          <p>• Cloud storage is not affected by browser cleanup</p>
         </div>
       </CardContent>
     </Card>

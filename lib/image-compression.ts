@@ -1,6 +1,6 @@
 /**
- * 智能图像压缩服务 - SSR 兼容版本
- * 支持WebP、AVIF、JPEG格式自动检测和多级压缩策略
+ * Smart Image Compression Service - SSR Compatible Version
+ * Supports WebP, AVIF, JPEG format auto-detection and multi-level compression strategies
  */
 
 export interface ImageCompressionConfig {
@@ -36,9 +36,9 @@ export interface CompressionMetrics {
   deviceType: string;
 }
 
-// 预设压缩配置
+// Preset compression configurations
 export const COMPRESSION_PRESETS = {
-  // 聊天图片 - 平衡质量和速度
+  // Chat images - balance quality and speed
   chat: {
     maxWidth: 800,
     maxHeight: 600,
@@ -46,7 +46,7 @@ export const COMPRESSION_PRESETS = {
     format: 'auto' as const,
     fallbackFormat: 'image/jpeg' as const
   },
-  // 缩略图 - 优先速度
+  // Thumbnails - prioritize speed
   thumbnail: {
     maxWidth: 200,
     maxHeight: 200,
@@ -54,7 +54,7 @@ export const COMPRESSION_PRESETS = {
     format: 'auto' as const,
     fallbackFormat: 'image/jpeg' as const
   },
-  // 预览图 - 极限压缩
+  // Previews - extreme compression
   preview: {
     maxWidth: 100,
     maxHeight: 100,
@@ -62,7 +62,7 @@ export const COMPRESSION_PRESETS = {
     format: 'auto' as const,
     fallbackFormat: 'image/jpeg' as const
   },
-  // 高质量 - 用于重要图片
+  // High quality - for important images
   highQuality: {
     maxWidth: 1200,
     maxHeight: 1200,
@@ -72,7 +72,7 @@ export const COMPRESSION_PRESETS = {
   }
 } as const;
 
-// 客户端检测工具函数
+// Client-side detection utility functions
 function isClientSide(): boolean {
   return typeof window !== 'undefined' && typeof document !== 'undefined';
 }
@@ -82,7 +82,7 @@ export class SmartImageCompressor {
   private isInitialized: boolean = false;
 
   constructor() {
-    // 只在客户端初始化
+    // Initialize only on client side
     if (isClientSide()) {
       this.detectSupportedFormats();
       this.isInitialized = true;
@@ -90,7 +90,7 @@ export class SmartImageCompressor {
   }
 
   /**
-   * 检测浏览器支持的图像格式
+   * Detect browser-supported image formats
    */
   private detectSupportedFormats(): void {
     if (!isClientSide()) {
@@ -103,31 +103,31 @@ export class SmartImageCompressor {
       canvas.width = 1;
       canvas.height = 1;
 
-      // 检测WebP支持
+      // Detect WebP support
       if (canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0) {
         this.supportedFormats.add('image/webp');
       }
 
-      // 检测AVIF支持
+      // Detect AVIF support
       if (canvas.toDataURL('image/avif').indexOf('data:image/avif') === 0) {
         this.supportedFormats.add('image/avif');
       }
 
-      // JPEG和PNG始终支持
+      // JPEG and PNG are always supported
       this.supportedFormats.add('image/jpeg');
       this.supportedFormats.add('image/png');
 
       console.log('[ImageCompressor] Supported formats detected:', Array.from(this.supportedFormats));
     } catch (error) {
       console.warn('[ImageCompressor] Format detection failed, using fallback:', error);
-      // 降级支持
+      // Fallback support
       this.supportedFormats.add('image/jpeg');
       this.supportedFormats.add('image/png');
     }
   }
 
   /**
-   * 确保在客户端初始化
+   * Ensure initialization on client side
    */
   private ensureInitialized(): void {
     if (!this.isInitialized && isClientSide()) {
@@ -137,7 +137,7 @@ export class SmartImageCompressor {
   }
 
   /**
-   * 获取最优的图像格式
+   * Get the optimal image format
    */
   private getOptimalFormat(requestedFormat: string): string {
     this.ensureInitialized();
@@ -146,7 +146,7 @@ export class SmartImageCompressor {
       return this.supportedFormats.has(requestedFormat) ? requestedFormat : 'image/jpeg';
     }
 
-    // 按优先级选择最佳格式
+    // Select the best format based on priority
     if (this.supportedFormats.has('image/avif')) {
       return 'image/avif';
     } else if (this.supportedFormats.has('image/webp')) {
@@ -157,7 +157,7 @@ export class SmartImageCompressor {
   }
 
   /**
-   * 计算最优尺寸
+   * Calculate the optimal dimensions
    */
   private calculateOptimalDimensions(
     originalWidth: number,
@@ -167,7 +167,7 @@ export class SmartImageCompressor {
   ): { width: number; height: number } {
     const widthRatio = maxWidth / originalWidth;
     const heightRatio = maxHeight / originalHeight;
-    const ratio = Math.min(widthRatio, heightRatio, 1); // 不放大图片
+    const ratio = Math.min(widthRatio, heightRatio, 1); // Do not enlarge the image
 
     return {
       width: Math.round(originalWidth * ratio),
@@ -176,7 +176,7 @@ export class SmartImageCompressor {
   }
 
   /**
-   * 压缩图像 - 客户端安全版本
+   * Compress image - client-side safe version
    */
   async compressImage(
     file: File,
@@ -197,7 +197,7 @@ export class SmartImageCompressor {
 
       img.onload = () => {
         try {
-          // 计算最优尺寸
+          // Calculate optimal dimensions
           const dimensions = this.calculateOptimalDimensions(
             img.width,
             img.height,
@@ -205,10 +205,10 @@ export class SmartImageCompressor {
             config.maxHeight
           );
 
-          // 选择最优格式
+          // Select the optimal format
           const optimalFormat = this.getOptimalFormat(config.format);
 
-          // 创建Canvas并压缩
+          // Create Canvas and compress
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
 
@@ -220,10 +220,10 @@ export class SmartImageCompressor {
           canvas.width = dimensions.width;
           canvas.height = dimensions.height;
 
-          // 绘制图像
+          // Draw image
           ctx.drawImage(img, 0, 0, dimensions.width, dimensions.height);
 
-          // 转换为Blob
+          // Convert to Blob
           canvas.toBlob(
             (blob) => {
               if (!blob) {
@@ -231,7 +231,7 @@ export class SmartImageCompressor {
                 return;
               }
 
-              // 创建DataURL
+              // Create DataURL
               const reader = new FileReader();
               reader.onloadend = () => {
                 const processingTime = performance.now() - startTime;
@@ -249,7 +249,7 @@ export class SmartImageCompressor {
                   processingTime
                 };
 
-                // 记录压缩指标
+                // Record compression metrics
                 this.trackCompression({
                   processingTime,
                   originalSize,
@@ -285,7 +285,7 @@ export class SmartImageCompressor {
   }
 
   /**
-   * 批量压缩图像
+   * Batch compress images
    */
   async compressImages(
     files: File[],
@@ -309,7 +309,7 @@ export class SmartImageCompressor {
         results.push(result);
       } catch (error) {
         console.error(`Failed to compress ${file.name}:`, error);
-        // 继续处理其他文件
+        // Continue processing other files
       }
     }
 
@@ -321,20 +321,20 @@ export class SmartImageCompressor {
   }
 
   /**
-   * 验证压缩质量是否可接受
+   * Verify if compression quality is acceptable
    */
   isQualityAcceptable(result: CompressedImageResult): boolean {
     return (
-      result.compressionRatio > 0.1 && // 至少10%压缩
-      result.compressionRatio < 0.95 && // 不超过95%压缩
-      result.dimensions.width >= 50 && // 最小宽度
-      result.dimensions.height >= 50 && // 最小高度
-      result.compressedSize > 1000 // 最小文件大小1KB
+      result.compressionRatio > 0.1 && // At least 10% compression
+      result.compressionRatio < 0.95 && // No more than 95% compression
+      result.dimensions.width >= 50 && // Minimum width
+      result.dimensions.height >= 50 && // Minimum height
+      result.compressedSize > 1000 // Minimum file size 1KB
     );
   }
 
   /**
-   * 获取浏览器支持的格式列表
+   * Get browser-supported format list
    */
   getSupportedFormats(): string[] {
     this.ensureInitialized();
@@ -342,13 +342,13 @@ export class SmartImageCompressor {
   }
 
   /**
-   * 记录压缩指标
+   * Record compression metrics
    */
   private trackCompression(metrics: CompressionMetrics): void {
-    // 发送到分析服务或本地存储
+    // Send to analysis service or local storage
     console.log('Compression metrics:', metrics);
 
-    // 可以集成Analytics服务
+    // Can integrate Analytics service
     if (isClientSide() && (window as any).gtag) {
       (window as any).gtag('event', 'image_compression', {
         custom_map: {
@@ -361,7 +361,7 @@ export class SmartImageCompressor {
   }
 
   /**
-   * 获取设备类型
+   * Get device type
    */
   private getDeviceType(): string {
     if (!isClientSide()) {
@@ -379,7 +379,7 @@ export class SmartImageCompressor {
   }
 }
 
-// 懒加载单例实例
+// Lazy load singleton instance
 let _imageCompressor: SmartImageCompressor | null = null;
 
 function getImageCompressor(): SmartImageCompressor {
@@ -394,7 +394,7 @@ function getImageCompressor(): SmartImageCompressor {
   return _imageCompressor;
 }
 
-// 便捷方法 - 客户端安全版本
+// Convenient method - client-side safe version
 export async function compressForChat(file: File): Promise<CompressedImageResult> {
   return getImageCompressor().compressImage(file, COMPRESSION_PRESETS.chat);
 }

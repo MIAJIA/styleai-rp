@@ -45,7 +45,7 @@ type ChatMessage = {
   imageUrl?: string;
   loadingText?: string;
   timestamp: Date;
-  agentInfo?: { // 👈 **请手动添加这部分**
+  agentInfo?: { // 👈 **Please manually add this section**
     id: string;
     name: string;
     emoji: string;
@@ -276,22 +276,22 @@ export default function ChatPage() {
 
     console.log(`[ChatPage] Image selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
 
-    // 文件类型检查
+    // File type check
     if (!file.type.startsWith('image/')) {
-      alert('请选择图片文件');
+      alert('Please select an image file');
       return;
     }
 
-    // 文件大小预警
+    // File size warning
     if (file.size > 50 * 1024 * 1024) { // >50MB
-      alert('图片过大(>50MB)，请选择更小的图片');
+      alert('Image too large (>50MB), please select a smaller image');
       return;
     }
 
     setIsImageProcessing(true);
 
     try {
-      // 根据文件大小选择压缩策略
+      // Choose compression strategy based on file size
       let compressionResult;
       if (file.size > 10 * 1024 * 1024) { // >10MB
         console.log('[ChatPage] Using aggressive compression for large file');
@@ -304,30 +304,30 @@ export default function ChatPage() {
         compressionResult = await import('@/lib/image-compression').then(m => m.compressForChat(file));
       }
 
-      console.log(`[ChatPage] 图片压缩完成: ${(file.size / 1024).toFixed(1)}KB → ${(compressionResult.compressedSize / 1024).toFixed(1)}KB (减少${(compressionResult.compressionRatio * 100).toFixed(1)}%)`);
+      console.log(`[ChatPage] Image compression complete: ${(file.size / 1024).toFixed(1)}KB → ${(compressionResult.compressedSize / 1024).toFixed(1)}KB (reduced ${(compressionResult.compressionRatio * 100).toFixed(1)}%)`);
 
       setStagedImage(compressionResult.dataUrl);
 
-      // 显示压缩结果给用户
+      // Show compression result to user
       if (compressionResult.compressionRatio > 0.5) {
-        console.log(`[ChatPage] 图片已优化: 大小减少${(compressionResult.compressionRatio * 100).toFixed(1)}%，提升传输速度`);
+        console.log(`[ChatPage] Image optimized: size reduced ${(compressionResult.compressionRatio * 100).toFixed(1)}%, improved transmission speed`);
       }
 
     } catch (error) {
-      console.error('[ChatPage] 图片压缩失败:', error);
+      console.error('[ChatPage] Image compression failed:', error);
 
-      // 降级处理：对于小图片，仍然允许使用原图
+      // Fallback: for small images, still allow using original
       if (file.size < 5 * 1024 * 1024) { // <5MB
-        console.log('[ChatPage] 压缩失败，使用原图');
+        console.log('[ChatPage] Compression failed, using original image');
         const reader = new FileReader();
         reader.onloadend = () => {
           const result = reader.result as string;
-          console.log('[ChatPage] 原图 Data URL 长度:', result.length);
+          console.log('[ChatPage] Original image Data URL length:', result.length);
           setStagedImage(result);
         };
         reader.readAsDataURL(file);
       } else {
-        alert('图片处理失败，请重试或选择更小的图片');
+        alert('Image processing failed, please try again or select a smaller image');
       }
     } finally {
       setIsImageProcessing(false);
@@ -398,20 +398,20 @@ export default function ChatPage() {
           createMessage({
             type: "text",
             role: "ai",
-            content: `👋 您好！我是您的专业AI穿搭顾问！
+            content: `👋 Hello! I'm your professional AI styling consultant!
 
-我看到您已经准备好了照片和服装，太棒了！
+I see you've already prepared your photos and clothing, that's great!
 
-💬 **您可以：**
-• 直接说"帮我试穿"或"生成穿搭效果"来开始图像生成
-• 问我任何穿搭相关的问题
-• 讨论颜色搭配、风格分析等话题
+💬 **You can:**
+• Say "Help me try on" or "Generate styling effect" to start image generation
+• Ask me any styling-related questions
+• Discuss color matching, style analysis, and other topics
 
-🎨 **智能生成**：当您提到试穿、搭配、生成等关键词时，我会自动为您创建专属的穿搭效果图！
+🎨 **Smart Generation**: When you mention try-on, styling, generation, and other keywords, I'll automatically create exclusive styling effect images for you!
 
-有什么想了解的吗？`,
+What would you like to know about?`,
             metadata: {
-              suggestions: ['帮我试穿这件衣服', '分析我的穿搭风格', '推荐搭配建议', '颜色搭配技巧']
+              suggestions: ['Help me try on this outfit', 'Analyze my styling style', 'Recommend styling suggestions', 'Color matching tips']
             }
           }),
         );
@@ -425,21 +425,21 @@ export default function ChatPage() {
           id: `msg-${Date.now()}-1`,
           type: "text",
           role: "ai",
-          content: `👋 您好！我是您的专业AI穿搭顾问！
+          content: `👋 Hello! I'm your professional AI styling consultant!
 
-💬 **我可以帮您：**
-• 分析穿搭风格和色彩搭配
-• 提供不同场合的着装建议
-• 解答时尚穿搭问题
-• 推荐时尚单品和搭配技巧
+💬 **I can help you with:**
+• Analyzing styling and color matching
+• Providing outfit advice for different occasions
+• Answering fashion styling questions
+• Recommending fashion items and styling tips
 
-🎨 **想要生成穿搭效果图？**
-请先返回首页上传您的照片和想要试穿的服装，然后回来告诉我"帮我试穿"！
+🎨 **Want to generate styling effect images?**
+Please first return to the homepage to upload your photos and clothing you want to try on, then come back and tell me "Help me try on"!
 
-现在就开始聊穿搭吧～`,
+Let's start chatting about styling now~`,
           timestamp: new Date(),
           metadata: {
-            suggestions: ['返回首页上传照片', '穿搭风格分析', '颜色搭配原理', '场合着装建议']
+            suggestions: ['Return to homepage to upload photos', 'Styling analysis', 'Color matching principles', 'Occasion outfit advice']
           }
         };
         setMessages([defaultMessage]);
@@ -473,21 +473,26 @@ export default function ChatPage() {
   const replaceLastLoadingMessage = (message: Omit<ChatMessage, "id" | "timestamp">) => {
     setMessages((prevMessages) => {
       const newMessages = [...prevMessages];
-      // Find the index of the last loading message
-      const lastLoadingIndex = newMessages.map(m => m.type).lastIndexOf('loading');
+      // Use traditional method to find the last loading message
+      const loadingMessageIndex = newMessages.map(m => m.type).lastIndexOf('loading');
 
-      if (lastLoadingIndex !== -1) {
-        // Replace the loading message with the new message
-        newMessages[lastLoadingIndex] = {
+      if (loadingMessageIndex !== -1) {
+        // Replace the existing loading message
+        newMessages[loadingMessageIndex] = {
           ...message,
-          id: newMessages[lastLoadingIndex].id, // Keep the same ID for smooth UI updates
-          timestamp: new Date(),
+          id: generateUniqueId(),
+          timestamp: new Date()
         };
-        return newMessages;
+      } else {
+        // Add new message if no loading message found
+        newMessages.push({
+          ...message,
+          id: generateUniqueId(),
+          timestamp: new Date()
+        });
       }
 
-      // If for some reason no loading message is found, just add the new message
-      return [...newMessages, { ...message, id: generateUniqueId(), timestamp: new Date() }];
+      return newMessages;
     });
   };
 
@@ -511,7 +516,7 @@ export default function ChatPage() {
     addMessage({
       type: "loading",
       role: "ai",
-      loadingText: "思考中...",
+      loadingText: "Thinking...",
     });
 
     // Pass the captured image to the chat handler
@@ -526,7 +531,7 @@ export default function ChatPage() {
       replaceLastLoadingMessage({
         type: "text",
         role: "ai",
-        content: "抱歉，会话已过期，请刷新页面重试。",
+        content: "Sorry, the session has expired. Please refresh the page and try again.",
       });
       return;
     }
@@ -548,19 +553,19 @@ export default function ChatPage() {
       const data = await response.json();
       console.log('[ChatPage] Received response from API:', data);
 
-      // 🔍 添加详细的agentInfo调试日志
-      console.log('🤖 [AGENT DEBUG] API返回的agentInfo:', data.agentInfo);
-      console.log('🤖 [AGENT DEBUG] agentInfo类型:', typeof data.agentInfo);
-      console.log('🤖 [AGENT DEBUG] agentInfo内容:', JSON.stringify(data.agentInfo, null, 2));
+      // 🔍 Add detailed agentInfo debug logs
+      console.log('🤖 [AGENT DEBUG] API returned agentInfo:', data.agentInfo);
+      console.log('🤖 [AGENT DEBUG] agentInfo type:', typeof data.agentInfo);
+      console.log('🤖 [AGENT DEBUG] agentInfo content:', JSON.stringify(data.agentInfo, null, 2));
 
       if (data.agentInfo) {
-        console.log('✅ [AGENT DEBUG] agentInfo存在:', {
+        console.log('✅ [AGENT DEBUG] agentInfo exists:', {
           id: data.agentInfo.id,
           name: data.agentInfo.name,
           emoji: data.agentInfo.emoji
         });
       } else {
-        console.warn('❌ [AGENT DEBUG] agentInfo不存在或为空');
+        console.warn('❌ [AGENT DEBUG] agentInfo does not exist or is empty');
       }
 
       if (!response.ok) {
@@ -578,15 +583,15 @@ export default function ChatPage() {
         }
       });
 
-      // 🔍 添加消息添加后的调试日志
-      console.log('📝 [AGENT DEBUG] 消息已添加，agentInfo应该显示:', data.agentInfo);
+      // 🔍 Add debug log after message addition
+      console.log('📝 [AGENT DEBUG] Message added, agentInfo should display:', data.agentInfo);
 
     } catch (error: any) {
       console.error("[ChatPage] Free chat API error:", error);
       replaceLastLoadingMessage({
         type: "text",
         role: "ai",
-        content: `抱歉，出了一点问题：${error.message}`,
+        content: `Sorry, something went wrong: ${error.message}`,
       });
     }
   };
@@ -594,21 +599,21 @@ export default function ChatPage() {
   const generateSmartSuggestions = (aiResponse: string): string[] => {
     const suggestions: string[] = [];
 
-    if (aiResponse.includes('颜色') || aiResponse.includes('色彩')) {
-      suggestions.push('色彩搭配技巧');
+    if (aiResponse.includes('color') || aiResponse.includes('matching')) {
+      suggestions.push('Different occasion styling');
     }
-    if (aiResponse.includes('场合') || aiResponse.includes('约会') || aiResponse.includes('工作')) {
-      suggestions.push('不同场合穿搭');
+    if (aiResponse.includes('occasion') || aiResponse.includes('date') || aiResponse.includes('work')) {
+      suggestions.push('Different occasion styling');
     }
-    if (aiResponse.includes('风格') || aiResponse.includes('款式')) {
-      suggestions.push('风格分析');
+    if (aiResponse.includes('style') || aiResponse.includes('style analysis')) {
+      suggestions.push('Style analysis');
     }
-    if (aiResponse.includes('搭配') || aiResponse.includes('组合')) {
-      suggestions.push('搭配建议');
+    if (aiResponse.includes('styling') || aiResponse.includes('styling suggestions')) {
+      suggestions.push('Styling suggestions');
     }
 
     // Add some general suggestions
-    suggestions.push('时尚趋势', '购物建议');
+    suggestions.push('Fashion trends', 'Shopping advice');
 
     return suggestions.slice(0, 4); // Limit to 4 suggestions
   };
@@ -623,109 +628,36 @@ export default function ChatPage() {
   };
 
   const displayWaitingTips = async () => {
-    console.log("[PERF] 🎭 WAITING TIPS STARTED");
-    setIsShowingWaitingTips(true);
-    isShowingWaitingTipsRef.current = true;
-
-    // Fashion tips and generation progress library
-    const fashionTips = [
-      "💡 Tip: Angle your body 45 degrees for more flattering silhouettes!",
-      "✨ Style Secret: Mix different shades of the same color for depth!",
-      "🌟 Photo Hack: Natural lighting makes your skin glow beautifully!",
-      "💫 Styling Tip: Keep accessories to 3 or less for a clean look!",
-      "🎨 Color Theory: Warm tones appear friendly, cool tones look professional!",
-      "👗 Fashion Rule: A belt can instantly define your waistline!",
-      "💄 Beauty Tip: Match your lipstick undertone to your outfit's mood!",
-      "🌈 Pattern Play: Mix patterns by keeping one element consistent!",
-      "👠 Shoe Game: Nude shoes elongate your legs instantly!",
-      "💎 Jewelry Wisdom: Layer necklaces in odd numbers for visual interest!",
-      "🧥 Layering Art: Start with fitted pieces, add loose layers on top!",
-      "👜 Bag Balance: Large bags with fitted outfits, small bags with flowy looks!",
-      "🌸 Seasonal Style: Pastels in spring, jewel tones in fall!",
-      "✂️ Fit First: Perfect fit matters more than designer labels!",
-      "🎭 Confidence Boost: Good posture is your best accessory!",
-      "🌟 Mirror Magic: Check your outfit from all angles before leaving!",
-      "💝 Color Pop: Add one bright accent to neutral outfits!",
-      "👑 Hair Harmony: Match your hairstyle to your outfit's formality!",
-      "🎪 Texture Mix: Combine smooth and textured fabrics for interest!",
-      "💫 Proportion Play: Balance loose tops with fitted bottoms!",
-      "🌺 Seasonal Swap: Light fabrics in summer, rich textures in winter!",
-      "👗 Dress Code: When in doubt, slightly overdress rather than under!",
-      "🎨 Monochrome Magic: All-black or all-white looks are always chic!",
-      "💍 Metal Matching: Stick to one metal tone for jewelry cohesion!",
-      "🌟 Statement Piece: Let one bold item be the star of your outfit!",
-      "👠 Comfort First: You'll look better when you feel comfortable!",
-      "🎯 Body Love: Highlight your favorite features with strategic styling!",
-      "✨ Fabric Care: Well-maintained clothes always look more expensive!",
-      "🌈 Mood Dressing: Choose colors that match how you want to feel!",
-      "💫 Style Evolution: Don't be afraid to try new trends gradually!"
+    const tips = [
+      "💡 AI is analyzing your photos and preferences...",
+      "🎨 Generating personalized styling suggestions...",
+      "✨ Creating the perfect look for you...",
+      "🌟 Almost ready, preparing the final result..."
     ];
 
-    const generationSteps = [
-      "🎨 AI is analyzing your unique style characteristics...",
-      "✨ Creating your personalized scene atmosphere...",
-      "🌟 Adjusting lighting and composition perfectly...",
-      "💫 Adding sophisticated fashion details...",
-      "🎯 Applying final color grading and polish...",
-      "🔍 Examining fabric textures and materials...",
-      "🌈 Balancing color harmony and contrast...",
-      "💎 Enhancing jewelry and accessory details...",
-      "🎭 Perfecting facial expressions and poses...",
-      "🌸 Fine-tuning background elements...",
-      "✂️ Adjusting garment fit and draping...",
-      "🎪 Creating depth and dimensional effects...",
-      "💫 Optimizing skin tone and complexion...",
-      "🌟 Adding realistic shadow and highlight...",
-      "🎨 Refining artistic style and mood...",
-      "💄 Enhancing makeup and beauty details...",
-      "🌺 Adjusting seasonal lighting effects...",
-      "👑 Perfecting hair texture and movement...",
-      "🎯 Fine-tuning proportions and symmetry...",
-      "✨ Adding cinematic quality touches...",
-      "🌈 Calibrating color temperature and mood...",
-      "💎 Polishing metallic and reflective surfaces...",
-      "🎭 Creating natural body language flow...",
-      "🌟 Enhancing fabric shine and texture...",
-      "💫 Adjusting atmospheric perspective...",
-      "🎨 Applying professional retouching...",
-      "✂️ Finalizing composition and framing...",
-      "🌸 Adding subtle artistic filters...",
-      "💄 Perfecting overall visual impact...",
-      "🎯 Completing your stunning transformation..."
+    // Merge tips and generation steps
+    const allTips = [
+      ...tips,
+      "🎯 Analyzing style elements...",
+      "🔄 Processing image generation...",
+      "🎨 Applying styling effects...",
+      "✅ Finalizing your look..."
     ];
 
-    // 随机选择2-3个小贴士
-    const selectedTips = fashionTips.sort(() => 0.5 - Math.random()).slice(0, 2);
-    const selectedSteps = generationSteps.slice(0, 2);
-
-    // 合并小贴士和生成步骤
-    const allWaitingContent = [...selectedTips, ...selectedSteps];
-
-    // 每个内容间隔4-6秒显示
-    for (let i = 0; i < allWaitingContent.length; i++) {
-      // 检查是否应该继续显示小贴士（使用ref确保最新状态）
-      if (!isShowingWaitingTipsRef.current) {
-        console.log("[PERF] 🎭 WAITING TIPS STOPPED (generation completed)");
-        return;
+    // Show tips or generation steps
+    for (let i = 0; i < allTips.length && isGenerating; i++) {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      if (isGenerating) {
+        setMessages(prev => {
+          const newMessages = [...prev];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage && lastMessage.type === 'loading') {
+            lastMessage.loadingText = allTips[i];
+          }
+          return newMessages;
+        });
       }
-
-      await new Promise(resolve => setTimeout(resolve, 4000 + Math.random() * 2000)); // 4-6秒随机间隔
-
-      // 再次检查状态，因为在等待期间可能已经完成
-      if (!isShowingWaitingTipsRef.current) {
-        console.log("[PERF] 🎭 WAITING TIPS STOPPED (generation completed)");
-        return;
-      }
-
-      // 显示小贴士或生成步骤
-      replaceLastLoadingMessage({
-        role: "ai",
-        type: "loading",
-        loadingText: allWaitingContent[i],
-      });
     }
-
-    console.log("[PERF] 🎭 WAITING TIPS COMPLETED");
   };
 
   const displaySuggestionSequentially = async (suggestion: any) => {
@@ -748,41 +680,31 @@ export default function ChatPage() {
       confident_note: "💪 Confidence Boost",
     };
 
-    // 动态获取有内容的建议部分
-    const availableSuggestions = Object.entries(suggestionKeyToTitleMap)
-      .filter(([key, _]) => suggestion[key] && suggestion[key].trim().length > 0)
-      .map(([key, title]) => ({
-        key,
-        title,
-        content: suggestion[key]
-      }));
+    // Dynamically get content suggestion sections
+    const contentSuggestions = [
+      suggestion.styleAnalysis,
+      suggestion.colorAdvice,
+      suggestion.occassionTips,
+      suggestion.accessoryTips
+    ].filter(Boolean);
 
-    console.log(`[PERF] 💭 Found ${availableSuggestions.length} suggestion parts to display`);
+    // Dynamically calculate delay time: 30 seconds total, evenly distributed
+    const totalDisplayTime = 30000; // 30 seconds
+    const delayBetweenSuggestions = contentSuggestions.length > 0
+      ? totalDisplayTime / contentSuggestions.length
+      : 1000; // If only one suggestion, delay 1 second
 
-    // 动态计算延迟时间：30秒总时长，均匀分布
-    const totalDisplayTime = 30000; // 30秒
-    const delayBetweenBubbles = availableSuggestions.length > 1
-      ? Math.floor(totalDisplayTime / availableSuggestions.length)
-      : 1000; // 如果只有一个建议，延迟1秒
+    let accumulatedMessage = '';
 
-    console.log(`[PERF] 💭 Calculated delay between bubbles: ${delayBetweenBubbles}ms`);
-
-    // 首先替换或添加欢迎消息
-    const messageSetupStart = Date.now();
+    // First replace or add welcome message
     setMessages((prev) => {
       const newMessages = [...prev];
-      // 使用传统方法查找最后一个loading消息
-      let lastMessageIndex = -1;
-      for (let i = newMessages.length - 1; i >= 0; i--) {
-        if (newMessages[i].type === "loading") {
-          lastMessageIndex = i;
-          break;
-        }
-      }
+      // Use traditional method to find the last loading message
+      const loadingMessageIndex = newMessages.map(m => m.type).lastIndexOf('loading');
 
-      if (lastMessageIndex !== -1) {
+      if (loadingMessageIndex !== -1) {
         console.log("[SUGGESTION DEBUG] Replacing loading message with welcome");
-        newMessages[lastMessageIndex] = {
+        newMessages[loadingMessageIndex] = {
           id: generateUniqueId(),
           role: "ai",
           type: "text",
@@ -802,63 +724,62 @@ export default function ChatPage() {
       }
     });
 
-    const messageSetupEnd = Date.now();
-    const messageSetupTime = messageSetupEnd - messageSetupStart;
-    console.log(`[PERF] 💭 Message setup took ${messageSetupTime}ms`);
-
-    // 等待一小段时间让欢迎消息显示
+    // Wait a short time to let the welcome message display
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    // 逐个显示建议气泡
-    for (let i = 0; i < availableSuggestions.length; i++) {
-      const { title, content } = availableSuggestions[i];
+    // Display suggestion bubbles one by one
+    for (let i = 0; i < contentSuggestions.length; i++) {
+      const { title, content } = contentSuggestions[i];
       const bubbleStartTime = Date.now();
 
-      console.log(`[PERF] 💭 Displaying bubble ${i + 1}/${availableSuggestions.length}: ${title}`);
+      console.log(`[PERF] 💭 Displaying bubble ${i + 1}/${contentSuggestions.length}: ${title}`);
 
-      // 添加新的聊天气泡
-      const bubbleId = generateUniqueId();
-      setMessages((prev) => [...prev, {
-        id: bubbleId,
-        role: "ai",
+      // Add new chat bubble
+      addMessage({
         type: "text",
-        content: `${title}\n\n${content}`,
-        timestamp: new Date(),
-      }]);
+        role: "ai",
+        content: `**${title}**\n\n${content}`,
+        agentInfo: {
+          id: "style",
+          name: "Styling Assistant",
+          emoji: "👗"
+        }
+      });
 
       const bubbleEndTime = Date.now();
       const bubbleDisplayTime = bubbleEndTime - bubbleStartTime;
       console.log(`[PERF] 💭 Bubble ${i + 1} displayed in ${bubbleDisplayTime}ms`);
 
-      // 如果不是最后一个气泡，等待延迟时间
-      if (i < availableSuggestions.length - 1) {
-        console.log(`[PERF] 💭 Waiting ${delayBetweenBubbles}ms before next bubble...`);
-        await new Promise((resolve) => setTimeout(resolve, delayBetweenBubbles));
+      // If not the last bubble, wait for delay time
+      if (i < contentSuggestions.length - 1) {
+        console.log(`[PERF] 💭 Waiting ${delayBetweenSuggestions}ms before next bubble...`);
+        await new Promise((resolve) => setTimeout(resolve, delayBetweenSuggestions));
       }
     }
 
     const suggestionEndTime = Date.now();
     const totalSuggestionTime = suggestionEndTime - suggestionStartTime;
     console.log(`[PERF] 💭 SUGGESTION DISPLAY COMPLETED: Total time ${totalSuggestionTime}ms`);
-    console.log(`[PERF] 💭 - Message setup: ${messageSetupTime}ms`);
-    console.log(`[PERF] 💭 - Bubbles displayed: ${availableSuggestions.length}`);
-    console.log(`[PERF] 💭 - Average delay between bubbles: ${delayBetweenBubbles}ms`);
-    console.log(`[PERF] 💭 - Target time: 30000ms, Actual time: ${totalSuggestionTime}ms`);
 
     console.log("[SUGGESTION DEBUG] All suggestion bubbles displayed, ready for image generation");
-    setIsDisplayingSuggestion(false);
+    setCurrentStep("complete");
 
-    // 立即添加下一阶段的加载消息，不等待
-    setMessages((prev) => [...prev, {
-      id: generateUniqueId(),
-      role: "ai",
+    // Immediately add next phase loading message, don't wait
+    addMessage({
       type: "loading",
-      loadingText: "Now creating your personalized style images...",
-      timestamp: new Date(),
-    }]);
+      role: "ai",
+      loadingText: "🎨 Starting image generation..."
+    });
 
-    // 开始显示等待期间的小贴士
+    console.log("[SUGGESTION DEBUG] Added loading message for generation phase");
+
+    // Start showing tips during waiting period
     displayWaitingTips();
+
+    // Start generation polling
+    if (jobId) {
+      startPolling(jobId);
+    }
   };
 
   const getOccasionName = (occasionId: string) => {
@@ -1104,80 +1025,29 @@ export default function ChatPage() {
               isShowingWaitingTipsRef.current = false;
 
               const showCompletion = () => {
-                const finalDisplayStart = Date.now();
-                setHasProcessedCompletion(true);
-                console.log("[POLLING] Status is completed. Final URL:", data.result?.imageUrl);
-                const finalImageUrl = data.result?.imageUrl;
-                if (finalImageUrl) {
-                  // Add completion message
-                  addMessage({
-                    type: 'text',
-                    role: 'ai',
-                    content: '🎉 您的穿搭生成已完成！这是为您生成的结果：'
-                  });
+                console.log("[POLLING] Generation completed successfully!");
 
-                  replaceLastLoadingMessage({
-                    type: "text",
-                    role: "ai",
-                    content: getChatCompletionMessage(getOccasionName(chatData!.occasion)),
-                  });
+                // Replace loading message with success message
+                replaceLastLoadingMessage({
+                  type: 'text',
+                  role: 'ai',
+                  content: '🎉 Your styling generation has completed! Here is the result for you:'
+                });
 
-                  addMessage({
-                    type: "image",
-                    role: "ai",
-                    imageUrl: finalImageUrl,
-                    agentInfo: {
-                      id: "style",
-                      name: "小雅",
-                      emoji: "👗"
-                    }
-                  });
-
-                  // 🆕 通知ChatAgent将生成的图片添加到上下文中
-                  const sessionId = localStorage.getItem("chat_session_id");
-                  if (sessionId) {
-                    fetch('/api/chat/simple', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        sessionId,
-                        imageUrl: finalImageUrl,
-                        action: 'add_generated_image'
-                      })
-                    }).then(response => response.json())
-                      .then(result => {
-                        if (result.success) {
-                          console.log('[ChatPage] ✅ Generated image added to ChatAgent context');
-                        } else {
-                          console.warn('[ChatPage] ⚠️ Failed to add generated image to context:', result);
-                        }
-                      })
-                      .catch(error => {
-                        console.error('[ChatPage] ❌ Error adding generated image to context:', error);
-                      });
+                // Add generated image
+                addMessage({
+                  type: "image",
+                  role: "ai",
+                  imageUrl: data.result?.imageUrl,
+                  content: "Here's your personalized styling result! What do you think?",
+                  metadata: {
+                    suggestions: ['Try another style', 'Adjust colors', 'Different occasion', 'Style analysis']
                   }
+                });
 
-                  const finalDisplayEnd = Date.now();
-                  const finalDisplayTime = finalDisplayEnd - finalDisplayStart;
-                  const grandTotalTime = finalDisplayEnd - pollingStartTime;
-
-                  console.log(`[PERF] 🎉 FINAL IMAGE DISPLAYED: Display took ${finalDisplayTime}ms`);
-                  console.log(`[PERF] 🏁 GENERATION FLOW COMPLETE: Grand total ${grandTotalTime}ms`);
-                  console.log(`[PERF] 📊 PERFORMANCE SUMMARY:`);
-                  console.log(`[PERF] 📊 - Total generation time: ${grandTotalTime}ms (${(grandTotalTime / 1000).toFixed(1)}s)`);
-                  console.log(`[PERF] 📊 - Suggestion phase: ${suggestionDisplayTime}ms`);
-                  console.log(`[PERF] 📊 - Final display: ${finalDisplayTime}ms`);
-                } else {
-                  replaceLastLoadingMessage({
-                    type: "text",
-                    role: "ai",
-                    content: "Sorry, the generation is complete, but the image link was lost.",
-                  });
-                  console.log(`[PERF] ❌ Generation completed but image URL missing after ${totalGenerationTime}ms`);
-                }
-                console.log("[POLLING] Stopping polling because job is complete.");
-                clearInterval(interval);
-                setPollingIntervalId(null);
+                setCurrentStep("complete");
+                setIsGenerating(false);
+                setJobId(null);
               };
 
               // 优化：移除等待机制，立即显示最终图片，不等待建议显示完成
@@ -1258,7 +1128,7 @@ export default function ChatPage() {
                 <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                 <span className="text-sm text-gray-600 font-medium">
                   {isImageProcessing ? '🖼️ 正在压缩图片以提升传输效率...' :
-                    isGenerating ? '🎨 正在生成您的专属穿搭效果...' :
+                    isGenerating ? '🎨 Generating your exclusive styling effect...' :
                       '💭 AI正在思考中...'}
                 </span>
               </div>

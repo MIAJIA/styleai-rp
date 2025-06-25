@@ -29,19 +29,19 @@ interface ConversationMessage {
 interface ChatContext {
   conversationHistory: ConversationMessage[];
   sessionInfo: {
-    lastGeneratedImage?: string;        // 最后生成的图片
-    lastUploadedImage?: string;         // 最后上传的图片
-    activeDiscussionTopic?: string;     // 当前讨论主题
-    mentionedClothingItems?: string[];  // 提到的服装单品
-    lastActiveAgent?: string;           // 最后活跃的Agent
-    compressionStats?: {                // 新增压缩统计
+    lastGeneratedImage?: string;        // Last generated image
+    lastUploadedImage?: string;         // Last uploaded image
+    activeDiscussionTopic?: string;     // Current discussion topic
+    mentionedClothingItems?: string[];  // Mentioned clothing items
+    lastActiveAgent?: string;           // Last active agent
+    compressionStats?: {                // Compression statistics
       totalImagesSent: number;
       totalBytesOriginal: number;
       totalBytesCompressed: number;
       averageCompressionRatio: number;
     };
   };
-  windowSize: number;                   // 保留消息数量
+  windowSize: number;                   // Number of messages to keep
   lastUpdated: Date;
 }
 
@@ -107,7 +107,7 @@ export class SmartContextManager {
       this.sessionInfo.lastUploadedImage = message.imageUrl;
     }
 
-    // 更新压缩统计
+    // Update compression statistics
     if (message.imageMetadata && this.sessionInfo.compressionStats) {
       const stats = this.sessionInfo.compressionStats;
       stats.totalImagesSent++;
@@ -134,12 +134,12 @@ export class SmartContextManager {
     const recentText = recentMessages.map(m => m.content).join(' ').toLowerCase();
 
     const topicPatterns = {
-      '颜色搭配': ['颜色', '色彩', '配色', '色调', '显白', '显黑', 'color', 'palette', 'matching', 'tone', 'hue'],
-      '单品替换': ['换', '替换', '改成', '变成', '试试', 'change', 'replace', 'switch', 'swap', 'try'],
-      '场合搭配': ['场合', '约会', '上班', '聚会', '婚礼', '面试', 'occasion', 'date', 'work', 'party', 'wedding', 'interview'],
-      '风格分析': ['风格', '款式', '类型', '感觉', '气质', 'style', 'look', 'type', 'vibe', 'temperament'],
-      '尺寸调整': ['大小', '尺寸', '合身', '宽松', '紧身', 'size', 'fit', 'loose', 'tight'],
-      '材质讨论': ['材质', '面料', '质感', '舒适', '透气', 'material', 'fabric', 'texture', 'comfort', 'breathable']
+      'Color Matching': ['颜色', '色彩', '配色', '色调', '显白', '显黑', 'color', 'palette', 'matching', 'tone', 'hue'],
+      'Item Replacement': ['换', '替换', '改成', '变成', '试试', 'change', 'replace', 'switch', 'swap', 'try'],
+      'Occasion Styling': ['场合', '约会', '上班', '聚会', '婚礼', '面试', 'occasion', 'date', 'work', 'party', 'wedding', 'interview'],
+      'Style Analysis': ['风格', '款式', '类型', '感觉', '气质', 'style', 'look', 'type', 'vibe', 'temperament'],
+      'Size Adjustment': ['大小', '尺寸', '合身', '宽松', '紧身', 'size', 'fit', 'loose', 'tight'],
+      'Material Discussion': ['材质', '面料', '质感', '舒适', '透气', 'material', 'fabric', 'texture', 'comfort', 'breathable']
     };
 
     for (const [topic, keywords] of Object.entries(topicPatterns)) {
@@ -148,20 +148,34 @@ export class SmartContextManager {
       }
     }
 
-    return '综合咨询';
+    return 'General Consultation';
   }
 
   private extractClothingItems(text: string): string[] {
     const clothingKeywords = [
+      // Chinese keywords (keep for backward compatibility)
       '上衣', '衬衫', 'T恤', 'T恤衫', '毛衣', '针织衫', '外套', '夹克', '西装', '风衣',
+      // English keywords
       'top', 'shirt', 'blouse', 't-shirt', 'tee', 'sweater', 'pullover', 'knitwear', 'cardigan', 'jacket', 'outerwear', 'coat', 'blazer', 'suit', 'trench coat',
+
+      // Chinese keywords (keep for backward compatibility)
       '裤子', '牛仔裤', '短裤', '西装裤', '运动裤', '休闲裤', '阔腿裤',
+      // English keywords
       'pants', 'trousers', 'jeans', 'shorts', 'dress pants', 'sweatpants', 'joggers', 'casual pants', 'wide-leg pants',
+
+      // Chinese keywords (keep for backward compatibility)
       '裙子', 'A字裙', '连衣裙', '短裙', '长裙', '半身裙', '包臀裙',
+      // English keywords
       'skirt', 'dress', 'a-line skirt', 'miniskirt', 'long skirt', 'maxi skirt', 'bodycon skirt',
+
+      // Chinese keywords (keep for backward compatibility)
       '鞋子', '运动鞋', '高跟鞋', '平底鞋', '靴子', '凉鞋', '拖鞋', '皮鞋',
+      // English keywords
       'shoes', 'footwear', 'sneakers', 'trainers', 'high heels', 'flats', 'boots', 'sandals', 'slippers', 'leather shoes',
+
+      // Chinese keywords (keep for backward compatibility)
       '帽子', '围巾', '包包', '手包', '背包', '项链', '耳环', '手链', '戒指', '腰带',
+      // English keywords
       'hat', 'cap', 'scarf', 'bag', 'handbag', 'purse', 'clutch', 'backpack', 'necklace', 'earrings', 'bracelet', 'ring', 'belt'
     ];
 
