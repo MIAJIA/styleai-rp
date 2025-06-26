@@ -74,7 +74,7 @@ StyleAI 是一个个性化时尚造型辅助应用。它利用先进的 AI 技�
 
 1."怎么搭Prompt":
 
-```你是一位专业的穿搭顾问，请根据以下输入，生成一套关于"如何搭配这件衣服"的七维度建议，结构请严格遵循 schema 格式（JSON 格式），字段包括：
+\`\`\`你是一位专业的穿搭顾问，请根据以下输入，生成一套关于"如何搭配这件衣服"的七维度建议，结构请严格遵循 schema 格式（JSON 格式），字段包括：
 scene_fit, style_alignment, personal_match, visual_focus, material_silhouette, color_combination, reuse_versatility, image_prompt。
 
 ---
@@ -113,11 +113,11 @@ scene_fit, style_alignment, personal_match, visual_focus, material_silhouette, c
 6. color_combination：推荐使用哪些主色/辅助色？是否要加入点缀色？注意与肤色冷暖调匹配。
 7. reuse_versatility：该单品如何搭配出不同风格/场合的 look，提升使用率与可持续性？
 8. image_prompt: 基于七维度的 summary，以完整描述的方式整合
-```
+\`\`\`
 
 ## 5. 架构图
 
-```mermaid
+\`\`\`mermaid
 graph TD
     subgraph "用户浏览器 (Client)"
         StyleMe["StyleMe 页面"] -- "1. 上传衣服/用户照片, 选择场景" --> FELogic{前端应用逻辑}
@@ -153,7 +153,7 @@ graph TD
 
     GenerateImageAPI -- "5. 返回最终图片 URL" --> FELogic
 
-```
+\`\`\`
 
 //scene fit
 丹宁短裤非常适合周末休闲场合，尤其是在温暖的天气下，可以自由行动并感受舒适。

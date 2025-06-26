@@ -8,13 +8,13 @@
 
 在`lib/chat-agent.ts`的`ChatAgent.chat`方法中，图片分析工具的触发条件有问题：
 
-```typescript
+\`\`\`typescript
 // 原来的逻辑 - 只有当前消息有图片时才使用工具
 if (imageUrl) {
   llmOptions.tools = [analyzeImageTool];
   llmOptions.tool_choice = { type: "function", function: { name: "analyze_outfit_image" } };
 }
-```
+\`\`\`
 
 这导致：
 
@@ -27,7 +27,7 @@ if (imageUrl) {
 
 修改`lib/chat-agent.ts`中的图片检测逻辑：
 
-```typescript
+\`\`\`typescript
 // 检查是否有图片 - 当前消息或上下文中的图片
 const hasCurrentImage = !!imageUrl;
 const hasContextImage = this.contextManager.hasRecentImage();
@@ -56,13 +56,13 @@ if (shouldUseImageTool) {
   llmOptions.tool_choice = { type: "function", function: { name: "analyze_outfit_image" } };
   console.log('[ChatAgent] Image detected (current or context). Adding image analysis tool to LLM call.');
 }
-```
+\`\`\`
 
 ### 2. 扩展SmartContextManager
 
 在`lib/memory.ts`中添加必要的方法：
 
-```typescript
+\`\`\`typescript
 // 新增方法：检查是否有最近的图片
 hasRecentImage(): boolean {
   return !!this.sessionInfo.lastUploadedImage || !!this.sessionInfo.lastGeneratedImage;
@@ -72,13 +72,13 @@ hasRecentImage(): boolean {
 getLastUploadedImage(): string | undefined {
   return this.sessionInfo.lastUploadedImage;
 }
-```
+\`\`\`
 
 ## 修复效果
 
 ### 修复前
 
-```
+\`\`\`
 用户: [上传图片] 我适合什么样的上衣呢？
 AI: [正常分析] 你有很好的运动身材，适合穿能展示体型的上衣...
 
@@ -88,11 +88,11 @@ AI: 让我先分析一下你上传的图片，以便更好地给你建议。
 用户: 好
 AI: 请稍等，我将分析一下你上传的图片。
 [卡住，没有实际分析]
-```
+\`\`\`
 
 ### 修复后
 
-```
+\`\`\`
 用户: [上传图片] 我适合什么样的上衣呢？
 AI: [正常分析] 你有很好的运动身材，适合穿能展示体型的上衣...
 
@@ -107,7 +107,7 @@ AI: [自动使用上下文图片调用分析工具]
     在颜色选择上，建议：
     1. 基础色：黑色、白色、灰色
     2. 点缀色：...
-```
+\`\`\`
 
 ## 技术细节
 

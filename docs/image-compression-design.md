@@ -40,7 +40,7 @@
 
 ### 2. Canvas 压缩参数效果
 
-```javascript
+\`\`\`javascript
 // 当前项目使用的压缩配置
 const compressionConfig = {
   maxWidth: 1024,     // 最大宽度
@@ -50,7 +50,7 @@ const compressionConfig = {
 
 // 压缩效果预期
 // 原始图片：6.5MB -> 压缩后：~1MB (85% 压缩率)
-```
+\`\`\`
 
 ### 3. 具体压缩效果分析
 
@@ -72,7 +72,7 @@ const compressionConfig = {
 
 #### 技术实现
 
-```typescript
+\`\`\`typescript
 interface ImageCompressionConfig {
   maxWidth: number;
   maxHeight: number;
@@ -144,11 +144,11 @@ class SmartImageCompressor {
     }
   }
 }
-```
+\`\`\`
 
 #### 聊天室集成
 
-```typescript
+\`\`\`typescript
 // 聊天消息类型扩展
 interface ChatMessage {
   id: string;
@@ -196,7 +196,7 @@ const CHAT_COMPRESSION_CONFIG = {
     fallbackFormat: 'image/jpeg' as const
   }
 };
-```
+\`\`\`
 
 ### 方案B：外部压缩服务
 
@@ -261,7 +261,7 @@ const CHAT_COMPRESSION_CONFIG = {
 
 ### 混合方案：本地压缩 + 智能回退
 
-```typescript
+\`\`\`typescript
 class HybridImageProcessor {
   private localCompressor: SmartImageCompressor;
   private fallbackUploader: ExternalUploader;
@@ -292,7 +292,7 @@ class HybridImageProcessor {
     );
   }
 }
-```
+\`\`\`
 
 ### 实施计划
 
@@ -327,7 +327,7 @@ class HybridImageProcessor {
 
 ### 监控方案
 
-```typescript
+\`\`\`typescript
 interface CompressionMetrics {
   processingTime: number;
   originalSize: number;
@@ -345,7 +345,7 @@ class CompressionAnalytics {
     analytics.track('image_compression', metrics);
   }
 }
-```
+\`\`\`
 
 ## 总结建议
 

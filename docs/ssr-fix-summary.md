@@ -4,11 +4,11 @@
 
 用户遇到Next.js服务端渲染(SSR)错误：
 
-```javascript
+\`\`\`javascript
 ReferenceError: document is not defined
 at SmartImageCompressor.detectSupportedFormats (lib/image-compression.ts:86:19)
 at new SmartImageCompressor (lib/image-compression.ts:79:9)
-```
+\`\`\`
 
 ## 根本原因
 
@@ -18,41 +18,41 @@ at new SmartImageCompressor (lib/image-compression.ts:79:9)
 
 1. **导入时机问题**：
 
-   ```typescript
+   \`\`\`typescript
    // 问题代码 (修复前)
    export const imageCompressor = new SmartImageCompressor(); // 导入时立即执行
-   ```
+   \`\`\`
 
 2. **构造函数问题**：
 
-   ```typescript
+   \`\`\`typescript
    constructor() {
      this.detectSupportedFormats(); // 立即调用检测函数
    }
-   ```
+   \`\`\`
 
 3. **浏览器API调用**：
 
-   ```typescript
+   \`\`\`typescript
    private detectSupportedFormats(): void {
      const canvas = document.createElement('canvas'); // ❌ 服务端无document
    }
-   ```
+   \`\`\`
 
 ## 修复方案
 
 ### 1. 客户端检测机制
 
-```typescript
+\`\`\`typescript
 // 添加客户端检测工具函数
 function isClientSide(): boolean {
   return typeof window !== 'undefined' && typeof document !== 'undefined';
 }
-```
+\`\`\`
 
 ### 2. 延迟初始化
 
-```typescript
+\`\`\`typescript
 export class SmartImageCompressor {
   private supportedFormats: Set<string> = new Set();
   private isInitialized: boolean = false;
@@ -65,11 +65,11 @@ export class SmartImageCompressor {
     }
   }
 }
-```
+\`\`\`
 
 ### 3. 懒加载单例
 
-```typescript
+\`\`\`typescript
 // ✅ 修复后 - 懒加载实例
 let _imageCompressor: SmartImageCompressor | null = null;
 
@@ -84,11 +84,11 @@ function getImageCompressor(): SmartImageCompressor {
 
   return _imageCompressor;
 }
-```
+\`\`\`
 
 ### 4. 安全的格式检测
 
-```typescript
+\`\`\`typescript
 private detectSupportedFormats(): void {
   if (!isClientSide()) {
     console.warn('[ImageCompressor] detectSupportedFormats called on server side');
@@ -105,20 +105,20 @@ private detectSupportedFormats(): void {
     this.supportedFormats.add('image/png');
   }
 }
-```
+\`\`\`
 
 ### 5. 动态导入优化
 
 在聊天页面中使用动态导入：
 
-```typescript
+\`\`\`typescript
 // app/chat/page.tsx - 修复前
 import { compressForChat } from '@/lib/image-compression';
 
 // app/chat/page.tsx - 修复后
 compressionResult = await import('@/lib/image-compression')
   .then(m => m.compressForChat(file));
-```
+\`\`\`
 
 ## 修复效果
 
@@ -140,26 +140,26 @@ compressionResult = await import('@/lib/image-compression')
 
 ### 1. 服务端渲染检查
 
-```bash
+\`\`\`bash
 # 启动开发服务器，检查是否还有SSR错误
 npm run dev
-```
+\`\`\`
 
 ### 2. 客户端功能测试
 
-```typescript
+\`\`\`typescript
 // 在浏览器控制台测试
 const { compressForChat } = await import('/lib/image-compression');
 // 应该能正常工作而不报错
-```
+\`\`\`
 
 ### 3. 错误日志监控
 
-```typescript
+\`\`\`typescript
 // 检查控制台中的警告信息
 // 应该看到：
 // "[ImageCompressor] Supported formats detected: ['image/webp', 'image/jpeg', 'image/png']"
-```
+\`\`\`
 
 ## 最佳实践
 

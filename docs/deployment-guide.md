@@ -5,7 +5,7 @@
 ### 本地开发环境
 创建 `.env.local` 文件并添加以下变量：
 
-```bash
+\`\`\`bash
 # Vercel KV (Redis) Database
 # 从 Vercel Dashboard > Storage > KV 获取
 KV_URL=redis://your-kv-url
@@ -22,7 +22,7 @@ OPENAI_API_KEY=your-openai-api-key
 KLING_AI_ACCESS_KEY=your-kling-access-key
 KLING_AI_SECRET_KEY=your-kling-secret-key
 RAPIDAPI_KEY=your-rapidapi-key-for-face-swap
-```
+\`\`\`
 
 ### 生产环境 (Vercel)
 1. 在 Vercel Dashboard 中进入项目设置
@@ -51,14 +51,14 @@ RAPIDAPI_KEY=your-rapidapi-key-for-face-swap
 ## 部署步骤
 
 ### 1. 代码部署
-```bash
+\`\`\`bash
 # 推送代码到 Git 仓库
 git add .
 git commit -m "Add database migration system"
 git push origin main
 
 # 或者直接从 Vercel Dashboard 导入 Git 仓库
-```
+\`\`\`
 
 ### 2. 验证部署
 1. 访问部署的应用
@@ -99,42 +99,42 @@ git push origin main
 ### 常见部署问题
 
 #### 1. 环境变量未设置
-```bash
+\`\`\`bash
 Error: KV_URL is not defined
-```
+\`\`\`
 **解决方案**: 检查 Vercel 项目设置中的环境变量配置
 
 #### 2. KV 连接失败
-```bash
+\`\`\`bash
 Error: Failed to connect to KV database
-```
+\`\`\`
 **解决方案**:
 - 验证 KV 数据库是否已创建
 - 检查环境变量值是否正确
 - 确认项目已连接到正确的 KV 实例
 
 #### 3. Blob 上传失败
-```bash
+\`\`\`bash
 Error: Failed to upload to blob storage
-```
+\`\`\`
 **解决方案**:
 - 检查 BLOB_READ_WRITE_TOKEN 是否正确
 - 验证 Blob 存储是否已启用
 - 检查文件大小是否超过限制
 
 #### 4. 迁移失败
-```bash
+\`\`\`bash
 Migration failed: Invalid look data
-```
+\`\`\`
 **解决方案**:
 - 检查 localStorage 数据格式
 - 验证必需字段是否存在
 - 查看详细错误日志
 
 #### 5. 生成超时问题 ⭐ 新增
-```bash
+\`\`\`bash
 Error [AbortError]: This operation was aborted
-```
+\`\`\`
 **解决方案**:
 - 检查 `vercel.json` 配置是否正确部署
 - 验证所有 AI API 密钥是否配置正确
@@ -158,9 +158,9 @@ Error [AbortError]: This operation was aborted
    - 验证图片 URL 是否有效
 
 #### 6. Blob 存储冲突 ⭐ 新增
-```bash
+\`\`\`bash
 Error: Vercel Blob: This blob already exists
-```
+\`\`\`
 **解决方案**:
 - 系统现已自动处理文件名冲突
 - 使用 `addRandomSuffix: true` 生成唯一文件名
@@ -174,9 +174,9 @@ Error: Vercel Blob: This blob already exists
 4. **错误恢复**: 重复操作不会导致系统错误
 
 #### 7. Redis Null 值错误 ⭐ 新增修复
-```bash
+\`\`\`bash
 Error [UpstashError]: Command failed: ERR null args are not supported
-```
+\`\`\`
 **问题原因**:
 - Vercel KV (Redis) 不支持 `null` 或 `undefined` 值
 - 数据库保存时包含了这些不支持的值
@@ -242,7 +242,7 @@ Error [UpstashError]: Command failed: ERR null args are not supported
 ### Vercel 函数超时设置
 项目包含 `vercel.json` 配置文件，设置了以下超时限制：
 
-```json
+\`\`\`json
 {
   "functions": {
     "app/api/generation/status/route.ts": {
@@ -259,7 +259,7 @@ Error [UpstashError]: Command failed: ERR null args are not supported
     }
   }
 }
-```
+\`\`\`
 
 ### 超时处理改进
 - **Face Swap API**: 超时从 90 秒增加到 180 秒，添加重试机制

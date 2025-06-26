@@ -8,14 +8,14 @@
 
 ❌ **问题**: 提出了过于复杂的目录结构
 
-```
+\`\`\`
 app/chat/
 ├── components/ (8个组件)
 ├── hooks/ (6个自定义hooks)
 ├── types/ (2个类型文件)
 ├── utils/ (3个工具文件)
 └── contexts/ (1个context)
-```
+\`\`\`
 
 ✅ **简化建议**: 当前1351行单文件运行良好，无需拆分
 
@@ -27,14 +27,14 @@ app/chat/
 
 ❌ **问题**: 引入useReducer + Context的复杂状态管理
 
-```typescript
+\`\`\`typescript
 // 过度复杂的Action类型
 type ChatAction =
   | { type: 'ADD_MESSAGE'; payload: Omit<ChatMessage, 'id' | 'timestamp'> }
   | { type: 'UPDATE_MESSAGE'; payload: { id: string; updates: Partial<ChatMessage> } }
   | { type: 'DELETE_MESSAGE'; payload: string }
   // ... 7种不同的Action类型
-```
+\`\`\`
 
 ✅ **简化建议**: 继续使用现有的useState
 
@@ -48,13 +48,13 @@ type ChatAction =
 
 ❌ **问题**: 引入WebSocket + 复杂的连接管理
 
-```typescript
+\`\`\`typescript
 class ChatWebSocketManager {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   // 复杂的重连逻辑...
 }
-```
+\`\`\`
 
 ✅ **简化建议**: 当前HTTP请求已足够
 
@@ -66,14 +66,14 @@ class ChatWebSocketManager {
 
 ❌ **问题**: 提出了Python后端 + 复杂的LangChain Agent
 
-```python
+\`\`\`python
 class StyleChatAgent:
     def __init__(self):
         self.llm = ChatOpenAI(model="gpt-4-turbo")
         self.memory = ConversationBufferWindowMemory(k=10)
         self.tools = self._create_tools()
         self.agent = create_openai_functions_agent(...)
-```
+\`\`\`
 
 ✅ **简化建议**: 使用简单的关键词匹配 + 不同prompt
 

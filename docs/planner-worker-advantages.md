@@ -8,14 +8,14 @@
 
 ### **方案1: 简单关键词匹配 (原设计)**
 
-```typescript
+\`\`\`typescript
 // ❌ 局限性明显
 const detectAgentIntent = (message: string): AgentType => {
   const colorKeywords = ['颜色', '色彩', '配色'];
   if (colorKeywords.some(k => message.includes(k))) return 'color_expert';
   return 'style_advisor';
 };
-```
+\`\`\`
 
 **问题**:
 
@@ -26,7 +26,7 @@ const detectAgentIntent = (message: string): AgentType => {
 
 ### **方案2: Planner-Worker模式 (推荐)**
 
-```typescript
+\`\`\`typescript
 // ✅ 智能路由 + 专业回答
 class PlannerAgent {
   async selectWorker(userMessage: string, context?: any): Promise<WorkerAgentType> {
@@ -41,7 +41,7 @@ class WorkerAgent {
     // temperature=0.7 确保回答的创造性
   }
 }
-```
+\`\`\`
 
 **优势**:
 
@@ -60,7 +60,7 @@ class WorkerAgent {
 
 ### **2. 避免过度工程化**
 
-```typescript
+\`\`\`typescript
 // ✅ 简单的类结构，避免复杂继承
 class PlannerAgent { /* 专注路由 */ }
 class WorkerAgent { /* 专注回答 */ }
@@ -72,11 +72,11 @@ async processMessage(userMessage: string, context: any) {
   const response = await this.worker.process(userMessage, context);
   return { response, selectedAgent };
 }
-```
+\`\`\`
 
 ### **3. 鲁棒性设计**
 
-```typescript
+\`\`\`typescript
 // ✅ 多层fallback机制
 try {
   const selectedAgent = await this.planner.selectWorker(...);
@@ -86,7 +86,7 @@ try {
 } catch (error) {
   return 'style_advisor'; // fallback 2
 }
-```
+\`\`\`
 
 ### **4. 成本控制**
 
@@ -119,7 +119,7 @@ try {
 
 ### **风险控制**
 
-```typescript
+\`\`\`typescript
 // ✅ 降级方案：高峰期回退到关键词匹配
 const useFallbackMode = process.env.HIGH_TRAFFIC === 'true';
 if (useFallbackMode) {
@@ -127,7 +127,7 @@ if (useFallbackMode) {
 } else {
   return await plannerWorkerMode(message);
 }
-```
+\`\`\`
 
 ## 💡 为什么选择这个方案？
 
@@ -153,7 +153,7 @@ if (useFallbackMode) {
 
 ### **为什么不用复杂的Agent框架？**
 
-```typescript
+\`\`\`typescript
 // ❌ 过度复杂的Agent框架
 class ComplexAgent extends BaseAgent {
   tools: Tool[];
@@ -166,7 +166,7 @@ class ComplexAgent extends BaseAgent {
 class PlannerAgent {
   // 30行代码，专注路由选择
 }
-```
+\`\`\`
 
 **原因**: 我们的需求明确且简单，不需要复杂的工具链和推理框架。
 

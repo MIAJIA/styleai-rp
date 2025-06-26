@@ -20,7 +20,7 @@
 
 ### 具体问题
 
-```typescript
+\`\`\`typescript
 // 修复前（有问题的代码）:
 const handleImageSelect = (event) => {
   const file = event.target.files?.[0];
@@ -32,13 +32,13 @@ const handleImageSelect = (event) => {
     reader.readAsDataURL(file); // ❌ 原图转Base64
   }
 };
-```
+\`\`\`
 
 ## 修复方案
 
 ### 1. 集成图片压缩功能
 
-```typescript
+\`\`\`typescript
 // 修复后的代码:
 const handleImageSelect = async (event) => {
   const file = event.target.files?.[0];
@@ -63,7 +63,7 @@ const handleImageSelect = async (event) => {
     setIsImageProcessing(false);
   }
 };
-```
+\`\`\`
 
 ### 2. 压缩配置
 
@@ -113,13 +113,13 @@ const handleImageSelect = async (event) => {
 
 ### 验证方法
 
-```bash
+\`\`\`bash
 # 测试步骤:
 1. 上传大图片 (>5MB)
 2. 观察压缩过程提示
 3. 检查控制台日志中的压缩统计
 4. 确认发送成功无token错误
-```
+\`\`\`
 
 ## 技术债务清理
 
@@ -140,14 +140,14 @@ const handleImageSelect = async (event) => {
 
 ### 日志监控
 
-```typescript
+\`\`\`typescript
 // 关键指标记录
 console.log(`[ChatPage] 图片压缩完成:
   原始大小: ${(file.size/1024).toFixed(1)}KB
   压缩后: ${(result.compressedSize/1024).toFixed(1)}KB
   压缩率: ${(result.compressionRatio * 100).toFixed(1)}%
 `);
-```
+\`\`\`
 
 ### 成功指标
 

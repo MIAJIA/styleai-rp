@@ -16,7 +16,7 @@
 **数据结构 (`Job`):**
 我们将为每个 `jobId` 存储一个JSON对象，结构如下：
 
-```json
+\`\`\`json
 {
   "jobId": "unique-uuid-string",
   "status": "pending" | "processing-style" | "processing-tryon" | "processing-faceswap" | "completed" | "failed",
@@ -26,7 +26,7 @@
   "createdAt": "iso-timestamp",
   "updatedAt": "iso-timestamp"
 }
-```
+\`\`\`
 
 #### **3. API 接口设计**
 

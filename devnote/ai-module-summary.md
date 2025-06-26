@@ -14,9 +14,9 @@
 
 ## 2️⃣ systemPrompt（可爱俏皮闺蜜风）
 
-```
+\`\`\`
 Hellooo bestie! 💖 I'm your super fun, slightly over-caffeinated personal stylist ...
-```
+\`\`\`
 
 特点：
 1. 第一人称 + emoji，语气活泼。
@@ -32,14 +32,14 @@ JSON 字段：`scene_fit` / `style_alignment` / `personal_match` / `visual_focus
 ### 3.1 getStyleSuggestionFromAI()
 
 参数：
-```ts
+\`\`\`ts
 {
   humanImageUrl: string,
   garmentImageUrl: string,
   occasion: string,
   userProfile?: OnboardingData // 可选，提升个性化
 }
-```
+\`\`\`
 流程：
 1. 拼接 `messages` 数组：`systemPrompt` + 用户消息（含可选 Profile）。
 2. 调用 `openai.chat.completions.create` (模型 gpt-4o, JSON mode)。
@@ -59,12 +59,12 @@ JSON 字段：`scene_fit` / `style_alignment` / `personal_match` / `visual_focus
 |7|上传最终图至 Blob，返回安全 URL|最终由 status route 标记 `completed`|
 
 `processImages` 结构示例：
-```json
+\`\`\`json
 {
   "styledImage": "https://...",
   "tryOnImage": "https://..."
 }
-```
+\`\`\`
 
 ---
 
@@ -88,4 +88,3 @@ JSON 字段：`scene_fit` / `style_alignment` / `personal_match` / `visual_focus
 ---
 
 > 以上记录用于团队快速了解 AI 模块现状，如有变化请同步更新。
-

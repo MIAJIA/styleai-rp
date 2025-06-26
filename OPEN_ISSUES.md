@@ -20,7 +20,7 @@
 
 ### 当前实现
 
-```typescript
+\`\`\`typescript
 // 4层降级存储策略应对localStorage限制
 const profileSaveSuccess = safeSetLocalStorage("styleMe_user_profile", profileJson);
 if (!profileSaveSuccess) {
@@ -28,7 +28,7 @@ if (!profileSaveSuccess) {
   // 策略3: 最小数据
   // 策略4: 错误标记
 }
-```
+\`\`\`
 
 ### 迁移目标
 
@@ -79,7 +79,7 @@ if (!profileSaveSuccess) {
 
 ### 当前实现
 
-```typescript
+\`\`\`typescript
 // 假的AI处理
 setTimeout(() => {
   const profile = {
@@ -89,7 +89,7 @@ setTimeout(() => {
   };
   // ...
 }, 2000); // 假延迟
-```
+\`\`\`
 
 ### 解决方案
 

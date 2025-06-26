@@ -24,7 +24,7 @@
 
 POST `/api/style/match`
 
-```json
+\`\`\`json
 {
   "skeleton_size": "small",             // enum: small | medium | large
   "body_volume": "full",                // enum: flat | full
@@ -34,13 +34,13 @@ POST `/api/style/match`
   "target_vibes": ["sweet_spicy", "elegant_refined"],
   "primary_scene": "date"               // optional
 }
-```
+\`\`\`
 
 ---
 
 ### 📤 输出参数（Response）
 
-```json
+\`\`\`json
 {
   "structure_tag": "小骨架 × 圆身 × 暖脸",
   "style_type": "类型8",
@@ -49,13 +49,13 @@ POST `/api/style/match`
   "recommended_items": ["花朵收腰连衣裙", "小亮色喇叭裤", "针织修身裙"],
   "dressing_tips": "强调正面腰线，使用柔和曲线与亮色系营造亲和感"
 }
-```
+\`\`\`
 
 ---
 
 ### 🧠 匹配逻辑说明
 
-```ts
+\`\`\`ts
 // 简化伪代码
 function classifyStyleType(skeleton, volume, linearity) {
   const key = `${skeleton}-${volume}-${linearity}`;
@@ -71,7 +71,7 @@ function classifyStyleType(skeleton, volume, linearity) {
   };
   return mapping[key];
 }
-```
+\`\`\`
 
 > **注意：** `linearity === mixed` 可 fallback 至 `curved` 处理（暖脸优先）
 

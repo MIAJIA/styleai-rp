@@ -26,18 +26,18 @@
 
 添加调试日志验证API返回的agentInfo：
 
-```typescript
+\`\`\`typescript
 // 在 handleFreeChat 中添加
 console.log('[DEBUG] API返回的agentInfo:', data.agentInfo);
 console.log('[DEBUG] agentInfo类型:', typeof data.agentInfo);
 console.log('[DEBUG] agentInfo内容:', JSON.stringify(data.agentInfo, null, 2));
-```
+\`\`\`
 
 ### 方案2：数据结构兼容性修复
 
 确保agentInfo数据结构正确：
 
-```typescript
+\`\`\`typescript
 // 在 handleFreeChat 中修复
 replaceLastLoadingMessage({
   type: "text",
@@ -52,18 +52,18 @@ replaceLastLoadingMessage({
     suggestions: generateSmartSuggestions(data.response),
   }
 });
-```
+\`\`\`
 
 ### 方案3：完整的用户对话测试
 
 使用真实的用户问题测试代理切换：
 
-```javascript
+\`\`\`javascript
 测试用例：
 1. "这个红色适合我吗？" → 应该显示 🎨 彩虹
 2. "约会穿什么好？" → 应该显示 📅 场合
 3. "整体风格建议" → 应该显示 👗 小雅
-```
+\`\`\`
 
 ## 📋 **实施步骤**
 

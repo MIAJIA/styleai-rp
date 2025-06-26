@@ -12,7 +12,7 @@
 - **回退方案**: localStorage (用于离线或错误时)
 
 ### 数据结构
-```typescript
+\`\`\`typescript
 interface DBLook {
   id: string;
   userId?: string;
@@ -31,41 +31,41 @@ interface DBLook {
     styleSuggestion?: any;
   };
 }
-```
+\`\`\`
 
 ## 环境配置
 
 ### 1. Vercel KV 设置
 1. 在 Vercel Dashboard 中创建 KV 数据库
 2. 获取连接信息并添加到环境变量：
-```bash
+\`\`\`bash
 KV_URL=redis://...
 KV_REST_API_URL=https://...
 KV_REST_API_TOKEN=...
 KV_REST_API_READ_ONLY_TOKEN=...
-```
+\`\`\`
 
 ### 2. Vercel Blob 设置
 1. 在 Vercel Dashboard 中启用 Blob Storage
 2. 获取连接信息并添加到环境变量：
-```bash
+\`\`\`bash
 BLOB_READ_WRITE_TOKEN=...
-```
+\`\`\`
 
 ### 3. 本地开发环境
-```bash
+\`\`\`bash
 # 复制环境变量文件
 cp .env.example .env.local
 
 # 添加 Vercel 存储凭据
 # 可以从 Vercel Dashboard 获取
-```
+\`\`\`
 
 ## API 端点
 
 ### GET /api/looks
 获取用户的所有造型数据
-```typescript
+\`\`\`typescript
 // 请求参数
 {
   userId?: string;  // 默认 'default'
@@ -78,11 +78,11 @@ cp .env.example .env.local
   looks: PastLook[];
   count: number;
 }
-```
+\`\`\`
 
 ### POST /api/looks
 保存新的造型数据
-```typescript
+\`\`\`typescript
 // 请求体
 {
   look: PastLook;
@@ -94,11 +94,11 @@ cp .env.example .env.local
   success: boolean;
   message: string;
 }
-```
+\`\`\`
 
 ### DELETE /api/looks
 删除造型数据
-```typescript
+\`\`\`typescript
 // 查询参数
 {
   lookId?: string;    // 删除单个
@@ -111,11 +111,11 @@ cp .env.example .env.local
   success: boolean;
   message: string;
 }
-```
+\`\`\`
 
 ### POST /api/looks/migrate
 迁移数据从 localStorage 到数据库
-```typescript
+\`\`\`typescript
 // 请求体
 {
   looks: PastLook[];
@@ -130,7 +130,7 @@ cp .env.example .env.local
   failureCount: number;
   errors?: string[];
 }
-```
+\`\`\`
 
 ## 核心功能
 
@@ -196,7 +196,7 @@ cp .env.example .env.local
 ### 常见问题
 
 #### 1. 迁移失败
-```bash
+\`\`\`bash
 # 检查环境变量
 echo $KV_URL
 echo $BLOB_READ_WRITE_TOKEN
@@ -205,7 +205,7 @@ echo $BLOB_READ_WRITE_TOKEN
 curl -I https://your-app.vercel.app/api/looks
 
 # 查看详细错误日志
-```
+\`\`\`
 
 #### 2. 图片上传失败
 - 检查 Blob 存储配置

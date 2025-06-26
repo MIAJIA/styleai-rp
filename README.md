@@ -44,7 +44,7 @@
 
 ## 🏗️ 项目结构
 
-```
+\`\`\`
 styleai-rp/
 ├── app/                    # Next.js App Router
 │   ├── api/               # API路由
@@ -57,7 +57,7 @@ styleai-rp/
 ├── public/                # 静态资源
 ├── docs/                  # 项目文档
 └── styles/                # 全局样式
-```
+\`\`\`
 
 ## 📚 详细文档
 
@@ -79,43 +79,43 @@ styleai-rp/
 
 1. **克隆项目**
 
-```bash
+\`\`\`bash
 git clone <repository-url>
 cd styleai-rp
-```
+\`\`\`
 
 2. **安装依赖**
 
-```bash
+\`\`\`bash
 npm install
 # 或
 pnpm install
-```
+\`\`\`
 
 3. **环境配置**
 
-```bash
+\`\`\`bash
 cp .env.local.example .env.local
 # 编辑 .env.local 添加必要的API密钥
-```
+\`\`\`
 
 4. **启动开发服务器**
 
-```bash
+\`\`\`bash
 npm run dev
 # 或
 pnpm dev
-```
+\`\`\`
 
 5. **访问应用**
 打开 [http://localhost:3000](http://localhost:3000) 查看应用
 
 ### 构建部署
 
-```bash
+\`\`\`bash
 npm run build
 npm start
-```
+\`\`\`
 
 ## 🎯 核心功能
 

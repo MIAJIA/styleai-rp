@@ -21,7 +21,7 @@
 
 **压缩配置详情：**
 
-```typescript
+\`\`\`typescript
 // 聊天用压缩预设
 chat: {
   maxWidth: 800,        // 最大宽度限制
@@ -29,13 +29,13 @@ chat: {
   quality: 0.8,         // 80%质量
   format: 'auto'        // 自动选择最优格式(AVIF/WebP/JPEG)
 }
-```
+\`\`\`
 
 #### 2. 聊天页面的问题实现
 
 **当前聊天页面的图片处理流程：**
 
-```typescript
+\`\`\`typescript
 // app/chat/page.tsx (第271-285行)
 const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
@@ -48,7 +48,7 @@ const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     reader.readAsDataURL(file);  // ❌ 原图转Base64
   }
 };
-```
+\`\`\`
 
 **问题分析：**
 
@@ -77,7 +77,7 @@ const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
 
 修改聊天页面的图片处理逻辑，集成现有压缩功能：
 
-```typescript
+\`\`\`typescript
 // 修改 handleImageSelect 函数
 const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
@@ -96,13 +96,13 @@ const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => 
     }
   }
 };
-```
+\`\`\`
 
 ### 方案2：增强版修复（推荐）
 
 添加智能压缩策略和用户反馈：
 
-```typescript
+\`\`\`typescript
 const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -135,13 +135,13 @@ const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => 
     setImageProcessing(false);
   }
 };
-```
+\`\`\`
 
 ### 方案3：预防措施增强
 
 添加文件大小检查和用户引导：
 
-```typescript
+\`\`\`typescript
 const validateImageFile = (file: File): { valid: boolean; message?: string } => {
   // 文件类型检查
   if (!file.type.startsWith('image/')) {
@@ -159,7 +159,7 @@ const validateImageFile = (file: File): { valid: boolean; message?: string } => 
 
   return { valid: true };
 };
-```
+\`\`\`
 
 ## 实施优先级
 

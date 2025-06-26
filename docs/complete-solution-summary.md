@@ -4,10 +4,10 @@
 
 ### 原始问题
 
-```javascript
+\`\`\`javascript
 ReferenceError: document is not defined
 at SmartImageCompressor.detectSupportedFormats (lib/image-compression.ts:86:19)
-```
+\`\`\`
 
 ### 修复状态：**🎉 已解决**
 
@@ -31,10 +31,10 @@ at SmartImageCompressor.detectSupportedFormats (lib/image-compression.ts:86:19)
 
 ### Node.js版本兼容性
 
-```bash
+\`\`\`bash
 You are using Node.js 18.16.0.
 For Next.js, Node.js version "^18.18.0 || ^19.8.0 || >= 20.0.0" is required.
-```
+\`\`\`
 
 **状态：** 需要用户升级Node.js版本
 
@@ -42,7 +42,7 @@ For Next.js, Node.js version "^18.18.0 || ^19.8.0 || >= 20.0.0" is required.
 
 #### 选项1：升级Node.js（推荐）
 
-```bash
+\`\`\`bash
 # 使用官方安装包
 # 访问 https://nodejs.org/
 # 下载 LTS 版本（20.x）
@@ -50,14 +50,14 @@ For Next.js, Node.js version "^18.18.0 || ^19.8.0 || >= 20.0.0" is required.
 # 或使用nvm（如果安装了）
 nvm install 20
 nvm use 20
-```
+\`\`\`
 
 #### 选项2：使用兼容版本的Next.js（临时方案）
 
-```bash
+\`\`\`bash
 # 降级到兼容Node.js 18.16.0的Next.js版本
 npm install next@14.0.4 --save
-```
+\`\`\`
 
 ## 📊 **修复成果总览**
 
@@ -80,7 +80,7 @@ npm install next@14.0.4 --save
 
 ### 🔧 **技术实现亮点**
 
-```typescript
+\`\`\`typescript
 // 智能环境检测
 function isClientSide(): boolean {
   return typeof window !== 'undefined' && typeof document !== 'undefined';
@@ -100,7 +100,7 @@ function getImageCompressor(): SmartImageCompressor {
 // 动态导入（chat页面）
 compressionResult = await import('@/lib/image-compression')
   .then(m => m.compressForChat(file));
-```
+\`\`\`
 
 ## 🎯 **下一步行动**
 
@@ -111,7 +111,7 @@ compressionResult = await import('@/lib/image-compression')
 
 ### 验证步骤
 
-```bash
+\`\`\`bash
 # 1. 升级Node.js后
 node --version  # 应显示 >= 18.18.0
 
@@ -122,7 +122,7 @@ npm run dev
 # http://localhost:3000/chat
 
 # 4. 测试图片上传和压缩功能
-```
+\`\`\`
 
 ## 🏆 **预期效果**
 

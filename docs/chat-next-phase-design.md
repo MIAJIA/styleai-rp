@@ -27,7 +27,7 @@
 
 ### **Agent配置和头像设计**
 
-```typescript
+\`\`\`typescript
 // Agent头像和个性设计
 const WORKER_AGENTS: Record<WorkerAgentType, WorkerAgent> = {
   style_advisor: {
@@ -102,11 +102,11 @@ interface WorkerAgent {
   specialties: string[];
   chatStyle: 'friendly' | 'creative' | 'trendy' | 'elegant' | 'professional' | 'systematic';
 }
-```
+\`\`\`
 
 ### **群聊消息类型扩展**
 
-```typescript
+\`\`\`typescript
 // 扩展消息类型支持群聊
 interface ChatMessage {
   id: string;
@@ -142,11 +142,11 @@ interface MessageThread {
   status: 'processing' | 'complete' | 'error';
   startTime: Date;
 }
-```
+\`\`\`
 
 ### **群聊模式的Agent处理流程**
 
-```typescript
+\`\`\`typescript
 // 增强的多Agent协调器 - 群聊模式
 class GroupChatCoordinator {
   private planner: EnhancedPlannerAgent;
@@ -356,11 +356,11 @@ ${Object.entries(thread.responses).map(([agentType, message]) =>
     return "基于各位专家的建议，我为您整理了以下要点...";
   }
 }
-```
+\`\`\`
 
 ### **前端群聊UI组件**
 
-```typescript
+\`\`\`typescript
 // 群聊消息气泡组件
 const GroupChatBubble = ({ message }: { message: ChatMessage }) => {
   const isUser = message.role === 'user';
@@ -438,11 +438,11 @@ const GroupChatBubble = ({ message }: { message: ChatMessage }) => {
     </div>
   );
 };
-```
+\`\`\`
 
 ### **前端集成示例**
 
-```typescript
+\`\`\`typescript
 // 在现有chat页面中集成群聊模式
 const handleSendMessage = async (message: string, attachments?: any[]) => {
   if (!message.trim() || isLoading) return;
@@ -512,7 +512,7 @@ const handleGroupChat = async (message: string) => {
     setIsLoading(false);
   }
 };
-```
+\`\`\`
 
 ## 🎯 群聊模式的优势
 
@@ -536,7 +536,7 @@ const handleGroupChat = async (message: string) => {
 
 **群聊界面显示**:
 
-```
+\`\`\`
 👤 用户: 约会该穿什么颜色的裙子？
 
 📅 场合正在思考... (typing动画)
@@ -556,7 +556,7 @@ const handleGroupChat = async (message: string) => {
 - 颜色首选：温柔粉色或优雅深蓝
 - 款式：A字裙，膝上5-10cm
 - 搭配：精致配饰 + 舒适中跟鞋
-```
+\`\`\`
 
 这种设计让多Agent系统更像真实的专家团队在为用户提供建议，用户体验更加自然和有趣！
 
@@ -564,7 +564,7 @@ const handleGroupChat = async (message: string) => {
 
 ### **Short-term Memory (会话记忆)**
 
-```typescript
+\`\`\`typescript
 // 群聊模式的会话记忆，存储在内存中
 interface ShortTermMemory {
   sessionId: string;
@@ -695,11 +695,11 @@ const updateSessionMemory = (
     timestamp: new Date()
   };
 };
-```
+\`\`\`
 
 ### **Long-term Memory (用户档案)**
 
-```typescript
+\`\`\`typescript
 // 群聊模式的用户长期记忆，存储在Vercel KV
 interface UserProfile {
   userId?: string;
@@ -858,11 +858,11 @@ const optimizeAgentSelection = (
 
   return taskAnalysis;
 };
-```
+\`\`\`
 
 ### **记忆系统在群聊中的应用**
 
-```typescript
+\`\`\`typescript
 // 在GroupChatCoordinator中集成记忆系统
 class GroupChatCoordinator {
   // ... existing code ...
@@ -924,13 +924,13 @@ class GroupChatCoordinator {
     };
   }
 }
-```
+\`\`\`
 
 ## 📱 前端实现方案
 
 ### **在现有页面基础上扩展**
 
-```typescript
+\`\`\`typescript
 // 在现有的 app/chat/page.tsx 中添加
 const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 const [sessionMemory, setSessionMemory] = useState<ShortTermMemory | null>(null);
@@ -1052,11 +1052,11 @@ useEffect(() => {
     });
   }
 }, [messages]);
-```
+\`\`\`
 
 ### **群聊消息显示组件**
 
-```typescript
+\`\`\`typescript
 // 更新的ChatBubble组件支持群聊模式
 const ChatBubble = ({ message }: { message: ChatMessage }) => {
   const isUser = message.role === 'user';
@@ -1149,11 +1149,11 @@ const ChatBubble = ({ message }: { message: ChatMessage }) => {
     </div>
   );
 };
-```
+\`\`\`
 
 ### **群聊状态指示器**
 
-```typescript
+\`\`\`typescript
 // 群聊进行中的状态指示器
 const GroupChatIndicator = ({
   participatingAgents,
@@ -1200,11 +1200,11 @@ const GroupChatIndicator = ({
     </div>
   );
 };
-```
+\`\`\`
 
 ### **记忆系统可视化（可选）**
 
-```typescript
+\`\`\`typescript
 // 用户档案和记忆系统的可视化组件（调试用）
 const MemoryDebugPanel = ({
   userProfile,
@@ -1266,7 +1266,7 @@ const MemoryDebugPanel = ({
     </div>
   );
 };
-```
+\`\`\`
 
 ## 🚀 实施计划
 
@@ -1284,7 +1284,7 @@ const MemoryDebugPanel = ({
 
 **1. 简化Agent配置（仅3个核心Agent）**
 
-```typescript
+\`\`\`typescript
 const SIMPLE_AGENTS = {
   style: {
     name: '小雅',
@@ -1302,11 +1302,11 @@ const SIMPLE_AGENTS = {
     systemPrompt: '你是场合专家，根据不同场合提供着装建议'
   }
 };
-```
+\`\`\`
 
 **2. 简单Agent选择逻辑（替代复杂TaskAnalyzer）**
 
-```typescript
+\`\`\`typescript
 const selectAgent = (userMessage: string): string => {
   const keywords = {
     color: ['颜色', '色彩', '搭配', '配色', '肤色'],
@@ -1320,7 +1320,7 @@ const selectAgent = (userMessage: string): string => {
   }
   return 'style'; // 默认使用穿搭顾问
 };
-```
+\`\`\`
 
 **3. 集成到现有API**
 
@@ -1370,7 +1370,7 @@ const selectAgent = (userMessage: string): string => {
 
 #### **数据收集**
 
-```typescript
+\`\`\`typescript
 // 简单的使用统计
 const agentUsageStats = {
   style: 0,
@@ -1383,7 +1383,7 @@ const logAgentUsage = (selectedAgent: string, userMessage: string) => {
   agentUsageStats[selectedAgent]++;
   console.log(`Agent ${selectedAgent} selected for: ${userMessage.substring(0, 50)}...`);
 };
-```
+\`\`\`
 
 #### **观察重点**
 
@@ -1423,7 +1423,7 @@ const logAgentUsage = (selectedAgent: string, userMessage: string) => {
 
 #### **决策标准**
 
-```typescript
+\`\`\`typescript
 const shouldContinue = (metrics: ValidationMetrics): boolean => {
   return (
     metrics.accuracyRate > 0.75 &&
@@ -1431,7 +1431,7 @@ const shouldContinue = (metrics: ValidationMetrics): boolean => {
     metrics.negativeComplaints < 0.1
   );
 };
-```
+\`\`\`
 
 ---
 
@@ -1445,14 +1445,14 @@ const shouldContinue = (metrics: ValidationMetrics): boolean => {
 
 **1. 添加1-2个新Agent**
 
-```typescript
+\`\`\`typescript
 // 仅在用户明确需要时添加
 body_consultant: {
   name: '美型',
   emoji: '💪',
   systemPrompt: '你是体型管理师，根据体型特点提供穿搭建议'
 }
-```
+\`\`\`
 
 **2. 改进选择算法**
 
@@ -1462,14 +1462,14 @@ body_consultant: {
 
 **3. 简单的选择记忆**
 
-```typescript
+\`\`\`typescript
 // 记住用户偏好的Agent
 const userAgentPreference = {
   userId: string,
   preferredAgent: string,
   lastUsed: Date
 };
-```
+\`\`\`
 
 **4. 优化UI显示**
 
@@ -1637,7 +1637,7 @@ const userAgentPreference = {
 
 **Step 1: 在前端 `app/chat/page.tsx` 维护一个 `ChatContext` 状态**
 
-```typescript
+\`\`\`typescript
 // app/chat/page.tsx
 
 // 1. 定义上下文状态
@@ -1668,11 +1668,11 @@ const handleSendMessage = async (message: string, imageUrl?: string) => {
 const onGenerationComplete = (generatedImageUrl: string) => {
   setChatContext(prev => ({ ...prev, lastImageUrl: generatedImageUrl }));
 };
-```
+\`\`\`
 
 **Step 2: 修改API和Agent以接收和使用 `ChatContext`**
 
-```typescript
+\`\`\`typescript
 // app/api/chat/simple/route.ts
 // 从请求体中解析 context
 const { message, sessionId, imageUrl, context } = await request.json();
@@ -1698,7 +1698,7 @@ You MUST consider this context when replying. If the user's message is short, li
   const systemMessage = new SystemMessage(systemPrompt);
   // ... a lot of other code
 }
-```
+\`\`\`
 
 通过这种方式，我们用最小的改动，让Agent"看见"了最近发生的事情，从而能更智能地理解用户的意图。
 
@@ -1724,7 +1724,7 @@ Agent的知识来源于其训练数据，无法获取最新的时尚潮流信息
 
 **Step 1: 在 `lib/chat-agent.ts` 中定义 `searchTool` Schema**
 
-```typescript
+\`\`\`typescript
 // lib/chat-agent.ts
 
 // 1. 定义搜索工具 Schema
@@ -1757,20 +1757,20 @@ if (imageUrl) {
 } else {
   llmOptions.tools = [searchTool];
 }
-```
+\`\`\`
 
 **Step 2: 更新Agent的System Prompt，指导其使用新工具**
 
-```typescript
+\`\`\`typescript
 // lib/chat-agent.ts -> AGENTS.style.systemPrompt
 systemPrompt: `你是专业的穿搭顾问小雅...
 ...
 - 如果用户想寻找特定商品或潮流（例如 "帮我找找看..."、"有什么推荐的..."），请使用 \`search_fashion_items\` 工具来获取信息，然后基于搜索结果给出建议。`
-```
+\`\`\`
 
 **Step 3: 在 `chat` 方法中处理 `search_fashion_items` 的调用**
 
-```typescript
+\`\`\`typescript
 // lib/chat-agent.ts -> chat() method
 
 if (firstResponse.tool_calls && firstResponse.tool_calls.length > 0) {
@@ -1799,7 +1799,7 @@ if (firstResponse.tool_calls && firstResponse.tool_calls.length > 0) {
   // 后续流程（创建ToolMessage，再次调用LLM）保持不变
   // ...
 }
-```
+\`\`\`
 
 通过这三步，我们构建了一个功能完整的、可测试的搜索流程，而无需编写一行真正的搜索后端代码。这让我们能快速验证这个功能对用户体验的提升，并为未来的真实实现铺平了道路。
 

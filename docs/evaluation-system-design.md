@@ -18,7 +18,7 @@
 
 #### **数据结构**
 
-```typescript
+\`\`\`typescript
 // 简化的评价数据结构
 interface MessageEvaluation {
   messageId: string;
@@ -32,11 +32,11 @@ interface MessageEvaluation {
   timestamp: Date;
   sessionId: string;
 }
-```
+\`\`\`
 
 #### **UI组件实现**
 
-```typescript
+\`\`\`typescript
 // 极简评价按钮组件
 const SimpleEvaluationUI = ({ message, onEvaluate }) => {
   const [voted, setVoted] = useState<boolean | null>(null);
@@ -76,13 +76,13 @@ const SimpleEvaluationUI = ({ message, onEvaluate }) => {
     </div>
   );
 };
-```
+\`\`\`
 
 ### **2. 自动化指标收集**
 
 #### **技术指标数据结构**
 
-```typescript
+\`\`\`typescript
 // 自动收集的技术指标
 interface AutoMetrics {
   messageId: string;
@@ -104,11 +104,11 @@ interface AutoMetrics {
   
   timestamp: Date;
 }
-```
+\`\`\`
 
 #### **自动指标收集器**
 
-```typescript
+\`\`\`typescript
 class AutoMetricsCollector {
   private startTime: number = 0;
   
@@ -135,7 +135,7 @@ class AutoMetricsCollector {
     // 存储用户行为数据用于后续分析
   }
 }
-```
+\`\`\`
 
 ---
 
@@ -143,7 +143,7 @@ class AutoMetricsCollector {
 
 ### **评价数据收集API**
 
-```typescript
+\`\`\`typescript
 // POST /api/evaluation/simple
 export async function POST(request: Request) {
   const { messageId, agentType, isHelpful, sessionId, userMessage } = await request.json();
@@ -166,11 +166,11 @@ export async function POST(request: Request) {
   
   return NextResponse.json({ success: true });
 }
-```
+\`\`\`
 
 ### **实时统计更新**
 
-```typescript
+\`\`\`typescript
 // 简化的统计更新
 const updateSimpleStats = async (agentType: string, isHelpful: boolean) => {
   const today = new Date().toISOString().split('T')[0];
@@ -195,11 +195,11 @@ const updateSimpleStats = async (agentType: string, isHelpful: boolean) => {
   
   await kv.set(statsKey, JSON.stringify(stats));
 };
-```
+\`\`\`
 
 ### **统计数据查询API**
 
-```typescript
+\`\`\`typescript
 // GET /api/evaluation/stats
 export async function GET() {
   const today = new Date().toISOString().split('T')[0];
@@ -229,7 +229,7 @@ export async function GET() {
     yesterday: processStats(yesterdayStats)
   });
 }
-```
+\`\`\`
 
 ---
 
@@ -237,7 +237,7 @@ export async function GET() {
 
 ### **简化的统计Dashboard**
 
-```typescript
+\`\`\`typescript
 // 简单的统计显示页面（开发用）
 const SimpleStatsPage = () => {
   const [stats, setStats] = useState(null);
@@ -291,11 +291,11 @@ const SimpleStatsPage = () => {
     </div>
   );
 };
-```
+\`\`\`
 
 ### **核心指标计算**
 
-```typescript
+\`\`\`typescript
 // Agent选择准确性分析
 const analyzeAgentPerformance = async (days: number = 7) => {
   const results = [];
@@ -324,7 +324,7 @@ const analyzeAgentPerformance = async (days: number = 7) => {
   
   return analysis;
 };
-```
+\`\`\`
 
 ---
 
@@ -332,7 +332,7 @@ const analyzeAgentPerformance = async (days: number = 7) => {
 
 ### **修改ChatBubble组件**
 
-```typescript
+\`\`\`typescript
 // 在现有ChatBubble中添加简化评价
 const ChatBubble = ({ message, onEvaluate }) => {
   // ... 现有代码保持不变 ...
@@ -380,11 +380,11 @@ const ChatBubble = ({ message, onEvaluate }) => {
     </div>
   );
 };
-```
+\`\`\`
 
 ### **修改Chat页面处理函数**
 
-```typescript
+\`\`\`typescript
 // 在现有chat/page.tsx中添加简化评价处理
 const handleMessageEvaluation = async (messageId: string, evaluation: { isHelpful: boolean }) => {
   try {
@@ -426,11 +426,11 @@ const getPreviousUserMessage = (messageId: string) => {
   }
   return '';
 };
-```
+\`\`\`
 
 ### **在Agent响应中包含类型信息**
 
-```typescript
+\`\`\`typescript
 // 修改现有的handleSendMessage，添加agent类型信息
 const handleSendMessage = async (message: string, attachments?: any[]) => {
   // ... 现有代码 ...
@@ -448,7 +448,7 @@ const handleSendMessage = async (message: string, attachments?: any[]) => {
     timestamp: new Date()
   });
 };
-```
+\`\`\`
 
 ---
 
@@ -456,7 +456,7 @@ const handleSendMessage = async (message: string, attachments?: any[]) => {
 
 ### **自动化性能监控**
 
-```typescript
+\`\`\`typescript
 // 简单的性能监控
 const checkPerformanceAlerts = async () => {
   const todayStats = await kv.get(`stats:${new Date().toISOString().split('T')[0]}`);
@@ -484,11 +484,11 @@ const checkPerformanceAlerts = async () => {
     }
   }
 };
-```
+\`\`\`
 
 ### **数据驱动的改进建议**
 
-```typescript
+\`\`\`typescript
 // 基于数据自动生成改进建议
 const generateImprovementSuggestions = async () => {
   const analysis = await analyzeAgentPerformance(7);
@@ -518,7 +518,7 @@ const generateImprovementSuggestions = async () => {
   
   return suggestions;
 };
-```
+\`\`\`
 
 ---
 
@@ -544,7 +544,7 @@ const generateImprovementSuggestions = async () => {
 
 ### **数据驱动决策标准**
 
-```typescript
+\`\`\`typescript
 // 阶段3决策标准
 const evaluatePhase2Success = (stats: any) => {
   const criteria = {
@@ -564,7 +564,7 @@ const evaluatePhase2Success = (stats: any) => {
     return 'simplify_to_single_agent'; // 简化为单Agent
   }
 };
-```
+\`\`\`
 
 ---
 

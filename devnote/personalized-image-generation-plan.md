@@ -23,7 +23,7 @@
 
 这是我们将发送给 Kling API 的 Prompt 模板。它使用英文编写以获得最佳的 AI 理解效果，并动态地填入用户的风格数据。
 
-```javascript
+\`\`\`javascript
 // 在你的前端组件 (app/my-style/page.tsx) 中构建这个 prompt
 
 // aiAnalysis 是你从后端获取的用户风格档案对象
@@ -58,7 +58,7 @@ Now, dress ${userName} in a complete, stylish outfit that perfectly embodies the
 
   return prompt;
 };
-```
+\`\`\`
 
 ## 实现步骤建议
 
@@ -68,7 +68,7 @@ Now, dress ${userName} in a complete, stylish outfit that perfectly embodies the
     - 添加 UI 元素让用户可以选择 `targetStyle` (例如一个下拉菜单或一组按钮)。
     - 实现一个处理点击事件的函数，类似这样：
 
-    ```tsx
+    \`\`\`tsx
     // 在 app/my-style/page.tsx 中
 
     const handleTransformClick = async (targetStyle: string) => {
@@ -110,6 +110,6 @@ Now, dress ${userName} in a complete, stylish outfit that perfectly embodies the
         setIsLoading(false);
       }
     };
-    ```
+    \`\`\`
 
 </rewritten_file>

@@ -12,7 +12,7 @@
 
 ### 整体架构
 
-```
+\`\`\`
 StyleAI-RP/
 ├── 🎨 前端应用 (Next.js App Router)
 ├── 🔌 API 接口 (Next.js API Routes)
@@ -20,13 +20,13 @@ StyleAI-RP/
 ├── 💾 数据存储 (Vercel KV + Blob)
 ├── 🤖 AI 集成 (OpenAI API)
 └── 📚 文档系统 (Markdown)
-```
+\`\`\`
 
 ## 📁 详细目录结构
 
 ### 核心应用目录
 
-```
+\`\`\`
 app/
 ├── 🏠 Root & Layout
 ├── 📄 Pages
@@ -53,45 +53,45 @@ app/
 │   └── tryon/          # 虚拟试穿
 └── 🧩 Components
     └── onboarding/     # 引导流程组件
-```
+\`\`\`
 
 ### 共享组件库
 
-```
+\`\`\`
 components/
 └── ui/                 # 基础UI组件
     ├── 🎨 Radix UI组件封装
     ├── 🎯 业务组件
     └── 🔧 工具组件
-```
+\`\`\`
 
 ### 静态资源
 
-```
+\`\`\`
 public/
 ├── cloth/              # 服装图片资源
 ├── examples/           # 示例图片
 └── idols/             # 明星/模特图片
-```
+\`\`\`
 
 ### 数据与配置
 
-```
+\`\`\`
 data/
 └── cloth/             # 服装数据
 
 lib/                   # 工具函数库
 styles/               # 全局样式
-```
+\`\`\`
 
 ### 开发与部署
 
-```
+\`\`\`
 .next/                # Next.js构建输出
 .vercel/              # Vercel部署配置
 docs/                 # 项目文档
 devnote/              # 开发笔记
-```
+\`\`\`
 
 ## 🛠️ 技术栈详解
 
@@ -162,15 +162,15 @@ devnote/              # 开发笔记
 
 ### 用户交互流程
 
-```
+\`\`\`
 用户输入 → 前端处理 → API调用 → AI处理 → 数据存储 → 结果返回
-```
+\`\`\`
 
 ### AI处理流程
 
-```
+\`\`\`
 图片/文本输入 → 预处理 → OpenAI API → 后处理 → 结果输出
-```
+\`\`\`
 
 ## 🚀 部署架构
 
@@ -277,7 +277,7 @@ devnote/              # 开发笔记
 
 ### 开发环境设置
 
-```bash
+\`\`\`bash
 # 克隆项目
 git clone <repository-url>
 
@@ -289,7 +289,7 @@ npm run dev
 
 # 构建项目
 npm run build
-```
+\`\`\`
 
 ### 代码规范
 

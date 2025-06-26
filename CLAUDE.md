@@ -19,7 +19,7 @@ StyleAI-RP is an AI-powered fashion recommendation platform that provides person
 
 ## Development Commands
 
-```bash
+\`\`\`bash
 # Development
 pnpm dev                 # Start development server
 pnpm build              # Build for production
@@ -28,7 +28,7 @@ pnpm lint               # Run ESLint
 
 # Testing
 # No specific test command - check for test scripts in package.json
-```
+\`\`\`
 
 ## Key Directories
 

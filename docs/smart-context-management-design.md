@@ -6,12 +6,12 @@
 
 ### **典型问题场景**
 
-```
+\`\`\`
 用户: 帮我生成一张穿搭图 → 生成图片A
 用户: 这个颜色不好看 → Agent不知道"这个"指什么
 用户: 换个蓝色的试试 → Agent不知道要换什么
 用户: 把鞋子换成运动鞋 → Agent完全迷失了上下文
-```
+\`\`\`
 
 ### **核心需求**
 
@@ -28,7 +28,7 @@
 
 #### **设计思路**
 
-```typescript
+\`\`\`typescript
 // ❌ 问题方案：前端维护并传输上下文
 const [chatContext, setChatContext] = useState({
   lastUserMessage: null,     // 只有最后一条用户消息
@@ -41,7 +41,7 @@ const response = await fetch('/api/chat/simple', {
   method: 'POST',
   body: JSON.stringify({ message, sessionId, imageUrl, context: chatContext })
 });
-```
+\`\`\`
 
 #### **问题分析**
 
@@ -54,7 +54,7 @@ const response = await fetch('/api/chat/simple', {
 
 #### **设计思路**
 
-```typescript
+\`\`\`typescript
 // ⚠️ 改进但仍有问题：扩大上下文窗口
 interface ChatContext {
   recentMessages: Array<{
@@ -71,7 +71,7 @@ interface ChatContext {
   };
   windowSize: number;  // 保留10条消息
 }
-```
+\`\`\`
 
 #### **仍存在的问题**
 
@@ -95,7 +95,7 @@ interface ChatContext {
 
 #### **上下文数据结构**
 
-```typescript
+\`\`\`typescript
 // 后端ChatAgent中的上下文结构
 interface ConversationMessage {
   role: 'user' | 'ai';
@@ -122,11 +122,11 @@ interface ChatContext {
   windowSize: number;                   // 保留消息数量
   lastUpdated: Date;
 }
-```
+\`\`\`
 
 #### **智能上下文管理器**
 
-```typescript
+\`\`\`typescript
 class SmartContextManager {
   private conversationHistory: ConversationMessage[] = [];
   private readonly MAX_HISTORY = 10;
@@ -307,7 +307,7 @@ class SmartContextManager {
            this.conversationHistory.length > 1;
   }
 }
-```
+\`\`\`
 
 ---
 
@@ -315,7 +315,7 @@ class SmartContextManager {
 
 ### **1. 扩展现有ChatAgent类**
 
-```typescript
+\`\`\`typescript
 // 修改 lib/chat-agent.ts
 export class ChatAgent {
   private contextManager: SmartContextManager;
@@ -381,11 +381,11 @@ export class ChatAgent {
     // ... 现有的OpenAI调用逻辑，使用扩展后的systemPrompt
   }
 }
-```
+\`\`\`
 
 ### **2. API端点无需修改**
 
-```typescript
+\`\`\`typescript
 // app/api/chat/simple/route.ts 保持现有代码不变
 export async function POST(request: NextRequest) {
   try {
@@ -416,11 +416,11 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-```
+\`\`\`
 
 ### **3. 前端完全无需修改**
 
-```typescript
+\`\`\`typescript
 // app/chat/page.tsx 保持现有代码完全不变
 const handleSendMessage = async (message: string, imageUrl?: string) => {
   // ... 现有代码完全不变 ...
@@ -438,11 +438,11 @@ const handleSendMessage = async (message: string, imageUrl?: string) => {
 
   // ... 其余逻辑完全不变 ...
 };
-```
+\`\`\`
 
 ### **4. 图片生成完成后的上下文更新**
 
-```typescript
+\`\`\`typescript
 // 在图片生成完成后，通知ChatAgent更新上下文
 // 修改图片生成完成的回调
 const onGenerationComplete = (generatedImageUrl: string) => {
@@ -477,7 +477,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '更新上下文失败' }, { status: 500 });
   }
 }
-```
+\`\`\`
 
 ---
 
@@ -495,7 +495,7 @@ export async function POST(request: NextRequest) {
 
 ### **内存使用分析**
 
-```typescript
+\`\`\`typescript
 // 每个session的内存使用估算
 interface MemoryUsage {
   conversationHistory: 10 * 500; // 10条消息 * 平均500字符 = 5KB
@@ -506,13 +506,13 @@ interface MemoryUsage {
 
 // 1000个并发session的总内存使用
 const totalMemoryFor1000Sessions = 7 * 1000; // 约7MB
-```
+\`\`\`
 
 **结论**：内存使用量极小，对服务器性能影响可忽略不计。
 
 ### **Token使用优化**
 
-```typescript
+\`\`\`typescript
 // 智能上下文长度控制
 class TokenOptimizer {
   private static readonly MAX_CONTEXT_TOKENS = 1000;
@@ -555,7 +555,7 @@ class TokenOptimizer {
     return optimizedPrompt;
   }
 }
-```
+\`\`\`
 
 ---
 
@@ -630,7 +630,7 @@ class TokenOptimizer {
 
 ### **上下文状态监控**
 
-```typescript
+\`\`\`typescript
 // 开发环境下的上下文调试工具
 class ContextDebugger {
   static logContextState(contextManager: SmartContextManager, sessionId: string) {
@@ -651,11 +651,11 @@ class ContextDebugger {
     console.log(`[Context Prompt] Content:\n${prompt}`);
   }
 }
-```
+\`\`\`
 
 ### **性能监控**
 
-```typescript
+\`\`\`typescript
 // 上下文处理性能监控
 class ContextPerformanceMonitor {
   static async measureContextProcessing<T>(
@@ -671,7 +671,7 @@ class ContextPerformanceMonitor {
     return result;
   }
 }
-```
+\`\`\`
 
 ---
 
@@ -725,7 +725,7 @@ class ContextPerformanceMonitor {
 
 ### **V2 架构：智能上下文分析流程**
 
-```mermaid
+\`\`\`mermaid
 graph TD
     A[用户消息进入] --> B{Pre-Check: 是否为简单、需上下文的消息?};
     B -- 是 (e.g., "换个颜色") --> C[调用小型LLM进行上下文分析];
@@ -736,7 +736,7 @@ graph TD
 
     style C fill:#d4edda,stroke:#c3e6cb
     style B fill:#f8d7da,stroke:#f5c6cb
-```
+\`\`\`
 
 ### **实施计划**
 
@@ -744,7 +744,7 @@ graph TD
 
 我们将修改 `updateSessionInfo` 和 `generateContextPrompt` 方法，用一个统一的 `analyzeContextWithLLM` 方法来取代手动的关键词匹配。
 
-```typescript
+\`\`\`typescript
 class SmartContextManager {
   // ... existing properties
 
@@ -822,13 +822,13 @@ class SmartContextManager {
 
   // generateContextPrompt 方法将直接使用 this.sessionInfo 中的信息，无需大改
 }
-```
+\`\`\`
 
 #### **Step 2: 调整 `ChatAgent`**
 
 `ChatAgent` 的 `chat` 方法需要调整为异步更新上下文。
 
-```typescript
+\`\`\`typescript
 // lib/chat-agent.ts
 export class ChatAgent {
   // ...
@@ -844,7 +844,7 @@ export class ChatAgent {
     // ... 后续逻辑（生成prompt，调用主LLM）不变 ...
   }
 }
-```
+\`\`\`
 
 ### **优势总结**
 
