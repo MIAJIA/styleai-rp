@@ -1,210 +1,210 @@
-# StyleAI-RP: AI时尚穿搭推荐平台
+# StyleAI-RP: AI Fashion Styling Recommendation App
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/jiameng1991-gmailcoms-projects/v0-fasionapp)
 [![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js%2015-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Powered by OpenAI](https://img.shields.io/badge/Powered%20by-OpenAI-green?style=for-the-badge&logo=openai)](https://openai.com/)
 
-> 一个基于AI的个性化时尚穿搭推荐平台，通过智能对话和图像分析为用户提供专业的穿搭建议。
+> A personalized AI-based fashion styling recommendation platform that provides professional styling advice through intelligent conversations and image analysis.
 
-## ✨ 特性亮点
+## ✨ Key Features
 
-- 🤖 **AI智能对话** - 基于大语言模型的穿搭顾问
-- 📸 **图像分析** - 上传照片获取个性化穿搭建议
-- 🎨 **风格管理** - 个人风格库和搭配历史
-- 👤 **用户引导** - 新用户友好的引导流程
-- 📱 **响应式设计** - 支持多设备访问
-- ⚡ **实时交互** - 流畅的用户体验
+- 🤖 **AI Intelligent Conversation** - Fashion consultant based on large language models
+- 📸 **Image Analysis** - Upload photos to get personalized styling advice
+- 🎨 **Style Management** - Personal style library and matching history
+- 👤 **User Guidance** - New user-friendly onboarding process
+- 📱 **Responsive Design** - Supports access on multiple devices
+- ⚡ **Real-time Interaction** - Smooth user experience
 
-## 🚀 在线体验
+## 🚀 Online Experience
 
-**生产环境**: [https://vercel.com/jiameng1991-gmailcoms-projects/v0-fasionapp](https://vercel.com/jiameng1991-gmailcoms-projects/v0-fasionapp)
+**Production Environment**: [https://vercel.com/jiameng1991-gmailcoms-projects/v0-fasionapp](https://vercel.com/jiameng1991-gmailcoms-projects/v0-fasionapp)
 
-## 🛠️ 技术栈
+## 🛠️ Technology Stack
 
-### 前端
+### Frontend
 
-- **Next.js 15.2.4** - React全栈框架
-- **React 19** - 用户界面库
-- **TypeScript** - 类型安全的JavaScript
-- **Tailwind CSS** - 原子化CSS框架
-- **Radix UI** - 无障碍组件库
+- **Next.js 15.2.4** - Full-stack React framework
+- **React 19** - User interface library
+- **TypeScript** - Type-safe JavaScript
+- **Tailwind CSS** - Atomic CSS framework
+- **Radix UI** - Accessible component library
 
-### 后端
+### Backend
 
-- **Next.js API Routes** - 服务端API
-- **Vercel KV** - Redis数据库
-- **Vercel Blob** - 文件存储
-- **OpenAI API** - AI模型服务
+- **Next.js API Routes** - Server-side API
+- **Vercel KV** - Redis database
+- **Vercel Blob** - File storage
+- **OpenAI API** - AI model service
 
-### 开发工具
+### Development Tools
 
-- **ESLint & Prettier** - 代码质量和格式化
-- **Zod** - 数据验证
-- **React Hook Form** - 表单管理
+- **ESLint & Prettier** - Code quality and formatting
+- **Zod** - Data validation
+- **React Hook Form** - Form management
 
-## 🏗️ 项目结构
+## 🏗️ Project Structure
 
-\`\`\`
+```
 styleai-rp/
 ├── app/                    # Next.js App Router
-│   ├── api/               # API路由
-│   ├── chat/              # 聊天页面
-│   ├── my-style/          # 个人风格管理
-│   ├── onboarding/        # 用户引导
+│   ├── api/               # API routes
+│   ├── chat/              # Chat page
+│   ├── my-style/          # Personal style management
+│   ├── onboarding/        # User onboarding
 │   └── ...
-├── components/            # 共享组件
-├── lib/                   # 工具函数
-├── public/                # 静态资源
-├── docs/                  # 项目文档
-└── styles/                # 全局样式
-\`\`\`
+├── components/            # Shared components
+├── lib/                   # Utility functions
+├── public/                # Static resources
+├── docs/                  # Project documentation
+└── styles/                # Global styles
+```
 
-## 📚 详细文档
+## 📚 Detailed Documentation
 
-完整的项目文档请查看 [docs](./docs/) 目录：
+For complete project documentation, please see the [docs](./docs/) directory:
 
-- 📋 **[项目结构概览](./docs/project-structure-overview.md)** - 完整架构说明
-- 🏗️ **[系统设计](./docs/system-design.md)** - 系统架构设计
-- 💬 **[聊天室设计](./docs/chat-room-design.md)** - AI聊天功能设计
-- 🚀 **[部署指南](./docs/deployment-guide.md)** - 部署和环境配置
+- 📋 **[Project Structure Overview](./docs/project-structure-overview.md)** - Complete architecture description
+- 🏗️ **[System Design](./docs/system-design.md)** - System architecture design
+- 💬 **[Chat Room Design](./docs/chat-room-design.md)** - AI chat feature design
+- 🚀 **[Deployment Guide](./docs/deployment-guide.md)** - Deployment and environment configuration
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 环境要求
+### Environment Requirements
 
 - Node.js 18+
-- npm 或 pnpm
+- npm or pnpm
 
-### 本地开发
+### Local Development
 
-1. **克隆项目**
+1. **Clone the Project**
 
-\`\`\`bash
+```bash
 git clone <repository-url>
 cd styleai-rp
-\`\`\`
+```
 
-2. **安装依赖**
+2. **Install Dependencies**
 
-\`\`\`bash
+```bash
 npm install
-# 或
+# or
 pnpm install
-\`\`\`
+```
 
-3. **环境配置**
+3. **Environment Configuration**
 
-\`\`\`bash
+```bash
 cp .env.local.example .env.local
-# 编辑 .env.local 添加必要的API密钥
-\`\`\`
+# Edit .env.local to add necessary API keys
+```
 
-4. **启动开发服务器**
+4. **Start Development Server**
 
-\`\`\`bash
+```bash
 npm run dev
-# 或
+# or
 pnpm dev
-\`\`\`
+```
 
-5. **访问应用**
-打开 [http://localhost:3000](http://localhost:3000) 查看应用
+5. **Access the Application**
+Open [http://localhost:3000](http://localhost:3000) to view the application
 
-### 构建部署
+### Build and Deploy
 
-\`\`\`bash
+```bash
 npm run build
 npm start
-\`\`\`
+```
 
-## 🎯 核心功能
+## 🎯 Core Features
 
-### 🤖 AI对话助手
+### 🤖 AI Chat Assistant
 
-- 智能穿搭建议
-- 多轮对话支持
-- 上下文理解
+- Intelligent styling advice
+- Multi-turn conversation support
+- Context understanding
 
-### 📸 图像分析
+### 📸 Image Analysis
 
-- 照片上传和分析
-- 风格识别
-- 色彩搭配建议
+- Photo upload and analysis
+- Style recognition
+- Color matching advice
 
-### 👤 个人中心
+### 👤 Personal Center
 
-- 用户账户管理
-- 个人风格库
-- 搭配历史记录
+- User account management
+- Personal style library
+- Matching history records
 
-### 🎨 风格管理
+### 🎨 Style Management
 
-- 风格偏好设置
-- 个性化推荐
-- 风格趋势分析
+- Style preference settings
+- Personalized recommendations
+- Style trend analysis
 
-## 🛣️ 开发路线图
+## 🛣️ Development Roadmap
 
-### ✅ 已完成
+### ✅ Completed
 
-- [x] 基础UI框架搭建
-- [x] 用户认证系统
-- [x] AI对话功能
-- [x] 图片上传分析
-- [x] 用户引导流程
+- [x] Basic UI framework setup
+- [x] User authentication system
+- [x] AI chat feature
+- [x] Image upload analysis
+- [x] User onboarding process
 
-### 🚧 进行中
+### 🚧 In Progress
 
-- [ ] 聊天室功能升级
-- [ ] 实时消息推送
-- [ ] 风格管理优化
-- [ ] 移动端适配
+- [ ] Chat room feature upgrade
+- [ ] Real-time message push
+- [ ] Style management optimization
+- [ ] Mobile adaptation
 
-### 📋 计划中
+### 📋 Planned
 
-- [ ] 语音交互
-- [ ] 社交分享
-- [ ] 个性化推荐算法
-- [ ] 多语言支持
+- [ ] Voice interaction
+- [ ] Social sharing
+- [ ] Personalized recommendation algorithm
+- [ ] Multi-language support
 
-## 🤝 贡献指南
+## 🤝 Contribution Guide
 
-我们欢迎所有形式的贡献！
+We welcome all forms of contributions!
 
-### 如何贡献
+### How to Contribute
 
-1. Fork 本项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+1. Fork the project
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-### 代码规范
+### Code Standards
 
-- 使用 TypeScript 进行开发
-- 遵循 ESLint 和 Prettier 规则
-- 编写必要的测试用例
-- 更新相关文档
+- Develop using TypeScript
+- Follow ESLint and Prettier rules
+- Write necessary test cases
+- Update relevant documentation
 
-## 📄 许可证
+## 📄 License
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
 
-## 📞 联系我们
+## 📞 Contact Us
 
-- **项目问题**: [GitHub Issues](https://github.com/your-repo/issues)
-- **功能建议**: [Discussions](https://github.com/your-repo/discussions)
-- **邮箱联系**: [your-email@example.com](mailto:your-email@example.com)
+- **Project Issues**: [GitHub Issues](https://github.com/your-repo/issues)
+- **Feature Suggestions**: [Discussions](https://github.com/your-repo/discussions)
+- **Email Contact**: [your-email@example.com](mailto:your-email@example.com)
 
-## 🙏 致谢
+## 🙏 Acknowledgments
 
-- [Next.js](https://nextjs.org/) - 强大的React框架
-- [OpenAI](https://openai.com/) - 提供AI模型支持
-- [Vercel](https://vercel.com/) - 优秀的部署平台
-- [Radix UI](https://www.radix-ui.com/) - 无障碍组件库
-- [Tailwind CSS](https://tailwindcss.com/) - 实用的CSS框架
+- [Next.js](https://nextjs.org/) - Powerful React framework
+- [OpenAI](https://openai.com/) - Provides AI model support
+- [Vercel](https://vercel.com/) - Excellent deployment platform
+- [Radix UI](https://www.radix-ui.com/) - Accessible component library
+- [Tailwind CSS](https://tailwindcss.com/) - Practical CSS framework
 
 ---
 
-**维护者**: StyleAI Team
-**最后更新**: 2024年12月
+**Maintainers**: StyleAI Team
+**Last Updated**: June 2025
