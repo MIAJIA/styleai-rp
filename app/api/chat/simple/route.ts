@@ -13,7 +13,7 @@ function getChatAgent(sessionId: string): ChatAgent {
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, sessionId, imageUrl, action } = await request.json();
+    const { message, sessionId, imageUrl, imageUrls, action } = await request.json();
 
     if (!sessionId) {
       return NextResponse.json(
@@ -31,6 +31,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: 'Generated image added to context'
+      });
+    }
+
+    // 处理特殊动作：添加多个生成的图片到上下文
+    if (action === 'add_generated_images' && imageUrls && Array.isArray(imageUrls)) {
+      // 添加多个生成的图片到ChatAgent的上下文中
+      agent.addGeneratedImagesToContext(imageUrls);
+      return NextResponse.json({
+        success: true,
+        message: `${imageUrls.length} generated images added to context`
       });
     }
 

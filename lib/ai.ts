@@ -209,6 +209,7 @@ const buildStylizeRequestBody = (
         ...baseBody,
         image_reference: "face",
         human_fidelity: 1,
+        n: 2,// number of images to generate
         model_name: "kling-v1-5",
       };
     case 'kling-v2':
@@ -226,9 +227,9 @@ const buildStylizeRequestBody = (
 };
 
 // More robust, reusable polling function
-async function executeKlingTask(submitPath: string, queryPathPrefix: string, requestBody: object): Promise<string> {
+async function executeKlingTask(submitPath: string, queryPathPrefix: string, requestBody: object): Promise<string[]> {
   if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
-      throw new Error("Kling AI API keys are not configured.");
+    throw new Error("Kling AI API keys are not configured.");
   }
   // 1. Submit the task
   const apiToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
@@ -254,7 +255,7 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
   // 2. Poll for the result
   let attempts = 0;
   const maxAttempts = 60; // Increased max attempts
-  let finalImageUrl = "";
+  let finalImageUrls: string[] = [];
 
   while (attempts < maxAttempts) {
     await sleep(5000); // Increased to 5-second interval
@@ -280,16 +281,19 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
       if (taskData.task_status === "succeed") {
         console.log("Kling task succeeded. Full response:", JSON.stringify(statusResult, null, 2));
 
-        // Defensive parsing for different possible success structures
+        // Handle multiple images from the response
         if (taskData.task_result?.images?.length > 0) {
-          finalImageUrl = taskData.task_result.images[0].url;
+          finalImageUrls = taskData.task_result.images.map((img: any) => img.url);
+          console.log(`Task ${taskId} succeeded! Found ${finalImageUrls.length} images:`, finalImageUrls);
         } else if (taskData.task_result?.url) {
-          finalImageUrl = taskData.task_result.url;
+          // Fallback for single image response
+          finalImageUrls = [taskData.task_result.url];
+          console.log(`Task ${taskId} succeeded! Single image URL:`, finalImageUrls[0]);
         } else {
           throw new Error("Task succeeded, but the response structure for the image URL is unexpected.");
         }
 
-        console.log(`Task ${taskId} succeeded! Image URL:`, finalImageUrl);
+        console.log(`Task ${taskId} succeeded! Total images: ${finalImageUrls.length}`);
         break;
       } else if (taskData.task_status === "failed") {
         throw new Error(`Kling task failed. Reason: ${taskData.task_status_msg || 'Unknown'}`);
@@ -303,11 +307,11 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
     }
   }
 
-  if (!finalImageUrl) {
+  if (finalImageUrls.length === 0) {
     throw new Error(`Kling task ${taskId} timed out after ${maxAttempts} attempts (${maxAttempts * 5} seconds).`);
   }
 
-  return finalImageUrl;
+  return finalImageUrls;
 }
 
 // --- Face Swap ---
@@ -388,7 +392,7 @@ export interface Job {
   statusMessage: string;
   createdAt: string;
   updatedAt: string;
-  suggestion?: { image_prompt: string; [key: string]: any; };
+  suggestion?: { image_prompt: string;[key: string]: any; };
   processImages?: {
     styledImage?: string;
     tryOnImage?: string;
@@ -411,10 +415,13 @@ async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: s
   const humanImageBase64 = await fileToBase64(humanImageFile);
 
   const stylizeRequestBody = buildStylizeRequestBody(modelVersion, prompt, humanImageBase64);
-  const styledImageUrl = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, stylizeRequestBody);
+  const styledImageUrls = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, stylizeRequestBody);
 
-  console.log(`[ATOMIC_STEP] Stylization with ${modelVersion} complete:`, styledImageUrl.substring(0, 100));
-  return styledImageUrl;
+  console.log(`[ATOMIC_STEP] Stylization with ${modelVersion} complete: ${styledImageUrls.length} images generated`);
+  console.log(`[ATOMIC_STEP] First image URL:`, styledImageUrls[0].substring(0, 100));
+
+  // Return the first image for backward compatibility
+  return styledImageUrls[0];
 }
 
 /**
@@ -437,10 +444,12 @@ async function runVirtualTryOn(canvasImageUrl: string, garmentImageUrl: string, 
     cloth_image: garmentImageBase64,
   };
 
-  const tryOnImageUrl = await executeKlingTask(KOLORS_VIRTUAL_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, tryOnRequestBody);
+  const tryOnImageUrls = await executeKlingTask(KOLORS_VIRTUAL_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, tryOnRequestBody);
 
-  console.log("[ATOMIC_STEP] Virtual Try-On complete:", tryOnImageUrl.substring(0, 100));
-  return tryOnImageUrl;
+  console.log("[ATOMIC_STEP] Virtual Try-On complete:", tryOnImageUrls[0].substring(0, 100));
+
+  // Return the first image for backward compatibility
+  return tryOnImageUrls[0];
 }
 
 /**
@@ -451,8 +460,8 @@ async function runAndPerformFaceSwap(humanImageUrl: string, humanImageName: stri
 
   // Convert images to files in parallel
   const [humanImageFile, tryOnImageFile] = await Promise.all([
-      urlToFile(humanImageUrl, humanImageName, humanImageType),
-      urlToFile(tryOnImageUrl, "tryon.jpg", "image/jpeg")
+    urlToFile(humanImageUrl, humanImageName, humanImageType),
+    urlToFile(tryOnImageUrl, "tryon.jpg", "image/jpeg")
   ]);
 
   // Perform face swap
@@ -465,21 +474,21 @@ async function runAndPerformFaceSwap(humanImageUrl: string, humanImageName: stri
  * FINALIZATION STEP: Saves the final image to blob storage.
  */
 async function saveFinalImageToBlob(finalImageUrl: string, jobId: string): Promise<string> {
-    console.log("[FINAL_STEP] Saving final image to blob storage...");
-    const finalImageResponse = await fetch(finalImageUrl);
-    if (!finalImageResponse.ok) {
-        throw new Error(`Failed to fetch final image from URL: ${finalImageUrl}`);
-    }
-    const finalImageBlob = await finalImageResponse.blob();
-    const finalImageName = `final-look-${jobId}.png`;
+  console.log("[FINAL_STEP] Saving final image to blob storage...");
+  const finalImageResponse = await fetch(finalImageUrl);
+  if (!finalImageResponse.ok) {
+    throw new Error(`Failed to fetch final image from URL: ${finalImageUrl}`);
+  }
+  const finalImageBlob = await finalImageResponse.blob();
+  const finalImageName = `final-look-${jobId}.png`;
 
-    const { url: finalSecureUrl } = await put(finalImageName, finalImageBlob, {
-      access: 'public',
-      addRandomSuffix: true,
-    });
+  const { url: finalSecureUrl } = await put(finalImageName, finalImageBlob, {
+    access: 'public',
+    addRandomSuffix: true,
+  });
 
-    console.log("[FINAL_STEP] Final image saved:", finalSecureUrl);
-    return finalSecureUrl;
+  console.log("[FINAL_STEP] Final image saved:", finalSecureUrl);
+  return finalSecureUrl;
 }
 
 
@@ -555,7 +564,7 @@ export async function executeSimpleScenePipeline(job: Job): Promise<string> {
  */
 export async function executeAdvancedScenePipeline(job: Job): Promise<string> {
   console.log(`[PIPELINE_START] Executing "Advanced Scene" pipeline for job ${job.jobId}`);
-   if (!job.suggestion?.image_prompt) {
+  if (!job.suggestion?.image_prompt) {
     throw new Error("Cannot run advanced scene pipeline without 'image_prompt'.");
   }
 

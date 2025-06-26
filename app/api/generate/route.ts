@@ -120,6 +120,7 @@ export async function POST(request: Request) {
     const requestBody = {
       human_image: humanImageBase64,
       cloth_image: garmentImageBase64,
+      n: 2, // Generate 2 images
     };
 
     // Step 3 - Call Kling AI to submit the task
@@ -148,7 +149,7 @@ export async function POST(request: Request) {
     // Step 4 - Poll for the result
     let attempts = 0;
     const maxAttempts = 40;
-    let finalImageUrl = "";
+    let finalImageUrls: string[] = [];
 
     while (attempts < maxAttempts) {
       console.log(`Polling attempt #${attempts + 1} for task: ${taskId}`);
@@ -176,8 +177,13 @@ export async function POST(request: Request) {
       const taskData = statusResult.data; // Data is nested
 
       if (taskData.task_status === "succeed") {
-        finalImageUrl = taskData.task_result.images[0].url;
-        console.log("Task succeeded! Image URL:", finalImageUrl);
+        // Handle multiple images from the response
+        if (taskData.task_result?.images?.length > 0) {
+          finalImageUrls = taskData.task_result.images.map((img: any) => img.url);
+          console.log(`Task succeeded! Found ${finalImageUrls.length} images:`, finalImageUrls);
+        } else {
+          throw new Error("Task succeeded, but no images were found in the response.");
+        }
         break;
       } else if (taskData.task_status === "failed") {
         throw new Error(`AI generation failed. Reason: ${taskData.task_status_msg || "Unknown"}`);
@@ -187,13 +193,16 @@ export async function POST(request: Request) {
       await sleep(3000);
     }
 
-    if (!finalImageUrl) {
+    if (finalImageUrls.length === 0) {
       throw new Error("AI generation timed out.");
     }
 
-    // Step 5 - Return the final image URL and context to the frontend
+    // Step 5 - Return all image URLs and context to the frontend
     return NextResponse.json({
-      imageUrl: finalImageUrl,
+      imageUrls: finalImageUrls,
+      // Keep backward compatibility by also returning the first image as imageUrl
+      imageUrl: finalImageUrls[0],
+      totalImages: finalImageUrls.length,
       garmentDescription,
       personaProfile,
     });

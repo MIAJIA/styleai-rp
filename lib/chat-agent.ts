@@ -489,7 +489,7 @@ export class ChatAgent {
     this.contextManager = new SmartContextManager();
   }
 
-  // New method: Add generated image to context
+  // Method: Add generated image to context (single image)
   public addGeneratedImageToContext(imageUrl: string) {
     console.log('[ChatAgent] Adding generated image to context:', imageUrl);
 
@@ -502,6 +502,25 @@ export class ChatAgent {
     });
 
     console.log('[ChatAgent] Generated image added to context successfully');
+  }
+
+  // Method: Add multiple generated images to context
+  public addGeneratedImagesToContext(imageUrls: string[]) {
+    console.log(`[ChatAgent] Adding ${imageUrls.length} generated images to context:`, imageUrls);
+
+    imageUrls.forEach((imageUrl, index) => {
+      const message = index === 0
+        ? '🎉 Your styling generation is complete! Here are your options:'
+        : `Option ${index + 1}:`;
+
+      this.contextManager.addMessage('ai', message, imageUrl, {
+        type: 'style',
+        name: 'Clara',
+        emoji: '👗'
+      });
+    });
+
+    console.log(`[ChatAgent] ${imageUrls.length} generated images added to context successfully`);
   }
 
   public async chat(

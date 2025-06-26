@@ -1052,8 +1052,8 @@ Let's start chatting about styling now~`,
 
           case "stylization_completed":
             if (!intermediateImageDisplayed) {
-              const styledImageUrl = data.styledImage
-              if (!styledImageUrl) break
+              const styledImageUrls = data.styledImages || (data.styledImage ? [data.styledImage] : [])
+              if (styledImageUrls.length === 0) break
 
               const stylizationTime = Date.now() - pollingStartTime
               console.log(`[PERF] 🎨 Phase 5: STYLIZATION_COMPLETED received after ${stylizationTime}ms`)
@@ -1061,24 +1061,38 @@ Let's start chatting about styling now~`,
               setIntermediateImageDisplayed(true)
               processedStatusesRef.current.add("stylization_completed")
 
-              // 🆕 ADD: Notify ChatAgent about the styled image for context
+              // 🆕 ADD: Notify ChatAgent about the styled images for context
               try {
                 const sessionId = localStorage.getItem("chat_session_id")
                 if (sessionId) {
-                  console.log("[ChatPage] Adding styled image to ChatAgent context:", styledImageUrl)
-                  await fetch("/api/chat/simple", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      sessionId,
-                      imageUrl: styledImageUrl,
-                      action: "add_generated_image",
-                    }),
-                  })
-                  console.log("[ChatPage] Styled image successfully added to ChatAgent context")
+                  if (styledImageUrls.length > 1) {
+                    console.log(`[ChatPage] Adding ${styledImageUrls.length} styled images to ChatAgent context:`, styledImageUrls)
+                    await fetch("/api/chat/simple", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        sessionId,
+                        imageUrls: styledImageUrls,
+                        action: "add_generated_images",
+                      }),
+                    })
+                    console.log(`[ChatPage] ${styledImageUrls.length} styled images successfully added to ChatAgent context`)
+                  } else {
+                    console.log("[ChatPage] Adding styled image to ChatAgent context:", styledImageUrls[0])
+                    await fetch("/api/chat/simple", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        sessionId,
+                        imageUrl: styledImageUrls[0],
+                        action: "add_generated_image",
+                      }),
+                    })
+                    console.log("[ChatPage] Styled image successfully added to ChatAgent context")
+                  }
                 }
               } catch (error) {
-                console.error("[ChatPage] Failed to add styled image to ChatAgent context:", error)
+                console.error("[ChatPage] Failed to add styled image(s) to ChatAgent context:", error)
               }
 
               replaceLastLoadingMessage({
@@ -1087,10 +1101,16 @@ Let's start chatting about styling now~`,
                 content: "Here is the designed scene and pose, now putting on the final outfit for you...",
               })
 
-              addMessage({
-                role: "ai",
-                type: "image",
-                imageUrl: styledImageUrl,
+              // Add all styled images
+              styledImageUrls.forEach((imageUrl: string, index: number) => {
+                addMessage({
+                  role: "ai",
+                  type: "image",
+                  imageUrl: imageUrl,
+                  content: styledImageUrls.length > 1
+                    ? `Styled option ${index + 1}:`
+                    : undefined,
+                })
               })
 
               addMessage({
@@ -1099,7 +1119,7 @@ Let's start chatting about styling now~`,
                 loadingText: "Performing final composition, hang tight, buddy...",
               })
 
-              console.log(`[PERF] 🎨 Phase 5: Intermediate image displayed, continuing to final generation...`)
+              console.log(`[PERF] 🎨 Phase 5: Intermediate images displayed, continuing to final generation...`)
             }
             break
 
@@ -1122,26 +1142,30 @@ Let's start chatting about styling now~`,
               const showCompletion = async () => {
                 console.log("[POLLING] Generation completed successfully!")
 
-                // 🆕 ADD: Notify ChatAgent about the generated image for context
-                const generatedImageUrl = data.result?.imageUrl
-                if (generatedImageUrl) {
+                // 🆕 ADD: Notify ChatAgent about the generated images for context
+                const generatedImageUrls = data.result?.imageUrls || (data.result?.imageUrl ? [data.result.imageUrl] : [])
+                const totalImages = data.result?.totalImages || generatedImageUrls.length
+
+                if (generatedImageUrls.length > 0) {
                   try {
                     const sessionId = localStorage.getItem("chat_session_id")
                     if (sessionId) {
-                      console.log("[ChatPage] Adding generated image to ChatAgent context:", generatedImageUrl)
+                      console.log(`[ChatPage] Adding ${generatedImageUrls.length} generated images to ChatAgent context:`, generatedImageUrls)
+
+                      // Use the new add_generated_images action for multiple images
                       await fetch("/api/chat/simple", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                           sessionId,
-                          imageUrl: generatedImageUrl,
-                          action: "add_generated_image",
+                          imageUrls: generatedImageUrls,
+                          action: "add_generated_images",
                         }),
                       })
-                      console.log("[ChatPage] Generated image successfully added to ChatAgent context")
+                      console.log(`[ChatPage] ${generatedImageUrls.length} generated images successfully added to ChatAgent context`)
                     }
                   } catch (error) {
-                    console.error("[ChatPage] Failed to add generated image to ChatAgent context:", error)
+                    console.error("[ChatPage] Failed to add generated images to ChatAgent context:", error)
                   }
                 }
 
@@ -1149,18 +1173,24 @@ Let's start chatting about styling now~`,
                 replaceLastLoadingMessage({
                   type: "text",
                   role: "ai",
-                  content: "🎉 Your styling generation has completed! Here is the result for you, my friend:",
+                  content: totalImages > 1
+                    ? `🎉 Your styling generation has completed! Here are ${totalImages} options for you, my friend:`
+                    : "🎉 Your styling generation has completed! Here is the result for you, my friend:",
                 })
 
-                // Add generated image
-                addMessage({
-                  type: "image",
-                  role: "ai",
-                  imageUrl: data.result?.imageUrl,
-                  content: "Here's your personalized styling result! What do you think?",
-                  metadata: {
-                    suggestions: ["Try another style", "Adjust colors", "Different occasion", "Style analysis"],
-                  },
+                // Add all generated images as separate messages
+                generatedImageUrls.forEach((imageUrl: string, index: number) => {
+                  addMessage({
+                    type: "image",
+                    role: "ai",
+                    imageUrl: imageUrl,
+                    content: totalImages > 1
+                      ? `Option ${index + 1}: What do you think of this styling?`
+                      : "Here's your personalized styling result! What do you think?",
+                    metadata: {
+                      suggestions: ["Try another style", "Adjust colors", "Different occasion", "Style analysis"],
+                    },
+                  })
                 })
 
                 setCurrentStep("complete")

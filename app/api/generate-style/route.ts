@@ -143,6 +143,7 @@ const buildRequestBody = (
       return {
         ...baseBody,
         human_fidelity: 1,
+        n: 2,// number of images to generate
         model_name: "kling-v1-5",
       };
     case "kling-v2":
@@ -272,9 +273,8 @@ export async function POST(request: Request) {
       } else {
         prompt += ` The clothing must also remain identical.`;
       }
-      prompt += ` Only change the background to: ${
-        stylePromptText || "a beautiful setting"
-      }. Do not alter the person or their attire in any way.`;
+      prompt += ` Only change the background to: ${stylePromptText || "a beautiful setting"
+        }. Do not alter the person or their attire in any way.`;
     }
 
     console.log("～～～Final Kling Prompt:", prompt);
@@ -315,7 +315,7 @@ export async function POST(request: Request) {
     // Step 5 - Poll for the result
     let attempts = 0;
     const maxAttempts = 40;
-    let finalImageUrl = "";
+    let finalImageUrls: string[] = [];
 
     while (attempts < maxAttempts) {
       console.log(`Polling attempt #${attempts + 1} for task: ${taskId}`);
@@ -342,8 +342,13 @@ export async function POST(request: Request) {
       const taskData = statusResult.data;
 
       if (taskData.task_status === "succeed") {
-        finalImageUrl = taskData.task_result.images[0].url;
-        console.log("Image generation succeeded! Image URL:", finalImageUrl);
+        // Handle multiple images from the response
+        if (taskData.task_result?.images?.length > 0) {
+          finalImageUrls = taskData.task_result.images.map((img: any) => img.url);
+          console.log(`Image generation succeeded! Found ${finalImageUrls.length} images:`, finalImageUrls);
+        } else {
+          throw new Error("Task succeeded, but no images were found in the response.");
+        }
         break;
       } else if (taskData.task_status === "failed") {
         throw new Error(`AI generation failed. Reason: ${taskData.task_status_msg || "Unknown"}`);
@@ -353,12 +358,17 @@ export async function POST(request: Request) {
       await sleep(3000);
     }
 
-    if (!finalImageUrl) {
+    if (finalImageUrls.length === 0) {
       throw new Error("AI generation timed out.");
     }
 
-    // Step 6 - Return the final image URL to the frontend
-    return NextResponse.json({ imageUrl: finalImageUrl });
+    // Step 6 - Return all image URLs to the frontend
+    return NextResponse.json({
+      imageUrls: finalImageUrls,
+      // Keep backward compatibility by also returning the first image as imageUrl
+      imageUrl: finalImageUrls[0],
+      totalImages: finalImageUrls.length
+    });
   } catch (error) {
     console.error("An error occurred in the generate-style API:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
