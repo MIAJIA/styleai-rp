@@ -140,6 +140,17 @@ function ChatBubble({
 }) {
   const isAI = message.role === "ai"
 
+  // Debug logging for product messages
+  if (message.type === "products" || (message.products && message.products.length > 0)) {
+    console.log("[ChatBubble] Rendering message with products:", {
+      messageId: message.id,
+      messageType: message.type,
+      hasProducts: !!message.products,
+      productCount: message.products?.length || 0,
+      products: message.products?.map(p => ({ id: p.id, name: p.name.substring(0, 20) + '...' })) || []
+    });
+  }
+
   return (
     <div className={`flex items-start gap-3 my-4 ${!isAI ? "flex-row-reverse" : ""}`}>
       {isAI ? (
@@ -584,23 +595,42 @@ Let's start chatting about styling now~`,
       }
 
       // Check if the response contains product information
-      const products = parseProductsFromText(data.response)
-      console.log("[ChatPage] Parsed products from response:", products)
+      let products: ProductInfo[] = [];
+
+      // First, try to parse products from the API response if it contains search results
+      if (data.searchResults) {
+        console.log("[ChatPage] Found searchResults in API response:", data.searchResults);
+        products = data.searchResults.items?.map((item: any) => ({
+          id: item.id || `product-${Date.now()}`,
+          name: item.name || 'Product',
+          price: item.price || 'Price not available',
+          description: item.description || '',
+          link: item.link || '#',
+          imageUrl: item.imageUrl || '/placeholder-product.jpg'
+        })) || [];
+      }
+
+      // Fallback: try to parse from text response
+      if (products.length === 0) {
+        products = parseProductsFromText(data.response);
+      }
+
+      console.log("[ChatPage] Final parsed products:", products);
 
       if (products.length > 0) {
-        // If products are found, create a message with both text and products
+        // If products are found, create a message with only products (no text content)
         replaceLastLoadingMessage({
           type: "products",
           role: "ai",
-          content: data.response,
+          content: undefined, // Don't show text content when products are present
           products: products,
           agentInfo: data.agentInfo,
           metadata: {
             suggestions: generateSmartSuggestions(data.response),
           },
-        })
+        });
       } else {
-        // 4. Use the recreated function to display the AI response
+        // Use the recreated function to display the AI response
         replaceLastLoadingMessage({
           type: "text",
           role: "ai",
@@ -609,7 +639,7 @@ Let's start chatting about styling now~`,
           metadata: {
             suggestions: generateSmartSuggestions(data.response),
           },
-        })
+        });
       }
 
       // 🔍 Add debug log after message addition
@@ -1260,7 +1290,7 @@ Let's start chatting about styling now~`,
                 const message = (e.target as HTMLFormElement).message.value
                 if (!message.trim() && !stagedImage) return
                 handleSendMessage(message)
-                ;(e.target as HTMLFormElement).reset()
+                  ; (e.target as HTMLFormElement).reset()
               }}
               className="flex items-center gap-2"
             >

@@ -42,11 +42,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { aiResponse, agentInfo } = await agent.chat(message, imageUrl);
+    const { aiResponse, agentInfo, searchResults } = await agent.chat(message, imageUrl);
 
     return NextResponse.json({
       response: aiResponse,
       agentInfo,
+      searchResults,
       success: true
     });
   } catch (error) {
