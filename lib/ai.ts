@@ -394,18 +394,25 @@ export interface Job {
   updatedAt: string;
   suggestion?: { image_prompt: string;[key: string]: any; };
   processImages?: {
-    styledImage?: string;
-    tryOnImage?: string;
+    styledImages?: string[];  // Changed to array
+    styledImage?: string;     // Keep for backward compatibility
+    tryOnImages?: string[];   // Changed to array
+    tryOnImage?: string;      // Keep for backward compatibility
   };
-  result?: { imageUrl: string };
+  result?: {
+    imageUrls?: string[];     // Added array version
+    imageUrl?: string;        // Keep for backward compatibility
+    totalImages?: number;     // Added count
+  };
   error?: string;
   [key: string]: any; // Index signature for Vercel KV compatibility
 }
 
 /**
  * ATOMIC STEP: Generates a stylized base image using a specific model.
+ * Returns multiple images.
  */
-async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string): Promise<string> {
+async function runStylizationMultiple(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string): Promise<string[]> {
   console.log(`[ATOMIC_STEP] Running Stylization with ${modelVersion}...`);
   if (!prompt) {
     throw new Error("Cannot generate styled image without a 'prompt'.");
@@ -418,18 +425,29 @@ async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: s
   const styledImageUrls = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, stylizeRequestBody);
 
   console.log(`[ATOMIC_STEP] Stylization with ${modelVersion} complete: ${styledImageUrls.length} images generated`);
-  console.log(`[ATOMIC_STEP] First image URL:`, styledImageUrls[0].substring(0, 100));
+  styledImageUrls.forEach((url, index) => {
+    console.log(`[ATOMIC_STEP] Image ${index + 1} URL:`, url.substring(0, 100));
+  });
 
-  // Return the first image for backward compatibility
+  return styledImageUrls;
+}
+
+/**
+ * ATOMIC STEP: Generates a stylized base image using a specific model.
+ * Legacy version that returns only the first image for backward compatibility.
+ */
+async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string): Promise<string> {
+  const styledImageUrls = await runStylizationMultiple(modelVersion, prompt, humanImageUrl, humanImageName, humanImageType);
   return styledImageUrls[0];
 }
 
 /**
  * ATOMIC STEP: Performs virtual try-on.
+ * Returns multiple images.
  * @param canvasImageUrl The URL of the image to apply the clothing to.
  * @param garmentImageUrl The URL of the clothing item.
  */
-async function runVirtualTryOn(canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string): Promise<string> {
+async function runVirtualTryOnMultiple(canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string): Promise<string[]> {
   console.log("[ATOMIC_STEP] Running Virtual Try-On...");
 
   // Convert canvas image and garment to files/base64 in parallel
@@ -442,13 +460,27 @@ async function runVirtualTryOn(canvasImageUrl: string, garmentImageUrl: string, 
     model_name: "kolors-virtual-try-on-v1-5",
     human_image: canvasImageBase64,
     cloth_image: garmentImageBase64,
+    n: 2, // Generate 2 images
   };
 
   const tryOnImageUrls = await executeKlingTask(KOLORS_VIRTUAL_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, tryOnRequestBody);
 
-  console.log("[ATOMIC_STEP] Virtual Try-On complete:", tryOnImageUrls[0].substring(0, 100));
+  console.log(`[ATOMIC_STEP] Virtual Try-On complete: ${tryOnImageUrls.length} images generated`);
+  tryOnImageUrls.forEach((url, index) => {
+    console.log(`[ATOMIC_STEP] Try-on image ${index + 1} URL:`, url.substring(0, 100));
+  });
 
-  // Return the first image for backward compatibility
+  return tryOnImageUrls;
+}
+
+/**
+ * ATOMIC STEP: Performs virtual try-on.
+ * Legacy version that returns only the first image for backward compatibility.
+ * @param canvasImageUrl The URL of the image to apply the clothing to.
+ * @param garmentImageUrl The URL of the clothing item.
+ */
+async function runVirtualTryOn(canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string): Promise<string> {
+  const tryOnImageUrls = await runVirtualTryOnMultiple(canvasImageUrl, garmentImageUrl, garmentImageName, garmentImageType);
   return tryOnImageUrls[0];
 }
 
@@ -496,113 +528,158 @@ async function saveFinalImageToBlob(finalImageUrl: string, jobId: string): Promi
 
 /**
  * PIPELINE 1: Performs virtual try-on only.
+ * Now returns multiple images.
  */
-export async function executeTryOnOnlyPipeline(job: Job): Promise<string> {
+export async function executeTryOnOnlyPipeline(job: Job): Promise<string[]> {
   console.log(`[PIPELINE_START] Executing "Try-On Only" pipeline for job ${job.jobId}`);
 
   // Step 1: Virtual Try-On on the original human image
   // The 'canvas' is the user's original photo.
-  const tryOnImageUrl = await runVirtualTryOn(
+  const tryOnImageUrls = await runVirtualTryOnMultiple(
     job.humanImage.url,
     job.garmentImage.url,
     job.garmentImage.name,
     job.garmentImage.type
   );
-  await kv.hset(job.jobId, { tryOnImage: tryOnImageUrl });
 
+  await kv.hset(job.jobId, {
+    tryOnImages: tryOnImageUrls,
+    tryOnImage: tryOnImageUrls[0] // Keep for backward compatibility
+  });
 
-  // Step 2: Save the result to blob storage
-  const finalUrl = await saveFinalImageToBlob(tryOnImageUrl, job.jobId);
+  // Step 2: Save all results to blob storage
+  const finalUrls: string[] = [];
+  for (let i = 0; i < tryOnImageUrls.length; i++) {
+    const finalUrl = await saveFinalImageToBlob(tryOnImageUrls[i], `${job.jobId}-${i + 1}`);
+    finalUrls.push(finalUrl);
+  }
 
-  console.log(`[PIPELINE_END] "Try-On Only" pipeline finished for job ${job.jobId}`);
-  return finalUrl;
+  console.log(`[PIPELINE_END] "Try-On Only" pipeline finished for job ${job.jobId}. Generated ${finalUrls.length} images.`);
+  return finalUrls;
 }
 
 /**
  * PIPELINE 2: Generates a simple scene with the user, with improved clothing fidelity.
+ * Now returns multiple images.
  */
-export async function executeSimpleScenePipeline(job: Job): Promise<string> {
+export async function executeSimpleScenePipeline(job: Job): Promise<string[]> {
   console.log(`[PIPELINE_START] Executing "Simple Scene" pipeline for job ${job.jobId}`);
   if (!job.suggestion?.image_prompt) {
     throw new Error("Cannot run simple scene pipeline without 'image_prompt'.");
   }
 
   // Step 1: Stylize the image using the simpler, faster model to get a new scene and pose.
-  const styledImageUrl = await runStylization(
+  const styledImageUrls = await runStylizationMultiple(
     'kling-v1-5',
     job.suggestion.image_prompt,
     job.humanImage.url,
     job.humanImage.name,
     job.humanImage.type
   );
+
   await kv.hset(job.jobId, {
     status: 'stylization_completed',
     statusMessage: '场景已生成，正在进行虚拟试穿...',
-    styledImage: styledImageUrl
+    styledImages: styledImageUrls,
+    styledImage: styledImageUrls[0] // Keep for backward compatibility
   });
 
-  // Step 2: Perform virtual try-on on the new scene to ensure high clothing fidelity.
-  const tryOnImageUrl = await runVirtualTryOn(
-    styledImageUrl,
-    job.garmentImage.url,
-    job.garmentImage.name,
-    job.garmentImage.type
-  );
-  await kv.hset(job.jobId, { tryOnImage: tryOnImageUrl });
+  // Step 2: Perform virtual try-on on each new scene to ensure high clothing fidelity.
+  const allTryOnImageUrls: string[] = [];
 
+  for (let i = 0; i < styledImageUrls.length; i++) {
+    console.log(`[PIPELINE] Processing virtual try-on for styled image ${i + 1}/${styledImageUrls.length}`);
+    const tryOnImageUrls = await runVirtualTryOnMultiple(
+      styledImageUrls[i],
+      job.garmentImage.url,
+      job.garmentImage.name,
+      job.garmentImage.type
+    );
+    allTryOnImageUrls.push(...tryOnImageUrls);
+  }
 
-  // Step 3: Save the result to blob storage
-  const finalUrl = await saveFinalImageToBlob(tryOnImageUrl, job.jobId);
+  await kv.hset(job.jobId, {
+    tryOnImages: allTryOnImageUrls,
+    tryOnImage: allTryOnImageUrls[0] // Keep for backward compatibility
+  });
 
-  console.log(`[PIPELINE_END] "Simple Scene" pipeline finished for job ${job.jobId}`);
-  return finalUrl;
+  // Step 3: Save all results to blob storage
+  const finalUrls: string[] = [];
+  for (let i = 0; i < allTryOnImageUrls.length; i++) {
+    const finalUrl = await saveFinalImageToBlob(allTryOnImageUrls[i], `${job.jobId}-${i + 1}`);
+    finalUrls.push(finalUrl);
+  }
+
+  console.log(`[PIPELINE_END] "Simple Scene" pipeline finished for job ${job.jobId}. Generated ${finalUrls.length} images.`);
+  return finalUrls;
 }
-
 
 /**
  * PIPELINE 3: Performs the full advanced scene generation.
+ * Now returns multiple images.
  */
-export async function executeAdvancedScenePipeline(job: Job): Promise<string> {
+export async function executeAdvancedScenePipeline(job: Job): Promise<string[]> {
   console.log(`[PIPELINE_START] Executing "Advanced Scene" pipeline for job ${job.jobId}`);
   if (!job.suggestion?.image_prompt) {
     throw new Error("Cannot run advanced scene pipeline without 'image_prompt'.");
   }
 
   // Step 1: Generate the stylized background/pose with the advanced model
-  const styledImageUrl = await runStylization(
+  const styledImageUrls = await runStylizationMultiple(
     'kling-v2',
     job.suggestion.image_prompt,
     job.humanImage.url,
     job.humanImage.name,
     job.humanImage.type
   );
+
   await kv.hset(job.jobId, {
     status: 'stylization_completed',
     statusMessage: '场景已生成，正在进行虚拟试穿...',
-    styledImage: styledImageUrl
+    styledImages: styledImageUrls,
+    styledImage: styledImageUrls[0] // Keep for backward compatibility
   });
 
-  // Step 2: Perform virtual try-on using the newly stylized image as the canvas
-  const tryOnImageUrl = await runVirtualTryOn(
-    styledImageUrl,
-    job.garmentImage.url,
-    job.garmentImage.name,
-    job.garmentImage.type
-  );
-  await kv.hset(job.jobId, { tryOnImage: tryOnImageUrl });
+  // Step 2: Perform virtual try-on using each newly stylized image as the canvas
+  const allTryOnImageUrls: string[] = [];
 
+  for (let i = 0; i < styledImageUrls.length; i++) {
+    console.log(`[PIPELINE] Processing virtual try-on for styled image ${i + 1}/${styledImageUrls.length}`);
+    const tryOnImageUrls = await runVirtualTryOnMultiple(
+      styledImageUrls[i],
+      job.garmentImage.url,
+      job.garmentImage.name,
+      job.garmentImage.type
+    );
+    allTryOnImageUrls.push(...tryOnImageUrls);
+  }
 
-  // Step 3: Perform face swap to put the user's face back onto the generated body
-  const swappedImageUrl = await runAndPerformFaceSwap(
-    job.humanImage.url,
-    job.humanImage.name,
-    job.humanImage.type,
-    tryOnImageUrl
-  );
+  await kv.hset(job.jobId, {
+    tryOnImages: allTryOnImageUrls,
+    tryOnImage: allTryOnImageUrls[0] // Keep for backward compatibility
+  });
 
-  // Step 4: Save the final, face-swapped image to blob storage
-  const finalUrl = await saveFinalImageToBlob(swappedImageUrl, job.jobId);
+  // Step 3: Perform face swap on all try-on images to put the user's face back onto the generated body
+  const allSwappedImageUrls: string[] = [];
 
-  console.log(`[PIPELINE_END] "Advanced Scene" pipeline finished for job ${job.jobId}`);
-  return finalUrl;
+  for (let i = 0; i < allTryOnImageUrls.length; i++) {
+    console.log(`[PIPELINE] Processing face swap for try-on image ${i + 1}/${allTryOnImageUrls.length}`);
+    const swappedImageUrl = await runAndPerformFaceSwap(
+      job.humanImage.url,
+      job.humanImage.name,
+      job.humanImage.type,
+      allTryOnImageUrls[i]
+    );
+    allSwappedImageUrls.push(swappedImageUrl);
+  }
+
+  // Step 4: Save all final, face-swapped images to blob storage
+  const finalUrls: string[] = [];
+  for (let i = 0; i < allSwappedImageUrls.length; i++) {
+    const finalUrl = await saveFinalImageToBlob(allSwappedImageUrls[i], `${job.jobId}-${i + 1}`);
+    finalUrls.push(finalUrl);
+  }
+
+  console.log(`[PIPELINE_END] "Advanced Scene" pipeline finished for job ${job.jobId}. Generated ${finalUrls.length} images.`);
+  return finalUrls;
 }

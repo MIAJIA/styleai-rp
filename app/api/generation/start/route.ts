@@ -20,34 +20,38 @@ async function runImageGenerationPipeline(jobId: string) {
     if (!job) {
       throw new Error(`Job with ID ${jobId} not found.`);
     }
-     if (!job.suggestion) {
-        throw new Error(`Job ${jobId} is missing the style suggestion needed for the pipeline.`);
+    if (!job.suggestion) {
+      throw new Error(`Job ${jobId} is missing the style suggestion needed for the pipeline.`);
     }
 
     console.log(`[Job ${jobId}] Starting image generation pipeline for mode: ${job.generationMode}`);
 
     // Execute the selected generation pipeline
-    let finalImageUrl: string;
+    let finalImageUrls: string[];
     switch (job.generationMode) {
       case 'tryon-only':
-        finalImageUrl = await executeTryOnOnlyPipeline(job);
+        finalImageUrls = await executeTryOnOnlyPipeline(job);
         break;
       case 'simple-scene':
-        finalImageUrl = await executeSimpleScenePipeline(job);
+        finalImageUrls = await executeSimpleScenePipeline(job);
         break;
       case 'advanced-scene':
-        finalImageUrl = await executeAdvancedScenePipeline(job);
+        finalImageUrls = await executeAdvancedScenePipeline(job);
         break;
       default:
         throw new Error(`Unknown generation mode: ${job.generationMode}`);
     }
 
-    // Mark job as complete
-    console.log(`[Job ${jobId}] Pipeline completed. Final URL: ${finalImageUrl}`);
+    // Mark job as complete with all images
+    console.log(`[Job ${jobId}] Pipeline completed. Generated ${finalImageUrls.length} images:`, finalImageUrls);
     await kv.hset(jobId, {
       status: 'completed',
       statusMessage: 'Your new look is ready!',
-      result: { imageUrl: finalImageUrl },
+      result: {
+        imageUrls: finalImageUrls,
+        imageUrl: finalImageUrls[0], // Keep for backward compatibility
+        totalImages: finalImageUrls.length
+      },
       updatedAt: new Date().toISOString(),
     });
 
@@ -58,9 +62,10 @@ async function runImageGenerationPipeline(jobId: string) {
         throw new Error("Job data not found for saving to DB.");
       }
 
+      // Save the first image as the primary look (for backward compatibility)
       const lookToSave: PastLook = {
         id: finalJobState.jobId,
-        imageUrl: finalImageUrl,
+        imageUrl: finalImageUrls[0],
         style: finalJobState.suggestion?.style_alignment || 'AI Generated',
         timestamp: Date.now(),
         originalHumanSrc: finalJobState.humanImage.url,
@@ -70,14 +75,14 @@ async function runImageGenerationPipeline(jobId: string) {
         processImages: {
           humanImage: finalJobState.humanImage.url,
           garmentImage: finalJobState.garmentImage.url,
-          finalImage: finalImageUrl,
+          finalImage: finalImageUrls[0],
           styleSuggestion: finalJobState.suggestion,
         },
       };
       await saveLookToDB(lookToSave, 'default');
-      console.log(`[Job ${jobId}] Successfully saved final look to primary DB.`);
+      console.log(`[Job ${jobId}] Successfully saved final look to primary DB with ${finalImageUrls.length} images. All URLs: ${finalImageUrls.join(', ')}`);
     } catch (dbError) {
-        console.error(`[Job ${jobId}] CRITICAL: Pipeline succeeded but failed to save look to DB.`, dbError);
+      console.error(`[Job ${jobId}] CRITICAL: Pipeline succeeded but failed to save look to DB.`, dbError);
     }
 
   } catch (error) {
@@ -108,7 +113,7 @@ export async function POST(request: Request) {
     }
 
     if (!['tryon-only', 'simple-scene', 'advanced-scene'].includes(generationMode)) {
-        return NextResponse.json({ error: 'Invalid generation mode' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid generation mode' }, { status: 400 });
     }
 
     // Upload images to Vercel Blob
@@ -128,7 +133,7 @@ export async function POST(request: Request) {
       garmentImageUrl: garmentImageBlob.url,
       occasion: occasion,
     });
-     console.log(`[Job] Suggestion generated for new job.` , suggestion);
+    console.log(`[Job] Suggestion generated for new job.`, suggestion);
 
     // Step 2: Create the job record in KV with the suggestion included
     const jobId = randomUUID();
