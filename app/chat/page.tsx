@@ -538,7 +538,7 @@ Let's start chatting about styling now~`,
     addMessage({
       type: "loading",
       role: "ai",
-      loadingText: "Thinking...",
+      loadingText: "Just a moment, I'm cooking up something stylish for you...",
     })
 
     // Pass the captured image to the chat handler
@@ -687,19 +687,19 @@ Let's start chatting about styling now~`,
 
   const displayWaitingTips = async () => {
     const tips = [
-      "💡 AI is analyzing your photos and preferences...",
-      "🎨 Generating personalized styling suggestions...",
-      "✨ Creating the perfect look for you...",
-      "🌟 Almost ready, preparing the final result...",
+      "💡 Just a sec, I'm brewing up some style magic for you...",
+      "🎨 Hold tight, your personalized fashion advice is on the way...",
+      "✨ Almost there, just adding the final touches to your look...",
+      "🌟 Hang in there, your style transformation is nearly complete...",
     ]
 
     // Merge tips and generation steps
     const allTips = [
       ...tips,
-      "🎯 Analyzing style elements...",
-      "🔄 Processing image generation...",
-      "🎨 Applying styling effects...",
-      "✅ Finalizing your look...",
+      "🎯 Analyzing style elements, just like old times...",
+      "🔄 Processing image generation, remember that time we tried that crazy hat?",
+      "🎨 Applying styling effects, because you deserve the best...",
+      "✅ Finalizing your look, can't wait for you to see it!",
     ]
 
     // Show tips or generation steps
@@ -885,7 +885,7 @@ Let's start chatting about styling now~`,
     addMessage({
       type: "loading",
       role: "ai",
-      loadingText: "Analyzing your request, please wait...",
+      loadingText: "Just a moment, I'm cooking up something stylish for you...",
     })
 
     try {
@@ -958,7 +958,25 @@ Let's start chatting about styling now~`,
       addMessage({
         type: "loading",
         role: "ai",
-        loadingText: "Generating suggestions for you...",
+        loadingText: "Crafting the perfect scene and pose, just like we used to do...",
+      })
+
+      replaceLastLoadingMessage({
+        role: "ai",
+        type: "loading",
+        loadingText: "Putting the final touches on your look, hang tight...",
+      })
+
+      addMessage({
+        type: "loading",
+        role: "ai",
+        loadingText: "Crafting the perfect scene and pose, just like we used to do...",
+      })
+
+      replaceLastLoadingMessage({
+        type: "text",
+        role: "ai",
+        content: "🎉 Your styling masterpiece is ready! Here's what I've got for you, my friend:",
       })
     } catch (error) {
       const errorTime = Date.now()
@@ -1028,7 +1046,7 @@ Let's start chatting about styling now~`,
             replaceLastLoadingMessage({
               role: "ai",
               type: "loading",
-              loadingText: "Creating a suitable scene and pose for you...",
+              loadingText: "Creating a suitable scene and pose for you, remember our last adventure?",
             })
             break
 
@@ -1078,7 +1096,7 @@ Let's start chatting about styling now~`,
               addMessage({
                 role: "ai",
                 type: "loading",
-                loadingText: "Performing final composition, please wait...",
+                loadingText: "Performing final composition, hang tight, buddy...",
               })
 
               console.log(`[PERF] 🎨 Phase 5: Intermediate image displayed, continuing to final generation...`)
@@ -1131,7 +1149,7 @@ Let's start chatting about styling now~`,
                 replaceLastLoadingMessage({
                   type: "text",
                   role: "ai",
-                  content: "🎉 Your styling generation has completed! Here is the result for you:",
+                  content: "🎉 Your styling generation has completed! Here is the result for you, my friend:",
                 })
 
                 // Add generated image
