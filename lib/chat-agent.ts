@@ -9,6 +9,291 @@ import {
 } from '@langchain/core/messages';
 import { SmartContextManager } from './memory';
 
+// Add interface for Google Shopping API response
+interface GoogleShoppingResult {
+  position?: number;
+  title: string;
+  link?: string;
+  product_id?: string;
+  product_link?: string;
+  source?: string;
+  price?: string;
+  extracted_price?: number;
+  rating?: number;
+  reviews?: number;
+  thumbnail?: string;
+  delivery?: string;
+  description?: string;
+  second_hand_condition?: string;
+}
+
+interface GoogleShoppingResponse {
+  shopping_results?: GoogleShoppingResult[];
+  inline_shopping_results?: GoogleShoppingResult[];
+  search_metadata?: {
+    id: string;
+    status: string;
+    google_shopping_light_url: string;
+    total_time_taken: number;
+  };
+  search_parameters?: {
+    engine: string;
+    q: string;
+    location?: string;
+    hl?: string;
+    gl?: string;
+  };
+}
+
+// Function to search Google Shopping Light API
+async function searchGoogleShoppingLight(query: string, imageUrl?: string): Promise<{
+  items: Array<{
+    id: string;
+    name: string;
+    price: string;
+    score: number;
+    imageUrl: string;
+    description?: string;
+    link?: string;
+    source?: string;
+  }>;
+  summary: string;
+  searchType: string;
+}> {
+  const apiKey = process.env.SERPAPI_KEY;
+
+  if (!apiKey) {
+    console.warn('[SearchAPI] SERPAPI_KEY not found, using mock data');
+    return getMockSearchResults(query);
+  }
+
+  try {
+    const searchQuery = query.trim();
+
+    if (!searchQuery) {
+      console.warn('[SearchAPI] Empty search query provided');
+      return {
+        items: [],
+        summary: "Please provide a search query to find products.",
+        searchType: "error"
+      };
+    }
+
+    console.log(`[SearchAPI] Calling Google Shopping Light API for query: "${searchQuery}"`);
+
+    // Construct the API URL with fixed US location settings
+    const params = new URLSearchParams({
+      engine: 'google_shopping_light',
+      q: searchQuery,
+      api_key: apiKey,
+      hl: 'en',        // Language: English
+      gl: 'us',        // Country: United States
+      num: '5'        // Number of results
+    });
+
+    const apiUrl = `https://serpapi.com/search?${params.toString()}`;
+    console.log(`[SearchAPI] API URL: ${apiUrl.replace(apiKey, 'HIDDEN_API_KEY')}`);
+
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log(`[SearchAPI] HTTP Response Status: ${response.status} ${response.statusText}`);
+
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
+    }
+
+    const data: GoogleShoppingResponse = await response.json();
+
+    // Comprehensive logging of API response structure
+    console.log('=== GOOGLE SHOPPING API RESPONSE ANALYSIS ===');
+    console.log(`[SearchAPI] Full response keys:`, Object.keys(data));
+
+    if (data.search_metadata) {
+      console.log(`[SearchAPI] Search Metadata:`, {
+        id: data.search_metadata.id,
+        status: data.search_metadata.status,
+        total_time_taken: data.search_metadata.total_time_taken,
+        url: data.search_metadata.google_shopping_light_url
+      });
+    }
+
+    if (data.search_parameters) {
+      console.log(`[SearchAPI] Search Parameters:`, data.search_parameters);
+    }
+
+    // Log shopping_results structure
+    if (data.shopping_results) {
+      console.log(`[SearchAPI] shopping_results found: ${data.shopping_results.length} items`);
+      if (data.shopping_results.length > 0) {
+        console.log(`[SearchAPI] First shopping_results item structure:`, {
+          keys: Object.keys(data.shopping_results[0]),
+          sample: {
+            position: data.shopping_results[0].position,
+            title: data.shopping_results[0].title?.substring(0, 50) + '...',
+            price: data.shopping_results[0].price,
+            source: data.shopping_results[0].source,
+            thumbnail: data.shopping_results[0].thumbnail ? 'present' : 'missing',
+            link: data.shopping_results[0].link ? 'present' : 'missing'
+          }
+        });
+      }
+    } else {
+      console.log(`[SearchAPI] shopping_results: NOT FOUND`);
+    }
+
+    // Log inline_shopping_results structure
+    if (data.inline_shopping_results) {
+      console.log(`[SearchAPI] inline_shopping_results found: ${data.inline_shopping_results.length} items`);
+      if (data.inline_shopping_results.length > 0) {
+        console.log(`[SearchAPI] First inline_shopping_results item structure:`, {
+          keys: Object.keys(data.inline_shopping_results[0]),
+          sample: {
+            position: data.inline_shopping_results[0].position,
+            title: data.inline_shopping_results[0].title?.substring(0, 50) + '...',
+            price: data.inline_shopping_results[0].price,
+            source: data.inline_shopping_results[0].source,
+            thumbnail: data.inline_shopping_results[0].thumbnail ? 'present' : 'missing',
+            link: data.inline_shopping_results[0].link ? 'present' : 'missing'
+          }
+        });
+      }
+    } else {
+      console.log(`[SearchAPI] inline_shopping_results: NOT FOUND`);
+    }
+
+    // Log any other interesting fields
+    const otherFields = Object.keys(data).filter(key =>
+      !['search_metadata', 'search_parameters', 'shopping_results', 'inline_shopping_results'].includes(key)
+    );
+    if (otherFields.length > 0) {
+      console.log(`[SearchAPI] Other response fields:`, otherFields);
+      otherFields.forEach(field => {
+        console.log(`[SearchAPI] ${field}:`, typeof data[field as keyof GoogleShoppingResponse],
+          Array.isArray(data[field as keyof GoogleShoppingResponse]) ?
+            `(array with ${(data[field as keyof GoogleShoppingResponse] as any[])?.length} items)` : '');
+      });
+    }
+
+    console.log('=== END API RESPONSE ANALYSIS ===');
+
+    // Process the response
+    const allResults: GoogleShoppingResult[] = [
+      ...(data.shopping_results || []),
+      ...(data.inline_shopping_results || [])
+    ];
+
+    console.log(`[SearchAPI] Total combined results: ${allResults.length}`);
+
+    if (!allResults || allResults.length === 0) {
+      console.warn('[SearchAPI] No results found in API response');
+      return {
+        items: [],
+        summary: `No products found for "${query}". Try a different search term.`,
+        searchType: "no_results"
+      };
+    }
+
+    // Transform API results to our format
+    const items = allResults.slice(0, 10).map((result, index) => {
+      console.log(`[SearchAPI] Processing result ${index + 1}:`, {
+        title: result.title?.substring(0, 30) + '...',
+        price: result.price,
+        rating: result.rating,
+        thumbnail: result.thumbnail ? 'present' : 'missing',
+        link: result.link ? 'present' : 'missing',
+        product_link: result.product_link ? 'present' : 'missing',
+        source: result.source
+      });
+
+      return {
+        id: result.product_id || `shopping-${index}`,
+        name: result.title,
+        price: result.price || 'Price not available',
+        score: result.rating || 4.0,
+        imageUrl: result.thumbnail || '/placeholder-product.jpg',
+        description: result.description || `${result.title} from ${result.source || 'unknown source'}`,
+        link: result.link || result.product_link,
+        source: result.source
+      };
+    });
+
+    const summary = `Found ${items.length} products for "${query}" from Google Shopping US. Results include various US retailers with current pricing.`;
+
+    console.log(`[SearchAPI] Successfully processed ${items.length} results from US market`);
+    console.log(`[SearchAPI] Final items structure:`, items.map(item => ({
+      id: item.id,
+      name: item.name.substring(0, 30) + '...',
+      price: item.price,
+      hasImage: item.imageUrl !== '/placeholder-product.jpg',
+      hasLink: !!item.link && item.link !== '#'
+    })));
+
+    return {
+      items,
+      summary,
+      searchType: "google_shopping_us"
+    };
+
+  } catch (error) {
+    console.error('[SearchAPI] Error calling Google Shopping Light API:', error);
+    console.error('[SearchAPI] Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    });
+
+    // Fallback to mock data on API error
+    console.log('[SearchAPI] Falling back to mock data due to API error');
+    return getMockSearchResults(query);
+  }
+}
+
+// Mock search results as fallback
+function getMockSearchResults(query: string) {
+  const mockItems = [
+    {
+      id: "mock-1",
+      name: `${query} - Premium Style`,
+      price: "$89.99",
+      score: 4.5,
+      imageUrl: "/placeholder-product.jpg",
+      description: `High-quality ${query} with premium materials`,
+      link: "#",
+      source: "Mock Store"
+    },
+    {
+      id: "mock-2",
+      name: `${query} - Classic Design`,
+      price: "$59.99",
+      score: 4.2,
+      imageUrl: "/placeholder-product.jpg",
+      description: `Classic ${query} with timeless appeal`,
+      link: "#",
+      source: "Mock Store"
+    },
+    {
+      id: "mock-3",
+      name: `${query} - Modern Collection`,
+      price: "$129.99",
+      score: 4.8,
+      imageUrl: "/placeholder-product.jpg",
+      description: `Modern ${query} from our latest collection`,
+      link: "#",
+      source: "Mock Store"
+    }
+  ];
+
+  return {
+    items: mockItems,
+    summary: `Mock results for "${query}". Configure SERPAPI_KEY to use real Google Shopping data.`,
+    searchType: "mock"
+  };
+}
+
 // 1. Define Agent configuration data structure
 interface AgentConfig {
   id: string;
@@ -309,111 +594,49 @@ export class ChatAgent {
         toolOutput = JSON.stringify(toolArgs);
       }
       else if (toolFunctionName === "search_fashion_items") {
-        console.log(`[ChatAgent] Executing MOCK search for:`, toolArgs);
-        // Mock search results based on query content
-        const query = toolArgs.query?.toLowerCase() || '';
-        const imageUrl = toolArgs.imageUrl;
+        console.log(`[ChatAgent] Executing Google Shopping Light API search for:`, toolArgs);
 
-        let mockSearchResults;
+        try {
+          const query = toolArgs.query || '';
+          const imageUrl = toolArgs.imageUrl;
 
-        // Generate different mock results based on query content
-        if (query.includes('jacket') || query.includes('夹克') || query.includes('外套')) {
-          mockSearchResults = {
+          if (!query.trim()) {
+            console.warn('[ChatAgent] Empty search query provided');
+            toolOutput = JSON.stringify({
+              items: [],
+              summary: "Please provide a search query to find products.",
+              searchType: "error"
+            });
+          } else {
+            // Call the real Google Shopping Light API
+            const searchResults = await searchGoogleShoppingLight(query, imageUrl);
+            toolOutput = JSON.stringify(searchResults);
+            console.log(`[ChatAgent] Google Shopping API search completed. Found ${searchResults.items.length} items.`);
+          }
+
+        } catch (error) {
+          console.error('[ChatAgent] Google Shopping API search failed:', error);
+
+          // Provide fallback response
+          const fallbackResults = {
             items: [
               {
-                id: 'jacket001',
-                name: 'Vintage Denim Jacket',
-                price: '$89',
-                score: 0.95,
-                imageUrl: '/images/mock-denim-jacket.jpg',
-                description: 'Classic 80s-inspired denim jacket with perfect fading'
-              },
-              {
-                id: 'jacket002',
-                name: 'Oversized Blazer',
-                price: '$129',
-                score: 0.88,
-                imageUrl: '/images/mock-blazer.jpg',
-                description: 'Contemporary oversized blazer in neutral tones'
-              },
+                id: 'error_fallback',
+                name: `Search for "${toolArgs.query}" temporarily unavailable`,
+                price: 'N/A',
+                score: 0.0,
+                imageUrl: '/images/error-placeholder.jpg',
+                description: 'Please try again later or refine your search query',
+                link: '#',
+                source: 'System'
+              }
             ],
-            summary: "Found 2 highly matching jackets that fit your style preferences.",
-            searchType: imageUrl ? "visual_similarity" : "text_search"
+            summary: `Unable to search for "${toolArgs.query}" at the moment. Please try again later.`,
+            searchType: "error_fallback"
           };
-        } else if (query.includes('dress') || query.includes('裙子') || query.includes('连衣裙')) {
-          mockSearchResults = {
-            items: [
-              {
-                id: 'dress001',
-                name: 'Midi Wrap Dress',
-                price: '$75',
-                score: 0.92,
-                imageUrl: '/images/mock-wrap-dress.jpg',
-                description: 'Flattering wrap style in flowing fabric'
-              },
-              {
-                id: 'dress002',
-                name: 'A-Line Summer Dress',
-                price: '$65',
-                score: 0.89,
-                imageUrl: '/images/mock-summer-dress.jpg',
-                description: 'Light and breezy for warm weather occasions'
-              },
-            ],
-            summary: "Found 2 beautiful dresses perfect for your occasions.",
-            searchType: imageUrl ? "visual_similarity" : "text_search"
-          };
-        } else if (query.includes('color') || query.includes('颜色') || query.includes('coral') || query.includes('burgundy')) {
-          mockSearchResults = {
-            items: [
-              {
-                id: 'color001',
-                name: 'Coral Silk Blouse',
-                price: '$95',
-                score: 0.94,
-                imageUrl: '/images/mock-coral-blouse.jpg',
-                description: 'Vibrant coral that complements warm undertones'
-              },
-              {
-                id: 'color002',
-                name: 'Burgundy Cashmere Sweater',
-                price: '$145',
-                score: 0.91,
-                imageUrl: '/images/mock-burgundy-sweater.jpg',
-                description: 'Rich burgundy perfect for autumn styling'
-              },
-            ],
-            summary: "Found 2 items in your requested color palette.",
-            searchType: "color_focused"
-          };
-        } else {
-          // Default/general search results
-          mockSearchResults = {
-            items: [
-              {
-                id: 'trend001',
-                name: 'Trending Knit Top',
-                price: '$55',
-                score: 0.87,
-                imageUrl: '/images/mock-knit-top.jpg',
-                description: 'On-trend textured knit in versatile styling'
-              },
-              {
-                id: 'trend002',
-                name: 'Statement Accessories Set',
-                price: '$35',
-                score: 0.84,
-                imageUrl: '/images/mock-accessories.jpg',
-                description: 'Curated accessories to elevate any outfit'
-              },
-            ],
-            summary: "Found 2 trending items that match your search.",
-            searchType: "general_search"
-          };
+
+          toolOutput = JSON.stringify(fallbackResults);
         }
-
-        toolOutput = JSON.stringify(mockSearchResults);
-        console.log(`[ChatAgent] Mock search completed. Returned ${mockSearchResults.items.length} items.`);
       } else {
         console.warn(`[ChatAgent] Unknown tool function: ${toolFunctionName}`);
         toolOutput = JSON.stringify({ error: "Unknown tool function" });
