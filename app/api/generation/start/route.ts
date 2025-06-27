@@ -62,27 +62,35 @@ async function runImageGenerationPipeline(jobId: string) {
         throw new Error("Job data not found for saving to DB.");
       }
 
-      // Save the first image as the primary look (for backward compatibility)
-      const lookToSave: PastLook = {
-        id: finalJobState.jobId,
-        imageUrl: finalImageUrls[0],
-        style: finalJobState.suggestion?.style_alignment || 'AI Generated',
-        timestamp: Date.now(),
-        originalHumanSrc: finalJobState.humanImage.url,
-        originalGarmentSrc: finalJobState.garmentImage.url,
-        garmentDescription: finalJobState.suggestion?.material_silhouette,
-        personaProfile: null,
-        processImages: {
-          humanImage: finalJobState.humanImage.url,
-          garmentImage: finalJobState.garmentImage.url,
-          finalImage: finalImageUrls[0],
-          styleSuggestion: finalJobState.suggestion,
-        },
-      };
-      await saveLookToDB(lookToSave, 'default');
-      console.log(`[Job ${jobId}] Successfully saved final look to primary DB with ${finalImageUrls.length} images. All URLs: ${finalImageUrls.join(', ')}`);
+      // --- FIX: Save all generated images to the database ---
+      for (let i = 0; i < finalImageUrls.length; i++) {
+        const imageUrl = finalImageUrls[i];
+        // Create a unique ID for each look by appending an index
+        const lookId = `${finalJobState.jobId}-${i}`;
+
+        const lookToSave: PastLook = {
+          id: lookId, // Use the unique ID
+          imageUrl: imageUrl, // Use the current image URL
+          style: finalJobState.suggestion?.style_alignment || 'AI Generated',
+          timestamp: Date.now(),
+          originalHumanSrc: finalJobState.humanImage.url,
+          originalGarmentSrc: finalJobState.garmentImage.url,
+          garmentDescription: finalJobState.suggestion?.material_silhouette,
+          personaProfile: null,
+          processImages: {
+            humanImage: finalJobState.humanImage.url,
+            garmentImage: finalJobState.garmentImage.url,
+            finalImage: imageUrl, // Use the current image URL
+            styleSuggestion: finalJobState.suggestion,
+          },
+        };
+        await saveLookToDB(lookToSave, 'default');
+        console.log(`[Job ${jobId}] Successfully saved look ${i + 1}/${finalImageUrls.length} to DB with ID: ${lookId}`);
+      }
+      console.log(`[Job ${jobId}] All ${finalImageUrls.length} looks saved to primary DB.`);
+
     } catch (dbError) {
-      console.error(`[Job ${jobId}] CRITICAL: Pipeline succeeded but failed to save look to DB.`, dbError);
+      console.error(`[Job ${jobId}] CRITICAL: Pipeline succeeded but failed to save look(s) to DB.`, dbError);
     }
 
   } catch (error) {
