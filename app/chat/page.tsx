@@ -757,6 +757,7 @@ Let's start chatting about styling now~`,
   const displaySuggestionSequentially = async (suggestion: any) => {
     const suggestionStartTime = Date.now()
     console.log(`[PERF] 💭 SUGGESTION DISPLAY STARTED at ${new Date().toISOString()}`)
+    console.log("[SUGGESTION DEBUG] Received suggestion object:", JSON.stringify(suggestion, null, 2));
 
     if (!suggestion || !suggestion.outfit_suggestions || suggestion.outfit_suggestions.length === 0) {
       console.warn("[SUGGESTION DEBUG] No valid suggestion object or outfit_suggestions found.")
@@ -875,21 +876,23 @@ Let's start chatting about styling now~`,
     console.log(`[PERF] 💭 SUGGESTION DISPLAY COMPLETED: Total time ${suggestionEndTime - suggestionStartTime}ms`)
 
     console.log("[SUGGESTION DEBUG] All suggestions displayed, ready for image generation")
-    setCurrentStep("complete")
+
+    // The 'complete' status will be handled by the main polling loop when the final image is ready.
+    // setCurrentStep("complete")
 
     addMessage({
       type: "loading",
       role: "ai",
-      loadingText: "🎨 Starting image generation...",
+      loadingText: "🎨 Now, let's generate the image based on the first suggestion...",
     })
 
-    console.log("[SUGGESTION DEBUG] Added loading message for generation phase")
+    console.log("[SUGGESTION DEBUG] Added loading message for generation phase. Polling continues.")
 
-    displayWaitingTips()
-
-    if (jobId) {
-      startPolling(jobId)
-    }
+    // Polling is already active, no need to call it again here.
+    // displayWaitingTips()
+    // if (jobId) {
+    //   startPolling(jobId)
+    // }
   }
 
   const getOccasionName = (occasionId: string) => {
