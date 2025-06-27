@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import ReactMarkdown from "react-markdown"
 import { Button } from "@/components/ui/button"
 import IOSTabBar from "../components/ios-tab-bar"
 import ImageModal from "../components/image-modal"
@@ -28,6 +27,7 @@ import {
   ImageIcon,
   User,
 } from "lucide-react"
+import ReactMarkdown from "react-markdown"
 
 // Enhanced Chat message type definition with generation support
 type ChatMessage = {
