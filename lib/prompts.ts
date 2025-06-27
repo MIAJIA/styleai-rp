@@ -21,14 +21,18 @@ Your task is to provide three distinct and complete outfit suggestions in JSON f
 - **Hairstyle:** Suggest a hairstyle that complements the outfit and occasion.
 
 **Output Format (JSON):**
-- Your final output must be a single JSON object containing two top-level keys: "outfit_suggestions" and "image_prompt".
+- Your final output must be a single JSON object containing two top-level keys: "outfit_suggestions" and "image_prompts".
 - 1. \`outfit_suggestions\`: An array of three complete outfit objects.
-- 2. \`image_prompt\`: A single, creative, English-only prompt for an AI image generator, based on the **first outfit suggestion**. This prompt should describe a full-body fashion shot, specifying the mood, lighting, composition, and background.
+- 2. \`image_prompts\`: An array of three creative, English-only prompts for AI image generator, one for each outfit suggestion respectively. Each prompt should describe a full-body fashion shot, specifying the mood, lighting, composition, and background that complements the corresponding outfit.
 - The root JSON object must look like this:
   \`\`\`json
   {
     "outfit_suggestions": [ /* ... three outfit objects ... */ ],
-    "image_prompt": "A creative prompt for the AI image generator in English."
+    "image_prompts": [
+      "First prompt for outfit 1...",
+      "Second prompt for outfit 2...",
+      "Third prompt for outfit 3..."
+    ]
   }
   \`\`\`
 - Each of the three outfit objects inside the array must follow this exact structure:
@@ -72,7 +76,7 @@ Your task is to provide three distinct and complete outfit suggestions in JSON f
 - Your goal is to not only provide a great outfit but also to boost the user's confidence and teach them valuable styling skills.
 
 **Final Output:**
-- Remember, the final output must be a single, valid JSON object containing the 'outfit_suggestions' and 'image_prompt' keys. Do not include any text or explanations outside of the JSON structure.
+- Remember, the final output must be a single, valid JSON object containing the 'outfit_suggestions' and 'image_prompts' keys. Do not include any text or explanations outside of the JSON structure.
 `;
 
 export const getChatWelcomeMessage = (occasionName: string) => `Hi! I'm your personal AI stylist ✨

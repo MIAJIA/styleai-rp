@@ -56,6 +56,12 @@ type ChatMessage = {
     // Suggestions for quick replies
     suggestions?: string[]
     isGenerationTrigger?: boolean
+    outfitIndex?: number
+    waitingForImage?: boolean
+    isImagePlaceholder?: boolean
+    totalImages?: number
+    variationIndex?: number
+    isOutfitPreview?: boolean
   }
 }
 
@@ -818,7 +824,7 @@ Let's start chatting about styling now~`,
         const loadingMessageIndex = newMessages.map((m) => m.type).lastIndexOf("loading")
 
         const welcomeContent =
-          "✨ I've analyzed your style! Here are three distinct outfit ideas for you. I'll create an image based on the first one."
+          "✨ I've analyzed your style! Here are three distinct outfit ideas for you. I'm creating visual previews for each one now!"
 
         if (loadingMessageIndex !== -1) {
           newMessages[loadingMessageIndex] = {
@@ -846,8 +852,11 @@ Let's start chatting about styling now~`,
       await new Promise((resolve) => setTimeout(resolve, 800))
 
       const outfits = suggestion.outfit_suggestions
-      const totalDisplayTime = 10000
+      const totalDisplayTime = 8000 // Reduced time since images will follow
       const delayBetweenSuggestions = outfits.length > 0 ? totalDisplayTime / outfits.length : 1000
+
+      // Store suggestion message IDs for later image updates
+      const suggestionMessageIds: string[] = [];
 
       for (let i = 0; i < outfits.length; i++) {
         const outfit = outfits[i]
@@ -856,6 +865,9 @@ Let's start chatting about styling now~`,
 
         const formattedItems = formatItems(outfit.items)
         const messageContent = `### ${i + 1}. ${outfit.outfit_title}\n\n${outfit.explanation}\n\n---\n\n${formattedItems}`
+
+        const messageId = generateUniqueId();
+        suggestionMessageIds.push(messageId);
 
         addMessage({
           type: "text",
@@ -866,39 +878,133 @@ Let's start chatting about styling now~`,
             name: "Styling Assistant",
             emoji: "👗",
           },
+          metadata: {
+            outfitIndex: i, // Track which outfit this is for later image pairing
+            waitingForImage: true, // Flag to indicate image is coming
+          }
+        })
+
+        // Add image placeholder immediately after each suggestion
+        addMessage({
+          type: "loading",
+          role: "ai",
+          loadingText: `Creating visual preview for "${outfit.outfit_title}"...`,
+          metadata: {
+            outfitIndex: i,
+            isImagePlaceholder: true,
+          }
         })
 
         const bubbleEndTime = Date.now()
-        console.log(`[PERF] 💭 Outfit bubble ${i + 1} displayed in ${bubbleEndTime - bubbleStartTime}ms`)
+        console.log(`[PERF] 💭 Outfit ${i + 1} with placeholder displayed in ${bubbleEndTime - bubbleStartTime}ms`)
 
         if (i < outfits.length - 1) {
-          console.log(`[PERF] 💭 Waiting ${delayBetweenSuggestions}ms before next bubble...`)
+          console.log(`[PERF] 💭 Waiting ${delayBetweenSuggestions}ms before next outfit...`)
           await new Promise((resolve) => setTimeout(resolve, delayBetweenSuggestions))
         }
       }
+
+      // Store suggestion data for later image updates
+      localStorage.setItem('currentSuggestions', JSON.stringify({
+        outfits: suggestion.outfit_suggestions,
+        messageIds: suggestionMessageIds,
+        timestamp: Date.now()
+      }));
     }
 
     const suggestionEndTime = Date.now()
     console.log(`[PERF] 💭 SUGGESTION DISPLAY COMPLETED: Total time ${suggestionEndTime - suggestionStartTime}ms`)
+    console.log("[SUGGESTION DEBUG] All suggestions with placeholders displayed, backend generating images in parallel")
 
-    console.log("[SUGGESTION DEBUG] All suggestions displayed, ready for image generation")
+    // Images will be filled in as they complete via polling
+    setCurrentStep("generating")
+  }
 
-    // The 'complete' status will be handled by the main polling loop when the final image is ready.
-    // setCurrentStep("complete")
+  // Handle parallel image generation results
+  const displayParallelImageResults = async (outfitResults: any[]) => {
+    console.log(`[PERF] 🎨 PARALLEL IMAGES RECEIVED: ${outfitResults.length} outfit groups`);
 
-    addMessage({
-      type: "loading",
-      role: "ai",
-      loadingText: "Alright, time to bring that first outfit idea to life—get ready!",
-    })
+    if (!outfitResults || outfitResults.length === 0) {
+      console.warn("[IMAGE DISPLAY] No outfit results to display");
+      return;
+    }
 
-    console.log("[SUGGESTION DEBUG] Added loading message for generation phase. Polling continues.")
+    // Process each outfit group
+    for (let i = 0; i < outfitResults.length; i++) {
+      const outfitResult = outfitResults[i];
+      const outfitIndex = outfitResult.outfitIndex;
+      const finalImages = outfitResult.finalImages || [];
 
-    // Polling is already active, no need to call it again here.
-    // displayWaitingTips()
-    // if (jobId) {
-    //   startPolling(jobId)
-    // }
+      console.log(`[IMAGE DISPLAY] Processing outfit ${outfitIndex + 1}: ${finalImages.length} images`);
+
+      if (finalImages.length === 0) {
+        console.warn(`[IMAGE DISPLAY] No images for outfit ${outfitIndex + 1}`);
+        continue;
+      }
+
+      // Replace the loading placeholder with the first image
+      setMessages(prevMessages => {
+        const newMessages = [...prevMessages];
+
+        // Find the loading placeholder for this outfit
+        const placeholderIndex = newMessages.findIndex(msg =>
+          msg.type === "loading" &&
+          msg.metadata?.isImagePlaceholder === true &&
+          msg.metadata?.outfitIndex === outfitIndex
+        );
+
+        if (placeholderIndex !== -1) {
+          // Replace with the first image
+          newMessages[placeholderIndex] = {
+            id: generateUniqueId(),
+            type: "image",
+            role: "ai",
+            imageUrl: finalImages[0],
+            content: finalImages.length > 1
+              ? `Visual preview (${finalImages.length} variations available)`
+              : "Visual preview",
+            timestamp: new Date(),
+            metadata: {
+              outfitIndex,
+              totalImages: finalImages.length,
+              isOutfitPreview: true
+            }
+          };
+
+          // Add additional images if there are more than one
+          if (finalImages.length > 1) {
+            for (let imgIndex = 1; imgIndex < finalImages.length; imgIndex++) {
+              newMessages.splice(placeholderIndex + imgIndex, 0, {
+                id: generateUniqueId(),
+                type: "image",
+                role: "ai",
+                imageUrl: finalImages[imgIndex],
+                content: `Variation ${imgIndex + 1}`,
+                timestamp: new Date(),
+                metadata: {
+                  outfitIndex,
+                  variationIndex: imgIndex,
+                  isOutfitPreview: true
+                }
+              });
+            }
+          }
+
+          console.log(`[IMAGE DISPLAY] Updated outfit ${outfitIndex + 1} with ${finalImages.length} images`);
+        } else {
+          console.warn(`[IMAGE DISPLAY] Could not find placeholder for outfit ${outfitIndex + 1}`);
+        }
+
+        return newMessages;
+      });
+
+      // Small delay between outfit image updates for better UX
+      if (i < outfitResults.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+
+    console.log(`[PERF] 🎨 PARALLEL IMAGES DISPLAY COMPLETED`);
   }
 
   const getOccasionName = (occasionId: string) => {
@@ -1215,56 +1321,101 @@ Let's start chatting about styling now~`,
               const showCompletion = async () => {
                 console.log("[POLLING] Generation completed successfully!")
 
-                // 🆕 ADD: Notify ChatAgent about the generated images for context
-                const generatedImageUrls = data.result?.imageUrls || (data.result?.imageUrl ? [data.result.imageUrl] : [])
-                const totalImages = data.result?.totalImages || generatedImageUrls.length
+                // Check if we have parallel outfit results (V2 format)
+                const outfitResults = data.result?.outfitResults;
 
-                if (generatedImageUrls.length > 0) {
-                  try {
-                    const sessionId = localStorage.getItem("chat_session_id")
-                    if (sessionId) {
-                      console.log(`[ChatPage] Adding ${generatedImageUrls.length} generated images to ChatAgent context:`, generatedImageUrls)
+                if (outfitResults && outfitResults.length > 0) {
+                  console.log(`[POLLING] Processing V2 parallel results: ${outfitResults.length} outfit groups`);
 
-                      // Use the new add_generated_images action for multiple images
-                      await fetch("/api/chat/simple", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          sessionId,
-                          imageUrls: generatedImageUrls,
-                          action: "add_generated_images",
-                        }),
-                      })
-                      console.log(`[ChatPage] ${generatedImageUrls.length} generated images successfully added to ChatAgent context`)
+                  // 🆕 ADD: Notify ChatAgent about all generated images for context
+                  const allGeneratedImages = outfitResults.flatMap((outfit: any) => outfit.finalImages || []);
+                  if (allGeneratedImages.length > 0) {
+                    try {
+                      const sessionId = localStorage.getItem("chat_session_id")
+                      if (sessionId) {
+                        console.log(`[ChatPage] Adding ${allGeneratedImages.length} V2 generated images to ChatAgent context`);
+                        await fetch("/api/chat/simple", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            sessionId,
+                            imageUrls: allGeneratedImages,
+                            action: "add_generated_images",
+                          }),
+                        })
+                        console.log(`[ChatPage] V2 generated images successfully added to ChatAgent context`);
+                      }
+                    } catch (error) {
+                      console.error("[ChatPage] Failed to add V2 generated images to ChatAgent context:", error)
                     }
-                  } catch (error) {
-                    console.error("[ChatPage] Failed to add generated images to ChatAgent context:", error)
                   }
-                }
 
-                // Replace loading message with success message
-                replaceLastLoadingMessage({
-                  type: "text",
-                  role: "ai",
-                  content: totalImages > 1
-                    ? `🎉 Your styling generation has completed! Here are ${totalImages} options for you, my friend:`
-                    : "🎉 Your styling generation has completed! Here is the result for you, my friend:",
-                })
-
-                // Add all generated images as separate messages
-                generatedImageUrls.forEach((imageUrl: string, index: number) => {
-                  addMessage({
-                    type: "image",
+                  // Replace loading message with completion message
+                  replaceLastLoadingMessage({
+                    type: "text",
                     role: "ai",
-                    imageUrl: imageUrl,
-                    content: totalImages > 1
-                      ? `Option ${index + 1}: What do you think of this styling?`
-                      : "Here's your personalized styling result! What do you think?",
-                    metadata: {
-                      suggestions: ["Try another style", "Adjust colors", "Different occasion", "Style analysis"],
-                    },
+                    content: `🎉 Your styling generation has completed! Here are ${outfitResults.length} distinct outfit ideas with visual previews:`,
                   })
-                })
+
+                  // Display parallel results using the new function
+                  await displayParallelImageResults(outfitResults);
+
+                  console.log(`[PERF] 🎉 V2 Parallel results displayed successfully`);
+                } else {
+                  // Legacy format handling
+                  console.log("[POLLING] Processing legacy single image results");
+
+                  // 🆕 ADD: Notify ChatAgent about the generated images for context
+                  const generatedImageUrls = data.result?.imageUrls || (data.result?.imageUrl ? [data.result.imageUrl] : [])
+                  const totalImages = data.result?.totalImages || generatedImageUrls.length
+
+                  if (generatedImageUrls.length > 0) {
+                    try {
+                      const sessionId = localStorage.getItem("chat_session_id")
+                      if (sessionId) {
+                        console.log(`[ChatPage] Adding ${generatedImageUrls.length} generated images to ChatAgent context:`, generatedImageUrls)
+
+                        // Use the new add_generated_images action for multiple images
+                        await fetch("/api/chat/simple", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            sessionId,
+                            imageUrls: generatedImageUrls,
+                            action: "add_generated_images",
+                          }),
+                        })
+                        console.log(`[ChatPage] ${generatedImageUrls.length} generated images successfully added to ChatAgent context`)
+                      }
+                    } catch (error) {
+                      console.error("[ChatPage] Failed to add generated images to ChatAgent context:", error)
+                    }
+                  }
+
+                  // Replace loading message with success message
+                  replaceLastLoadingMessage({
+                    type: "text",
+                    role: "ai",
+                    content: totalImages > 1
+                      ? `🎉 Your styling generation has completed! Here are ${totalImages} options for you, my friend:`
+                      : "🎉 Your styling generation has completed! Here is the result for you, my friend:",
+                  })
+
+                  // Add all generated images as separate messages
+                  generatedImageUrls.forEach((imageUrl: string, index: number) => {
+                    addMessage({
+                      type: "image",
+                      role: "ai",
+                      imageUrl: imageUrl,
+                      content: totalImages > 1
+                        ? `Option ${index + 1}: What do you think of this styling?`
+                        : "Here's your personalized styling result! What do you think?",
+                      metadata: {
+                        suggestions: ["Try another style", "Adjust colors", "Different occasion", "Style analysis"],
+                      },
+                    })
+                  })
+                }
 
                 setCurrentStep("complete")
                 setIsGenerating(false)

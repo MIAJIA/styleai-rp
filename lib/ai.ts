@@ -40,7 +40,7 @@ const outfitSuggestionSchema = z.object({
 
 const styleSuggestionsSchema = z.object({
   outfit_suggestions: z.array(outfitSuggestionSchema).length(3).describe("An array of exactly three distinct outfit suggestions."),
-  image_prompt: z.string().describe("A creative, English-only prompt for an AI image generator, based on the first outfit suggestion."),
+  image_prompts: z.array(z.string()).length(3).describe("Three creative, English-only prompts for AI image generator, one for each outfit suggestion respectively."),
 });
 
 // Convert Zod schema to JSON schema for the tool
@@ -492,7 +492,7 @@ export interface Job {
   updatedAt: string;
   suggestion?: {
     outfit_suggestions: any[]; // Array of outfit suggestions
-    image_prompt: string;
+    image_prompts: string[]; // Array of image prompts, one for each outfit
     [key: string]: any;
   };
   processImages?: {
@@ -535,7 +535,36 @@ async function runStylizationMultiple(modelVersion: 'kling-v1-5' | 'kling-v2', p
 }
 
 /**
- * ATOMIC STEP: Generates a stylized base image using a specific model.
+ * ATOMIC STEP: Generates stylized images for multiple prompts in parallel.
+ * Returns an array of image arrays, where each sub-array contains images for one prompt.
+ */
+async function runStylizationParallel(
+  modelVersion: 'kling-v1-5' | 'kling-v2',
+  prompts: string[],
+  humanImageUrl: string,
+  humanImageName: string,
+  humanImageType: string
+): Promise<string[][]> {
+  console.log(`[ATOMIC_STEP] Running Parallel Stylization with ${modelVersion} for ${prompts.length} prompts...`);
+
+  // Execute all prompts in parallel
+  const allPromises = prompts.map((prompt, index) => {
+    console.log(`[PARALLEL] Starting stylization ${index + 1}/${prompts.length} for prompt: ${prompt.substring(0, 50)}...`);
+    return runStylizationMultiple(modelVersion, prompt, humanImageUrl, humanImageName, humanImageType);
+  });
+
+  const results = await Promise.all(allPromises);
+
+  console.log(`[ATOMIC_STEP] Parallel Stylization complete: Generated ${results.length} groups with total ${results.flat().length} images`);
+  results.forEach((group, index) => {
+    console.log(`[ATOMIC_STEP] Group ${index + 1}: ${group.length} images`);
+  });
+
+  return results;
+}
+
+/**
+ * ATOMIC STEP: Generates stylized base image using a specific model.
  * Legacy version that returns only the first image for backward compatibility.
  */
 async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string): Promise<string> {
@@ -666,14 +695,14 @@ export async function executeTryOnOnlyPipeline(job: Job): Promise<string[]> {
  */
 export async function executeSimpleScenePipeline(job: Job): Promise<string[]> {
   console.log(`[PIPELINE_START] Executing "Simple Scene" pipeline for job ${job.jobId}`);
-  if (!job.suggestion?.image_prompt) {
-    throw new Error("Cannot run simple scene pipeline without 'image_prompt'.");
+  if (!job.suggestion?.image_prompts) {
+    throw new Error("Cannot run simple scene pipeline without 'image_prompts'.");
   }
 
   // Step 1: Stylize the image using the simpler, faster model to get a new scene and pose.
   const styledImageUrls = await runStylizationMultiple(
     'kling-v1-5',
-    job.suggestion.image_prompt,
+    job.suggestion.image_prompts[0],
     job.humanImage.url,
     job.humanImage.name,
     job.humanImage.type
@@ -722,14 +751,14 @@ export async function executeSimpleScenePipeline(job: Job): Promise<string[]> {
  */
 export async function executeAdvancedScenePipeline(job: Job): Promise<string[]> {
   console.log(`[PIPELINE_START] Executing "Advanced Scene" pipeline for job ${job.jobId}`);
-  if (!job.suggestion?.image_prompt) {
-    throw new Error("Cannot run advanced scene pipeline without 'image_prompt'.");
+  if (!job.suggestion?.image_prompts) {
+    throw new Error("Cannot run advanced scene pipeline without 'image_prompts'.");
   }
 
   // Step 1: Generate the stylized background/pose with the advanced model
   const styledImageUrls = await runStylizationMultiple(
     'kling-v2',
-    job.suggestion.image_prompt,
+    job.suggestion.image_prompts[0],
     job.humanImage.url,
     job.humanImage.name,
     job.humanImage.type
@@ -784,6 +813,92 @@ export async function executeAdvancedScenePipeline(job: Job): Promise<string[]> 
 
   console.log(`[PIPELINE_END] "Advanced Scene" pipeline finished for job ${job.jobId}. Generated ${finalUrls.length} images.`);
   return finalUrls;
+}
+
+/**
+ * PIPELINE V2: Enhanced Simple Scene with parallel generation for all 3 outfit suggestions.
+ * Returns grouped results for better user experience.
+ */
+export async function executeSimpleScenePipelineV2(job: Job): Promise<{
+  outfitResults: Array<{
+    outfitIndex: number;
+    outfitData: any;
+    styledImages: string[];
+    finalImages: string[];
+  }>
+}> {
+  console.log(`[PIPELINE_START] Executing "Simple Scene V2" pipeline for job ${job.jobId}`);
+  if (!job.suggestion?.image_prompts || job.suggestion.image_prompts.length !== 3) {
+    throw new Error("Cannot run simple scene pipeline V2 without 3 image_prompts.");
+  }
+  if (!job.suggestion?.outfit_suggestions || job.suggestion.outfit_suggestions.length !== 3) {
+    throw new Error("Cannot run simple scene pipeline V2 without 3 outfit_suggestions.");
+  }
+
+  // Step 1: Parallel stylization for all 3 prompts
+  const allStyledImageGroups = await runStylizationParallel(
+    'kling-v1-5',
+    job.suggestion.image_prompts,
+    job.humanImage.url,
+    job.humanImage.name,
+    job.humanImage.type
+  );
+
+  // Update job with intermediate results
+  await kv.hset(job.jobId, {
+    status: 'stylization_completed',
+    statusMessage: 'All scenes generated, proceeding with virtual try-on...',
+    processImages: {
+      styledImageGroups: allStyledImageGroups,
+      styledImages: allStyledImageGroups.flat() // Flatten for backward compatibility
+    }
+  });
+
+  // Step 2: Parallel virtual try-on for all styled images
+  const allTryOnPromises = allStyledImageGroups.map((styledImageGroup, groupIndex) => {
+    console.log(`[PIPELINE] Processing virtual try-on for outfit group ${groupIndex + 1}/3`);
+    return Promise.all(styledImageGroup.map(styledImage =>
+      runVirtualTryOnMultiple(
+        styledImage,
+        job.garmentImage.url,
+        job.garmentImage.name,
+        job.garmentImage.type
+      )
+    ));
+  });
+
+  const allTryOnGroups = await Promise.all(allTryOnPromises);
+
+  // Step 3: Save results and organize by outfit
+  const outfitResults = [];
+
+  for (let outfitIndex = 0; outfitIndex < 3; outfitIndex++) {
+    const styledImages = allStyledImageGroups[outfitIndex];
+    const tryOnImageGroups = allTryOnGroups[outfitIndex];
+    const allTryOnImages = tryOnImageGroups.flat();
+
+    // Save final images to blob storage
+    const finalImages: string[] = [];
+    for (let i = 0; i < allTryOnImages.length; i++) {
+      const finalUrl = await saveFinalImageToBlob(
+        allTryOnImages[i],
+        `${job.jobId}-outfit${outfitIndex + 1}-${i + 1}`
+      );
+      finalImages.push(finalUrl);
+    }
+
+    outfitResults.push({
+      outfitIndex,
+      outfitData: job.suggestion.outfit_suggestions[outfitIndex],
+      styledImages,
+      finalImages,
+    });
+
+    console.log(`[PIPELINE] Outfit ${outfitIndex + 1} completed: ${finalImages.length} final images`);
+  }
+
+  console.log(`[PIPELINE_END] "Simple Scene V2" pipeline finished for job ${job.jobId}. Generated ${outfitResults.length} outfit groups.`);
+  return { outfitResults };
 }
 
 // Helper to convert a URL to a File object
