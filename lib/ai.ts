@@ -52,10 +52,12 @@ export async function getStyleSuggestionFromAI({
     const humanImageBase64 = `data:${humanImageBlob.type};base64,${Buffer.from(humanImageBuffer).toString('base64')}`;
     const garmentImageBase64 = `data:${garmentImageBlob.type};base64,${Buffer.from(garmentImageBuffer).toString('base64')}`;
 
-    // Build additional context from user profile if provided
-    const userProfileContext = userProfile
-      ? `以下是我的风格档案 JSON：\n\n\`${JSON.stringify(userProfile)}\``
+    // Build the user prompt following the structured format defined in systemPrompt.
+    const userProfileSection = userProfile
+      ? `# User Profile\n\`\`\`json\n${JSON.stringify(userProfile, null, 2)}\n\`\`\``
       : "";
+
+    const userMessageText = `Please provide styling suggestions based on the following information. My photo is the first image, and the garment is the second.\n\n${userProfileSection}\n\n# Essential Item\nThe garment in the second attached image is the "Essential Item".\n\n# Occasion\n${occasion}`;
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -68,7 +70,7 @@ export async function getStyleSuggestionFromAI({
           content: [
             {
               type: "text",
-              text: `Here is my photo, the garment I love, and the occasion (\"${occasion}\"). ${userProfileContext}`,
+              text: userMessageText,
             },
             {
               type: "image_url",
