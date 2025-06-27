@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import { saveImageVote, getImageVote, removeImageVote, getBatchImageVotes } from '@/lib/image-vote';
 
-// This log helps confirm the file is being re-initialized by the server.
-console.log('[API Route Init] Re-creating /api/image-vote route handler...');
-
 // POST /api/image-vote - Saves or updates an image vote
 export async function POST(request: Request) {
   try {

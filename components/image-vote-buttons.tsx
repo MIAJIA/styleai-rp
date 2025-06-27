@@ -29,18 +29,12 @@ export default function ImageVoteButtons({
   // 加载当前投票状态
   useEffect(() => {
     const loadVoteStatus = async () => {
-      console.log(`[ImageVoteButtons] Loading vote status for image: ${imageUrl.substring(0, 50)}...`);
       try {
         const response = await fetch(`/api/image-vote?imageUrl=${encodeURIComponent(imageUrl)}`);
         const data = await response.json();
 
-        console.log(`[ImageVoteButtons] Vote status response:`, data);
-
         if (data.success && data.vote) {
-          console.log(`[ImageVoteButtons] Found existing vote: ${data.vote.voteType} for image ${imageUrl.substring(0, 50)}...`);
           setVoteType(data.vote.voteType);
-        } else {
-          console.log(`[ImageVoteButtons] No existing vote found for image ${imageUrl.substring(0, 50)}...`);
         }
       } catch (error) {
         console.error('[ImageVoteButtons] Error loading vote status:', error);
@@ -55,24 +49,17 @@ export default function ImageVoteButtons({
   const handleVote = async (newVoteType: 'upvote' | 'downvote') => {
     if (isLoading) return;
 
-    console.log(`[ImageVoteButtons] HandleVote called: ${newVoteType}, current vote: ${voteType}, sessionId: ${sessionId}`);
-    console.log(`[ImageVoteButtons] Image URL: ${imageUrl.substring(0, 50)}...`);
-
     setIsLoading(true);
 
     try {
       // 如果点击的是当前已选择的投票，则取消投票
       const finalVoteType = voteType === newVoteType ? null : newVoteType;
 
-      console.log(`[ImageVoteButtons] Final vote type to send: ${finalVoteType}`);
-
       const requestBody = {
         imageUrl,
         voteType: finalVoteType,
         sessionId
       };
-
-      console.log(`[ImageVoteButtons] Sending vote request:`, requestBody);
 
       const response = await fetch('/api/image-vote', {
         method: 'POST',
@@ -82,19 +69,14 @@ export default function ImageVoteButtons({
         body: JSON.stringify(requestBody),
       });
 
-      console.log(`[ImageVoteButtons] Vote response status: ${response.status}`);
-
       const responseData = await response.json();
-      console.log(`[ImageVoteButtons] Vote response data:`, responseData);
 
       if (response.ok) {
-        console.log(`[ImageVoteButtons] Vote saved successfully: ${finalVoteType}`);
         setVoteType(finalVoteType);
         setShowFeedback(true);
 
         // 调用回调函数
         if (onVoteChange) {
-          console.log(`[ImageVoteButtons] Calling onVoteChange callback with: ${finalVoteType}`);
           onVoteChange(finalVoteType);
         }
 

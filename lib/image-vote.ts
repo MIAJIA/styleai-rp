@@ -23,21 +23,13 @@ export function getImageId(imageUrl: string): string {
 export async function getImageVote(imageUrl: string): Promise<ImageVote | null> {
   try {
     const imageId = getImageId(imageUrl);
-    console.log(`[ImageVote-Get] Getting vote for image ID: ${imageId}, URL: ${imageUrl.substring(0, 50)}...`);
-
     const voteData = await kv.get(`image_vote:${imageId}`);
-    console.log(`[ImageVote-Get] KV Store raw data:`, voteData);
 
     if (!voteData) {
-      console.log(`[ImageVote-Get] No vote data found for image ID: ${imageId}`);
       return null;
     }
 
-    // Vercel KV 自动处理序列化/反序列化，所以这里直接使用返回的对象
-    const parsedVote = voteData as ImageVote;
-    console.log(`[ImageVote-Get] Vote data:`, parsedVote);
-
-    return parsedVote;
+    return voteData as ImageVote;
   } catch (error) {
     console.error('[ImageVote-Get] Error getting image vote:', error);
     return null;
@@ -52,27 +44,13 @@ export async function saveImageVote(
 ): Promise<void> {
   try {
     const imageId = getImageId(imageUrl);
-    console.log(`[ImageVote-Save] Saving vote for image ID: ${imageId}, URL: ${imageUrl.substring(0, 50)}...`);
-    console.log(`[ImageVote-Save] Vote type: ${voteType}, Session ID: ${sessionId}`);
-
     const voteData: ImageVote = {
       imageUrl,
       voteType,
       timestamp: new Date().toISOString(),
       sessionId
     };
-
-    console.log(`[ImageVote-Save] Vote data to save:`, voteData);
-    console.log(`[ImageVote-Save] KV Store key: image_vote:${imageId}`);
-
-    // 直接存储对象，让 Vercel KV 处理序列化
     await kv.set(`image_vote:${imageId}`, voteData);
-    console.log(`[ImageVote-Save] Vote saved successfully to KV Store`);
-
-    // 验证保存是否成功
-    const savedData = await kv.get(`image_vote:${imageId}`);
-    console.log(`[ImageVote-Save] Verification - saved data:`, savedData);
-
   } catch (error) {
     console.error('[ImageVote-Save] Error saving image vote:', error);
     throw error;
@@ -83,7 +61,6 @@ export async function saveImageVote(
 export async function removeImageVote(imageUrl: string): Promise<void> {
   try {
     await saveImageVote(imageUrl, null);
-    console.log(`Image vote removed for: ${getImageId(imageUrl)}`);
   } catch (error) {
     console.error('Error removing image vote:', error);
     throw error;
