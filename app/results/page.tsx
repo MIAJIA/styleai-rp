@@ -31,7 +31,6 @@ export default function ResultsPage() {
   const [pastLooks, setPastLooks] = useState<PastLook[]>([]);
   const [isRecentLooksExpanded, setIsRecentLooksExpanded] = useState(false);
   const [selectedLook, setSelectedLook] = useState<PastLook | null>(null);
-  const [showProcessImages, setShowProcessImages] = useState<Record<string, boolean>>({});
   const [globalVoteStats, setGlobalVoteStats] = useState<{
     totalImages: number;
     totalVotes: number;
@@ -236,13 +235,6 @@ export default function ResultsPage() {
     setPastLooks([]);
   };
 
-  const toggleProcessImages = (lookId: string) => {
-    setShowProcessImages(prev => ({
-      ...prev,
-      [lookId]: !prev[lookId]
-    }));
-  };
-
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -387,24 +379,7 @@ export default function ResultsPage() {
                             {pastLook.processImages?.styleSuggestion?.outfit_suggestions?.[0]?.explanation || `Generated on ${formatDate(pastLook.timestamp)}`}
                           </p>
                         </div>
-
-                        {/* Voting status */}
-                        <div className="mt-2">
-                          <ImageVoteStatus imageUrl={pastLook.imageUrl} showSummary={true} />
-                        </div>
                       </div>
-
-                      {/* View Process Button */}
-                      {pastLook.processImages && (
-                        <button
-                          onClick={() => toggleProcessImages(pastLook.id)}
-                          className="flex items-center text-xs text-gray-500 hover:text-gray-800 transition-colors"
-                        >
-                          <ImageIcon size={14} className="mr-1" />
-                          <span>View Process</span>
-                          <ChevronDown size={14} className={cn("ml-1 transition-transform", showProcessImages[pastLook.id] && "rotate-180")} />
-                        </button>
-                      )}
                     </div>
                   </div>
                 ))}
