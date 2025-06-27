@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, X, ChevronDown, ChevronUp, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, X, ChevronDown, ChevronUp, Image as ImageIcon, BarChart3, ThumbsUp, ThumbsDown } from "lucide-react";
 import IOSTabBar from "../components/ios-tab-bar";
+import ImageVoteButtons from "@/components/image-vote-buttons";
+import ImageVoteStatus from "@/components/image-vote-status";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +32,13 @@ export default function ResultsPage() {
   const [isRecentLooksExpanded, setIsRecentLooksExpanded] = useState(false);
   const [selectedLook, setSelectedLook] = useState<PastLook | null>(null);
   const [showProcessImages, setShowProcessImages] = useState<Record<string, boolean>>({});
+  const [globalVoteStats, setGlobalVoteStats] = useState<{
+    totalImages: number;
+    totalVotes: number;
+    upvotes: number;
+    downvotes: number;
+    upvotePercentage: number;
+  } | null>(null);
 
   // Load past looks from database on initial render
   useEffect(() => {
@@ -109,6 +118,59 @@ export default function ResultsPage() {
 
     loadLooks();
   }, []);
+
+  // Load global vote statistics
+  useEffect(() => {
+    const loadGlobalVoteStats = async () => {
+      if (pastLooks.length === 0) return;
+
+      console.log(`[Results] Loading global vote stats for ${pastLooks.length} images`);
+      try {
+        const imageUrls = pastLooks.map(look => look.imageUrl);
+        console.log(`[Results] Image URLs to check:`, imageUrls.map(url => url.substring(0, 50) + '...'));
+
+        const response = await fetch(`/api/image-vote/stats?imageUrls=${encodeURIComponent(JSON.stringify(imageUrls))}`);
+        console.log(`[Results] Stats API response status: ${response.status}`);
+
+        const data = await response.json();
+        console.log(`[Results] Stats API response data:`, data);
+
+        if (data.success && data.stats) {
+          // Calculate global statistics
+          let totalImages = 0;
+          let totalVotes = 0;
+          let upvotes = 0;
+          let downvotes = 0;
+
+          Object.values(data.stats).forEach((stat: any) => {
+            if (stat.totalVotes > 0) {
+              totalImages++;
+              totalVotes += stat.totalVotes;
+              upvotes += stat.upvotes;
+              downvotes += stat.downvotes;
+            }
+          });
+
+          const stats = {
+            totalImages,
+            totalVotes,
+            upvotes,
+            downvotes,
+            upvotePercentage: totalVotes > 0 ? (upvotes / totalVotes) * 100 : 0
+          };
+
+          console.log(`[Results] Calculated global stats:`, stats);
+          setGlobalVoteStats(stats);
+        } else {
+          console.log(`[Results] No stats data received or API failed`);
+        }
+      } catch (error) {
+        console.error('[Results] Error loading global vote stats:', error);
+      }
+    };
+
+    loadGlobalVoteStats();
+  }, [pastLooks]);
 
   const handleDeleteLook = async (lookId: string) => {
     try {
@@ -210,6 +272,62 @@ export default function ResultsPage() {
       </div>
 
       <div className="px-5 py-4 space-y-4">
+        {/* Global Vote Statistics */}
+        {globalVoteStats && globalVoteStats.totalVotes > 0 && (
+          <div className="ios-card p-5 animate-fade-up">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Global Vote Statistics
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Images with votes:</span>
+                  <span className="text-xs font-medium">{globalVoteStats.totalImages}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Total votes:</span>
+                  <span className="text-xs font-medium">{globalVoteStats.totalVotes}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500 flex items-center gap-1">
+                    <ThumbsUp className="w-3 h-3 text-green-600" />
+                    Upvotes:
+                  </span>
+                  <span className="text-xs font-medium text-green-600">{globalVoteStats.upvotes}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500 flex items-center gap-1">
+                    <ThumbsDown className="w-3 h-3 text-red-600" />
+                    Downvotes:
+                  </span>
+                  <span className="text-xs font-medium text-red-600">{globalVoteStats.downvotes}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress bar for upvote percentage */}
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-500">Approval Rate:</span>
+                <span className="text-xs font-medium">{globalVoteStats.upvotePercentage.toFixed(1)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${globalVoteStats.upvotePercentage}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Recent Looks Section */}
         <div className="ios-card p-5 animate-fade-up">
           <div className="flex items-center justify-between mb-4">
@@ -230,15 +348,29 @@ export default function ResultsPage() {
                 {displayedLooks.map((pastLook) => (
                   <div key={pastLook.id} className="bg-white rounded-xl shadow-sm border border-gray-100">
                     {/* Main Image */}
-                    <div className="relative aspect-[3/4] rounded-t-xl overflow-hidden">
+                    <div className="relative aspect-[3/4] rounded-t-xl overflow-hidden group">
                       <img
                         src={pastLook.imageUrl}
                         alt="Generated look"
                         className="w-full h-full object-cover"
                       />
+
+                      {/* Vote buttons - always visible if voted, otherwise show on hover */}
+                      <div className="absolute top-2 left-2">
+                        <ImageVoteButtons
+                          imageUrl={pastLook.imageUrl}
+                          size="sm"
+                          variant="overlay"
+                          className="opacity-100 group-hover:opacity-100 transition-opacity duration-200"
+                          onVoteChange={(voteType) => {
+                            console.log(`[Results] Image vote changed: ${voteType} for look ${pastLook.id}`);
+                          }}
+                        />
+                      </div>
+
                       <button
                         onClick={() => handleDeleteLook(pastLook.id)}
-                        className="absolute top-2 right-2 p-2 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors"
+                        className="absolute top-2 right-2 p-2 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors opacity-0 group-hover:opacity-100"
                       >
                         <X size={16} />
                       </button>
@@ -247,18 +379,29 @@ export default function ResultsPage() {
                     {/* Look Details */}
                     <div className="p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <div>
+                        <div className="flex-1">
                           <h4 className="font-medium text-gray-900 text-sm">
                             {pastLook.style === 'suggestion' ? 'Style Suggestion' : pastLook.style}
                           </h4>
                           <p className="text-xs text-gray-500">{formatDate(pastLook.timestamp)}</p>
+
+                          {/* 投票状态显示 */}
+                          <div className="mt-1">
+                            <ImageVoteStatus
+                              imageUrl={pastLook.imageUrl}
+                              size="sm"
+                              showStats={true}
+                              showUserVote={true}
+                              className="text-xs"
+                            />
+                          </div>
                         </div>
                         {pastLook.processImages && (
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => toggleProcessImages(pastLook.id)}
-                            className="text-gray-600 h-8 px-2"
+                            className="text-gray-600 h-8 px-2 ml-2"
                           >
                             <ImageIcon className="w-4 h-4 mr-1" />
                             {showProcessImages[pastLook.id] ? (

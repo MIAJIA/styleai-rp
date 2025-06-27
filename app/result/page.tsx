@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Share2, Download, RefreshCw, Heart, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ImageVoteButtons from "@/components/image-vote-buttons";
 import Navigation from "../components/navigation";
 
 export default function ResultPage() {
@@ -59,7 +60,7 @@ export default function ResultPage() {
                 style={{ animationDelay: `${index * 0.2}s` }}
               >
                 <div className="glass-card rounded-3xl p-4 relative overflow-hidden">
-                  <div className="relative">
+                  <div className="relative group">
                     <img
                       src={result.image || "/placeholder.svg"}
                       alt={result.style}
@@ -81,6 +82,21 @@ export default function ResultPage() {
                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1">
                       <span className="text-xs font-medium text-gray-800">{result.style}</span>
                     </div>
+
+                    {/* Vote buttons - only show for non-blurred images */}
+                    {!result.isBlurred && (
+                      <div className="absolute top-3 left-1/2 transform -translate-x-1/2">
+                        <ImageVoteButtons
+                          imageUrl={result.image}
+                          size="sm"
+                          variant="overlay"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          onVoteChange={(voteType) => {
+                            console.log(`[Result] Image vote changed: ${voteType} for style ${result.style}`);
+                          }}
+                        />
+                      </div>
+                    )}
 
                     {/* Like Button */}
                     <button

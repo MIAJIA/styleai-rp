@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import IOSTabBar from "../components/ios-tab-bar"
 import ImageModal from "../components/image-modal"
+import ImageVoteButtons from "@/components/image-vote-buttons"
 import { ProductGrid, parseProductsFromText, type ProductInfo } from "../components/product-card"
 import {
   ArrowLeft,
@@ -134,11 +135,16 @@ function AIAvatar() {
 function ChatBubble({
   message,
   onImageClick,
+  sessionId,
 }: {
   message: ChatMessage
   onImageClick: (imageUrl: string) => void
+  sessionId?: string
 }) {
   const isAI = message.role === "ai"
+  const isUser = message.role === "user"
+
+  console.log(`[ChatBubble] Rendering message with sessionId: ${sessionId}, hasImage: ${!!message.imageUrl}`);
 
   // Debug logging for product messages
   if (message.type === "products" || (message.products && message.products.length > 0)) {
@@ -152,80 +158,106 @@ function ChatBubble({
   }
 
   return (
-    <div className={`flex items-start gap-3 my-4 ${!isAI ? "flex-row-reverse" : ""}`}>
-      {isAI ? (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center mr-2 flex-shrink-0">
-          <span className="text-lg">{message.agentInfo?.emoji || "🤖"}</span>
-        </div>
-      ) : (
-        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-2 flex-shrink-0">
-          <User className="w-5 h-5 text-gray-600" />
-        </div>
-      )}
-      <div
-        className={`
-          px-4 py-3 rounded-2xl max-w-[80%] flex flex-col
-          ${isAI ? "bg-white shadow-sm border border-gray-100" : "bg-[#FF6EC7] text-white"}
-        `}
-      >
-        {isAI && message.agentInfo && (
-          <div className="text-xs text-gray-500 mb-1 font-semibold">{message.agentInfo.name}</div>
-        )}
-
-        {/* Render text content if it exists */}
-        {message.content && <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>}
-
-        {/* Render image if it exists, with a margin if text is also present */}
-        {message.imageUrl && (
-          <img
-            src={message.imageUrl || "/placeholder.svg"}
-            alt={isAI ? "Generated image" : "Uploaded image"}
-            width={300}
-            height={400}
-            className={`rounded-lg cursor-pointer ${message.content ? "mt-2" : ""}`}
-            onClick={() => message.imageUrl && onImageClick(message.imageUrl)}
-          />
-        )}
-
-        {/* Render products if they exist */}
-        {message.products && message.products.length > 0 && (
-          <div className={message.content ? "mt-3" : ""}>
-            <ProductGrid products={message.products} />
-          </div>
-        )}
-
-        {message.type === "loading" && (
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-150"></div>
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-300"></div>
-            {message.loadingText && <span className="text-sm text-gray-600">{message.loadingText}</span>}
-          </div>
-        )}
-
-        {message.type === "generation-request" && (
-          <div className="space-y-2">
-            <p className="text-sm leading-relaxed">{message.content}</p>
-            {message.metadata?.generationData && (
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {message.metadata.generationData.selfiePreview && (
-                  <img
-                    src={message.metadata.generationData.selfiePreview || "/placeholder.svg"}
-                    alt="Selfie"
-                    className="w-full h-20 object-cover rounded-lg"
-                  />
-                )}
-                {message.metadata.generationData.clothingPreview && (
-                  <img
-                    src={message.metadata.generationData.clothingPreview || "/placeholder.svg"}
-                    alt="Clothing"
-                    className="w-full h-20 object-cover rounded-lg"
-                  />
-                )}
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
+      <div className={`flex ${isUser ? "flex-row-reverse" : "flex-row"} items-start max-w-[80%]`}>
+        {/* AI Avatar */}
+        {isAI && (
+          <div className="flex-shrink-0 mr-2">
+            <AIAvatar />
+            {message.agentInfo && (
+              <div className="text-xs text-gray-500 mt-1 text-center">
+                <span>{message.agentInfo.emoji}</span>
+                <span className="ml-1">{message.agentInfo.name}</span>
               </div>
             )}
           </div>
         )}
+        <div
+          className={`
+            px-4 py-3 rounded-2xl max-w-[80%] flex flex-col
+            ${isAI ? "bg-white shadow-sm border border-gray-100" : "bg-[#FF6EC7] text-white"}
+          `}
+        >
+          {isAI && message.agentInfo && (
+            <div className="text-xs text-gray-500 mb-1 font-semibold">{message.agentInfo.name}</div>
+          )}
+
+          {/* Render text content if it exists */}
+          {message.content && <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>}
+
+          {/* Render image if it exists, with a margin if text is also present */}
+          {message.imageUrl && (
+            <div className={message.content ? "mt-2" : ""}>
+              <div className="relative group">
+                <img
+                  src={message.imageUrl || "/placeholder.svg"}
+                  alt={isAI ? "Generated image" : "Uploaded image"}
+                  width={300}
+                  height={400}
+                  className="rounded-lg cursor-pointer"
+                  onClick={() => message.imageUrl && onImageClick(message.imageUrl)}
+                />
+
+                {/* Vote buttons overlay - only show for AI generated images */}
+                {isAI && message.imageUrl && (
+                  <div className="absolute top-2 right-2">
+                    <ImageVoteButtons
+                      imageUrl={message.imageUrl}
+                      sessionId={sessionId}
+                      size="sm"
+                      variant="overlay"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                      onVoteChange={(voteType) => {
+                        console.log(`[ChatBubble] Image vote changed: ${voteType} for ${message.imageUrl?.substring(0, 50)}...`);
+                        console.log(`[ChatBubble] SessionId used: ${sessionId}`);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Render products if they exist */}
+          {message.products && message.products.length > 0 && (
+            <div className={message.content ? "mt-3" : ""}>
+              <ProductGrid products={message.products} />
+            </div>
+          )}
+
+          {message.type === "loading" && (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-150"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-300"></div>
+              {message.loadingText && <span className="text-sm text-gray-600">{message.loadingText}</span>}
+            </div>
+          )}
+
+          {message.type === "generation-request" && (
+            <div className="space-y-2">
+              <p className="text-sm leading-relaxed">{message.content}</p>
+              {message.metadata?.generationData && (
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {message.metadata.generationData.selfiePreview && (
+                    <img
+                      src={message.metadata.generationData.selfiePreview || "/placeholder.svg"}
+                      alt="Selfie"
+                      className="w-full h-20 object-cover rounded-lg"
+                    />
+                  )}
+                  {message.metadata.generationData.clothingPreview && (
+                    <img
+                      src={message.metadata.generationData.clothingPreview || "/placeholder.svg"}
+                      alt="Clothing"
+                      className="w-full h-20 object-cover rounded-lg"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -385,6 +417,10 @@ export default function ChatPage() {
       currentSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       localStorage.setItem("chat_session_id", currentSessionId)
     }
+
+    // Set the sessionId state
+    setSessionId(currentSessionId)
+    console.log("[ChatPage] Session ID initialized:", currentSessionId)
 
     // The rest of the initialization logic remains the same...
     try {
@@ -1295,7 +1331,7 @@ Let's start chatting about styling now~`,
         ) : (
           <div className="max-w-2xl mx-auto">
             {messages.map((message) => (
-              <ChatBubble key={message.id} message={message} onImageClick={handleImageClick} />
+              <ChatBubble key={message.id} message={message} onImageClick={handleImageClick} sessionId={sessionId} />
             ))}
             <div ref={messagesEndRef} />
           </div>
@@ -1359,7 +1395,7 @@ Let's start chatting about styling now~`,
               </Button>
               <input
                 name="message"
-                placeholder="跟你的专属顾问聊聊吧..."
+                placeholder="Talk to your personal stylist..."
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#FF6EC7] text-sm"
                 autoComplete="off"
               />
@@ -1452,7 +1488,12 @@ Let's start chatting about styling now~`,
       </div>
 
       {/* Image Modal */}
-      <ImageModal isOpen={isModalOpen} onClose={handleCloseModal} imageUrl={modalImage || ""} />
+      <ImageModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        imageUrl={modalImage || ""}
+        sessionId={sessionId}
+      />
 
       {/* iOS Tab Bar */}
       <IOSTabBar />

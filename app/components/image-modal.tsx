@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Download, Share2, Heart } from "lucide-react";
+import ImageVoteButtons from "@/components/image-vote-buttons";
 import { cn } from "@/lib/utils";
 
 interface ImageModalProps {
@@ -10,9 +11,10 @@ interface ImageModalProps {
   onClose: () => void;
   imageUrl: string;
   title?: string;
+  sessionId?: string;
 }
 
-export default function ImageModal({ isOpen, onClose, imageUrl, title }: ImageModalProps) {
+export default function ImageModal({ isOpen, onClose, imageUrl, title, sessionId }: ImageModalProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   if (!isOpen) return null;
@@ -102,6 +104,19 @@ export default function ImageModal({ isOpen, onClose, imageUrl, title }: ImageMo
 
           {/* Action buttons */}
           <div className="p-4 border-t border-gray-100">
+            {/* Vote buttons */}
+            <div className="flex justify-center mb-4">
+              <ImageVoteButtons
+                imageUrl={imageUrl}
+                sessionId={sessionId}
+                size="md"
+                variant="default"
+                onVoteChange={(voteType) => {
+                  console.log(`[ImageModal] Image vote changed: ${voteType} for ${imageUrl}`);
+                }}
+              />
+            </div>
+
             <div className="flex gap-3">
               <Button
                 onClick={handleDownload}
