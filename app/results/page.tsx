@@ -378,92 +378,32 @@ export default function ResultsPage() {
 
                     {/* Look Details */}
                     <div className="p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900 text-sm">
-                            {pastLook.style === 'suggestion' ? 'Style Suggestion' : pastLook.style}
+                      <div className="flex-1">
+                        <div className="prose prose-sm max-w-none">
+                          <h4 className="font-semibold text-gray-800">
+                            {pastLook.processImages?.styleSuggestion?.outfit_suggestions?.[0]?.outfit_title || "AI Generated"}
                           </h4>
-                          <p className="text-xs text-gray-500">{formatDate(pastLook.timestamp)}</p>
-
-                          {/* 投票状态显示 */}
-                          <div className="mt-1">
-                            <ImageVoteStatus
-                              imageUrl={pastLook.imageUrl}
-                              size="sm"
-                              showStats={true}
-                              showUserVote={true}
-                              className="text-xs"
-                            />
-                          </div>
+                          <p className="text-xs text-gray-500">
+                            {pastLook.processImages?.styleSuggestion?.outfit_suggestions?.[0]?.explanation || `Generated on ${formatDate(pastLook.timestamp)}`}
+                          </p>
                         </div>
-                        {pastLook.processImages && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleProcessImages(pastLook.id)}
-                            className="text-gray-600 h-8 px-2 ml-2"
-                          >
-                            <ImageIcon className="w-4 h-4 mr-1" />
-                            {showProcessImages[pastLook.id] ? (
-                              <ChevronUp className="w-4 h-4" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4" />
-                            )}
-                          </Button>
-                        )}
+
+                        {/* Voting status */}
+                        <div className="mt-2">
+                          <ImageVoteStatus imageUrl={pastLook.imageUrl} showSummary={true} />
+                        </div>
                       </div>
 
-                      {/* Process Images */}
-                      {showProcessImages[pastLook.id] && pastLook.processImages && (
-                        <div className="mt-3 space-y-3">
-                          <div className="grid grid-cols-3 gap-1">
-                            <div className="space-y-1">
-                              <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                <img
-                                  src={pastLook.processImages.humanImage}
-                                  alt="Original photo"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <p className="text-[10px] text-gray-500 text-center">Original</p>
-                            </div>
-                            <div className="space-y-1">
-                              <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                <img
-                                  src={pastLook.processImages.garmentImage}
-                                  alt="Garment"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <p className="text-[10px] text-gray-500 text-center">Garment</p>
-                            </div>
-                            <div className="space-y-1">
-                              <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                <img
-                                  src={pastLook.processImages.finalImage}
-                                  alt="Final look"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <p className="text-[10px] text-gray-500 text-center">Final</p>
-                            </div>
-                          </div>
-
-                          {/* Style Suggestion */}
-                          {pastLook.processImages.styleSuggestion && (
-                            <div className="bg-gray-50 rounded-lg p-2 text-xs">
-                              <h5 className="font-medium text-gray-900 mb-1">Style Suggestion</h5>
-                              {Object.entries(pastLook.processImages.styleSuggestion)
-                                .filter(([key]) => key !== "image_prompt")
-                                .map(([key, value]) => (
-                                  <div key={key} className="mb-1">
-                                    <span className="text-gray-600 capitalize">{key.replace(/_/g, " ")}: </span>
-                                    <span className="text-gray-900">{value as string}</span>
-                                  </div>
-                                ))}
-                            </div>
-                          )}
-                        </div>
+                      {/* View Process Button */}
+                      {pastLook.processImages && (
+                        <button
+                          onClick={() => toggleProcessImages(pastLook.id)}
+                          className="flex items-center text-xs text-gray-500 hover:text-gray-800 transition-colors"
+                        >
+                          <ImageIcon size={14} className="mr-1" />
+                          <span>View Process</span>
+                          <ChevronDown size={14} className={cn("ml-1 transition-transform", showProcessImages[pastLook.id] && "rotate-180")} />
+                        </button>
                       )}
                     </div>
                   </div>
