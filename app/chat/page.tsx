@@ -9,6 +9,7 @@ import IOSTabBar from "../components/ios-tab-bar"
 import ImageModal from "../components/image-modal"
 import ImageVoteButtons from "@/components/image-vote-buttons"
 import { ProductGrid, parseProductsFromText, type ProductInfo } from "../components/product-card"
+import { loadCompleteOnboardingData } from "@/lib/onboarding-storage"
 import {
   ArrowLeft,
   Loader2,
@@ -975,7 +976,7 @@ Let's start chatting about styling now~`,
 
       // Load and append user profile for personalization
       try {
-        const onboardingData = await import("@/lib/onboarding-storage").then(m => m.loadCompleteOnboardingData());
+        const onboardingData = loadCompleteOnboardingData();
         if (onboardingData) {
           formData.append("user_profile", JSON.stringify(onboardingData));
           console.log("[CHAT DEBUG] Appending user_profile to FormData:", JSON.stringify(onboardingData, null, 2));

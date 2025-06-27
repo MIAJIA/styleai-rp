@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
-  Send,
-  Sparkles,
   User,
-  Bot,
   Camera,
-  Shirt,
   Palette,
   Heart,
-  MessageCircle,
-  Loader2,
+  Settings,
+  Edit,
+  ArrowLeft,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import {
   loadCompleteOnboardingData,
@@ -21,16 +21,7 @@ import {
   type OnboardingData,
 } from "@/lib/onboarding-storage";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
-
-interface Message {
-  id: string;
-  type: 'user' | 'ai';
-  content: string;
-  timestamp: Date;
-  suggestions?: string[];
-  isTyping?: boolean;
-}
+import IOSTabBar from "../components/ios-tab-bar";
 
 interface UserProfile extends OnboardingData {
   savedAt?: string;
@@ -40,67 +31,12 @@ interface UserProfile extends OnboardingData {
   };
 }
 
-const CONVERSATION_STARTERS = [
-  {
-    icon: Shirt,
-    text: "What should I wear today?",
-    color: "bg-blue-100 text-blue-700 border-blue-200"
-  },
-  {
-    icon: Palette,
-    text: "Help me find my style",
-    color: "bg-purple-100 text-purple-700 border-purple-200"
-  },
-  {
-    icon: Heart,
-    text: "Outfit for a date night",
-    color: "bg-pink-100 text-pink-700 border-pink-200"
-  },
-  {
-    icon: Camera,
-    text: "Analyze my style profile",
-    color: "bg-green-100 text-green-700 border-green-200"
-  }
-];
-
-const AI_RESPONSES = {
-  greeting: [
-    "Hi there! ✨ I'm your personal AI stylist. I've analyzed your style profile and I'm excited to help you look amazing today! What can I help you with?",
-    "Hello gorgeous! 💫 Ready to create some stunning looks together? I have some great ideas based on your unique style profile!",
-    "Hey style star! 🌟 I'm here to help you express your beautiful self through fashion. What's on your mind today?"
-  ],
-  "what should i wear today": [
-    "Great question! Based on your style profile, I'd recommend something that highlights your best features. What's the occasion? Work, casual day out, or something special? 💫",
-    "I love helping with daily outfit choices! Tell me - what's your mood today? Feeling bold and confident, or more relaxed and comfortable? ✨"
-  ],
-  "help me find my style": [
-    "I'd love to help you discover your unique style! From your profile, I can see you have some amazing features to work with. Let's explore what makes you feel most confident and beautiful! 🌟",
-    "Style discovery is my favorite topic! Your profile shows some interesting preferences. What kind of vibe are you drawn to lately? Classic elegance, trendy chic, or something more edgy? ✨"
-  ],
-  "outfit for a date night": [
-    "Ooh, date night! 💕 How exciting! Based on your style profile, I have some gorgeous ideas that will make you feel absolutely stunning. What's the setting - dinner, casual coffee, or something more adventurous?",
-    "Date night calls for something special! ✨ I'm thinking we can create a look that's both elegant and shows your personality. Tell me about your date - romantic dinner or fun activity?"
-  ],
-  "analyze my style profile": [
-    "I'd love to dive into your style analysis! 📊 From what I can see, you have some wonderful strengths we can highlight. Your facial features and body proportions give us so many styling opportunities! What aspect interests you most?",
-    "Your style profile is fascinating! ✨ I see some great potential for creating looks that really showcase your unique beauty. Would you like me to focus on colors, silhouettes, or overall styling approaches?"
-  ],
-  default: [
-    "That's an interesting question! I'd love to help you with that. Can you tell me a bit more about what you're looking for? ✨",
-    "I'm here to help with all your style needs! Could you give me a bit more context so I can provide the best advice? 💫",
-    "Great topic! I have some ideas, but I'd love to understand more about your specific situation. Tell me more! 🌟"
-  ]
-};
-
 export default function MyStylePage() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [photos, setPhotos] = useState<{ fullBodyPhoto: string | null }>({
     fullBodyPhoto: null,
   });
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -128,232 +64,350 @@ export default function MyStylePage() {
 
         setProfileData(profile);
         setPhotos(userPhotos);
-
-        // Initialize conversation with greeting
-        const greetingMessage: Message = {
-          id: `ai-${Date.now()}`,
-          type: 'ai',
-          content: AI_RESPONSES.greeting[Math.floor(Math.random() * AI_RESPONSES.greeting.length)],
-          timestamp: new Date()
-        };
-        setMessages([greetingMessage]);
       } catch (error) {
         console.error("Error loading profile:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     loadProfile();
   }, []);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const getAIResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
-
-    if (lowerMessage.includes("wear today") || lowerMessage.includes("what to wear")) {
-      return AI_RESPONSES["what should i wear today"][Math.floor(Math.random() * AI_RESPONSES["what should i wear today"].length)];
-    }
-    if (lowerMessage.includes("find my style") || lowerMessage.includes("style help")) {
-      return AI_RESPONSES["help me find my style"][Math.floor(Math.random() * AI_RESPONSES["help me find my style"].length)];
-    }
-    if (lowerMessage.includes("date") || lowerMessage.includes("romantic")) {
-      return AI_RESPONSES["outfit for a date night"][Math.floor(Math.random() * AI_RESPONSES["outfit for a date night"].length)];
-    }
-    if (lowerMessage.includes("analyze") || lowerMessage.includes("profile")) {
-      return AI_RESPONSES["analyze my style profile"][Math.floor(Math.random() * AI_RESPONSES["analyze my style profile"].length)];
-    }
-
-    return AI_RESPONSES.default[Math.floor(Math.random() * AI_RESPONSES.default.length)];
-  };
-
-  const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
-
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      type: 'user',
-      content: inputValue,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue("");
-    setIsTyping(true);
-
-    // Simulate AI thinking time
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: `ai-${Date.now()}`,
-        type: 'ai',
-        content: getAIResponse(inputValue),
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, aiResponse]);
-      setIsTyping(false);
-    }, 1000 + Math.random() * 2000); // 1-3 seconds delay
-  };
-
-  const handleQuickReply = (text: string) => {
-    setInputValue(text);
-  };
-
   const hasCompletedOnboarding = profileData && (
     profileData.stylePreferences?.length ||
     Object.keys(profileData).length > 2
   );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (!hasCompletedOnboarding) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center p-4 pb-20">
         <div className="w-full max-w-md text-center bg-white rounded-3xl shadow-xl p-8">
           <div className="w-20 h-20 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Bot className="w-10 h-10 text-white" />
+            <User className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-2xl font-bold mb-4 text-gray-800">Meet Your AI Stylist</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">Complete Your Style Profile</h2>
           <p className="text-gray-600 mb-8 leading-relaxed">
-            Complete your style assessment first, and I'll provide personalized fashion advice tailored just for you!
+            Create your personalized style profile to get the best recommendations and see your fashion journey!
           </p>
           <Button
             onClick={() => router.push("/onboarding")}
             className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full font-bold py-4 text-lg shadow-lg"
           >
-            <Sparkles className="w-5 h-5 mr-2" />
+            <Camera className="w-5 h-5 mr-2" />
             Start Style Assessment
           </Button>
         </div>
+        <IOSTabBar />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 pb-20 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 pb-20">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
-              <Bot className="w-5 h-5 text-white" />
+            <Button variant="ghost" size="sm" onClick={() => router.back()} className="p-2">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-xl font-bold text-gray-800">My Style Profile</h1>
+              <p className="text-sm text-gray-500">Your personalized fashion journey</p>
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-800">AI Stylist</h1>
-              <p className="text-xs text-gray-500">Your personal fashion advisor</p>
-            </div>
-            <div className="ml-auto flex items-center gap-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-xs text-gray-500">Online</span>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/onboarding")}
+              className="text-pink-600 border-pink-200 hover:bg-pink-50"
+            >
+              <Edit className="w-4 h-4 mr-1" />
+              Edit
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 max-w-md mx-auto w-full">
-        <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                "flex gap-3",
-                message.type === 'user' ? "justify-end" : "justify-start"
-              )}
-            >
-              {message.type === 'ai' && (
-                <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-4 h-4 text-white" />
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+        {/* Profile Photo Section */}
+        <Card className="p-6 bg-white shadow-lg border-0">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              {photos.fullBodyPhoto || profileData?.fullBodyPhoto ? (
+                <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-pink-200">
+                  <img
+                    src={photos.fullBodyPhoto || profileData?.fullBodyPhoto || "/placeholder.svg"}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="w-20 h-20 bg-gradient-to-br from-pink-200 to-purple-200 rounded-full flex items-center justify-center">
+                  <Camera className="w-8 h-8 text-gray-600" />
                 </div>
               )}
-
-              <div
-                className={cn(
-                  "max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed",
-                  message.type === 'user'
-                    ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-md"
-                    : "bg-white shadow-sm border border-gray-100 text-gray-800 rounded-bl-md"
-                )}
-              >
-                {message.content}
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-white" />
               </div>
-
-              {message.type === 'user' && (
-                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4 text-gray-600" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-gray-800">Style Profile</h2>
+              <p className="text-gray-600">
+                {profileData?.savedAt
+                  ? `Created ${new Date(profileData.savedAt).toLocaleDateString()}`
+                  : "Recently created"
+                }
+              </p>
+              {profileData?.photoMetadata?.hasFullBodyPhoto && (
+                <div className="flex items-center gap-1 mt-1">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  <span className="text-xs text-green-600">Photo analyzed</span>
                 </div>
               )}
             </div>
-          ))}
+          </div>
+        </Card>
 
-          {isTyping && (
-            <div className="flex gap-3 justify-start">
-              <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-white" />
+        {/* AI Analysis Results */}
+        {profileData?.aiAnalysis && (
+          <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-white" />
               </div>
-              <div className="bg-white shadow-sm border border-gray-100 px-4 py-3 rounded-2xl rounded-bl-md">
-                <div className="flex items-center gap-1">
-                  <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                  <span className="text-sm text-gray-500">AI is thinking...</span>
+              <h3 className="text-lg font-semibold text-gray-800">AI Analysis Results</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {profileData.aiAnalysis.bodyType && (
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Body Type</p>
+                  <p className="text-gray-800">{profileData.aiAnalysis.bodyType}</p>
                 </div>
+              )}
+              {profileData.aiAnalysis.faceShape && (
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Face Shape</p>
+                  <p className="text-gray-800">{profileData.aiAnalysis.faceShape}</p>
+                </div>
+              )}
+              {profileData.aiAnalysis.boneStructure && (
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Bone Structure</p>
+                  <p className="text-gray-800">{profileData.aiAnalysis.boneStructure}</p>
+                </div>
+              )}
+              {profileData.aiAnalysis.styleInitialSense && (
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Style Sense</p>
+                  <p className="text-gray-800">{profileData.aiAnalysis.styleInitialSense}</p>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* Body Analysis */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Heart className="w-5 h-5 text-pink-500" />
+            <h3 className="text-lg font-semibold text-gray-800">Body Analysis</h3>
+          </div>
+
+          {profileData?.bodyAdvantages && profileData.bodyAdvantages.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-600 mb-2">Strengths to Highlight</p>
+              <div className="flex flex-wrap gap-2">
+                {profileData.bodyAdvantages.map((advantage, index) => (
+                  <Badge key={index} variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                    {advantage}
+                  </Badge>
+                ))}
               </div>
             </div>
           )}
-        </div>
-        <div ref={messagesEndRef} />
-      </div>
 
-      {/* Quick Reply Suggestions */}
-      {messages.length <= 1 && (
-        <div className="px-4 pb-4 max-w-md mx-auto w-full">
-          <p className="text-xs text-gray-500 mb-3 text-center">Try asking me about:</p>
-          <div className="grid grid-cols-2 gap-2">
-            {CONVERSATION_STARTERS.map((starter, index) => {
-              const Icon = starter.icon;
-              return (
-                <button
-                  key={index}
-                  onClick={() => handleQuickReply(starter.text)}
-                  className={cn(
-                    "flex items-center gap-2 p-3 rounded-xl text-xs font-medium transition-all border",
-                    starter.color,
-                    "hover:shadow-md"
-                  )}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{starter.text}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+          {profileData?.bodyChallenges && profileData.bodyChallenges.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-600 mb-2">Areas to Balance</p>
+              <div className="flex flex-wrap gap-2">
+                {profileData.bodyChallenges.map((challenge, index) => (
+                  <Badge key={index} variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
+                    {challenge}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
-      {/* Input Area */}
-      <div className="bg-white border-t border-gray-200 px-4 py-4 max-w-md mx-auto w-full">
-        <div className="flex gap-3 items-end">
-          <div className="flex-1">
-            <Input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Ask me anything about style..."
-              className="rounded-full border-gray-300 focus:border-pink-500 focus:ring-pink-500"
-              disabled={isTyping}
-            />
+          {profileData?.customAdvantages && (
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-600 mb-2">Custom Strengths</p>
+              <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">{profileData.customAdvantages}</p>
+            </div>
+          )}
+
+          {profileData?.customChallenges && (
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-2">Custom Challenges</p>
+              <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">{profileData.customChallenges}</p>
+            </div>
+          )}
+        </Card>
+
+        {/* Style Preferences */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Palette className="w-5 h-5 text-purple-500" />
+            <h3 className="text-lg font-semibold text-gray-800">Style Preferences</h3>
           </div>
+
+          {profileData?.stylePreferences && profileData.stylePreferences.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-600 mb-2">Preferred Styles</p>
+              <div className="flex flex-wrap gap-2">
+                {profileData.stylePreferences.map((style, index) => (
+                  <Badge key={index} className="bg-purple-100 text-purple-800 border-purple-200">
+                    {style}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {profileData?.customStyle && (
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-600 mb-2">Custom Style Description</p>
+              <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">{profileData.customStyle}</p>
+            </div>
+          )}
+
+          {profileData?.specificStyles && profileData.specificStyles.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-2">Specific Style Interests</p>
+              <div className="flex flex-wrap gap-2">
+                {profileData.specificStyles.map((style, index) => (
+                  <Badge key={index} variant="outline" className="border-purple-300 text-purple-700">
+                    {style}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Personalization Settings */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Settings className="w-5 h-5 text-gray-600" />
+            <h3 className="text-lg font-semibold text-gray-800">Personal Preferences</h3>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">Sustainable Fashion</span>
+              <div className="flex items-center gap-2">
+                {profileData?.sustainableFashion ? (
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-gray-400" />
+                )}
+                <span className="text-xs text-gray-500">
+                  {profileData?.sustainableFashion ? "Enabled" : "Disabled"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">Accessory Matching</span>
+              <div className="flex items-center gap-2">
+                {profileData?.accessoryMatching ? (
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-gray-400" />
+                )}
+                <span className="text-xs text-gray-500">
+                  {profileData?.accessoryMatching ? "Enabled" : "Disabled"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Style Profile Summary */}
+        {profileData?.styleProfile && (
+          <Card className="p-6 bg-gradient-to-r from-pink-50 via-rose-50 to-orange-50 border-pink-200">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-orange-500 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800">AI Style Profile</h3>
+            </div>
+
+            {profileData.styleProfile.structureCombination && (
+              <div className="mb-4">
+                <p className="text-sm font-medium text-gray-600 mb-1">Body Structure Analysis</p>
+                <p className="text-gray-800">{profileData.styleProfile.structureCombination}</p>
+              </div>
+            )}
+
+            {profileData.styleProfile.styleLabels && profileData.styleProfile.styleLabels.length > 0 && (
+              <div className="mb-4">
+                <p className="text-sm font-medium text-gray-600 mb-2">Your Style Labels</p>
+                <div className="flex flex-wrap gap-2">
+                  {profileData.styleProfile.styleLabels.map((label, index) => (
+                    <Badge key={index} className="bg-pink-100 text-pink-800 border-pink-200">
+                      {label}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {profileData.styleProfile.recommendedKeywords && profileData.styleProfile.recommendedKeywords.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Recommended Style Keywords</p>
+                <div className="flex flex-wrap gap-2">
+                  {profileData.styleProfile.recommendedKeywords.map((keyword, index) => (
+                    <Badge key={index} variant="outline" className="border-orange-300 text-orange-700">
+                      {keyword}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Action Buttons */}
+        <div className="space-y-3">
           <Button
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isTyping}
-            className="w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg flex-shrink-0"
+            onClick={() => router.push("/")}
+            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full py-3 font-semibold"
           >
-            <Send className="w-4 h-4" />
+            Start Styling Session
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => router.push("/onboarding")}
+            className="w-full border-pink-200 text-pink-600 hover:bg-pink-50 rounded-full py-3"
+          >
+            Update Profile
           </Button>
         </div>
       </div>
+
+      {/* iOS Tab Bar */}
+      <IOSTabBar />
     </div>
   );
 }
