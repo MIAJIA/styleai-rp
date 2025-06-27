@@ -187,40 +187,75 @@ async function fetchWithTimeout(
   return response;
 }
 
-// Helper to convert a URL to a File object
-async function urlToFile(url: string, filename: string, mimeType: string): Promise<File> {
-  const maxRetries = 3;
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
+// File API polyfill utility
+function createFilePolyfill(blob: Blob, filename: string, options?: FilePropertyBag): File {
+  // Check if native File constructor exists and works
+  if (typeof File !== 'undefined') {
     try {
-      console.log(`Converting URL to file (attempt ${attempt + 1}/${maxRetries}): ${url.substring(0, 100)}...`);
-
-      const response = await fetchWithTimeout(url, {
-        timeout: 120000 // 2 minutes timeout for file downloads
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.blob();
-      return new File([data], filename, { type: mimeType });
-
+      return new File([blob], filename, options);
     } catch (error) {
-      console.error(`URL to file conversion attempt ${attempt + 1} failed:`, error);
-
-      if (attempt === maxRetries - 1) {
-        throw new Error(`Failed to convert URL to file after ${maxRetries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-
-      // Wait before retrying
-      const waitTime = (attempt + 1) * 2000; // 2s, 4s, 6s
-      console.log(`Waiting ${waitTime}ms before retry...`);
-      await sleep(waitTime);
+      console.warn('Native File constructor failed, using polyfill:', error);
     }
   }
 
-  throw new Error("URL to file conversion failed: Maximum retries exceeded");
+  // Polyfill: Create a Blob with File-like properties
+  const fileBlob = new Blob([blob], { type: options?.type || blob.type });
+
+  // Add File-specific properties
+  Object.defineProperty(fileBlob, 'name', {
+    value: filename,
+    writable: false,
+    configurable: false
+  });
+
+  Object.defineProperty(fileBlob, 'lastModified', {
+    value: options?.lastModified || Date.now(),
+    writable: false,
+    configurable: false
+  });
+
+  Object.defineProperty(fileBlob, 'webkitRelativePath', {
+    value: '',
+    writable: false,
+    configurable: false
+  });
+
+  return fileBlob as File;
+}
+
+// Utility to check if we're in a browser environment
+function isBrowserEnvironment(): boolean {
+  return typeof window !== 'undefined' && typeof document !== 'undefined';
+}
+
+// Helper function to create a data URL to File converter that works cross-environment
+function dataURLtoFile(dataUrl: string, filename: string): File | null {
+  if (!dataUrl || !isBrowserEnvironment()) {
+    return null;
+  }
+
+  try {
+    const arr = dataUrl.split(',');
+    if (arr.length < 2) return null;
+
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) return null;
+
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+
+    const blob = new Blob([u8arr], { type: mime });
+    return createFilePolyfill(blob, filename, { type: mime });
+  } catch (error) {
+    console.error('Failed to convert data URL to file:', error);
+    return null;
+  }
 }
 
 // Helper function to convert a File to a Base64 string
@@ -749,4 +784,47 @@ export async function executeAdvancedScenePipeline(job: Job): Promise<string[]> 
 
   console.log(`[PIPELINE_END] "Advanced Scene" pipeline finished for job ${job.jobId}. Generated ${finalUrls.length} images.`);
   return finalUrls;
+}
+
+// Helper to convert a URL to a File object
+async function urlToFile(url: string, filename: string, mimeType: string): Promise<File> {
+  const maxRetries = 3;
+
+  // Check if we're in a browser environment
+  if (!isBrowserEnvironment()) {
+    throw new Error('URL to File conversion requires a browser environment. Please run in a browser context.');
+  }
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      console.log(`Converting URL to file (attempt ${attempt + 1}/${maxRetries}): ${url.substring(0, 100)}...`);
+
+      const response = await fetchWithTimeout(url, {
+        timeout: 120000 // 2 minutes timeout for file downloads
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.blob();
+
+      // Use our polyfill utility that handles cross-environment compatibility
+      return createFilePolyfill(data, filename, { type: mimeType });
+
+    } catch (error) {
+      console.error(`URL to file conversion attempt ${attempt + 1} failed:`, error);
+
+      if (attempt === maxRetries - 1) {
+        throw new Error(`Failed to convert URL to file after ${maxRetries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+
+      // Wait before retrying
+      const waitTime = (attempt + 1) * 2000; // 2s, 4s, 6s
+      console.log(`Waiting ${waitTime}ms before retry...`);
+      await sleep(waitTime);
+    }
+  }
+
+  throw new Error("URL to file conversion failed: Maximum retries exceeded");
 }
