@@ -230,7 +230,7 @@ function isBrowserEnvironment(): boolean {
 
 // Helper function to create a data URL to File converter that works cross-environment
 function dataURLtoFile(dataUrl: string, filename: string): File | null {
-  if (!dataUrl || !isBrowserEnvironment()) {
+  if (!dataUrl) {
     return null;
   }
 
@@ -789,11 +789,6 @@ export async function executeAdvancedScenePipeline(job: Job): Promise<string[]> 
 // Helper to convert a URL to a File object
 async function urlToFile(url: string, filename: string, mimeType: string): Promise<File> {
   const maxRetries = 3;
-
-  // Check if we're in a browser environment
-  if (!isBrowserEnvironment()) {
-    throw new Error('URL to File conversion requires a browser environment. Please run in a browser context.');
-  }
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
