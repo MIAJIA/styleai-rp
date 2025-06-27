@@ -579,7 +579,7 @@ Let's start chatting about styling now~`,
     addMessage({
       type: "loading",
       role: "ai",
-      loadingText: "Just a moment, I'm cooking up something stylish for you...",
+      loadingText: "Hold on—I'm putting together a killer look just for you!",
     })
 
     // Pass the captured image to the chat handler
@@ -888,7 +888,7 @@ Let's start chatting about styling now~`,
     addMessage({
       type: "loading",
       role: "ai",
-      loadingText: "🎨 Now, let's generate the image based on the first suggestion...",
+      loadingText: "Alright, time to bring that first outfit idea to life—get ready!",
     })
 
     console.log("[SUGGESTION DEBUG] Added loading message for generation phase. Polling continues.")
@@ -944,7 +944,7 @@ Let's start chatting about styling now~`,
     addMessage({
       type: "loading",
       role: "ai",
-      loadingText: "Just a moment, I'm cooking up something stylish for you...",
+      loadingText: "Hold on—I'm putting together a killer look just for you!",
     })
 
     try {
@@ -1030,19 +1030,19 @@ Let's start chatting about styling now~`,
       addMessage({
         type: "loading",
         role: "ai",
-        loadingText: "Crafting the perfect scene and pose, just like we used to do...",
+        loadingText: "Let me set the scene—you're gonna look amazing in this!",
       })
 
       replaceLastLoadingMessage({
         role: "ai",
         type: "loading",
-        loadingText: "Putting the final touches on your look, hang tight...",
+        loadingText: "One sec—just adding a bit more sparkle to your fit!",
       })
 
       addMessage({
         type: "loading",
         role: "ai",
-        loadingText: "Crafting the perfect scene and pose, just like we used to do...",
+        loadingText: "Let me set the scene—you're gonna look amazing in this!",
       })
 
       replaceLastLoadingMessage({
@@ -1118,7 +1118,7 @@ Let's start chatting about styling now~`,
             replaceLastLoadingMessage({
               role: "ai",
               type: "loading",
-              loadingText: "Creating a suitable scene and pose for you, remember our last adventure?",
+              loadingText: "I'm setting up the perfect vibe and pose—this one's gonna pop!",
             })
             break
 
@@ -1188,7 +1188,7 @@ Let's start chatting about styling now~`,
               addMessage({
                 role: "ai",
                 type: "loading",
-                loadingText: "Performing final composition, hang tight, buddy...",
+                loadingText: "Final touches coming up—almost there!",
               })
 
               console.log(`[PERF] 🎨 Phase 5: Intermediate images displayed, continuing to final generation...`)
@@ -1347,10 +1347,10 @@ Let's start chatting about styling now~`,
                 <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                 <span className="text-sm text-gray-600 font-medium">
                   {isImageProcessing
-                    ? "🖼️ 正在压缩图片以提升传输效率..."
+                    ? "Optimizing your image so it looks fab and loads fast…"
                     : isGenerating
-                      ? "🎨 Generating your exclusive styling effect..."
-                      : "💭 AI正在思考中..."}
+                      ? "Making your styling magic happen—stay tuned!"
+                      : "Thinking through your look—this one's gonna be good…"}
                 </span>
               </div>
             </div>
