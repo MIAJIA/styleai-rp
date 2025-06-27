@@ -88,18 +88,33 @@ export async function getStyleSuggestionFromAI({
         },
       ],
       max_tokens: 2000,
-      // @ts-ignore
-      response_format: { type: "json_object" },
+      // The 'response_format' is removed to make the JSON generation more robust.
+      // We will parse the JSON from the text response instead.
+      // response_format: { type: "json_object" },
     });
+
+    console.log("[AI DEBUG] Full OpenAI Response:", JSON.stringify(response, null, 2));
 
     const content = response.choices[0].message.content;
     if (!content) {
-      throw new Error("OpenAI returned an empty response.");
+      console.error("[AI DEBUG] OpenAI response content is empty. Finish reason:", response.choices[0].finish_reason);
+      throw new Error(`OpenAI returned an empty response. Finish reason: ${response.choices[0].finish_reason}`);
     }
 
-    // Parse the JSON string and return it
-    const suggestion = JSON.parse(content);
-    return suggestion;
+    // Attempt to parse the JSON from the response content
+    try {
+      // Find the start and end of the JSON block
+      const jsonStart = content.indexOf('{');
+      const jsonEnd = content.lastIndexOf('}') + 1;
+      const jsonString = content.substring(jsonStart, jsonEnd);
+
+      const suggestion = JSON.parse(jsonString);
+      return suggestion;
+    } catch (parseError) {
+      console.error("Error parsing JSON suggestion from OpenAI:", parseError);
+      console.error("Original content from OpenAI:", content);
+      throw new Error("Failed to parse the style suggestion from the AI's response.");
+    }
   } catch (error) {
     console.error("Error getting style suggestion from OpenAI:", error);
     // Re-throw the error to be handled by the caller
