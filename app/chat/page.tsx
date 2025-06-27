@@ -758,108 +758,125 @@ Let's start chatting about styling now~`,
     const suggestionStartTime = Date.now()
     console.log(`[PERF] 💭 SUGGESTION DISPLAY STARTED at ${new Date().toISOString()}`)
 
-    if (!suggestion) return
-
-    console.log("[SUGGESTION DEBUG] Starting displaySuggestionSequentially")
-    setIsDisplayingSuggestion(true)
-
-    const suggestionKeyToTitleMap = {
-      scene_fit: "🎯 Occasion Fit",
-      style_alignment: "👗 Styling Suggestions",
-      personal_match: "💫 Personal Match",
-      visual_focus: "👀 Visual Focus",
-      material_silhouette: "👚 Material & Silhouette",
-      color_combination: "🎨 Color Palette",
-      reuse_versatility: "✨ Reuse & Versatility",
-      confident_note: "💪 Confidence Boost",
-    }
-
-    // Dynamically get content suggestion sections
-    const contentSuggestions = [
-      suggestion.styleAnalysis,
-      suggestion.colorAdvice,
-      suggestion.occassionTips,
-      suggestion.accessoryTips,
-    ].filter(Boolean)
-
-    // Dynamically calculate delay time: 30 seconds total, evenly distributed
-    const totalDisplayTime = 30000 // 30 seconds
-    const delayBetweenSuggestions = contentSuggestions.length > 0 ? totalDisplayTime / contentSuggestions.length : 1000 // If only one suggestion, delay 1 second
-
-    const accumulatedMessage = ""
-
-    // First replace or add welcome message
-    setMessages((prev) => {
-      const newMessages = [...prev]
-      // Use traditional method to find the last loading message
-      const loadingMessageIndex = newMessages.map((m) => m.type).lastIndexOf("loading")
-
-      if (loadingMessageIndex !== -1) {
-        console.log("[SUGGESTION DEBUG] Replacing loading message with welcome")
-        newMessages[loadingMessageIndex] = {
-          id: generateUniqueId(),
-          role: "ai",
-          type: "text",
-          content: "✨ I've analyzed your style! Let me share my insights with you:",
-          timestamp: new Date(),
-        }
-        return newMessages
-      } else {
-        console.log("[SUGGESTION DEBUG] Adding new welcome message")
-        return [
-          ...newMessages,
-          {
-            id: generateUniqueId(),
-            role: "ai",
-            type: "text",
-            content: "✨ I've analyzed your style! Let me share my insights with you:",
-            timestamp: new Date(),
-          },
-        ]
-      }
-    })
-
-    // Wait a short time to let the welcome message display
-    await new Promise((resolve) => setTimeout(resolve, 800))
-
-    // Display suggestion bubbles one by one
-    for (let i = 0; i < contentSuggestions.length; i++) {
-      const { title, content } = contentSuggestions[i]
-      const bubbleStartTime = Date.now()
-
-      console.log(`[PERF] 💭 Displaying bubble ${i + 1}/${contentSuggestions.length}: ${title}`)
-
-      // Add new chat bubble
+    if (!suggestion || !suggestion.outfit_suggestions || suggestion.outfit_suggestions.length === 0) {
+      console.warn("[SUGGESTION DEBUG] No valid suggestion object or outfit_suggestions found.")
       addMessage({
         type: "text",
         role: "ai",
-        content: `**${title}**\n\n${content}`,
+        content: "I couldn't come up with any specific outfit suggestions this time, but I'll generate an image based on the overall style idea!",
         agentInfo: {
           id: "style",
           name: "Styling Assistant",
           emoji: "👗",
         },
       })
+    } else {
+      console.log("[SUGGESTION DEBUG] Starting displaySuggestionSequentially with new format")
+      setIsDisplayingSuggestion(true)
 
-      const bubbleEndTime = Date.now()
-      const bubbleDisplayTime = bubbleEndTime - bubbleStartTime
-      console.log(`[PERF] 💭 Bubble ${i + 1} displayed in ${bubbleDisplayTime}ms`)
+      const formatItems = (items: any) => {
+        if (!items) return ""
+        let formatted = ""
 
-      // If not the last bubble, wait for delay time
-      if (i < contentSuggestions.length - 1) {
-        console.log(`[PERF] 💭 Waiting ${delayBetweenSuggestions}ms before next bubble...`)
-        await new Promise((resolve) => setTimeout(resolve, delayBetweenSuggestions))
+        if (items.tops && items.tops.length > 0) {
+          formatted += `**Tops:**\n`
+          items.tops.forEach((item: any) => {
+            formatted += `- *${item.item_name}:* ${item.description}\n`
+          })
+        }
+        if (items.bottoms) {
+          formatted += `**Bottoms:**\n- *${items.bottoms.item_name}:* ${items.bottoms.description}\n`
+        }
+        if (items.shoes) {
+          formatted += `**Shoes:**\n- *${items.shoes.item_name}:* ${items.shoes.description}\n`
+        }
+        if (items.bag) {
+          formatted += `**Bag:**\n- *${items.bag.item_name}:* ${items.bag.description}\n`
+        }
+        if (items.accessories && items.accessories.length > 0) {
+          formatted += `**Accessories:**\n`
+          items.accessories.forEach((item: any) => {
+            formatted += `- *${item.item_name}:* ${item.description}\n`
+          })
+        }
+        if (items.hairstyle) {
+          formatted += `**Hairstyle:**\n- *${items.hairstyle.style_name}:* ${items.hairstyle.description}\n`
+        }
+
+        return formatted
+      }
+
+      setMessages((prev) => {
+        const newMessages = [...prev]
+        const loadingMessageIndex = newMessages.map((m) => m.type).lastIndexOf("loading")
+
+        const welcomeContent =
+          "✨ I've analyzed your style! Here are three distinct outfit ideas for you. I'll create an image based on the first one."
+
+        if (loadingMessageIndex !== -1) {
+          newMessages[loadingMessageIndex] = {
+            id: generateUniqueId(),
+            role: "ai",
+            type: "text",
+            content: welcomeContent,
+            timestamp: new Date(),
+          }
+          return newMessages
+        } else {
+          return [
+            ...newMessages,
+            {
+              id: generateUniqueId(),
+              role: "ai",
+              type: "text",
+              content: welcomeContent,
+              timestamp: new Date(),
+            },
+          ]
+        }
+      })
+
+      await new Promise((resolve) => setTimeout(resolve, 800))
+
+      const outfits = suggestion.outfit_suggestions
+      const totalDisplayTime = 10000
+      const delayBetweenSuggestions = outfits.length > 0 ? totalDisplayTime / outfits.length : 1000
+
+      for (let i = 0; i < outfits.length; i++) {
+        const outfit = outfits[i]
+        const bubbleStartTime = Date.now()
+        console.log(`[PERF] 💭 Displaying outfit suggestion ${i + 1}/${outfits.length}: ${outfit.outfit_title}`)
+
+        const formattedItems = formatItems(outfit.items)
+        const messageContent = `### ${i + 1}. ${outfit.outfit_title}\n\n${outfit.explanation}\n\n---\n\n${formattedItems}`
+
+        addMessage({
+          type: "text",
+          role: "ai",
+          content: messageContent,
+          agentInfo: {
+            id: "style",
+            name: "Styling Assistant",
+            emoji: "👗",
+          },
+        })
+
+        const bubbleEndTime = Date.now()
+        console.log(`[PERF] 💭 Outfit bubble ${i + 1} displayed in ${bubbleEndTime - bubbleStartTime}ms`)
+
+        if (i < outfits.length - 1) {
+          console.log(`[PERF] 💭 Waiting ${delayBetweenSuggestions}ms before next bubble...`)
+          await new Promise((resolve) => setTimeout(resolve, delayBetweenSuggestions))
+        }
       }
     }
 
     const suggestionEndTime = Date.now()
-    const totalSuggestionTime = suggestionEndTime - suggestionStartTime
-    console.log(`[PERF] 💭 SUGGESTION DISPLAY COMPLETED: Total time ${totalSuggestionTime}ms`)
+    console.log(`[PERF] 💭 SUGGESTION DISPLAY COMPLETED: Total time ${suggestionEndTime - suggestionStartTime}ms`)
 
-    console.log("[SUGGESTION DEBUG] All suggestion bubbles displayed, ready for image generation")
+    console.log("[SUGGESTION DEBUG] All suggestions displayed, ready for image generation")
     setCurrentStep("complete")
 
-    // Immediately add next phase loading message, don't wait
     addMessage({
       type: "loading",
       role: "ai",
@@ -868,10 +885,8 @@ Let's start chatting about styling now~`,
 
     console.log("[SUGGESTION DEBUG] Added loading message for generation phase")
 
-    // Start showing tips during waiting period
     displayWaitingTips()
 
-    // Start generation polling
     if (jobId) {
       startPolling(jobId)
     }

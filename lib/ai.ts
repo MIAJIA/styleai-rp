@@ -392,7 +392,11 @@ export interface Job {
   statusMessage: string;
   createdAt: string;
   updatedAt: string;
-  suggestion?: { image_prompt: string;[key: string]: any; };
+  suggestion?: {
+    outfit_suggestions: any[]; // Array of outfit suggestions
+    image_prompt: string;
+    [key: string]: any;
+  };
   processImages?: {
     styledImages?: string[];  // Changed to array
     styledImage?: string;     // Keep for backward compatibility
