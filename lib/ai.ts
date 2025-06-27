@@ -41,7 +41,7 @@ const outfitSuggestionSchema = z.object({
 const styleSuggestionsSchema = z.object({
   outfit_suggestions: z.array(outfitSuggestionSchema).length(3).describe("An array of exactly three distinct outfit suggestions."),
   image_prompt: z.string().describe("A creative, English-only prompt for an AI image generator, based on the first outfit suggestion."),
-});
+}).describe("The overall container for style suggestions and the image prompt.");
 
 // Convert Zod schema to JSON schema for the tool
 const styleSuggestionsJsonSchema = zodToJsonSchema(styleSuggestionsSchema, "styleSuggestions");
