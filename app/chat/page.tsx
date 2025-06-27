@@ -973,6 +973,19 @@ Let's start chatting about styling now~`,
       formData.append("occasion", chatData.occasion)
       formData.append("generation_mode", chatData.generationMode)
 
+      // Load and append user profile for personalization
+      try {
+        const onboardingData = await import("@/lib/onboarding-storage").then(m => m.loadCompleteOnboardingData());
+        if (onboardingData) {
+          formData.append("user_profile", JSON.stringify(onboardingData));
+          console.log("[CHAT DEBUG] Appending user_profile to FormData:", JSON.stringify(onboardingData, null, 2));
+        } else {
+          console.log("[CHAT DEBUG] No user_profile data found to append.");
+        }
+      } catch (error) {
+        console.error("[CHAT DEBUG] Error loading onboarding data:", error);
+      }
+
       if (stylePrompts[chatData.occasion as keyof typeof stylePrompts]) {
         formData.append("style_prompt", stylePrompts[chatData.occasion as keyof typeof stylePrompts])
       } else {
