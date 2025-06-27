@@ -4,11 +4,47 @@ import { put } from "@vercel/blob";
 import { kv } from "@vercel/kv";
 import { type OnboardingData } from "@/lib/onboarding-storage";
 import { systemPrompt } from "./prompts";
+import { z } from "zod";
+import zodToJsonSchema from "zod-to-json-schema";
 
 // Initialize the OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Zod schema for structured output, matching the format in lib/prompts.ts
+const itemDetailSchema = z.object({
+  item_name: z.string().describe("The name of the clothing item or accessory."),
+  description: z.string().describe("A brief description of the item and why it was chosen."),
+});
+
+const hairstyleSchema = z.object({
+  style_name: z.string().describe("The name of the hairstyle."),
+  description: z.string().describe("A brief description of the hairstyle and why it complements the outfit.")
+});
+
+const outfitItemsSchema = z.object({
+  tops: z.array(itemDetailSchema).describe("An array of top items, which can include layers."),
+  bottoms: itemDetailSchema.describe("The bottom item."),
+  shoes: itemDetailSchema.describe("The shoes."),
+  bag: itemDetailSchema.describe("The bag or purse."),
+  accessories: z.array(itemDetailSchema).describe("An array of accessories like jewelry, hats, etc."),
+  hairstyle: hairstyleSchema.describe("The suggested hairstyle."),
+});
+
+const outfitSuggestionSchema = z.object({
+  outfit_title: z.string().describe("A short, catchy title for the outfit."),
+  items: outfitItemsSchema,
+  explanation: z.string().describe("A detailed explanation of why this outfit works for the user, providing styling tips and emotional value."),
+});
+
+const styleSuggestionsSchema = z.object({
+  outfit_suggestions: z.array(outfitSuggestionSchema).length(3).describe("An array of exactly three distinct outfit suggestions."),
+  image_prompt: z.string().describe("A creative, English-only prompt for an AI image generator, based on the first outfit suggestion."),
+});
+
+// Convert Zod schema to JSON schema for the tool
+const styleSuggestionsJsonSchema = zodToJsonSchema(styleSuggestionsSchema, "styleSuggestions");
 
 interface StyleSuggestionInput {
   humanImageUrl: string;
@@ -58,6 +94,7 @@ export async function getStyleSuggestionFromAI({
       : "";
 
     const userMessageText = `Please provide styling suggestions based on the following information. My photo is the first image, and the garment is the second.\n\n${userProfileSection}\n\n# Essential Item\nThe garment in the second attached image is the "Essential Item".\n\n# Occasion\n${occasion}`;
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -87,34 +124,40 @@ export async function getStyleSuggestionFromAI({
           ],
         },
       ],
-      max_tokens: 2000,
-      // The 'response_format' is removed to make the JSON generation more robust.
-      // We will parse the JSON from the text response instead.
-      // response_format: { type: "json_object" },
+      max_tokens: 4000,
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "get_style_suggestions",
+            description: "Get three complete outfit suggestions in a structured JSON format.",
+            parameters: styleSuggestionsJsonSchema,
+          },
+        },
+      ],
+      tool_choice: {
+        type: "function",
+        function: { name: "get_style_suggestions" },
+      },
     });
 
-    console.log("[AI DEBUG] Full OpenAI Response:", JSON.stringify(response, null, 2));
+    const message = response.choices[0].message;
 
-    const content = response.choices[0].message.content;
-    if (!content) {
-      console.error("[AI DEBUG] OpenAI response content is empty. Finish reason:", response.choices[0].finish_reason);
-      throw new Error(`OpenAI returned an empty response. Finish reason: ${response.choices[0].finish_reason}`);
+    if (!message.tool_calls || message.tool_calls.length === 0) {
+      console.error("[AI DEBUG] OpenAI response did not include a tool call. Finish reason:", response.choices[0].finish_reason);
+      throw new Error(`AI did not return a structured suggestion. Finish reason: ${response.choices[0].finish_reason}`);
     }
 
-    // Attempt to parse the JSON from the response content
-    try {
-      // Find the start and end of the JSON block
-      const jsonStart = content.indexOf('{');
-      const jsonEnd = content.lastIndexOf('}') + 1;
-      const jsonString = content.substring(jsonStart, jsonEnd);
+    const toolCall = message.tool_calls[0];
 
-      const suggestion = JSON.parse(jsonString);
-      return suggestion;
-    } catch (parseError) {
-      console.error("Error parsing JSON suggestion from OpenAI:", parseError);
-      console.error("Original content from OpenAI:", content);
-      throw new Error("Failed to parse the style suggestion from the AI's response.");
+    if (toolCall.function.name !== 'get_style_suggestions') {
+      console.error(`[AI DEBUG] Unexpected tool call: ${toolCall.function.name}`);
+      throw new Error(`AI returned an unexpected tool: ${toolCall.function.name}`);
     }
+
+    const suggestion = JSON.parse(toolCall.function.arguments);
+    return suggestion;
+
   } catch (error) {
     console.error("Error getting style suggestion from OpenAI:", error);
     // Re-throw the error to be handled by the caller
