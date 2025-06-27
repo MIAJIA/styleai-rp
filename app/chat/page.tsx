@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import ReactMarkdown from "react-markdown"
 import { Button } from "@/components/ui/button"
 import IOSTabBar from "../components/ios-tab-bar"
 import ImageModal from "../components/image-modal"
@@ -183,7 +184,11 @@ function ChatBubble({
           )}
 
           {/* Render text content if it exists */}
-          {message.content && <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>}
+          {message.content && (
+            <div className="prose prose-sm max-w-none">
+              <ReactMarkdown>{message.content}</ReactMarkdown>
+            </div>
+          )}
 
           {/* Render image if it exists, with a margin if text is also present */}
           {message.imageUrl && (

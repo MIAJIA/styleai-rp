@@ -65,6 +65,7 @@
     "react-day-picker": "latest",
     "react-dom": "^19",
     "react-hook-form": "latest",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "latest",
     "recharts": "latest",
     "sonner": "latest",
@@ -76,6 +77,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@tailwindcss/typography": "^0.5.16",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22",
     "@types/react": "^19",
