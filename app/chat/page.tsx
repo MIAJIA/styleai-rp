@@ -61,7 +61,9 @@ type ChatMessage = {
     isImagePlaceholder?: boolean
     totalImages?: number
     variationIndex?: number
+    imageIndex?: number
     isOutfitPreview?: boolean
+    isFallback?: boolean
   }
 }
 
@@ -543,18 +545,28 @@ Let's start chatting about styling now~`,
   const replaceLastLoadingMessage = (message: Omit<ChatMessage, "id" | "timestamp">) => {
     setMessages((prevMessages) => {
       const newMessages = [...prevMessages]
-      // Use traditional method to find the last loading message
-      const loadingMessageIndex = newMessages.map((m) => m.type).lastIndexOf("loading")
+      // Find the last loading message that is NOT an image placeholder
+      let loadingMessageIndex = -1;
+      for (let i = newMessages.length - 1; i >= 0; i--) {
+        if (newMessages[i].type === "loading" && !newMessages[i].metadata?.isImagePlaceholder) {
+          loadingMessageIndex = i;
+          break;
+        }
+      }
+
+      console.log(`[REPLACE_LOADING DEBUG] Looking for non-placeholder loading message, found at index: ${loadingMessageIndex}`);
 
       if (loadingMessageIndex !== -1) {
         // Replace the existing loading message
+        console.log(`[REPLACE_LOADING DEBUG] Replacing loading message at index ${loadingMessageIndex}`);
         newMessages[loadingMessageIndex] = {
           ...message,
           id: generateUniqueId(),
           timestamp: new Date(),
         }
       } else {
-        // Add new message if no loading message found
+        // Add new message if no non-placeholder loading message found
+        console.log(`[REPLACE_LOADING DEBUG] No non-placeholder loading message found, adding new message`);
         newMessages.push({
           ...message,
           id: generateUniqueId(),
@@ -771,12 +783,12 @@ Let's start chatting about styling now~`,
     console.log(`[PERF] 💭 SUGGESTION DISPLAY STARTED at ${new Date().toISOString()}`)
     console.log("[SUGGESTION DEBUG] Received suggestion object:", JSON.stringify(suggestion, null, 2));
 
-    if (!suggestion || !suggestion.outfit_suggestions || suggestion.outfit_suggestions.length === 0) {
-      console.warn("[SUGGESTION DEBUG] No valid suggestion object or outfit_suggestions found.")
+    if (!suggestion || !suggestion.outfit_suggestion) {
+      console.warn("[SUGGESTION DEBUG] No valid suggestion object or outfit_suggestion found.")
       addMessage({
         type: "text",
         role: "ai",
-        content: "I couldn't come up with any specific outfit suggestions this time, but I'll generate an image based on the overall style idea!",
+        content: "I couldn't come up with a specific outfit suggestion this time, but I'll generate an image based on the overall style idea!",
         agentInfo: {
           id: "style",
           name: "Styling Assistant",
@@ -784,7 +796,7 @@ Let's start chatting about styling now~`,
         },
       })
     } else {
-      console.log("[SUGGESTION DEBUG] Starting displaySuggestionSequentially with new format")
+      console.log("[SUGGESTION DEBUG] Starting displaySuggestionSequentially with single outfit format")
       setIsDisplayingSuggestion(true)
 
       const formatItems = (items: any) => {
@@ -824,7 +836,7 @@ Let's start chatting about styling now~`,
         const loadingMessageIndex = newMessages.map((m) => m.type).lastIndexOf("loading")
 
         const welcomeContent =
-          "✨ I've analyzed your style! Here are three distinct outfit ideas for you. I'm creating visual previews for each one now!"
+          "✨ I've analyzed your style! Here's a personalized outfit idea for you. I'm creating a visual preview now!"
 
         if (loadingMessageIndex !== -1) {
           newMessages[loadingMessageIndex] = {
@@ -851,160 +863,211 @@ Let's start chatting about styling now~`,
 
       await new Promise((resolve) => setTimeout(resolve, 800))
 
-      const outfits = suggestion.outfit_suggestions
-      const totalDisplayTime = 8000 // Reduced time since images will follow
-      const delayBetweenSuggestions = outfits.length > 0 ? totalDisplayTime / outfits.length : 1000
+      const outfit = suggestion.outfit_suggestion
+      const bubbleStartTime = Date.now()
+      console.log(`[PERF] 💭 Displaying outfit suggestion: ${outfit.outfit_title}`)
 
-      // Store suggestion message IDs for later image updates
-      const suggestionMessageIds: string[] = [];
+      const formattedItems = formatItems(outfit.items)
+      const messageContent = `### ${outfit.outfit_title}\n\n${outfit.explanation}\n\n---\n\n${formattedItems}`
 
-      for (let i = 0; i < outfits.length; i++) {
-        const outfit = outfits[i]
-        const bubbleStartTime = Date.now()
-        console.log(`[PERF] 💭 Displaying outfit suggestion ${i + 1}/${outfits.length}: ${outfit.outfit_title}`)
+      const messageId = generateUniqueId();
 
-        const formattedItems = formatItems(outfit.items)
-        const messageContent = `### ${i + 1}. ${outfit.outfit_title}\n\n${outfit.explanation}\n\n---\n\n${formattedItems}`
-
-        const messageId = generateUniqueId();
-        suggestionMessageIds.push(messageId);
-
-        addMessage({
-          type: "text",
-          role: "ai",
-          content: messageContent,
-          agentInfo: {
-            id: "style",
-            name: "Styling Assistant",
-            emoji: "👗",
-          },
-          metadata: {
-            outfitIndex: i, // Track which outfit this is for later image pairing
-            waitingForImage: true, // Flag to indicate image is coming
-          }
-        })
-
-        // Add image placeholder immediately after each suggestion
-        addMessage({
-          type: "loading",
-          role: "ai",
-          loadingText: `Creating visual preview for "${outfit.outfit_title}"...`,
-          metadata: {
-            outfitIndex: i,
-            isImagePlaceholder: true,
-          }
-        })
-
-        const bubbleEndTime = Date.now()
-        console.log(`[PERF] 💭 Outfit ${i + 1} with placeholder displayed in ${bubbleEndTime - bubbleStartTime}ms`)
-
-        if (i < outfits.length - 1) {
-          console.log(`[PERF] 💭 Waiting ${delayBetweenSuggestions}ms before next outfit...`)
-          await new Promise((resolve) => setTimeout(resolve, delayBetweenSuggestions))
+      addMessage({
+        type: "text",
+        role: "ai",
+        content: messageContent,
+        agentInfo: {
+          id: "style",
+          name: "Styling Assistant",
+          emoji: "👗",
+        },
+        metadata: {
+          waitingForImage: true, // Flag to indicate image is coming
         }
-      }
+      })
+
+      // Add image placeholder for the outfit
+      console.log(`[SUGGESTION DEBUG] Adding placeholder for outfit visualization`);
+      const placeholderMessage = {
+        type: "loading" as const,
+        role: "ai" as const,
+        loadingText: `Creating visual preview...`,
+        metadata: {
+          imageIndex: 0,
+          isImagePlaceholder: true,
+        }
+      };
+      console.log(`[SUGGESTION DEBUG] Placeholder message:`, placeholderMessage);
+      console.log(`[SUGGESTION DEBUG] Placeholder details: imageIndex=${placeholderMessage.metadata.imageIndex}, isImagePlaceholder=${placeholderMessage.metadata.isImagePlaceholder}`);
+      addMessage(placeholderMessage)
+
+      const bubbleEndTime = Date.now()
+      console.log(`[PERF] 💭 Outfit with placeholders displayed in ${bubbleEndTime - bubbleStartTime}ms`)
 
       // Store suggestion data for later image updates
-      localStorage.setItem('currentSuggestions', JSON.stringify({
-        outfits: suggestion.outfit_suggestions,
-        messageIds: suggestionMessageIds,
+      localStorage.setItem('currentSuggestion', JSON.stringify({
+        outfit: suggestion.outfit_suggestion,
+        messageId: messageId,
         timestamp: Date.now()
       }));
+
+      // Debug: Check messages state after adding placeholder
+      setTimeout(() => {
+        console.log(`[SUGGESTION DEBUG] Messages after placeholder should be added - checking in 100ms`);
+        setMessages(currentMessages => {
+          const placeholders = currentMessages.filter(msg => msg.type === "loading" && msg.metadata?.isImagePlaceholder);
+          console.log(`[SUGGESTION DEBUG] Current placeholder count: ${placeholders.length}`);
+          console.log(`[SUGGESTION DEBUG] Current placeholders:`, placeholders.map(msg => ({
+            id: msg.id,
+            imageIndex: msg.metadata?.imageIndex,
+            isImagePlaceholder: msg.metadata?.isImagePlaceholder
+          })));
+          return currentMessages; // No changes, just checking
+        });
+      }, 100);
     }
 
     const suggestionEndTime = Date.now()
     console.log(`[PERF] 💭 SUGGESTION DISPLAY COMPLETED: Total time ${suggestionEndTime - suggestionStartTime}ms`)
-    console.log("[SUGGESTION DEBUG] All suggestions with placeholders displayed, backend generating images in parallel")
+    console.log("[SUGGESTION DEBUG] Suggestion with placeholders displayed, backend generating images in parallel")
 
     // Images will be filled in as they complete via polling
     setCurrentStep("generating")
   }
 
-  // Handle parallel image generation results
-  const displayParallelImageResults = async (outfitResults: any[]) => {
-    console.log(`[PERF] 🎨 PARALLEL IMAGES RECEIVED: ${outfitResults.length} outfit groups`);
+  // Handle image generation results
+  const displayImageResults = async (imageUrls: string[]) => {
+    console.log(`[PERF] 🎨 IMAGES RECEIVED: ${imageUrls.length} generated image(s)`);
 
-    if (!outfitResults || outfitResults.length === 0) {
-      console.warn("[IMAGE DISPLAY] No outfit results to display");
+    if (!imageUrls || imageUrls.length === 0) {
+      console.warn("[IMAGE DISPLAY] No image results to display");
       return;
     }
 
-    // Process each outfit group
-    for (let i = 0; i < outfitResults.length; i++) {
-      const outfitResult = outfitResults[i];
-      const outfitIndex = outfitResult.outfitIndex;
-      const finalImages = outfitResult.finalImages || [];
+    // Debug: Log current messages before processing
+    console.log("[IMAGE DISPLAY DEBUG] Current messages before processing:", messages.map(msg => ({
+      id: msg.id,
+      type: msg.type,
+      hasImageUrl: !!msg.imageUrl,
+      metadata: msg.metadata
+    })));
 
-      console.log(`[IMAGE DISPLAY] Processing outfit ${outfitIndex + 1}: ${finalImages.length} images`);
+    // Debug: Log all available placeholders at the start
+    const initialPlaceholders = messages.filter(msg => msg.type === "loading" && msg.metadata?.isImagePlaceholder);
+    console.log(`[IMAGE DISPLAY DEBUG] Initial placeholders count: ${initialPlaceholders.length}`);
+    console.log(`[IMAGE DISPLAY DEBUG] Initial placeholders details:`, initialPlaceholders.map(msg => ({
+      id: msg.id,
+      imageIndex: msg.metadata?.imageIndex,
+      loadingText: msg.loadingText
+    })));
 
-      if (finalImages.length === 0) {
-        console.warn(`[IMAGE DISPLAY] No images for outfit ${outfitIndex + 1}`);
-        continue;
-      }
+    // Process all images in a single setMessages call to avoid race conditions
+    setMessages(prevMessages => {
+      console.log(`[IMAGE DISPLAY DEBUG] PROCESSING ALL IMAGES - Starting with ${prevMessages.length} messages`);
 
-      // Replace the loading placeholder with the first image
-      setMessages(prevMessages => {
-        const newMessages = [...prevMessages];
+      let newMessages = [...prevMessages];
 
-        // Find the loading placeholder for this outfit
-        const placeholderIndex = newMessages.findIndex(msg =>
-          msg.type === "loading" &&
-          msg.metadata?.isImagePlaceholder === true &&
-          msg.metadata?.outfitIndex === outfitIndex
-        );
+      // Debug: Log all loading messages at the start of processing
+      const allLoadingMessages = newMessages.filter(msg => msg.type === "loading");
+      console.log(`[IMAGE DISPLAY DEBUG] All loading messages at start:`, allLoadingMessages.map(msg => ({
+        id: msg.id,
+        isImagePlaceholder: msg.metadata?.isImagePlaceholder,
+        imageIndex: msg.metadata?.imageIndex,
+        loadingText: msg.loadingText
+      })));
+
+      // Process each image
+      for (let i = 0; i < imageUrls.length; i++) {
+        const imageUrl = imageUrls[i];
+
+        console.log(`[IMAGE DISPLAY] Processing image ${i + 1}: ${imageUrl.substring(0, 100) + '...'}`)
+
+        // Find the loading placeholder for this image index
+        const placeholderIndex = newMessages.findIndex(msg => {
+          const isLoading = msg.type === "loading";
+          const isPlaceholder = msg.metadata?.isImagePlaceholder === true;
+          const indexMatch = msg.metadata?.imageIndex === i;
+
+          console.log(`[IMAGE DISPLAY DEBUG] Checking message ${msg.id}: loading=${isLoading}, placeholder=${isPlaceholder}, indexMatch=${indexMatch} (looking for ${i})`);
+
+          return isLoading && isPlaceholder && indexMatch;
+        });
+
+        console.log(`[IMAGE DISPLAY DEBUG] Placeholder search result for image ${i}: index ${placeholderIndex}`);
 
         if (placeholderIndex !== -1) {
-          // Replace with the first image
-          newMessages[placeholderIndex] = {
+          console.log(`[IMAGE DISPLAY DEBUG] Found placeholder at index ${placeholderIndex}, replacing with image: ${imageUrl.substring(0, 100)}...`);
+
+          // Replace with the image
+          const newImageMessage = {
             id: generateUniqueId(),
-            type: "image",
-            role: "ai",
-            imageUrl: finalImages[0],
-            content: finalImages.length > 1
-              ? `Visual preview (${finalImages.length} variations available)`
-              : "Visual preview",
+            type: "image" as const,
+            role: "ai" as const,
+            imageUrl: imageUrl,
+            content: imageUrls.length === 1 ? "Your personalized style preview" : `Visual preview ${i + 1}`,
             timestamp: new Date(),
             metadata: {
-              outfitIndex,
-              totalImages: finalImages.length,
+              imageIndex: i,
               isOutfitPreview: true
             }
           };
 
-          // Add additional images if there are more than one
-          if (finalImages.length > 1) {
-            for (let imgIndex = 1; imgIndex < finalImages.length; imgIndex++) {
-              newMessages.splice(placeholderIndex + imgIndex, 0, {
-                id: generateUniqueId(),
-                type: "image",
-                role: "ai",
-                imageUrl: finalImages[imgIndex],
-                content: `Variation ${imgIndex + 1}`,
-                timestamp: new Date(),
-                metadata: {
-                  outfitIndex,
-                  variationIndex: imgIndex,
-                  isOutfitPreview: true
-                }
-              });
-            }
-          }
+          console.log(`[IMAGE DISPLAY DEBUG] Creating new image message:`, {
+            id: newImageMessage.id,
+            type: newImageMessage.type,
+            hasImageUrl: !!newImageMessage.imageUrl,
+            imageUrlLength: newImageMessage.imageUrl?.length,
+            imageUrlPreview: newImageMessage.imageUrl?.substring(0, 100) + '...'
+          });
 
-          console.log(`[IMAGE DISPLAY] Updated outfit ${outfitIndex + 1} with ${finalImages.length} images`);
+          newMessages[placeholderIndex] = newImageMessage;
+          console.log(`[IMAGE DISPLAY] Updated image ${i + 1}`);
         } else {
-          console.warn(`[IMAGE DISPLAY] Could not find placeholder for outfit ${outfitIndex + 1}`);
+          console.error(`[IMAGE DISPLAY] Could not find placeholder for image ${i + 1}`);
+          console.error(`[IMAGE DISPLAY] Available placeholders:`,
+            newMessages.filter(msg => msg.type === "loading" && msg.metadata?.isImagePlaceholder)
+              .map(msg => ({ id: msg.id, imageIndex: msg.metadata?.imageIndex }))
+          );
+          console.error(`[IMAGE DISPLAY] All loading messages:`,
+            newMessages.filter(msg => msg.type === "loading")
+              .map(msg => ({
+                id: msg.id,
+                isImagePlaceholder: msg.metadata?.isImagePlaceholder,
+                imageIndex: msg.metadata?.imageIndex,
+                loadingText: msg.loadingText?.substring(0, 50) + '...'
+              }))
+          );
+
+          // Improved fallback: Add image at the end with clear indication
+          console.log(`[IMAGE DISPLAY] Adding image at the end as fallback for image ${i + 1}`);
+          newMessages.push({
+            id: generateUniqueId(),
+            type: "image" as const,
+            role: "ai" as const,
+            imageUrl: imageUrl,
+            content: `🎨 ${imageUrls.length === 1 ? "Your personalized style preview" : `Visual preview ${i + 1}`} (generated successfully)`,
+            timestamp: new Date(),
+            metadata: {
+              imageIndex: i,
+              isOutfitPreview: true,
+              isFallback: true
+            }
+          });
         }
-
-        return newMessages;
-      });
-
-      // Small delay between outfit image updates for better UX
-      if (i < outfitResults.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 300));
       }
-    }
 
-    console.log(`[PERF] 🎨 PARALLEL IMAGES DISPLAY COMPLETED`);
+      // Final debug: Log all messages after processing
+      const finalPlaceholders = newMessages.filter(msg => msg.type === "loading" && msg.metadata?.isImagePlaceholder);
+      console.log(`[IMAGE DISPLAY DEBUG] Final placeholders count after all updates: ${finalPlaceholders.length}`);
+
+      const finalImages = newMessages.filter(msg => msg.type === "image" && msg.metadata?.isOutfitPreview);
+      console.log(`[IMAGE DISPLAY DEBUG] Final images count: ${finalImages.length}`);
+
+      console.log(`[IMAGE DISPLAY DEBUG] PROCESSING COMPLETE - Final message count: ${newMessages.length}`);
+      return newMessages;
+    });
+
+    console.log(`[PERF] 🎨 IMAGES DISPLAY COMPLETED`);
   }
 
   const getOccasionName = (occasionId: string) => {
@@ -1227,6 +1290,18 @@ Let's start chatting about styling now~`,
               type: "loading",
               loadingText: "I'm setting up the perfect vibe and pose—this one's gonna pop!",
             })
+
+            // Debug: Check placeholder status after replacing loading message
+            setTimeout(() => {
+              setMessages(currentMessages => {
+                const placeholders = currentMessages.filter(msg => msg.type === "loading" && msg.metadata?.isImagePlaceholder);
+                console.log(`[POLLING DEBUG] After suggestion_generated - placeholder count: ${placeholders.length}`);
+                if (placeholders.length === 0) {
+                  console.warn(`[POLLING DEBUG] WARNING: No placeholders found after suggestion_generated processing`);
+                }
+                return currentMessages; // No changes, just checking
+              });
+            }, 50);
             break
 
           case "stylization_completed":
@@ -1321,100 +1396,86 @@ Let's start chatting about styling now~`,
               const showCompletion = async () => {
                 console.log("[POLLING] Generation completed successfully!")
 
-                // Check if we have parallel outfit results (V2 format)
-                const outfitResults = data.result?.outfitResults;
+                // Get the generated image URLs
+                const generatedImageUrls = data.result?.imageUrls || (data.result?.imageUrl ? [data.result.imageUrl] : [])
+                const totalImages = data.result?.totalImages || generatedImageUrls.length
 
-                if (outfitResults && outfitResults.length > 0) {
-                  console.log(`[POLLING] Processing V2 parallel results: ${outfitResults.length} outfit groups`);
+                console.log(`[POLLING] Processing ${generatedImageUrls.length} generated images`);
 
-                  // 🆕 ADD: Notify ChatAgent about all generated images for context
-                  const allGeneratedImages = outfitResults.flatMap((outfit: any) => outfit.finalImages || []);
-                  if (allGeneratedImages.length > 0) {
-                    try {
-                      const sessionId = localStorage.getItem("chat_session_id")
-                      if (sessionId) {
-                        console.log(`[ChatPage] Adding ${allGeneratedImages.length} V2 generated images to ChatAgent context`);
-                        await fetch("/api/chat/simple", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            sessionId,
-                            imageUrls: allGeneratedImages,
-                            action: "add_generated_images",
-                          }),
-                        })
-                        console.log(`[ChatPage] V2 generated images successfully added to ChatAgent context`);
-                      }
-                    } catch (error) {
-                      console.error("[ChatPage] Failed to add V2 generated images to ChatAgent context:", error)
+                if (generatedImageUrls.length > 0) {
+                  // 🆕 ADD: Notify ChatAgent about the generated images for context
+                  try {
+                    const sessionId = localStorage.getItem("chat_session_id")
+                    if (sessionId) {
+                      console.log(`[ChatPage] Adding ${generatedImageUrls.length} generated images to ChatAgent context:`, generatedImageUrls)
+
+                      await fetch("/api/chat/simple", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          sessionId,
+                          imageUrls: generatedImageUrls,
+                          action: "add_generated_images",
+                        }),
+                      })
+                      console.log(`[ChatPage] ${generatedImageUrls.length} generated images successfully added to ChatAgent context`)
                     }
+                  } catch (error) {
+                    console.error("[ChatPage] Failed to add generated images to ChatAgent context:", error)
                   }
 
                   // Replace loading message with completion message
                   replaceLastLoadingMessage({
                     type: "text",
                     role: "ai",
-                    content: `🎉 Your styling generation has completed! Here are ${outfitResults.length} distinct outfit ideas with visual previews:`,
+                    content: totalImages === 1
+                      ? "🎉 Your styling generation has completed! Here's your personalized result:"
+                      : `🎉 Your styling generation has completed! Here are ${totalImages} variations for you:`,
                   })
 
-                  // Display parallel results using the new function
-                  await displayParallelImageResults(outfitResults);
+                  // Debug: Check placeholder state right before displayImageResults
+                  console.log(`[COMPLETION DEBUG] About to call displayImageResults with ${generatedImageUrls.length} images`);
 
-                  console.log(`[PERF] 🎉 V2 Parallel results displayed successfully`);
-                } else {
-                  // Legacy format handling
-                  console.log("[POLLING] Processing legacy single image results");
+                  // Check current messages state synchronously
+                  setMessages(currentMessages => {
+                    const placeholders = currentMessages.filter(msg => msg.type === "loading" && msg.metadata?.isImagePlaceholder);
+                    const allLoading = currentMessages.filter(msg => msg.type === "loading");
 
-                  // 🆕 ADD: Notify ChatAgent about the generated images for context
-                  const generatedImageUrls = data.result?.imageUrls || (data.result?.imageUrl ? [data.result.imageUrl] : [])
-                  const totalImages = data.result?.totalImages || generatedImageUrls.length
+                    console.log(`[COMPLETION DEBUG] Current message count: ${currentMessages.length}`);
+                    console.log(`[COMPLETION DEBUG] Placeholder count before displayImageResults: ${placeholders.length}`);
+                    console.log(`[COMPLETION DEBUG] All loading messages: ${allLoading.length}`);
+                    console.log(`[COMPLETION DEBUG] Placeholder details:`, placeholders.map(msg => ({
+                      id: msg.id,
+                      imageIndex: msg.metadata?.imageIndex,
+                      loadingText: msg.loadingText
+                    })));
 
-                  if (generatedImageUrls.length > 0) {
-                    try {
-                      const sessionId = localStorage.getItem("chat_session_id")
-                      if (sessionId) {
-                        console.log(`[ChatPage] Adding ${generatedImageUrls.length} generated images to ChatAgent context:`, generatedImageUrls)
-
-                        // Use the new add_generated_images action for multiple images
-                        await fetch("/api/chat/simple", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            sessionId,
-                            imageUrls: generatedImageUrls,
-                            action: "add_generated_images",
-                          }),
-                        })
-                        console.log(`[ChatPage] ${generatedImageUrls.length} generated images successfully added to ChatAgent context`)
-                      }
-                    } catch (error) {
-                      console.error("[ChatPage] Failed to add generated images to ChatAgent context:", error)
+                    if (placeholders.length === 0) {
+                      console.error(`[COMPLETION DEBUG] CRITICAL: No placeholders found right before displayImageResults!`);
+                      console.error(`[COMPLETION DEBUG] All messages:`, currentMessages.map(msg => ({
+                        id: msg.id,
+                        type: msg.type,
+                        role: msg.role,
+                        hasMetadata: !!msg.metadata,
+                        isImagePlaceholder: msg.metadata?.isImagePlaceholder,
+                        imageIndex: msg.metadata?.imageIndex
+                      })));
                     }
-                  }
 
-                  // Replace loading message with success message
+                    return currentMessages; // No changes, just checking
+                  });
+
+                  // Display all images using the new function
+                  await displayImageResults(generatedImageUrls);
+
+                  console.log(`[PERF] 🎉 Images displayed successfully`);
+                } else {
+                  console.warn("[POLLING] No images received in completion");
                   replaceLastLoadingMessage({
                     type: "text",
                     role: "ai",
-                    content: totalImages > 1
-                      ? `🎉 Your styling generation has completed! Here are ${totalImages} options for you, my friend:`
-                      : "🎉 Your styling generation has completed! Here is the result for you, my friend:",
-                  })
-
-                  // Add all generated images as separate messages
-                  generatedImageUrls.forEach((imageUrl: string, index: number) => {
-                    addMessage({
-                      type: "image",
-                      role: "ai",
-                      imageUrl: imageUrl,
-                      content: totalImages > 1
-                        ? `Option ${index + 1}: What do you think of this styling?`
-                        : "Here's your personalized styling result! What do you think?",
-                      metadata: {
-                        suggestions: ["Try another style", "Adjust colors", "Different occasion", "Style analysis"],
-                      },
-                    })
-                  })
+                    content: "🎉 Generation completed, but no images were received. Please try again.",
+                  });
                 }
 
                 setCurrentStep("complete")
@@ -1422,7 +1483,7 @@ Let's start chatting about styling now~`,
                 setJobId(null)
               }
 
-              // 优化：移除等待机制，立即显示最终图片，不等待建议显示完成
+              // 移除等待机制，立即显示最终图片
               await showCompletion()
             }
             break

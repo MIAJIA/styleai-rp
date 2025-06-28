@@ -28,36 +28,20 @@ async function runImageGenerationPipeline(jobId: string) {
     console.log(`[Job ${jobId}] Starting image generation pipeline for mode: ${job.generationMode}`);
 
     // Execute the selected generation pipeline
-    let results: any;
+    let finalImageUrls: string[];
     switch (job.generationMode) {
       case 'tryon-only':
-        const finalImageUrls = await executeTryOnOnlyPipeline(job);
-        results = { finalImageUrls };
+        finalImageUrls = await executeTryOnOnlyPipeline(job);
         break;
       case 'simple-scene':
         // Use V2 pipeline for enhanced parallel generation
-        results = await executeSimpleScenePipelineV2(job);
+        finalImageUrls = await executeSimpleScenePipelineV2(job);
         break;
       case 'advanced-scene':
-        // For now, use original pipeline, but this can be upgraded to V2 later
-        const advancedImageUrls = await executeAdvancedScenePipeline(job);
-        results = { finalImageUrls: advancedImageUrls };
+        finalImageUrls = await executeAdvancedScenePipeline(job);
         break;
       default:
         throw new Error(`Unknown generation mode: ${job.generationMode}`);
-    }
-
-    // Handle different result formats
-    let finalImageUrls: string[];
-    let outfitResults: any[] = [];
-
-    if (results.outfitResults) {
-      // V2 pipeline results with grouped outfits
-      outfitResults = results.outfitResults;
-      finalImageUrls = results.outfitResults.flatMap((outfit: any) => outfit.finalImages);
-    } else {
-      // Legacy pipeline results
-      finalImageUrls = results.finalImageUrls;
     }
 
     // Mark job as complete with all images
@@ -69,7 +53,6 @@ async function runImageGenerationPipeline(jobId: string) {
         imageUrls: finalImageUrls,
         imageUrl: finalImageUrls[0], // Keep for backward compatibility
         totalImages: finalImageUrls.length,
-        outfitResults: outfitResults.length > 0 ? outfitResults : undefined // Include grouped results if available
       },
       updatedAt: new Date().toISOString(),
     });

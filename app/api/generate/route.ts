@@ -120,7 +120,7 @@ export async function POST(request: Request) {
     const requestBody = {
       human_image: humanImageBase64,
       cloth_image: garmentImageBase64,
-      n: 2, // Generate 2 images
+      n: 1, // Generate 1 images
     };
 
     // Step 3 - Call Kling AI to submit the task
