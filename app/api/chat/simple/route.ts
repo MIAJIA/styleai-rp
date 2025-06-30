@@ -52,11 +52,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { aiResponse, agentInfo, searchResults } = await agent.chat(message, imageUrl);
+    const { aiResponse, agentInfo, quickReplies, searchResults } = await agent.chat(message, imageUrl);
 
     return NextResponse.json({
       response: aiResponse,
       agentInfo,
+      quickReplies,
       searchResults,
       success: true
     });

@@ -329,26 +329,43 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
   if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
     throw new Error("Kling AI API keys are not configured.");
   }
-  // 1. Submit the task
   const apiToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
-  const submitResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${submitPath}`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
-    timeout: 180000, // Increased to 3 minutes for submit
-  });
+  let taskId = '';
 
-  if (!submitResponse.ok) {
-    const errorBody = await submitResponse.text();
-    throw new Error(`Kling API Error on submit to ${submitPath}: ${submitResponse.status} ${errorBody}`);
+  const maxSubmitRetries = 3;
+  for (let attempt = 0; attempt < maxSubmitRetries; attempt++) {
+    try {
+      console.log(`[Kling] Submit attempt ${attempt + 1}/${maxSubmitRetries}...`);
+      // 1. Submit the task
+      const submitResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${submitPath}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        timeout: 180000, // Increased to 3 minutes for submit
+      });
+
+      if (!submitResponse.ok) {
+        const errorBody = await submitResponse.text();
+        throw new Error(`Kling API Error on submit to ${submitPath}: ${submitResponse.status} ${errorBody}`);
+      }
+
+      const submitResult = await submitResponse.json();
+      taskId = submitResult.data.task_id;
+      console.log(`Kling task submitted to ${submitPath}. Task ID: ${taskId}`);
+      break; // Success, exit retry loop
+    } catch (error) {
+      console.error(`[Kling] Submit attempt ${attempt + 1} failed:`, error);
+      if (attempt === maxSubmitRetries - 1) {
+        throw new Error(`Failed to submit Kling task after ${maxSubmitRetries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      const waitTime = Math.pow(2, attempt) * 2000; // 2s, 4s
+      console.log(`[Kling] Waiting ${waitTime}ms before next submit attempt...`);
+      await sleep(waitTime);
+    }
   }
-
-  const submitResult = await submitResponse.json();
-  const taskId = submitResult.data.task_id;
-  console.log(`Kling task submitted to ${submitPath}. Task ID: ${taskId}`);
 
   // 2. Poll for the result
   let attempts = 0;

@@ -67,6 +67,37 @@ type ChatMessage = {
   }
 }
 
+// Component to render quick reply buttons
+function QuickReplyButtons({
+  suggestions,
+  onSelect,
+}: {
+  suggestions: string[]
+  onSelect: (suggestion: string) => void
+}) {
+  if (!suggestions || suggestions.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto mt-2 mb-4 px-4">
+      <div className="flex flex-wrap gap-2">
+        {suggestions.map((text, index) => (
+          <Button
+            key={index}
+            variant="outline"
+            size="sm"
+            className="rounded-full bg-white/80 backdrop-blur-lg"
+            onClick={() => onSelect(text)}
+          >
+            {text}
+          </Button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // Data type for generation requests
 type ChatModeData = {
   selfiePreview: string
@@ -709,7 +740,7 @@ Let's start chatting about styling now~`,
           products: products,
           agentInfo: data.agentInfo,
           metadata: {
-            suggestions: generateSmartSuggestions(data.response),
+            suggestions: data.quickReplies || [],
           },
         });
       } else {
@@ -720,7 +751,7 @@ Let's start chatting about styling now~`,
           content: data.response,
           agentInfo: data.agentInfo,
           metadata: {
-            suggestions: generateSmartSuggestions(data.response),
+            suggestions: data.quickReplies || [],
           },
         });
       }
@@ -1426,6 +1457,16 @@ Let's start chatting about styling now~`,
             <div ref={messagesEndRef} />
           </div>
         )}
+
+        {/* Quick Replies - Render after the last message if it's from AI */}
+        {messages.length > 0 &&
+          messages[messages.length - 1].role === 'ai' &&
+          messages[messages.length - 1].metadata?.suggestions && (
+            <QuickReplyButtons
+              suggestions={messages[messages.length - 1].metadata!.suggestions!}
+              onSelect={handleSendMessage}
+            />
+          )}
 
         {/* Chat Input Area */}
         <footer className="p-4 bg-white border-t border-gray-200">

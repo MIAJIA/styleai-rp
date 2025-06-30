@@ -88,6 +88,34 @@ const searchTool = {
   }
 };
 
+// New schema for structured response with quick replies
+const getChatResponseTool = {
+  type: "function",
+  function: {
+    name: "format_chat_response",
+    description: "Formats the AI's response and provides exactly 4 quick reply suggestions.",
+    parameters: {
+      type: "object",
+      properties: {
+        response: {
+          type: "string",
+          description: "The main text response to the user's query."
+        },
+        quickReplies: {
+          type: "array",
+          description: "An array of exactly 4 relevant and helpful quick reply suggestions for the user.",
+          items: {
+            type: "string"
+          },
+          minItems: 4,
+          maxItems: 4,
+        }
+      },
+      required: ["response", "quickReplies"]
+    }
+  }
+};
+
 // 2. Create Agent configuration constants
 const AGENTS: Record<string, AgentConfig> = {
   style: {
@@ -163,6 +191,8 @@ Key Behaviors:
 Tool Usage:
 • When users upload images, use the \`analyze_outfit_image\` tool to assist your analysis, then focus on evaluating the occasion suitability of the outfit.
 • When users ask for occasion-specific recommendations (e.g., "what should I wear to...", "help me find something for..."), use the \`search_fashion_items\` tool to find appropriate items, then provide occasion-specific styling advice based on the results.
+
+Output Format: You MUST use the 'format_chat_response' tool to structure your output. Provide your main reply in the 'response' field and exactly four helpful, relevant follow-up questions or actions in the 'quickReplies' field to continue the conversation.
 
 ➤ Always prioritize actionable takeaways in a friendly tone. This is a conversation—not a report. Keep it focused and approachable, and expand only if the user asks.`,
     // Original Chinese keywords: ['约会', '上班', '工作', '聚会', '场合', '婚礼', '面试', '职场', '正式', '休闲']
@@ -528,7 +558,7 @@ export class ChatAgent {
   public async chat(
     message: string,
     imageUrl?: string,
-  ): Promise<{ agentInfo: AgentConfig; aiResponse: string; searchResults?: any }> {
+  ): Promise<{ agentInfo: AgentConfig; aiResponse: string; quickReplies: string[]; searchResults?: any }> {
     console.log(`[ChatAgent] Processing message with context awareness`);
 
     this.contextManager.addMessage('user', message, imageUrl);
@@ -545,158 +575,132 @@ export class ChatAgent {
       systemPrompt += contextPrompt;
       console.log('[ChatAgent] Including conversation context in prompt');
     }
-    console.log(`[ChatAgent] Final system prompt: ${systemPrompt}`);
-    const systemMessage = new SystemMessage(systemPrompt);
 
-    const userMessageContent: MessageContentComplex[] = [{ type: "text", text: message }];
+    const baseSystemMessage = new SystemMessage(systemPrompt);
+
+    const userMessageContent: MessageContentComplex[] = [{
+      type: "text",
+      text: message
+    }];
 
     // Check if there's an image - current message or context image
     const hasCurrentImage = !!imageUrl;
-    const hasContextImage = this.contextManager.hasRecentImage();
-    const shouldUseImageTool = hasCurrentImage || hasContextImage;
+    let imageWasAdded = false;
 
+    // Add image if it was just uploaded
     if (hasCurrentImage) {
       userMessageContent.push({
         type: "image_url",
         image_url: { url: imageUrl },
       });
-    } else if (hasContextImage && needsContext) {
-      // If current message has no image but context has image, add context image
-      const contextImageUrl = this.contextManager.getLastUploadedImage();
-      if (contextImageUrl) {
-        userMessageContent.push({
-          type: "image_url",
-          image_url: { url: contextImageUrl },
-        });
-        console.log('[ChatAgent] Adding context image to current message for analysis');
+      imageWasAdded = true;
+      console.log('[ChatAgent] Added newly uploaded image to the message.');
+    }
+    // Only add a context image if the user's message explicitly refers to it
+    else {
+      const imageKeywords = ['this', 'that', 'it', 'the image', 'the photo', 'the picture', 'the outfit', '这', '那', '它', '图', '照片', '衣服'];
+      const messageMentionsImage = imageKeywords.some(keyword => message.toLowerCase().includes(keyword));
+
+      if (needsContext && messageMentionsImage && this.contextManager.hasRecentImage()) {
+        const contextImageUrl = this.contextManager.getLastUploadedImage();
+        if (contextImageUrl) {
+          userMessageContent.push({
+            type: "image_url",
+            image_url: { url: contextImageUrl },
+          });
+          imageWasAdded = true;
+          console.log('[ChatAgent] User message seems to refer to an image, adding context image to the call.');
+        }
       }
     }
 
-    const userMessage = new HumanMessage({ content: userMessageContent });
-    const messages: BaseMessage[] = [systemMessage, userMessage];
+    const shouldUseImageTool = imageWasAdded;
 
-    const llmOptions: any = {};
+    const userMessage = new HumanMessage({
+      content: userMessageContent
+    });
+
+    const messagesForFirstCall: BaseMessage[] = [baseSystemMessage, userMessage];
+
+    // Define tools for the first, optional tool-using step
+    const firstPassTools = [];
     if (shouldUseImageTool) {
-      llmOptions.tools = [analyzeImageTool, searchTool]; // Provide both tools when image is available
-      console.log('[ChatAgent] Image detected (current or context). Adding image analysis and search tools to LLM call.');
-    } else {
-      llmOptions.tools = [searchTool]; // Only search tool when no image
-      console.log('[ChatAgent] No image detected. Adding search tool to LLM call.');
+      firstPassTools.push(analyzeImageTool);
+    }
+    if (message.toLowerCase().includes('find') || message.toLowerCase().includes('search') || message.includes('找') || message.includes('搜索') || message.includes('推荐') || message.includes('recommendation') || message.includes('shopping') || message.includes('recommend')) {
+      firstPassTools.push(searchTool);
     }
 
-    const firstResponse = await this.llm.invoke(messages, llmOptions);
+    const firstResponse = await this.llm.invoke(messagesForFirstCall, {
+      tools: firstPassTools
+    });
     console.log('[ChatAgent] First LLM call complete.');
 
+    const toolMessages: ToolMessage[] = [];
     let searchResults: any = null;
 
     if (firstResponse.tool_calls && firstResponse.tool_calls.length > 0) {
       console.log("[ChatAgent] Tool call detected:", JSON.stringify(firstResponse.tool_calls, null, 2));
 
-      const toolMessages: ToolMessage[] = [];
-
-      // Process all tool calls
       for (const toolCall of firstResponse.tool_calls) {
         if (!toolCall.id) {
           console.warn("Tool call received without an ID, skipping.");
           continue;
         }
-
         const toolCallId = toolCall.id;
         const toolFunctionName = toolCall.name;
         const toolArgs = toolCall.args;
         let toolOutput = "";
 
-        // Handle different tool calls
         if (toolFunctionName === "analyze_outfit_image") {
           console.log(`[ChatAgent] Executing image analysis for outfit analysis`);
           toolOutput = JSON.stringify(toolArgs);
-        }
-        else if (toolFunctionName === "search_fashion_items") {
+        } else if (toolFunctionName === "search_fashion_items") {
           console.log(`[ChatAgent] Executing Google Shopping Light API search for:`, toolArgs);
-
-          try {
-            const query = toolArgs.query || '';
-            const imageUrl = toolArgs.imageUrl;
-
-            if (!query.trim()) {
-              console.warn('[ChatAgent] Empty search query provided');
-              toolOutput = JSON.stringify({
-                items: [],
-                summary: "Please provide a search query to find products.",
-                searchType: "error"
-              });
-            } else {
-              // Call the real Google Shopping Light API
-              const searchResultsData = await searchGoogleShoppingLight(query, imageUrl);
-              searchResults = searchResultsData; // Store for return
-              toolOutput = JSON.stringify(searchResultsData);
-              console.log(`[ChatAgent] Google Shopping API search completed. Found ${searchResultsData.items.length} items.`);
-            }
-
-          } catch (error) {
-            console.error('[ChatAgent] Google Shopping API search failed:', error);
-
-            // Provide fallback response
-            const fallbackResults = {
-              items: [
-                {
-                  id: 'error_fallback',
-                  name: `Search for "${toolArgs.query}" temporarily unavailable`,
-                  price: 'N/A',
-                  score: 0.0,
-                  imageUrl: '/images/error-placeholder.jpg',
-                  description: 'Please try again later or refine your search query',
-                  link: '#',
-                  source: 'System'
-                }
-              ],
-              summary: `Unable to search for "${toolArgs.query}" at the moment. Please try again later.`,
-              searchType: "error_fallback"
-            };
-
-            searchResults = fallbackResults; // Store fallback for return
-            toolOutput = JSON.stringify(fallbackResults);
-          }
+          const searchResultsData = await searchGoogleShoppingLight(toolArgs.query, toolArgs.imageUrl);
+          searchResults = searchResultsData;
+          toolOutput = JSON.stringify(searchResultsData);
+          console.log(`[ChatAgent] Google Shopping API search completed. Found ${searchResultsData.items.length} items.`);
         } else {
-          console.warn(`[ChatAgent] Unknown tool function: ${toolFunctionName}`);
-          toolOutput = JSON.stringify({ error: "Unknown tool function" });
+          console.warn(`[ChatAgent] Unknown tool function in first pass: ${toolFunctionName}`);
+          toolOutput = JSON.stringify({
+            error: "Unknown tool function"
+          });
         }
-
-        const toolMessage = new ToolMessage({
+        toolMessages.push(new ToolMessage({
           tool_call_id: toolCallId,
           name: toolFunctionName,
-          content: toolOutput,
-        });
-
-        toolMessages.push(toolMessage);
+          content: toolOutput
+        }));
       }
+    }
 
-      // If we have no valid tool messages, return direct response
-      if (toolMessages.length === 0) {
-        console.warn("No valid tool messages created, returning direct response.");
-        this.contextManager.addMessage('ai', firstResponse.content.toString(), undefined, {
-          type: selectedAgent.id,
-          name: selectedAgent.name,
-          emoji: selectedAgent.emoji
-        });
-        return {
-          agentInfo: selectedAgent,
-          aiResponse: firstResponse.content.toString(),
-        };
-      }
+    // Always make a final call to get the structured response
+    const finalSystemPrompt = systemPrompt + "\n\nOutput Format: You have now gathered all necessary information. You MUST use the 'format_chat_response' tool to structure your final output to the user. Provide your main reply in the 'response' field and exactly four helpful, relevant follow-up questions or actions in the 'quickReplies' field to continue the conversation.";
+    const finalSystemMessage = new SystemMessage(finalSystemPrompt);
+    const messagesForFinalCall: BaseMessage[] = [finalSystemMessage, userMessage, firstResponse, ...toolMessages];
 
-      const messagesForSecondCall: BaseMessage[] = [
-        systemMessage,
-        userMessage,
-        firstResponse,
-        ...toolMessages, // Include all tool messages
-      ];
+    console.log('[ChatAgent] Making final LLM call to get structured response...');
+    const finalResponse = await this.llm.invoke(messagesForFinalCall, {
+      tools: [getChatResponseTool],
+      tool_choice: {
+        type: "function",
+        function: {
+          name: "format_chat_response"
+        }
+      },
+    });
 
-      console.log('[ChatAgent] Making second LLM call with tool results...');
-      const finalResponse = await this.llm.invoke(messagesForSecondCall);
-      console.log('[ChatAgent] Second LLM call complete.');
+    const finalToolCall = finalResponse.tool_calls?.[0];
 
-      this.contextManager.addMessage('ai', finalResponse.content.toString(), undefined, {
+    if (finalToolCall && finalToolCall.name === 'format_chat_response' && finalToolCall.args) {
+      console.log('[ChatAgent] Successfully received structured response.');
+      const {
+        response,
+        quickReplies
+      } = finalToolCall.args;
+
+      this.contextManager.addMessage('ai', response, undefined, {
         type: selectedAgent.id,
         name: selectedAgent.name,
         emoji: selectedAgent.emoji
@@ -704,21 +708,26 @@ export class ChatAgent {
 
       return {
         agentInfo: selectedAgent,
-        aiResponse: finalResponse.content.toString(),
+        aiResponse: response,
+        quickReplies: quickReplies || [],
         searchResults: searchResults,
       };
     }
 
-    this.contextManager.addMessage('ai', firstResponse.content.toString(), undefined, {
+    // Fallback if the model fails to use the required tool
+    console.warn('[ChatAgent] Model failed to use the required format_chat_response tool. Returning raw content.');
+    const fallbackResponse = finalResponse.content.toString();
+    this.contextManager.addMessage('ai', fallbackResponse, undefined, {
       type: selectedAgent.id,
       name: selectedAgent.name,
       emoji: selectedAgent.emoji
     });
 
-    console.log(`[ChatAgent] Responding with simple text. Length: ${firstResponse.content.toString().length}`);
     return {
       agentInfo: selectedAgent,
-      aiResponse: firstResponse.content.toString(),
+      aiResponse: fallbackResponse,
+      quickReplies: [], // Return empty array on fallback
+      searchResults: searchResults,
     };
   }
 
