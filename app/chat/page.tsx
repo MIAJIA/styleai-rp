@@ -310,12 +310,21 @@ export default function ChatPage() {
   // Track if auto-generation has been triggered to prevent multiple calls
   const [hasAutoStarted, setHasAutoStarted] = useState(false)
 
+  const [generationStatusText, setGenerationStatusText] = useState<string | null>(null);
+
+  const hasDisplayedIntermediateImages = useRef(false);
+
   // Re-enable state variables that are still in use by other parts of the component
   const [userInput, setUserInput] = useState("")
   const [sessionId, setSessionId] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
 
   const [isImageProcessing, setIsImageProcessing] = useState(false)
+
+  const [displayedIntermediateImages, setDisplayedIntermediateImages] = useState(false);
+  const isGeneratingRef = useRef(false)
+  const pollingIntervalIdRef = useRef<NodeJS.Timeout | null>(null)
+  const hasProcessedCompletionRef = useRef(false)
 
   // --- START: Image Handling Functions ---
   const handleImageUploadClick = () => {
@@ -982,18 +991,12 @@ Let's start chatting about styling now~`,
 
         console.log(`[IMAGE DISPLAY] Processing image ${i + 1}: ${imageUrl.substring(0, 100) + '...'}`)
 
-        // Find the loading placeholder for this image index
-        const placeholderIndex = newMessages.findIndex(msg => {
-          const isLoading = msg.type === "loading";
-          const isPlaceholder = msg.metadata?.isImagePlaceholder === true;
-          const indexMatch = msg.metadata?.imageIndex === i;
+        // Find the FIRST available loading placeholder, regardless of index
+        const placeholderIndex = newMessages.findIndex(msg =>
+          msg.type === "loading" && msg.metadata?.isImagePlaceholder === true
+        );
 
-          console.log(`[IMAGE DISPLAY DEBUG] Checking message ${msg.id}: loading=${isLoading}, placeholder=${isPlaceholder}, indexMatch=${indexMatch} (looking for ${i})`);
-
-          return isLoading && isPlaceholder && indexMatch;
-        });
-
-        console.log(`[IMAGE DISPLAY DEBUG] Placeholder search result for image ${i}: index ${placeholderIndex}`);
+        console.log(`[IMAGE DISPLAY DEBUG] Found first available placeholder for image ${i}: at index ${placeholderIndex}`);
 
         if (placeholderIndex !== -1) {
           console.log(`[IMAGE DISPLAY DEBUG] Found placeholder at index ${placeholderIndex}, replacing with image: ${imageUrl.substring(0, 100)}...`);
@@ -1023,21 +1026,7 @@ Let's start chatting about styling now~`,
           newMessages[placeholderIndex] = newImageMessage;
           console.log(`[IMAGE DISPLAY] Updated image ${i + 1}`);
         } else {
-          console.error(`[IMAGE DISPLAY] Could not find placeholder for image ${i + 1}`);
-          console.error(`[IMAGE DISPLAY] Available placeholders:`,
-            newMessages.filter(msg => msg.type === "loading" && msg.metadata?.isImagePlaceholder)
-              .map(msg => ({ id: msg.id, imageIndex: msg.metadata?.imageIndex }))
-          );
-          console.error(`[IMAGE DISPLAY] All loading messages:`,
-            newMessages.filter(msg => msg.type === "loading")
-              .map(msg => ({
-                id: msg.id,
-                isImagePlaceholder: msg.metadata?.isImagePlaceholder,
-                imageIndex: msg.metadata?.imageIndex,
-                loadingText: msg.loadingText?.substring(0, 50) + '...'
-              }))
-          );
-
+          console.warn(`[IMAGE DISPLAY] Could not find any more placeholders for image ${i + 1}. Appending to the end.`);
           // Improved fallback: Add image at the end with clear indication
           console.log(`[IMAGE DISPLAY] Adding image at the end as fallback for image ${i + 1}`);
           newMessages.push({
@@ -1104,10 +1093,12 @@ Let's start chatting about styling now~`,
 
     setIsGenerating(true)
     setCurrentStep("generating")
+    setGenerationStatusText("Kicking off the magic... ✨");
     setPollingError(null)
     processedStatusesRef.current.clear()
     setIntermediateImageDisplayed(false)
     setHasProcessedCompletion(false)
+    hasDisplayedIntermediateImages.current = false;
     setIsShowingWaitingTips(false)
     isShowingWaitingTipsRef.current = false
 
@@ -1232,303 +1223,135 @@ Let's start chatting about styling now~`,
         content: `Sorry, something went wrong: ${errorMessage}`,
       })
       setIsGenerating(false)
+      setGenerationStatusText(null);
       setCurrentStep("error")
     }
   }
 
+  const showCompletion = async (imageUrls: string[]) => {
+    console.log("[POLLING] Generation completed successfully!")
+    await displayImageResults(imageUrls);
+  }
+
   const startPolling = (jobId: string) => {
-    const pollingStartTime = Date.now()
-    let suggestionDisplayTime = 0 // 在轮询开始时初始化
-    console.log(`[PERF] 🔄 POLLING STARTED for job ${jobId} at ${new Date().toISOString()}`)
+    console.log(`[POLLING] Starting polling for jobId: ${jobId}`);
+    setJobId(jobId);
+    setCurrentStep("generating");
 
-    const interval = setInterval(async () => {
+    const intervalId = setInterval(async () => {
       try {
-        const pollRequestStart = Date.now()
-        const response = await fetch(`/api/generation/status?jobId=${jobId}`)
+        const response = await fetch(`/api/generation/status?jobId=${jobId}`);
         if (!response.ok) {
-          throw new Error(`The server responded with status: ${response.status}`)
+          throw new Error(`Polling failed with status: ${response.status}`);
         }
-        const data = await response.json()
-        const pollRequestEnd = Date.now()
-        const pollRequestTime = pollRequestEnd - pollRequestStart
+        const job = await response.json();
 
-        console.log(`[PERF] 📡 Poll request took ${pollRequestTime}ms, received status: ${data.status}`)
+        // --- DEBUG LOG ---
+        console.log("[POLLING] Received job status:", JSON.stringify(job, null, 2));
 
-        const statusKey = data.status
-        console.log("[POLLING DEBUG] Current statusKey:", statusKey)
-        console.log("[POLLING DEBUG] processedStatusesRef contents:", Array.from(processedStatusesRef.current))
-
-        if (processedStatusesRef.current.has(statusKey)) {
-          console.log("[POLLING DEBUG] Status already processed, skipping:", statusKey)
-          return
+        // Update loading message
+        if (job.statusMessage) {
+          setGenerationStatusText(job.statusMessage);
         }
 
-        // Mark status as processed immediately to prevent concurrent processing
-        processedStatusesRef.current.add(statusKey)
-        console.log("[POLLING DEBUG] Marked status as processed:", statusKey)
+        // Check for intermediate styled images
+        if (job.status === 'stylization_completed' && job.processImages?.styledImages?.length > 0 && !hasDisplayedIntermediateImages.current) {
+          console.log("[POLLING] Stylization completed. Displaying intermediate images.");
+          hasDisplayedIntermediateImages.current = true; // Prevent re-rendering
 
-        const statusProcessStart = Date.now()
+          // Add a message indicating that these are intermediate results
+          addMessage({
+            role: 'ai',
+            type: 'text',
+            content: "✨ 这是为你生成的初步场景预览，正在进行最终的细节处理...",
+          });
 
-        switch (data.status) {
-          case "suggestion_generated":
-            console.log(`[PERF] 💡 Phase 4: SUGGESTION_GENERATED received at ${new Date().toISOString()}`)
-            const suggestionDisplayStart = Date.now()
+          // Display the styled images
+          job.processImages.styledImages.forEach((imageUrl: string) => {
+            addMessage({
+              role: 'ai',
+              type: 'image',
+              imageUrl: imageUrl,
+            });
+          });
+        }
 
-            console.log("[POLLING DEBUG] Processing suggestion_generated status")
-            await displaySuggestionSequentially(data.suggestion)
+        if (job.status === 'suggestion_generated' && !processedStatusesRef.current.has('suggestion_generated')) {
+          console.log("[POLLING] Suggestion generated. Displaying text suggestion.");
+          await displaySuggestionSequentially(job.suggestion);
+          processedStatusesRef.current.add('suggestion_generated');
+        }
 
-            const suggestionDisplayEnd = Date.now()
-            suggestionDisplayTime = suggestionDisplayEnd - suggestionDisplayStart // 更新外部作用域的变量
-            const totalSuggestionTime = suggestionDisplayEnd - pollingStartTime
+        if (job.status === "succeed" || job.status === "completed" || job.status === "failed") {
+          clearInterval(intervalId);
+          setJobId(null);
+          setIsGenerating(false);
+          setGenerationStatusText(null);
 
-            console.log(`[PERF] 💡 Phase 4 COMPLETED: Suggestion display took ${suggestionDisplayTime}ms`)
-            console.log(`[PERF] 💡 Total time from polling start to suggestion complete: ${totalSuggestionTime}ms`)
+          if ((job.status === "succeed" || job.status === "completed") && job.result?.imageUrls?.length > 0) {
+            console.log("[POLLING] Job finished successfully. Preparing to display results.");
 
-            console.log("[POLLING DEBUG] Replacing loading message after suggestion display")
-            replaceLastLoadingMessage({
-              role: "ai",
-              type: "loading",
-              loadingText: "I'm setting up the perfect vibe and pose—this one's gonna pop!",
-            })
+            // Clean up any stale loading messages before showing final results.
+            setMessages(prev => prev.filter(msg => msg.type !== 'loading'));
+            await new Promise(resolve => setTimeout(resolve, 50)); // Allow state to update
 
-            // Debug: Check placeholder status after replacing loading message
-            setTimeout(() => {
-              setMessages(currentMessages => {
-                const placeholders = currentMessages.filter(msg => msg.type === "loading" && msg.metadata?.isImagePlaceholder);
-                console.log(`[POLLING DEBUG] After suggestion_generated - placeholder count: ${placeholders.length}`);
-                if (placeholders.length === 0) {
-                  console.warn(`[POLLING DEBUG] WARNING: No placeholders found after suggestion_generated processing`);
-                }
-                return currentMessages; // No changes, just checking
-              });
-            }, 50);
-            break
-
-          case "stylization_completed":
-            if (!intermediateImageDisplayed) {
-              const styledImageUrls = data.styledImages || (data.styledImage ? [data.styledImage] : [])
-              if (styledImageUrls.length === 0) break
-
-              const stylizationTime = Date.now() - pollingStartTime
-              console.log(`[PERF] 🎨 Phase 5: STYLIZATION_COMPLETED received after ${stylizationTime}ms`)
-
-              setIntermediateImageDisplayed(true)
-              processedStatusesRef.current.add("stylization_completed")
-
-              // 🆕 ADD: Notify ChatAgent about the styled images for context
-              try {
-                const sessionId = localStorage.getItem("chat_session_id")
-                if (sessionId) {
-                  if (styledImageUrls.length > 1) {
-                    console.log(`[ChatPage] Adding ${styledImageUrls.length} styled images to ChatAgent context:`, styledImageUrls)
-                    await fetch("/api/chat/simple", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        sessionId,
-                        imageUrls: styledImageUrls,
-                        action: "add_generated_images",
-                      }),
-                    })
-                    console.log(`[ChatPage] ${styledImageUrls.length} styled images successfully added to ChatAgent context`)
-                  } else {
-                    console.log("[ChatPage] Adding styled image to ChatAgent context:", styledImageUrls[0])
-                    await fetch("/api/chat/simple", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        sessionId,
-                        imageUrl: styledImageUrls[0],
-                        action: "add_generated_image",
-                      }),
-                    })
-                    console.log("[ChatPage] Styled image successfully added to ChatAgent context")
-                  }
-                }
-              } catch (error) {
-                console.error("[ChatPage] Failed to add styled image(s) to ChatAgent context:", error)
-              }
-
-              replaceLastLoadingMessage({
-                role: "ai",
-                type: "text",
-                content: "Here is the designed scene and pose, now putting on the final outfit for you...",
-              })
-
-              // Add all styled images
-              styledImageUrls.forEach((imageUrl: string, index: number) => {
-                addMessage({
-                  role: "ai",
-                  type: "image",
-                  imageUrl: imageUrl,
-                  content: styledImageUrls.length > 1
-                    ? `Styled option ${index + 1}:`
-                    : undefined,
-                })
-              })
+            // Defensive check: If intermediate images exist but were not shown, display them first.
+            if (job.processImages?.styledImages?.length > 0 && !hasDisplayedIntermediateImages.current) {
+              console.log("[POLLING] Intermediate images were not displayed, showing them now before the final result.");
+              hasDisplayedIntermediateImages.current = true;
 
               addMessage({
-                role: "ai",
-                type: "loading",
-                loadingText: "Final touches coming up—almost there!",
-              })
+                role: 'ai',
+                type: 'text',
+                content: "✨ 这是为你生成的初步场景预览，在最终处理之前：",
+              });
 
-              console.log(`[PERF] 🎨 Phase 5: Intermediate images displayed, continuing to final generation...`)
+              job.processImages.styledImages.forEach((imageUrl: string) => {
+                addMessage({
+                  role: 'ai',
+                  type: 'image',
+                  imageUrl: imageUrl,
+                });
+              });
+
+              // Wait a bit before showing the final image for a better user experience
+              await new Promise(resolve => setTimeout(resolve, 1500));
             }
-            break
 
-          case "completed":
-            if (!hasProcessedCompletion) {
-              const completionTime = Date.now()
-              const totalGenerationTime = completionTime - pollingStartTime
+            // Add final completion text
+            addMessage({
+              role: 'ai',
+              type: 'text',
+              content: "🎉 Your styling masterpiece is ready! Here's your personalized result:",
+            });
 
-              console.log(`[PERF] 🎉 Phase 6: GENERATION COMPLETED after ${totalGenerationTime}ms total`)
-              setCurrentStep("complete")
-
-              // 🔧 FIX: Reset isGenerating and isLoading to false when generation is complete
-              setIsGenerating(false)
-              setIsLoading(false) // Reset loading state for unified chat
-
-              // 停止显示等待小贴士
-              setIsShowingWaitingTips(false)
-              isShowingWaitingTipsRef.current = false
-
-              const showCompletion = async () => {
-                console.log("[POLLING] Generation completed successfully!")
-
-                // Get the generated image URLs
-                const generatedImageUrls = data.result?.imageUrls || (data.result?.imageUrl ? [data.result.imageUrl] : [])
-                const totalImages = data.result?.totalImages || generatedImageUrls.length
-
-                console.log(`[POLLING] Processing ${generatedImageUrls.length} generated images`);
-
-                if (generatedImageUrls.length > 0) {
-                  // 🆕 ADD: Notify ChatAgent about the generated images for context
-                  try {
-                    const sessionId = localStorage.getItem("chat_session_id")
-                    if (sessionId) {
-                      console.log(`[ChatPage] Adding ${generatedImageUrls.length} generated images to ChatAgent context:`, generatedImageUrls)
-
-                      await fetch("/api/chat/simple", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          sessionId,
-                          imageUrls: generatedImageUrls,
-                          action: "add_generated_images",
-                        }),
-                      })
-                      console.log(`[ChatPage] ${generatedImageUrls.length} generated images successfully added to ChatAgent context`)
-                    }
-                  } catch (error) {
-                    console.error("[ChatPage] Failed to add generated images to ChatAgent context:", error)
-                  }
-
-                  // Replace loading message with completion message
-                  replaceLastLoadingMessage({
-                    type: "text",
-                    role: "ai",
-                    content: totalImages === 1
-                      ? "🎉 Your styling generation has completed! Here's your personalized result:"
-                      : `🎉 Your styling generation has completed! Here are ${totalImages} variations for you:`,
-                  })
-
-                  // Debug: Check placeholder state right before displayImageResults
-                  console.log(`[COMPLETION DEBUG] About to call displayImageResults with ${generatedImageUrls.length} images`);
-
-                  // Check current messages state synchronously
-                  setMessages(currentMessages => {
-                    const placeholders = currentMessages.filter(msg => msg.type === "loading" && msg.metadata?.isImagePlaceholder);
-                    const allLoading = currentMessages.filter(msg => msg.type === "loading");
-
-                    console.log(`[COMPLETION DEBUG] Current message count: ${currentMessages.length}`);
-                    console.log(`[COMPLETION DEBUG] Placeholder count before displayImageResults: ${placeholders.length}`);
-                    console.log(`[COMPLETION DEBUG] All loading messages: ${allLoading.length}`);
-                    console.log(`[COMPLETION DEBUG] Placeholder details:`, placeholders.map(msg => ({
-                      id: msg.id,
-                      imageIndex: msg.metadata?.imageIndex,
-                      loadingText: msg.loadingText
-                    })));
-
-                    if (placeholders.length === 0) {
-                      console.error(`[COMPLETION DEBUG] CRITICAL: No placeholders found right before displayImageResults!`);
-                      console.error(`[COMPLETION DEBUG] All messages:`, currentMessages.map(msg => ({
-                        id: msg.id,
-                        type: msg.type,
-                        role: msg.role,
-                        hasMetadata: !!msg.metadata,
-                        isImagePlaceholder: msg.metadata?.isImagePlaceholder,
-                        imageIndex: msg.metadata?.imageIndex
-                      })));
-                    }
-
-                    return currentMessages; // No changes, just checking
-                  });
-
-                  // Display all images using the new function
-                  await displayImageResults(generatedImageUrls);
-
-                  console.log(`[PERF] 🎉 Images displayed successfully`);
-                } else {
-                  console.warn("[POLLING] No images received in completion");
-                  replaceLastLoadingMessage({
-                    type: "text",
-                    role: "ai",
-                    content: "🎉 Generation completed, but no images were received. Please try again.",
-                  });
-                }
-
-                setCurrentStep("complete")
-                setIsGenerating(false)
-                setJobId(null)
-              }
-
-              // 移除等待机制，立即显示最终图片
-              await showCompletion()
-            }
-            break
-
-          case "failed":
-            const failureTime = Date.now() - pollingStartTime
-            console.log(`[PERF] ❌ GENERATION FAILED after ${failureTime}ms`)
-
-            // 🔧 FIX: Reset both isGenerating and isLoading to false when generation fails
-            setIsGenerating(false)
-            setIsLoading(false) // Reset loading state for unified chat
-            setCurrentStep("error")
-
-            throw new Error(data.statusMessage || "Generation failed without a specific reason.")
-
-          default:
-            console.log(`[POLLING] Unhandled status: ${data.status}`)
+            console.log("[POLLING] Displaying final results.");
+            await showCompletion(job.result.imageUrls);
+          } else {
+            console.error("[POLLING] Job failed or has no image results.", job.error);
+            replaceLastLoadingMessage({
+              role: 'ai',
+              type: 'text',
+              content: `出错了: ${job.error || '未知错误'}`
+            });
+            setCurrentStep("error");
+          }
         }
-
-        const statusProcessEnd = Date.now()
-        const statusProcessTime = statusProcessEnd - statusProcessStart
-        console.log(`[PERF] ⚙️ Status processing took ${statusProcessTime}ms for status: ${data.status}`)
       } catch (error) {
-        const errorTime = Date.now()
-        const totalErrorTime = errorTime - pollingStartTime
-        console.error(`[PERF] ❌ POLLING ERROR after ${totalErrorTime}ms:`, error)
-
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred"
-        setPollingError(errorMessage)
+        console.error("Error during polling:", error);
+        clearInterval(intervalId);
+        setJobId(null);
+        setIsGenerating(false);
+        setGenerationStatusText(null);
         replaceLastLoadingMessage({
-          type: "text",
-          role: "ai",
-          content: `Sorry, we ran into a problem: ${errorMessage}`,
-        })
-        clearInterval(interval)
-        setPollingIntervalId(null)
-
-        // 🔧 FIX: Reset both isGenerating and isLoading to false when there's an error
-        setIsGenerating(false)
-        setIsLoading(false) // Reset loading state for unified chat
+          role: 'ai',
+          type: 'text',
+          content: "轮询时发生错误，请稍后再试。"
+        });
+        setCurrentStep("error");
       }
-    }, 3000)
-
-    setPollingIntervalId(interval)
-  }
+    }, 5000); // Poll every 5 seconds
+  };
 
   // 2. Prevent rendering on server and initial client render to avoid hydration mismatch
   if (!isInitialized) {
@@ -1551,6 +1374,8 @@ Let's start chatting about styling now~`,
         </div>
       </header>
 
+      {/* Scenes generated, proceeding with virtual try-on.../ Creating visual preview... */}
+
       {/* Status indicator for ongoing processes */}
       {(isGenerating || isLoading || isImageProcessing) && (
         <div className="sticky top-16 z-20 px-4 py-2 bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50">
@@ -1559,11 +1384,12 @@ Let's start chatting about styling now~`,
               <div className="flex items-center gap-3">
                 <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                 <span className="text-sm text-gray-600 font-medium">
-                  {isImageProcessing
-                    ? "Optimizing your image so it looks fab and loads fast…"
-                    : isGenerating
-                      ? "Making your styling magic happen—stay tuned!"
-                      : "Thinking through your look—this one's gonna be good…"}
+                  {(() => {
+                    if (isImageProcessing) return "Optimizing your image so it looks fab and loads fast…";
+                    if (isGenerating) return generationStatusText || "Making your styling magic happen—stay tuned!";
+                    if (isLoading) return "Thinking through your look—this one's gonna be good…";
+                    return null;
+                  })()}
                 </span>
               </div>
             </div>
