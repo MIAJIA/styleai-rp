@@ -809,36 +809,37 @@ Let's start chatting about styling now~`,
       setIsDisplayingSuggestion(true)
 
       const formatItems = (items: any) => {
-        if (!items) return ""
-        let formatted = ""
+        if (!items) return "";
+        const sections: string[] = [];
 
         if (items.tops && items.tops.length > 0) {
-          formatted += `**Tops:**\n`
-          items.tops.forEach((item: any) => {
-            formatted += `- *${item.item_name}:* ${item.description}\n`
-          })
-        }
-        if (items.bottoms) {
-          formatted += `**Bottoms:**\n- *${items.bottoms.item_name}:* ${items.bottoms.description}\n`
-        }
-        if (items.shoes) {
-          formatted += `**Shoes:**\n- *${items.shoes.item_name}:* ${items.shoes.description}\n`
-        }
-        if (items.bag) {
-          formatted += `**Bag:**\n- *${items.bag.item_name}:* ${items.bag.description}\n`
-        }
-        if (items.accessories && items.accessories.length > 0) {
-          formatted += `**Accessories:**\n`
-          items.accessories.forEach((item: any) => {
-            formatted += `- *${item.item_name}:* ${item.description}\n`
-          })
-        }
-        if (items.hairstyle) {
-          formatted += `**Hairstyle:**\n- *${items.hairstyle.style_name}:* ${items.hairstyle.description}\n`
+          const topItems = items.tops.map((item: any) => `- *${item.item_name}:* ${item.description}`).join('\n');
+          sections.push(`**Tops:**\n${topItems}`);
         }
 
-        return formatted
-      }
+        if (items.bottoms) {
+          sections.push(`**Bottoms:**\n- *${items.bottoms.item_name}:* ${items.bottoms.description}`);
+        }
+
+        if (items.shoes) {
+          sections.push(`**Shoes:**\n- *${items.shoes.item_name}:* ${items.shoes.description}`);
+        }
+
+        if (items.bag) {
+          sections.push(`**Bag:**\n- *${items.bag.item_name}:* ${items.bag.description}`);
+        }
+
+        if (items.accessories && items.accessories.length > 0) {
+          const accessoryItems = items.accessories.map((item: any) => `- *${item.item_name}:* ${item.description}`).join('\n');
+          sections.push(`**Accessories:**\n${accessoryItems}`);
+        }
+
+        if (items.hairstyle) {
+          sections.push(`**Hairstyle:**\n- *${items.hairstyle.style_name}:* ${items.hairstyle.description}`);
+        }
+
+        return sections.join('\n\n');
+      };
 
       setMessages((prev) => {
         const newMessages = [...prev]
