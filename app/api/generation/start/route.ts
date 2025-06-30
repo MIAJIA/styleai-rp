@@ -12,6 +12,7 @@ import {
   type GenerationMode,
 } from '@/lib/ai';
 import { saveLookToDB, type PastLook } from '@/lib/database';
+import { type OnboardingData } from '@/lib/onboarding-storage';
 
 // This background function now ONLY handles the long-running image generation
 async function runImageGenerationPipeline(jobId: string) {
@@ -21,9 +22,32 @@ async function runImageGenerationPipeline(jobId: string) {
     if (!job) {
       throw new Error(`Job with ID ${jobId} not found.`);
     }
-    if (!job.suggestion) {
-      throw new Error(`Job ${jobId} is missing the style suggestion needed for the pipeline.`);
+
+    console.log(`[Job ${jobId}] Starting AI style suggestion generation...`);
+
+    // --- FIX: The suggestion generation is now part of the background job ---
+    const suggestion = await getStyleSuggestionFromAI({
+      humanImageUrl: job.humanImage.url,
+      garmentImageUrl: job.garmentImage.url,
+      occasion: job.occasion,
+      userProfile: job.userProfile, // Pass user profile to the AI
+    });
+    console.log(`[Job ${jobId}] Suggestion generated.`);
+
+    // Update job with suggestion
+    await kv.hset(jobId, {
+      suggestion: suggestion,
+      status: 'suggestion_generated',
+      statusMessage: 'Style advice generated. Preparing to create your look...',
+      updatedAt: new Date().toISOString(),
+    });
+
+    // To avoid KV race conditions, update the local job object instead of re-fetching.
+    if (!job) {
+      throw new Error("Job context was lost unexpectedly after suggestion generation.");
     }
+    job.suggestion = suggestion;
+    job.status = 'suggestion_generated';
 
     console.log(`[Job ${jobId}] Starting image generation pipeline for mode: ${job.generationMode}`);
 
@@ -117,6 +141,16 @@ export async function POST(request: Request) {
     const garmentImageFile = formData.get('garment_image') as File | null;
     const occasion = formData.get('occasion') as string | null;
     const generationMode = formData.get('generation_mode') as GenerationMode | null;
+    const userProfileString = formData.get('user_profile') as string | null;
+
+    let userProfile: OnboardingData | undefined = undefined;
+    if (userProfileString) {
+      try {
+        userProfile = JSON.parse(userProfileString);
+      } catch (e) {
+        console.warn('Could not parse user_profile from FormData');
+      }
+    }
 
     if (!humanImageFile || !garmentImageFile || !occasion || !generationMode) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -137,20 +171,12 @@ export async function POST(request: Request) {
     });
 
     // --- REFACTORED LOGIC ---
-    // Step 1: Get Style Suggestion immediately
-    const suggestion = await getStyleSuggestionFromAI({
-      humanImageUrl: humanImageBlob.url,
-      garmentImageUrl: garmentImageBlob.url,
-      occasion: occasion,
-    });
-    console.log(`[Job] Suggestion generated for new job.`, suggestion);
-
-    // Step 2: Create the job record in KV with the suggestion included
+    // Step 1: Create the initial job record in KV.
     const jobId = randomUUID();
     const jobData: Job = {
       jobId,
-      status: 'suggestion_generated', // Start with this status
-      statusMessage: 'Style advice generated. Preparing to create your look...',
+      status: 'pending', // Start with a generic 'pending' status
+      statusMessage: 'Kicking off the magic... ✨',
       humanImage: {
         url: humanImageBlob.url,
         type: humanImageFile.type,
@@ -163,16 +189,18 @@ export async function POST(request: Request) {
       },
       occasion,
       generationMode,
-      suggestion, // Include suggestion from the start
+      userProfile, // Store user profile
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     await kv.hset(jobId, jobData);
+    console.log(`[Job ${jobId}] Initial job record created. Status: pending.`);
 
-    // Step 3: Fire and forget the background process for image generation.
+    // Step 2: Fire and forget the background process for the entire pipeline.
     runImageGenerationPipeline(jobId);
+    console.log(`[Job ${jobId}] Background pipeline started. API is returning response now.`);
 
-    // Step 4: Return immediately.
+    // Step 3: Return immediately.
     return NextResponse.json({ jobId });
   } catch (error) {
     console.error('Error starting generation job:', error);

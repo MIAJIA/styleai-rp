@@ -622,29 +622,19 @@ Let's start chatting about styling now~`,
     console.log(`[ChatPage] handleSendMessage called. Message: "${message}", Has Staged Image: ${!!stagedImage}`)
     if (message.trim() === "" && !stagedImage) return
 
-    // Search backwards through the conversation to find the last image, regardless of sender.
-    // This is more robust than just checking the very last message.
-    let contextImageUrl = stagedImage ?? undefined;
-    if (!contextImageUrl) {
-      for (let i = messages.length - 1; i >= 0; i--) {
-        const message = messages[i];
-        if (message.type === 'image' && message.imageUrl) {
-          console.log(`[ChatPage] Found last image (from role: ${message.role}) at index ${i} to use as context.`);
-          contextImageUrl = message.imageUrl;
-          break; // Stop after finding the most recent one
-        }
-      }
-    }
+    // The backend `ChatAgent` is now responsible for context.
+    // The frontend only needs to send the newly uploaded image.
+    const imageUrlForThisMessage = stagedImage ?? undefined;
 
     // Add user message to UI immediately, only showing the explicitly staged image
     addMessage({
       type: "text",
       role: "user",
       content: message,
-      imageUrl: stagedImage ?? undefined,
+      imageUrl: imageUrlForThisMessage,
     })
 
-    // Clear the staged image immediately after capturing it for the message
+    // Clear the staged image immediately after sending it
     setStagedImage(null)
 
     // Show loading indicator
@@ -654,8 +644,8 @@ Let's start chatting about styling now~`,
       loadingText: "Hold on—I'm putting together a killer look just for you!",
     })
 
-    // Pass the user's text and the correct contextual image to the chat handler
-    await handleFreeChat(message, contextImageUrl)
+    // Pass the user's text and the (optional) new image to the chat handler
+    await handleFreeChat(message, imageUrlForThisMessage)
   }
 
   const handleFreeChat = async (message: string, imageUrl?: string | null) => {
@@ -707,6 +697,9 @@ Let's start chatting about styling now~`,
         throw new Error(data.error || "API request failed")
       }
 
+      // Ensure response text is a string to prevent errors
+      const responseText = data.response || '';
+
       // Check if the response contains product information
       let products: ProductInfo[] = [];
 
@@ -726,7 +719,7 @@ Let's start chatting about styling now~`,
 
       // Fallback: try to parse from text response
       if (products.length === 0) {
-        products = parseProductsFromText(data.response);
+        products = parseProductsFromText(responseText);
       }
 
       console.log("[ChatPage] Final parsed products:", products);
@@ -748,7 +741,7 @@ Let's start chatting about styling now~`,
         replaceLastLoadingMessage({
           type: "text",
           role: "ai",
-          content: data.response,
+          content: responseText,
           agentInfo: data.agentInfo,
           metadata: {
             suggestions: data.quickReplies || [],
@@ -1432,8 +1425,26 @@ Let's start chatting about styling now~`,
                 <span className="text-sm text-gray-600 font-medium">
                   {(() => {
                     if (isImageProcessing) return "Optimizing your image so it looks fab and loads fast…";
-                    if (isGenerating) return generationStatusText || "Making your styling magic happen—stay tuned!";
-                    if (isLoading) return "Thinking through your look—this one's gonna be good…";
+                    if (isGenerating) {
+                      const status = generationStatusText || "Making your styling magic happen—stay tuned!";
+                      const prompt = "While you wait, feel free to ask me anything else!";
+                      return (
+                        <span>
+                          {status}
+                          <span className="text-gray-500 font-normal italic mt-1 block">{prompt}</span>
+                        </span>
+                      );
+                    }
+                    if (isLoading) {
+                      const status = "Thinking through your look—this one's gonna be good…";
+                      const prompt = "We can keep chatting while I think.";
+                      return (
+                        <span>
+                          {status}
+                          <span className="text-gray-500 font-normal italic mt-1 block">{prompt}</span>
+                        </span>
+                      );
+                    }
                     return null;
                   })()}
                 </span>

@@ -638,6 +638,7 @@ export class ChatAgent {
 
     const toolMessages: ToolMessage[] = [];
     let searchResults: any = null;
+    let searchWasTriggered = false;
 
     if (firstResponse.tool_calls && firstResponse.tool_calls.length > 0) {
       console.log("[ChatAgent] Tool call detected:", JSON.stringify(firstResponse.tool_calls, null, 2));
@@ -656,6 +657,7 @@ export class ChatAgent {
           console.log(`[ChatAgent] Executing image analysis for outfit analysis`);
           toolOutput = JSON.stringify(toolArgs);
         } else if (toolFunctionName === "search_fashion_items") {
+          searchWasTriggered = true;
           console.log(`[ChatAgent] Executing Google Shopping Light API search for:`, toolArgs);
           const searchResultsData = await searchGoogleShoppingLight(toolArgs.query, toolArgs.imageUrl);
           searchResults = searchResultsData;
@@ -663,9 +665,7 @@ export class ChatAgent {
           console.log(`[ChatAgent] Google Shopping API search completed. Found ${searchResultsData.items.length} items.`);
         } else {
           console.warn(`[ChatAgent] Unknown tool function in first pass: ${toolFunctionName}`);
-          toolOutput = JSON.stringify({
-            error: "Unknown tool function"
-          });
+          toolOutput = JSON.stringify({ error: "Unknown tool function" });
         }
         toolMessages.push(new ToolMessage({
           tool_call_id: toolCallId,
@@ -675,6 +675,25 @@ export class ChatAgent {
       }
     }
 
+    // "Fast Lane" for search results - bypass second LLM call
+    if (searchWasTriggered) {
+      console.log('[ChatAgent] Search tool was triggered. Bypassing second LLM call for a fast response.');
+      const responseText = `Here are some items I found for you!`;
+      this.contextManager.addMessage('ai', responseText, undefined, {
+        type: selectedAgent.id,
+        name: selectedAgent.name,
+        emoji: selectedAgent.emoji
+      });
+
+      return {
+        agentInfo: selectedAgent,
+        aiResponse: responseText,
+        quickReplies: [], // No dynamic quick replies for fast search
+        searchResults: searchResults,
+      };
+    }
+
+    // Regular flow for non-search or complex tool_call scenarios
     // Always make a final call to get the structured response
     const finalSystemPrompt = systemPrompt + "\n\nOutput Format: You have now gathered all necessary information. You MUST use the 'format_chat_response' tool to structure your final output to the user. Provide your main reply in the 'response' field and exactly four helpful, relevant follow-up questions or actions in the 'quickReplies' field to continue the conversation.";
     const finalSystemMessage = new SystemMessage(finalSystemPrompt);
