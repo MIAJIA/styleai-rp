@@ -415,6 +415,8 @@ async function searchGoogleShoppingLight(query: string, imageUrl?: string): Prom
       hasLink: !!item.link && item.link !== '#'
     })));
 
+    console.log('[SearchAPI] SERPAPI result:', JSON.stringify(data, null, 2));
+
     return {
       items,
       summary,
@@ -589,10 +591,89 @@ export class ChatAgent {
 
     if (firstResponse.tool_calls && firstResponse.tool_calls.length > 0) {
       console.log("[ChatAgent] Tool call detected:", JSON.stringify(firstResponse.tool_calls, null, 2));
-      const toolCall = firstResponse.tool_calls[0];
 
-      if (!toolCall.id) {
-        console.warn("Tool call received without an ID, returning direct response.");
+      const toolMessages: ToolMessage[] = [];
+
+      // Process all tool calls
+      for (const toolCall of firstResponse.tool_calls) {
+        if (!toolCall.id) {
+          console.warn("Tool call received without an ID, skipping.");
+          continue;
+        }
+
+        const toolCallId = toolCall.id;
+        const toolFunctionName = toolCall.name;
+        const toolArgs = toolCall.args;
+        let toolOutput = "";
+
+        // Handle different tool calls
+        if (toolFunctionName === "analyze_outfit_image") {
+          console.log(`[ChatAgent] Executing image analysis for outfit analysis`);
+          toolOutput = JSON.stringify(toolArgs);
+        }
+        else if (toolFunctionName === "search_fashion_items") {
+          console.log(`[ChatAgent] Executing Google Shopping Light API search for:`, toolArgs);
+
+          try {
+            const query = toolArgs.query || '';
+            const imageUrl = toolArgs.imageUrl;
+
+            if (!query.trim()) {
+              console.warn('[ChatAgent] Empty search query provided');
+              toolOutput = JSON.stringify({
+                items: [],
+                summary: "Please provide a search query to find products.",
+                searchType: "error"
+              });
+            } else {
+              // Call the real Google Shopping Light API
+              const searchResultsData = await searchGoogleShoppingLight(query, imageUrl);
+              searchResults = searchResultsData; // Store for return
+              toolOutput = JSON.stringify(searchResultsData);
+              console.log(`[ChatAgent] Google Shopping API search completed. Found ${searchResultsData.items.length} items.`);
+            }
+
+          } catch (error) {
+            console.error('[ChatAgent] Google Shopping API search failed:', error);
+
+            // Provide fallback response
+            const fallbackResults = {
+              items: [
+                {
+                  id: 'error_fallback',
+                  name: `Search for "${toolArgs.query}" temporarily unavailable`,
+                  price: 'N/A',
+                  score: 0.0,
+                  imageUrl: '/images/error-placeholder.jpg',
+                  description: 'Please try again later or refine your search query',
+                  link: '#',
+                  source: 'System'
+                }
+              ],
+              summary: `Unable to search for "${toolArgs.query}" at the moment. Please try again later.`,
+              searchType: "error_fallback"
+            };
+
+            searchResults = fallbackResults; // Store fallback for return
+            toolOutput = JSON.stringify(fallbackResults);
+          }
+        } else {
+          console.warn(`[ChatAgent] Unknown tool function: ${toolFunctionName}`);
+          toolOutput = JSON.stringify({ error: "Unknown tool function" });
+        }
+
+        const toolMessage = new ToolMessage({
+          tool_call_id: toolCallId,
+          name: toolFunctionName,
+          content: toolOutput,
+        });
+
+        toolMessages.push(toolMessage);
+      }
+
+      // If we have no valid tool messages, return direct response
+      if (toolMessages.length === 0) {
+        console.warn("No valid tool messages created, returning direct response.");
         this.contextManager.addMessage('ai', firstResponse.content.toString(), undefined, {
           type: selectedAgent.id,
           name: selectedAgent.name,
@@ -604,78 +685,11 @@ export class ChatAgent {
         };
       }
 
-      const toolCallId = toolCall.id;
-      const toolFunctionName = toolCall.name;
-      const toolArgs = toolCall.args;
-      let toolOutput = "";
-
-      // Handle different tool calls
-      if (toolFunctionName === "analyze_outfit_image") {
-        console.log(`[ChatAgent] Executing image analysis for outfit analysis`);
-        toolOutput = JSON.stringify(toolArgs);
-      }
-      else if (toolFunctionName === "search_fashion_items") {
-        console.log(`[ChatAgent] Executing Google Shopping Light API search for:`, toolArgs);
-
-        try {
-          const query = toolArgs.query || '';
-          const imageUrl = toolArgs.imageUrl;
-
-          if (!query.trim()) {
-            console.warn('[ChatAgent] Empty search query provided');
-            toolOutput = JSON.stringify({
-              items: [],
-              summary: "Please provide a search query to find products.",
-              searchType: "error"
-            });
-          } else {
-            // Call the real Google Shopping Light API
-            const searchResultsData = await searchGoogleShoppingLight(query, imageUrl);
-            searchResults = searchResultsData; // Store for return
-            toolOutput = JSON.stringify(searchResultsData);
-            console.log(`[ChatAgent] Google Shopping API search completed. Found ${searchResultsData.items.length} items.`);
-          }
-
-        } catch (error) {
-          console.error('[ChatAgent] Google Shopping API search failed:', error);
-
-          // Provide fallback response
-          const fallbackResults = {
-            items: [
-              {
-                id: 'error_fallback',
-                name: `Search for "${toolArgs.query}" temporarily unavailable`,
-                price: 'N/A',
-                score: 0.0,
-                imageUrl: '/images/error-placeholder.jpg',
-                description: 'Please try again later or refine your search query',
-                link: '#',
-                source: 'System'
-              }
-            ],
-            summary: `Unable to search for "${toolArgs.query}" at the moment. Please try again later.`,
-            searchType: "error_fallback"
-          };
-
-          searchResults = fallbackResults; // Store fallback for return
-          toolOutput = JSON.stringify(fallbackResults);
-        }
-      } else {
-        console.warn(`[ChatAgent] Unknown tool function: ${toolFunctionName}`);
-        toolOutput = JSON.stringify({ error: "Unknown tool function" });
-      }
-
-      const toolMessage = new ToolMessage({
-        tool_call_id: toolCallId,
-        name: toolFunctionName,
-        content: toolOutput,
-      });
-
       const messagesForSecondCall: BaseMessage[] = [
         systemMessage,
         userMessage,
         firstResponse,
-        toolMessage,
+        ...toolMessages, // Include all tool messages
       ];
 
       console.log('[ChatAgent] Making second LLM call with tool results...');

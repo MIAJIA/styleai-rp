@@ -711,8 +711,10 @@ export async function executeSimpleScenePipeline(job: Job): Promise<string[]> {
   await kv.hset(job.jobId, {
     status: 'stylization_completed',
     statusMessage: '场景已生成，正在进行虚拟试穿...',
-    styledImages: styledImageUrls,
-    styledImage: styledImageUrls[0] // Keep for backward compatibility
+    processImages: {
+      styledImages: styledImageUrls,
+      styledImage: styledImageUrls[0] // Keep for backward compatibility
+    }
   });
 
   // Step 2: Perform virtual try-on on each new scene to ensure high clothing fidelity.
@@ -729,9 +731,14 @@ export async function executeSimpleScenePipeline(job: Job): Promise<string[]> {
     allTryOnImageUrls.push(...tryOnImageUrls);
   }
 
+  const existingProcessImages: any = await kv.hget(job.jobId, 'processImages') || {};
+
   await kv.hset(job.jobId, {
-    tryOnImages: allTryOnImageUrls,
-    tryOnImage: allTryOnImageUrls[0] // Keep for backward compatibility
+    processImages: {
+      ...existingProcessImages,
+      tryOnImages: allTryOnImageUrls,
+      tryOnImage: allTryOnImageUrls[0] // Keep for backward compatibility
+    }
   });
 
   // Step 3: Save all results to blob storage
@@ -767,8 +774,10 @@ export async function executeAdvancedScenePipeline(job: Job): Promise<string[]> 
   await kv.hset(job.jobId, {
     status: 'stylization_completed',
     statusMessage: '场景已生成，正在进行虚拟试穿...',
-    styledImages: styledImageUrls,
-    styledImage: styledImageUrls[0] // Keep for backward compatibility
+    processImages: {
+      styledImages: styledImageUrls,
+      styledImage: styledImageUrls[0] // Keep for backward compatibility
+    }
   });
 
   // Step 2: Perform virtual try-on using each newly stylized image as the canvas
@@ -785,9 +794,14 @@ export async function executeAdvancedScenePipeline(job: Job): Promise<string[]> 
     allTryOnImageUrls.push(...tryOnImageUrls);
   }
 
+  const existingProcessImages: any = await kv.hget(job.jobId, 'processImages') || {};
+
   await kv.hset(job.jobId, {
-    tryOnImages: allTryOnImageUrls,
-    tryOnImage: allTryOnImageUrls[0] // Keep for backward compatibility
+    processImages: {
+      ...existingProcessImages,
+      tryOnImages: allTryOnImageUrls,
+      tryOnImage: allTryOnImageUrls[0] // Keep for backward compatibility
+    }
   });
 
   // Step 3: Perform face swap on all try-on images to put the user's face back onto the generated body
@@ -861,9 +875,14 @@ export async function executeSimpleScenePipelineV2(job: Job): Promise<string[]> 
   const allTryOnGroups = await Promise.all(allTryOnPromises);
   const allTryOnImages = allTryOnGroups.flat();
 
+  const existingProcessImages: any = await kv.hget(job.jobId, 'processImages') || {};
+
   await kv.hset(job.jobId, {
-    tryOnImages: allTryOnImages,
-    tryOnImage: allTryOnImages[0] // Keep for backward compatibility
+    processImages: {
+      ...existingProcessImages,
+      tryOnImages: allTryOnImages,
+      tryOnImage: allTryOnImages[0] // Keep for backward compatibility
+    }
   });
 
   // Step 3: Save all final images to blob storage

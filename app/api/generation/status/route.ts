@@ -18,6 +18,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
+    // Log the entire job object to see what's being fetched from KV
+    console.log(`[API_STATUS] Fetched job ${jobId}:`, JSON.stringify(job, null, 2));
+
     // The job's status is continuously updated by the background process.
     // This endpoint simply returns the current state of the job from the KV store.
     return NextResponse.json(job);

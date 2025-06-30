@@ -675,7 +675,8 @@ Let's start chatting about styling now~`,
           price: item.price || 'Price not available',
           description: item.description || '',
           link: item.link || '#',
-          imageUrl: item.imageUrl || '/placeholder-product.jpg'
+          imageUrl: item.imageUrl || '/placeholder-product.jpg',
+          source: item.source // Add the source field
         })) || [];
       }
 

@@ -10,6 +10,7 @@ export interface ProductInfo {
   description: string
   link: string
   imageUrl?: string
+  source?: string
 }
 
 interface ProductCardProps {
@@ -73,21 +74,9 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
 
         <p className="text-lg font-bold text-primary mb-2">{product.price}</p>
 
-        {product.description && (
-          <p className="text-xs text-gray-600 line-clamp-2 mb-3">{product.description}</p>
-        )}
-
-        <Button
-          size="sm"
-          className="w-full text-xs bg-primary hover:bg-primary/90"
-          onClick={(e) => {
-            e.stopPropagation()
-            handleClick()
-          }}
-        >
-          <ExternalLink className="w-3 h-3 mr-1" />
-          {product.link && product.link !== '#' ? 'View Product' : 'Product Info'}
-        </Button>
+        <a href={product.link} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">
+          {product.source || 'Merchant'}
+        </a>
       </div>
     </div>
   )
@@ -109,7 +98,7 @@ export function ProductGrid({ products }: ProductGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
       {products.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}
