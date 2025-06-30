@@ -591,16 +591,29 @@ Let's start chatting about styling now~`,
     console.log(`[ChatPage] handleSendMessage called. Message: "${message}", Has Staged Image: ${!!stagedImage}`)
     if (message.trim() === "" && !stagedImage) return
 
-    // Add user message to UI immediately, including the staged image
+    // Search backwards through the conversation to find the last image, regardless of sender.
+    // This is more robust than just checking the very last message.
+    let contextImageUrl = stagedImage ?? undefined;
+    if (!contextImageUrl) {
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const message = messages[i];
+        if (message.type === 'image' && message.imageUrl) {
+          console.log(`[ChatPage] Found last image (from role: ${message.role}) at index ${i} to use as context.`);
+          contextImageUrl = message.imageUrl;
+          break; // Stop after finding the most recent one
+        }
+      }
+    }
+
+    // Add user message to UI immediately, only showing the explicitly staged image
     addMessage({
       type: "text",
       role: "user",
       content: message,
-      imageUrl: stagedImage ?? undefined, // 2. Fix type error (null -> undefined)
+      imageUrl: stagedImage ?? undefined,
     })
 
-    const imageToSend = stagedImage
-    // Clear the staged image immediately after capturing it
+    // Clear the staged image immediately after capturing it for the message
     setStagedImage(null)
 
     // Show loading indicator
@@ -610,8 +623,8 @@ Let's start chatting about styling now~`,
       loadingText: "Hold on—I'm putting together a killer look just for you!",
     })
 
-    // Pass the captured image to the chat handler
-    await handleFreeChat(message, imageToSend)
+    // Pass the user's text and the correct contextual image to the chat handler
+    await handleFreeChat(message, contextImageUrl)
   }
 
   const handleFreeChat = async (message: string, imageUrl?: string | null) => {
