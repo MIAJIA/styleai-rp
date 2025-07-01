@@ -3,7 +3,7 @@ import * as jwt from "jsonwebtoken";
 import { put } from "@vercel/blob";
 import { kv } from "@vercel/kv";
 import { type OnboardingData } from "@/lib/onboarding-storage";
-import { systemPrompt } from "./prompts";
+import { systemPrompt, IMAGE_GENERATION_MODEL } from "./prompts";
 import { z } from "zod";
 import zodToJsonSchema from "zod-to-json-schema";
 
@@ -92,6 +92,8 @@ export async function getStyleSuggestionFromAI({
   if (!humanImageUrl || !garmentImageUrl || !occasion) {
     throw new Error("Missing required inputs for style suggestion.");
   }
+
+  console.log(`[AI DEBUG] Using image generation model: ${IMAGE_GENERATION_MODEL}`);
 
   // do not change userProfile, only update the log, do not need to log the fullbodyphoto in userProfile
   const userProfileForLog = { ...userProfile };
@@ -214,6 +216,7 @@ ${stylePreferenceSection}`;
     }
 
     const suggestion = JSON.parse(toolCall.function.arguments);
+    console.log("[AI DEBUG] OpenAI Suggestion:", JSON.stringify(suggestion, null, 2));
     return suggestion;
 
   } catch (error) {
@@ -356,7 +359,7 @@ const buildStylizeRequestBody = (
     aspect_ratio: "3:4",
     image: humanImageBase64,
   };
-  console.log("Building stylize request for model:", modelVersion);
+  console.log(`[${IMAGE_GENERATION_MODEL}] Building stylize request for model:`, modelVersion);
   console.log("!!! send final prompt:", prompt);
 
   switch (modelVersion) {
