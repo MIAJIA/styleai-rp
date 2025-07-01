@@ -169,34 +169,8 @@ export default function HomePage() {
   const handleGenerationModeSelect = (mode: "tryon-only" | "simple-scene" | "advanced-scene") => {
     setGenerationMode(mode);
 
-    // Auto-navigate if both images are selected
-    if (hasRequiredImages) {
-      // Store current selection data to sessionStorage for Chat page to use
-      const chatData = {
-        selfiePreview,
-        clothingPreview,
-        occasion,
-        generationMode: mode, // Use the newly selected mode
-        selectedPersona,
-        selfieFile: selfieFile ? {
-          name: selfieFile.name,
-          type: selfieFile.type,
-          size: selfieFile.size
-        } : null,
-        clothingFile: clothingFile ? {
-          name: clothingFile.name,
-          type: clothingFile.type,
-          size: clothingFile.size
-        } : null,
-        timestamp: Date.now()
-      };
-
-      console.log('[MAIN DEBUG] Auto-navigating to chat with data:', chatData);
-      sessionStorage.setItem('chatModeData', JSON.stringify(chatData));
-
-      // Navigate to Chat page
-      router.push('/chat');
-    }
+    // Remove auto-navigation to allow users to enter custom prompt
+    // Navigation will happen when user clicks the "Start Generation" button
   };
 
   // Modify handleStartGeneration to use customPrompt if provided
@@ -358,6 +332,24 @@ export default function HomePage() {
                 rows={3}
               />
             </div>
+
+            {/* Start Generation Button - Show when all required steps are completed */}
+            {hasRequiredImages && (
+              <div className="space-y-3">
+                <button
+                  onClick={handleStartGeneration}
+                  className="w-full bg-gradient-to-r from-[#FF6EC7] to-[#FF9B3E] text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    <span>Start Generation</span>
+                  </div>
+                </button>
+                <p className="text-xs text-gray-500 text-center">
+                  This will take you to the chat where your styling magic happens!
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Drawers for selection */}

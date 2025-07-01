@@ -182,6 +182,8 @@ export async function POST(request: Request) {
     // --- REFACTORED LOGIC ---
     // Step 1: Create the initial job record in KV.
     const jobId = randomUUID();
+
+    // Build jobData object, only include customPrompt if it has a valid value
     const jobData: Job = {
       jobId,
       status: 'pending', // Start with a generic 'pending' status
@@ -199,13 +201,21 @@ export async function POST(request: Request) {
       occasion,
       generationMode,
       userProfile, // Store user profile
-      customPrompt: customPrompt || undefined, // Store custom prompt, convert null to undefined
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    // Only add customPrompt field if it exists and is not empty
+    if (customPrompt && customPrompt.trim()) {
+      jobData.customPrompt = customPrompt.trim();
+      console.log(`[Job ${jobId}] Adding customPrompt to job data:`, customPrompt.trim());
+    } else {
+      console.log(`[Job ${jobId}] No customPrompt provided, using default prompt logic`);
+    }
+
     await kv.hset(jobId, jobData);
     console.log(`[Job ${jobId}] Initial job record created. Status: pending.`);
-    console.log(`[Job ${jobId}] Stored customPrompt:`, jobData.customPrompt);
+    console.log(`[Job ${jobId}] Stored customPrompt:`, jobData.customPrompt || 'undefined (not set)');
 
     // Step 2: Fire and forget the background process for the entire pipeline.
     runImageGenerationPipeline(jobId);

@@ -492,8 +492,6 @@ export default function ChatPage() {
         const parsedData = JSON.parse(storedData)
         console.log("[CHAT DEBUG] Parsed chat data:", parsedData)
         console.log("[CHAT DEBUG] Parsed customPrompt:", parsedData.customPrompt)
-        console.log("[CHAT DEBUG] CustomPrompt type:", typeof parsedData.customPrompt)
-        console.log("[CHAT DEBUG] CustomPrompt length:", parsedData.customPrompt?.length || 0)
         setChatData(parsedData)
 
         // Initialize with unified welcome message
@@ -1207,7 +1205,11 @@ Let's start chatting about styling now~`,
         const onboardingData = loadCompleteOnboardingData();
         if (onboardingData) {
           formData.append("user_profile", JSON.stringify(onboardingData));
-          console.log("[CHAT DEBUG] Appending user_profile to FormData:", JSON.stringify(onboardingData, null, 2));
+          const onboardingDataForLog = { ...onboardingData };
+          if (onboardingDataForLog?.fullBodyPhoto) {
+            onboardingDataForLog.fullBodyPhoto = '***';
+          }
+          console.log("[CHAT DEBUG] Appending user_profile to FormData:", JSON.stringify(onboardingDataForLog, null, 2));
         } else {
           console.log("[CHAT DEBUG] No user_profile data found to append.");
         }
@@ -1219,6 +1221,10 @@ Let's start chatting about styling now~`,
       if (chatData.customPrompt && chatData.customPrompt.trim()) {
         formData.append("custom_prompt", chatData.customPrompt.trim());
         console.log("[CHAT DEBUG] Appending custom_prompt to FormData:", chatData.customPrompt.trim());
+      } else {
+        console.log("[CHAT DEBUG] No custom prompt to append. chatData.customPrompt:", chatData.customPrompt);
+        console.log("[CHAT DEBUG] Custom prompt check - exists?", !!chatData.customPrompt);
+        console.log("[CHAT DEBUG] Custom prompt check - trimmed?", chatData.customPrompt?.trim());
       }
 
       if (stylePrompts[chatData.occasion as keyof typeof stylePrompts]) {
