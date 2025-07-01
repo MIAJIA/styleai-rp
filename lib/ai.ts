@@ -7,6 +7,30 @@ import { systemPrompt } from "./prompts";
 import { z } from "zod";
 import zodToJsonSchema from "zod-to-json-schema";
 
+const PROMPT_APPENDIX = ` :
+# Image Generation Information
+Image Format
+
+9:16 Vertical Composition
+Two-thirds or full-body, model standing naturally or slightly sideways, with clear body proportions;
+Natural small movements (e.g., one hand in pocket/holding a bag), but the body outline must be clearly discernible;
+Street photography texture, suitable for outfit display.
+
+Lens Suggestions
+The lens should be two-thirds to full-body, avoiding too far or too close to prevent loss of outfit details;
+The model's posture should avoid covering key areas of the outfit (such as waistline, pants shape, neckline);
+Posture suggestions: natural standing, slightly sideways, hand in pocket or lightly holding a bag strap;
+Recommended angle: front with a slight side, lens slightly tilted down to highlight the upper garment structure;
+Keep the clothing naturally draped, avoiding exaggerated movements that affect fabric texture presentation.
+
+Lighting Suggestions
+Natural light or outdoor soft light, emphasizing real texture and color;
+Avoid strong backlight, silhouette, and other effects that obscure the outfit.
+
+Background and Scene
+The background should match the occasion, have a sense of life but not steal the focus, and it is recommended to include some still life elements (such as green plants, chairs, fallen leaves, etc.) to enhance the atmosphere.
+`;
+
 // Initialize the OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -14,8 +38,10 @@ const openai = new OpenAI({
 
 // Zod schema for structured output, matching the format in lib/prompts.ts
 const itemDetailSchema = z.object({
-  item_name: z.string().describe("The name of the clothing item or accessory."),
-  description: z.string().describe("A brief description of the item and why it was chosen."),
+  item_name: z.string().describe('The name of the clothing item or accessory.'),
+  style_details: z.string().describe('The style details of the clothing item or accessory.'),
+  wearing_details: z.string().describe('The wearing details of the clothing item or accessory.'),
+  effect_description: z.string().optional().describe('The effect description of the clothing item or accessory.'),
 });
 
 const hairstyleSchema = z.object({
@@ -29,6 +55,7 @@ const outfitItemsSchema = z.object({
   shoes: itemDetailSchema.describe("The shoes."),
   bag: itemDetailSchema.describe("The bag or purse."),
   accessories: z.array(itemDetailSchema).describe("An array of accessories like jewelry, hats, etc."),
+  layering_description: z.string().optional().describe("A description of layering relationships, including the order of wearing, the details of exposure, and the role of layers in style, atmosphere, or structural shaping."),
   hairstyle: hairstyleSchema.describe("The suggested hairstyle."),
 });
 
@@ -40,7 +67,7 @@ const outfitSuggestionSchema = z.object({
 
 const styleSuggestionsSchema = z.object({
   outfit_suggestion: outfitSuggestionSchema.describe("A single complete outfit suggestion."),
-  image_prompt: z.string().describe("A creative, English-only prompt for AI image generator to create visual representation of the outfit suggestion."),
+  image_prompt: z.string().describe("A creative, English-only prompt for AI image generator to create visual representation of the 视觉化穿搭建议的背景与场景，图片的气质描述 based on user profile and target scene."),
 });
 
 // Convert Zod schema to JSON schema for the tool
@@ -133,7 +160,7 @@ export async function getStyleSuggestionFromAI({
           type: "function",
           function: {
             name: "get_style_suggestions",
-            description: "Get three complete outfit suggestions in a structured JSON format.",
+            description: "Get one complete outfit suggestions in a structured JSON format.",
             parameters: styleSuggestionsJsonSchema,
           },
         },
@@ -531,16 +558,22 @@ export interface Job {
  * ATOMIC STEP: Generates a stylized base image using a specific model.
  * Returns multiple images.
  */
-async function runStylizationMultiple(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string): Promise<string[]> {
+async function runStylizationMultiple(modelVersion: 'kling-v1-5' | 'kling-v2', suggestion: Job['suggestion'], humanImageUrl: string, humanImageName: string, humanImageType: string): Promise<string[]> {
   console.log(`[ATOMIC_STEP] Running Stylization with ${modelVersion}...`);
-  if (!prompt) {
+  if (!suggestion?.image_prompt) {
     throw new Error("Cannot generate styled image without a 'prompt'.");
   }
+
+  const outfitSuggestionString = suggestion.outfit_suggestion ? JSON.stringify(suggestion.outfit_suggestion) : '';
+  const finalPrompt = suggestion.image_prompt + ' ' + outfitSuggestionString + PROMPT_APPENDIX;
+
+  // print the final prompt
+  console.log(`!!![ATOMIC_STEP] Final prompt: ${finalPrompt}`);
 
   const humanImageFile = await urlToFile(humanImageUrl, humanImageName, humanImageType);
   const humanImageBase64 = await fileToBase64(humanImageFile);
 
-  const stylizeRequestBody = buildStylizeRequestBody(modelVersion, prompt, humanImageBase64);
+  const stylizeRequestBody = buildStylizeRequestBody(modelVersion, finalPrompt, humanImageBase64);
   const styledImageUrls = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, stylizeRequestBody);
 
   console.log(`[ATOMIC_STEP] Stylization with ${modelVersion} complete: ${styledImageUrls.length} images generated`);
@@ -567,7 +600,8 @@ async function runStylizationParallel(
   // Execute all prompts in parallel
   const allPromises = prompts.map((prompt, index) => {
     console.log(`[PARALLEL] Starting stylization ${index + 1}/${prompts.length} for prompt: ${prompt.substring(0, 50)}...`);
-    return runStylizationMultiple(modelVersion, prompt, humanImageUrl, humanImageName, humanImageType);
+    const suggestion: Job['suggestion'] = { image_prompt: prompt, outfit_suggestion: '' };
+    return runStylizationMultiple(modelVersion, suggestion, humanImageUrl, humanImageName, humanImageType);
   });
 
   const results = await Promise.all(allPromises);
@@ -585,7 +619,8 @@ async function runStylizationParallel(
  * Legacy version that returns only the first image for backward compatibility.
  */
 async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string): Promise<string> {
-  const styledImageUrls = await runStylizationMultiple(modelVersion, prompt, humanImageUrl, humanImageName, humanImageType);
+  const suggestion: Job['suggestion'] = { image_prompt: prompt, outfit_suggestion: '' };
+  const styledImageUrls = await runStylizationMultiple(modelVersion, suggestion, humanImageUrl, humanImageName, humanImageType);
   return styledImageUrls[0];
 }
 
@@ -716,10 +751,14 @@ export async function executeSimpleScenePipeline(job: Job): Promise<string[]> {
     throw new Error("Cannot run simple scene pipeline without 'image_prompt'.");
   }
 
+  if (!job.suggestion?.outfit_suggestion) {
+    throw new Error("Cannot run simple scene pipeline without 'outfit_suggestion'.");
+  }
+
   // Step 1: Stylize the image using the simpler, faster model to get a new scene and pose.
   const styledImageUrls = await runStylizationMultiple(
     'kling-v1-5',
-    job.suggestion.image_prompt,
+    job.suggestion,
     job.humanImage.url,
     job.humanImage.name,
     job.humanImage.type
@@ -778,11 +817,13 @@ export async function executeAdvancedScenePipeline(job: Job): Promise<string[]> 
   if (!job.suggestion?.image_prompt) {
     throw new Error("Cannot run advanced scene pipeline without 'image_prompt'.");
   }
-
+  if (!job.suggestion?.outfit_suggestion) {
+    throw new Error("Cannot run advanced scene pipeline without 'outfit_suggestion'.");
+  }
   // Step 1: Generate the stylized background/pose with the advanced model
   const styledImageUrls = await runStylizationMultiple(
     'kling-v2',
-    job.suggestion.image_prompt,
+    job.suggestion,
     job.humanImage.url,
     job.humanImage.name,
     job.humanImage.type
@@ -862,7 +903,7 @@ export async function executeSimpleScenePipelineV2(job: Job): Promise<string[]> 
   // Step 1: Generate multiple styled images from the same prompt
   const styledImageUrls = await runStylizationMultiple(
     'kling-v1-5',
-    job.suggestion.image_prompt,
+    job.suggestion,
     job.humanImage.url,
     job.humanImage.name,
     job.humanImage.type

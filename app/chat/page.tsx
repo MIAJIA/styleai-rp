@@ -851,29 +851,42 @@ Let's start chatting about styling now~`,
         const sections: string[] = [];
 
         if (items.tops && items.tops.length > 0) {
-          const topItems = items.tops.map((item: any) => `- *${item.item_name}:* ${item.description}`).join('\n');
+          const topItems = items.tops.map((item: any) => {
+            const details = [item.style_details, item.wearing_details, item.effect_description].filter(Boolean).join('，');
+            return `- *${item.item_name}:* ${details}`;
+          }).join('\n');
           sections.push(`**Tops:**\n${topItems}`);
         }
 
         if (items.bottoms) {
-          sections.push(`**Bottoms:**\n- *${items.bottoms.item_name}:* ${items.bottoms.description}`);
+          const details = [items.bottoms.style_details, items.bottoms.wearing_details, items.bottoms.effect_description].filter(Boolean).join('，');
+          sections.push(`**Bottoms:**\n- *${items.bottoms.item_name}:* ${details}`);
         }
 
         if (items.shoes) {
-          sections.push(`**Shoes:**\n- *${items.shoes.item_name}:* ${items.shoes.description}`);
+          const details = [items.shoes.style_details, items.shoes.wearing_details, items.shoes.effect_description].filter(Boolean).join('，');
+          sections.push(`**Shoes:**\n- *${items.shoes.item_name}:* ${details}`);
         }
 
         if (items.bag) {
-          sections.push(`**Bag:**\n- *${items.bag.item_name}:* ${items.bag.description}`);
+          const details = [items.bag.style_details, items.bag.wearing_details, items.bag.effect_description].filter(Boolean).join('，');
+          sections.push(`**Bag:**\n- *${items.bag.item_name}:* ${details}`);
         }
 
         if (items.accessories && items.accessories.length > 0) {
-          const accessoryItems = items.accessories.map((item: any) => `- *${item.item_name}:* ${item.description}`).join('\n');
+          const accessoryItems = items.accessories.map((item: any) => {
+            const details = [item.style_details, item.wearing_details, item.effect_description].filter(Boolean).join('，');
+            return `- *${item.item_name}:* ${details}`;
+          }).join('\n');
           sections.push(`**Accessories:**\n${accessoryItems}`);
         }
 
         if (items.hairstyle) {
           sections.push(`**Hairstyle:**\n- *${items.hairstyle.style_name}:* ${items.hairstyle.description}`);
+        }
+
+        if (items.layering_description) {
+          sections.push(`**Layering:**\n${items.layering_description}`);
         }
 
         return sections.join('\n\n');
@@ -916,7 +929,7 @@ Let's start chatting about styling now~`,
       console.log(`[PERF] 💭 Displaying outfit suggestion: ${outfit.outfit_title}`)
 
       const formattedItems = formatItems(outfit.items)
-      const messageContent = `### ${outfit.outfit_title}\n\n${outfit.explanation}\n\n---\n\n${formattedItems}`
+      const messageContent = `### ${outfit.outfit_title}\n\n${outfit.style_summary}\n\n---\n\n${formattedItems}`
 
       const messageId = generateUniqueId();
 
