@@ -24,6 +24,9 @@ async function runImageGenerationPipeline(jobId: string) {
     }
 
     console.log(`[Job ${jobId}] Starting AI style suggestion generation...`);
+    console.log(`[Job ${jobId}] Retrieved job from KV with customPrompt:`, job.customPrompt);
+    console.log(`[Job ${jobId}] CustomPrompt type:`, typeof job.customPrompt);
+    console.log(`[Job ${jobId}] CustomPrompt length:`, job.customPrompt?.length || 0);
 
     // --- FIX: The suggestion generation is now part of the background job ---
     const suggestion = await getStyleSuggestionFromAI({
@@ -142,6 +145,12 @@ export async function POST(request: Request) {
     const occasion = formData.get('occasion') as string | null;
     const generationMode = formData.get('generation_mode') as GenerationMode | null;
     const userProfileString = formData.get('user_profile') as string | null;
+    const customPrompt = formData.get('custom_prompt') as string | null;
+
+    // Debug log for customPrompt
+    console.log('[GENERATION START API] Received customPrompt:', customPrompt);
+    console.log('[GENERATION START API] CustomPrompt type:', typeof customPrompt);
+    console.log('[GENERATION START API] CustomPrompt length:', customPrompt?.length || 0);
 
     let userProfile: OnboardingData | undefined = undefined;
     if (userProfileString) {
@@ -190,11 +199,13 @@ export async function POST(request: Request) {
       occasion,
       generationMode,
       userProfile, // Store user profile
+      customPrompt: customPrompt || undefined, // Store custom prompt, convert null to undefined
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     await kv.hset(jobId, jobData);
     console.log(`[Job ${jobId}] Initial job record created. Status: pending.`);
+    console.log(`[Job ${jobId}] Stored customPrompt:`, jobData.customPrompt);
 
     // Step 2: Fire and forget the background process for the entire pipeline.
     runImageGenerationPipeline(jobId);

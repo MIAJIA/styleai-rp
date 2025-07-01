@@ -108,6 +108,7 @@ type ChatModeData = {
   selfieFile: any
   clothingFile: any
   timestamp: number
+  customPrompt?: string
 }
 
 type ChatStep = "suggestion" | "generating" | "complete" | "error"
@@ -356,6 +357,12 @@ export default function ChatPage() {
   const isGeneratingRef = useRef(false)
   const pollingIntervalIdRef = useRef<NodeJS.Timeout | null>(null)
   const hasProcessedCompletionRef = useRef(false)
+
+  // Define finalPrompt based on chatData
+  const finalPrompt = chatData?.customPrompt || "No custom prompt provided";
+
+  // Log the finalPrompt to verify its content and length
+  console.log('[DEBUG] Final Prompt:', finalPrompt, 'Length:', finalPrompt.length);
 
   // --- START: Image Handling Functions ---
   const handleImageUploadClick = () => {
@@ -1199,6 +1206,12 @@ Let's start chatting about styling now~`,
         console.error("[CHAT DEBUG] Error loading onboarding data:", error);
       }
 
+      // Add custom prompt if provided
+      if (chatData.customPrompt && chatData.customPrompt.trim()) {
+        formData.append("custom_prompt", chatData.customPrompt.trim());
+        console.log("[CHAT DEBUG] Appending custom_prompt to FormData:", chatData.customPrompt.trim());
+      }
+
       if (stylePrompts[chatData.occasion as keyof typeof stylePrompts]) {
         formData.append("style_prompt", stylePrompts[chatData.occasion as keyof typeof stylePrompts])
       } else {
@@ -1299,7 +1312,12 @@ Let's start chatting about styling now~`,
         const job = await response.json();
 
         // --- DEBUG LOG ---
-        console.log("[POLLING] Received job status:", JSON.stringify(job, null, 2));
+        // do not change userProfile, only update the log, do not need to log the fullbodyphoto in userProfile
+        const jobForLog = { ...job };
+        if (jobForLog?.fullBodyPhoto) {
+          jobForLog.fullBodyPhoto = '***';
+        }
+        console.log("[POLLING] Received job status:", JSON.stringify(jobForLog, null, 2));
 
         // Update loading message
         if (job.statusMessage) {
@@ -1603,6 +1621,8 @@ Let's start chatting about styling now~`,
                 <div>chatData: {chatData ? "exists" : "null"}</div>
                 <div>messages.length: {String(messages.length)}</div>
                 <div>pollingError: {pollingError || "none"}</div>
+                <div className="font-semibold text-gray-800 mt-3 mb-2">💡 Final Prompt:</div>
+                <div>{finalPrompt}</div>
               </div>
             )}
           </div>

@@ -7,29 +7,31 @@ import { systemPrompt } from "./prompts";
 import { z } from "zod";
 import zodToJsonSchema from "zod-to-json-schema";
 
-const PROMPT_APPENDIX = ` :
-# Image Generation Information
-Image Format
+const PROMPT_APPENDIX = `#图片格式
+9:16，竖版，全身照，街拍质感`;
 
-9:16 Vertical Composition
-Two-thirds or full-body, model standing naturally or slightly sideways, with clear body proportions;
-Natural small movements (e.g., one hand in pocket/holding a bag), but the body outline must be clearly discernible;
-Street photography texture, suitable for outfit display.
+// `# Image Generation Information
+// Image Format
 
-Lens Suggestions
-The lens should be two-thirds to full-body, avoiding too far or too close to prevent loss of outfit details;
-The model's posture should avoid covering key areas of the outfit (such as waistline, pants shape, neckline);
-Posture suggestions: natural standing, slightly sideways, hand in pocket or lightly holding a bag strap;
-Recommended angle: front with a slight side, lens slightly tilted down to highlight the upper garment structure;
-Keep the clothing naturally draped, avoiding exaggerated movements that affect fabric texture presentation.
+// 9:16 Vertical Composition
+// Two-thirds or full-body, model standing naturally or slightly sideways, with clear body proportions;
+// Natural small movements (e.g., one hand in pocket/holding a bag), but the body outline must be clearly discernible;
+// Street photography texture, suitable for outfit display.
 
-Lighting Suggestions
-Natural light or outdoor soft light, emphasizing real texture and color;
-Avoid strong backlight, silhouette, and other effects that obscure the outfit.
+// Lens Suggestions
+// The lens should be two-thirds to full-body, avoiding too far or too close to prevent loss of outfit details;
+// The model's posture should avoid covering key areas of the outfit (such as waistline, pants shape, neckline);
+// Posture suggestions: natural standing, slightly sideways, hand in pocket or lightly holding a bag strap;
+// Recommended angle: front with a slight side, lens slightly tilted down to highlight the upper garment structure;
+// Keep the clothing naturally draped, avoiding exaggerated movements that affect fabric texture presentation.
 
-Background and Scene
-The background should match the occasion, have a sense of life but not steal the focus, and it is recommended to include some still life elements (such as green plants, chairs, fallen leaves, etc.) to enhance the atmosphere.
-`;
+// Lighting Suggestions
+// Natural light or outdoor soft light, emphasizing real texture and color;
+// Avoid strong backlight, silhouette, and other effects that obscure the outfit.
+
+// Background and Scene
+// The background should match the occasion, have a sense of life but not steal the focus, and it is recommended to include some still life elements (such as green plants, chairs, fallen leaves, etc.) to enhance the atmosphere.
+// `;
 
 // Initialize the OpenAI client
 const openai = new OpenAI({
@@ -91,7 +93,13 @@ export async function getStyleSuggestionFromAI({
     throw new Error("Missing required inputs for style suggestion.");
   }
 
-  console.log("[AI DEBUG] Received userProfile for suggestion:", JSON.stringify(userProfile, null, 2));
+  // do not change userProfile, only update the log, do not need to log the fullbodyphoto in userProfile
+  const userProfileForLog = { ...userProfile };
+  if (userProfileForLog?.fullBodyPhoto) {
+    userProfileForLog.fullBodyPhoto = '***';
+  }
+
+  console.log("[AI DEBUG] Received userProfile for suggestion:", JSON.stringify(userProfileForLog, null, 2));
 
   try {
     // Fetch images and convert to base64 data URLs in parallel
@@ -327,6 +335,7 @@ const buildStylizeRequestBody = (
     image: humanImageBase64,
   };
   console.log("Building stylize request for model:", modelVersion);
+  console.log("!!! send final prompt:", prompt);
 
   switch (modelVersion) {
     case 'kling-v1-5':
@@ -534,6 +543,8 @@ export interface Job {
   statusMessage: string;
   createdAt: string;
   updatedAt: string;
+  userProfile?: any; // User profile data
+  customPrompt?: string; // Custom prompt for stylization
   suggestion?: {
     outfit_suggestion: any; // Single outfit suggestion
     image_prompt: string; // Single image prompt
@@ -558,14 +569,35 @@ export interface Job {
  * ATOMIC STEP: Generates a stylized base image using a specific model.
  * Returns multiple images.
  */
-async function runStylizationMultiple(modelVersion: 'kling-v1-5' | 'kling-v2', suggestion: Job['suggestion'], humanImageUrl: string, humanImageName: string, humanImageType: string): Promise<string[]> {
+async function runStylizationMultiple(modelVersion: 'kling-v1-5' | 'kling-v2', suggestion: Job['suggestion'], humanImageUrl: string, humanImageName: string, humanImageType: string, job?: Job): Promise<string[]> {
   console.log(`[ATOMIC_STEP] Running Stylization with ${modelVersion}...`);
-  if (!suggestion?.image_prompt) {
-    throw new Error("Cannot generate styled image without a 'prompt'.");
+  console.log(`[ATOMIC_STEP] Received job parameter:`, !!job);
+  console.log(`[ATOMIC_STEP] Job customPrompt:`, job?.customPrompt);
+  console.log(`[ATOMIC_STEP] Job customPrompt type:`, typeof job?.customPrompt);
+  console.log(`[ATOMIC_STEP] Job customPrompt length:`, job?.customPrompt?.length || 0);
+
+  let finalPrompt: string;
+
+  // Check if custom prompt is provided and prioritize it
+  if (job?.customPrompt && job.customPrompt.trim()) {
+    finalPrompt = job.customPrompt.trim();
+    console.log(`[ATOMIC_STEP] Using custom prompt: ${finalPrompt}`);
+  } else {
+    // Use default prompt construction logic
+    console.log(`[ATOMIC_STEP] No custom prompt found, using default logic`);
+    if (!suggestion?.image_prompt) {
+      throw new Error("Cannot generate styled image without a 'prompt'.");
+    }
+    const outfitSuggestionString = suggestion.outfit_suggestion ? JSON.stringify(suggestion.outfit_suggestion) : '';
+    finalPrompt = suggestion.image_prompt + ' ' + outfitSuggestionString + PROMPT_APPENDIX;
+    console.log(`[ATOMIC_STEP] Using generated prompt: ${finalPrompt.substring(0, 200)}...`);
   }
 
-  const outfitSuggestionString = suggestion.outfit_suggestion ? JSON.stringify(suggestion.outfit_suggestion) : '';
-  const finalPrompt = suggestion.image_prompt + ' ' + outfitSuggestionString + PROMPT_APPENDIX;
+  // Check prompt length to prevent API errors
+  if (finalPrompt.length > 2500) {
+    console.warn(`[ATOMIC_STEP] Prompt too long (${finalPrompt.length} chars), truncating to 2500 chars`);
+    finalPrompt = finalPrompt.substring(0, 2500);
+  }
 
   // print the final prompt
   console.log(`!!![ATOMIC_STEP] Final prompt: ${finalPrompt}`);
@@ -593,7 +625,8 @@ async function runStylizationParallel(
   prompts: string[],
   humanImageUrl: string,
   humanImageName: string,
-  humanImageType: string
+  humanImageType: string,
+  job?: Job
 ): Promise<string[][]> {
   console.log(`[ATOMIC_STEP] Running Parallel Stylization with ${modelVersion} for ${prompts.length} prompts...`);
 
@@ -601,7 +634,7 @@ async function runStylizationParallel(
   const allPromises = prompts.map((prompt, index) => {
     console.log(`[PARALLEL] Starting stylization ${index + 1}/${prompts.length} for prompt: ${prompt.substring(0, 50)}...`);
     const suggestion: Job['suggestion'] = { image_prompt: prompt, outfit_suggestion: '' };
-    return runStylizationMultiple(modelVersion, suggestion, humanImageUrl, humanImageName, humanImageType);
+    return runStylizationMultiple(modelVersion, suggestion, humanImageUrl, humanImageName, humanImageType, job);
   });
 
   const results = await Promise.all(allPromises);
@@ -618,9 +651,9 @@ async function runStylizationParallel(
  * ATOMIC STEP: Generates stylized base image using a specific model.
  * Legacy version that returns only the first image for backward compatibility.
  */
-async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string): Promise<string> {
+async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string, job?: Job): Promise<string> {
   const suggestion: Job['suggestion'] = { image_prompt: prompt, outfit_suggestion: '' };
-  const styledImageUrls = await runStylizationMultiple(modelVersion, suggestion, humanImageUrl, humanImageName, humanImageType);
+  const styledImageUrls = await runStylizationMultiple(modelVersion, suggestion, humanImageUrl, humanImageName, humanImageType, job);
   return styledImageUrls[0];
 }
 
@@ -761,7 +794,8 @@ export async function executeSimpleScenePipeline(job: Job): Promise<string[]> {
     job.suggestion,
     job.humanImage.url,
     job.humanImage.name,
-    job.humanImage.type
+    job.humanImage.type,
+    job
   );
 
   await kv.hset(job.jobId, {
@@ -826,7 +860,8 @@ export async function executeAdvancedScenePipeline(job: Job): Promise<string[]> 
     job.suggestion,
     job.humanImage.url,
     job.humanImage.name,
-    job.humanImage.type
+    job.humanImage.type,
+    job
   );
 
   await kv.hset(job.jobId, {
@@ -906,7 +941,8 @@ export async function executeSimpleScenePipelineV2(job: Job): Promise<string[]> 
     job.suggestion,
     job.humanImage.url,
     job.humanImage.name,
-    job.humanImage.type
+    job.humanImage.type,
+    job
   );
 
   // Update job with intermediate results

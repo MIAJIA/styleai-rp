@@ -1,0 +1,161 @@
+
+你是一个专业时尚造型师，擅长根据用户设定的风格、场景、季节和身材特点，设计具有画面感的完整穿搭建议。
+
+你的目标是生成一份 **结构清晰、语言优雅、强调穿搭细节、具有图像引导性的穿搭 prompt**，用于 Kling 或其他 AI 图像生成工具。
+
+请严格按照以下格式输出，内容需包括每一个穿搭部位的具体单品、色彩、材质、款式细节、风格效果，以及穿法说明。
+
+---
+**上装**
+- ...
+**下装**
+- ...
+**鞋**
+- ...
+**包**
+- ...
+**配饰**
+- ...
+**发型建议**
+- ...
+---
+
+**风格要求**：
+1. 语言风格需细致优雅，有品味，有画面感；
+2. 每个单品用 **“{颜色+材质+品类名称} + 款式细节 + 具体上身穿法细节 ”** 的结构，写明：
+  - 颜色、材质、剪裁或设计细节（如：水蓝色棉质长款马甲， 黑色硬挺材质收腰直筒裤， 乳白色铆钉皮质帆布鞋）；
+  - 具体**具体上身穿法细节**（如：“袖口挽到肘部”，“衬衫下摆只塞一侧”，“领口微敞露出锁骨”， “不扣扣子，露出内搭”等）；
+  - 可选加上此穿法对风格/身形的影响说明；
+  - 每项内容不宜太长，一句话为佳，但必须“有画面感”。
+3. 叠穿关系表达要求
+  - 如出现两件或以上的上装（如衬衫 + 马甲 / 打底 + 风衣）或其他层叠搭配：
+    - 明确主次穿法顺序（哪件是内搭、哪件是外层）；
+    - 描述细节露出部位（如领口、袖口、衣摆等）；
+    - 强调两者在层次营造、风格氛围或结构塑形上的作用；
+  - 示例参考：
+    - “白衬衣作为内搭，袖口挽起、下摆自然露出，在V领马甲领口与下摆处形成视觉露出层次，营造复古书卷气。”
+
+========================================
+[API_STATUS] Fetched job 16edeebe-5a03-466c-aad2-6a69ee54754c: {
+  "generationMode": "simple-scene",
+  "userProfile": {
+   "fullBodyPhoto": []
+    "bodyAdvantages": [
+      "Long legs",
+      "Good proportions"
+    ],
+    "bodyChallenges": [
+      "Narrow shoulders"
+    ],
+    "customAdvantages": "",
+    "customChallenges": "",
+    "aiAnalysis": {
+      "bodyType": "Rectangle",
+      "faceShape": "Oval",
+      "styleInitialSense": "Casual beach style with a relaxed and approachable vibe.",
+      "boneStructure": "Delicate",
+      "bodyAdvantages": [
+        "Long legs"
+      ],
+      "face_style": {
+        "type_name": "vitality_girl_face",
+        "feature_keywords": [
+          "Pure",
+          "Approachable"
+        ],
+        "style_recommendation": [
+          "Innocent & Sultry",
+          "Girl-Next-Door"
+        ]
+      }
+    },
+    "stylePreferences": [
+      "cool",
+      "minimalist"
+    ],
+    "customStyle": "",
+    "styleProfile": {
+      "structureCombination": "Highlighting long legs",
+      "styleLabels": [
+        "Cool and fashionable",
+        "Clean and minimal"
+      ],
+      "recommendedKeywords": [
+        "Crop top",
+        "Simple lines",
+        "Neutral tones"
+      ]
+    }
+  },
+
+  "processImages": {// todo !!!!! 这里有重复的field
+    "styledImages": [
+      "https://p2-kling.klingai.com/bs2/upload-ylab-stunt/4a1ca726401acc30fb13389072a09845.png?x-kcdn-pid=112452"
+    ],
+    "styledImage": "https://p2-kling.klingai.com/bs2/upload-ylab-stunt/4a1ca726401acc30fb13389072a09845.png?x-kcdn-pid=112452",
+    "tryOnImages": [
+      "https://p2-kling.klingai.com/bs2/upload-ylab-stunt/c0acd2564192efd43cca6ca5038a2ca9.png?x-kcdn-pid=112452"
+    ],
+    "tryOnImage": "https://p2-kling.klingai.com/bs2/upload-ylab-stunt/c0acd2564192efd43cca6ca5038a2ca9.png?x-kcdn-pid=112452"
+  },
+  "jobId": "16edeebe-5a03-466c-aad2-6a69ee54754c",
+  "status": "completed",
+  "garmentImage": {
+    "url": "https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/user_clothing-lp9o3yPZ0LYPaTniGLkHdeVIraBKcr.jpg",
+    "type": "image/png",
+    "name": "user_clothing.jpg"
+  },
+  "humanImage": {
+    "url": "https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/user_selfie-SgNWjvLMipSPswLR7O3phJ17gw6M2C.jpg",
+    "type": "image/jpeg",
+    "name": "user_selfie.jpg"
+  },
+  "occasion": "coffee-shop",
+  "updatedAt": "2025-06-30T18:51:24.981Z",
+  "suggestion": {
+    "outfit_suggestion": {
+      "outfit_title": "Effortless Coffee Chic",
+      "items": {
+        "tops": [
+          {
+            "item_name": "White fitted t-shirt",
+            "description": "A minimalist t-shirt tucked in to keep the look clean and highlight the waist."
+          },
+          {
+            "item_name": "Black Leather Jacket",
+            "description": "The essential item, providing edge and structure to balance narrow shoulders."
+          }
+        ],
+        "bottoms": {
+          "item_name": "High-waisted light denim jeans",
+          "description": "These elongate the legs and provide a casual yet polished look, perfect for a coffee shop."
+        },
+        "shoes": {
+          "item_name": "White sneakers",
+          "description": "Comfortable and stylish, matching the jacket to maintain a balanced look."
+        },
+        "bag": {
+          "item_name": "Small crossbody bag",
+          "description": "Functional and chic, in a neutral tone to keep the focus on the outfit."
+        },
+        "accessories": [
+          {
+            "item_name": "Silver hoop earrings",
+            "description": "Add a touch of elegance without overwhelming the casual vibe."
+          },
+          {
+            "item_name": "Simple black belt",
+            "description": "Defines the waist and adds a cohesive touch with the jacket."
+          }
+        ],
+        "hairstyle": {
+          "style_name": "Loose waves",
+          "description": "Enhances the natural, relaxed vibe and frames the face beautifully."
+        }
+      },
+      "explanation": "This 'Effortless Coffee Chic' outfit perfectly highlights your long legs and good proportions while addressing the narrow shoulder challenge. The black leather jacket is a bold choice that adds structure, helping to broaden your shoulders and balance your silhouette. Paired with a white fitted t-shirt and high-waisted denim jeans, the look stays minimal yet stylish, making it ideal for a coffee shop outing. White sneakers maintain the vibe casual and chic, while a small crossbody bag keeps it functional. Silver hoop earrings add a subtle elegance, and loose waves in your hair enhance the relaxed, approachable style you carry so well. Though the jacket was a challenge, it works here by adding that cool, fashionable edge you're drawn to."
+    },
+    "image_prompt": "A full-body fashion shot of a person in a coffee shop wearing a black leather jacket, white t-shirt, light denim jeans, and white sneakers, with loose waves hairstyle. The mood is cool and relaxed, with soft natural lighting and a minimal, modern café background."
+  },
+  "createdAt": "2025-06-30T18:49:51.293Z"
+}

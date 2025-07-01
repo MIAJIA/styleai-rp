@@ -126,6 +126,7 @@ export default function HomePage() {
   const [isPortraitSheetOpen, setIsPortraitSheetOpen] = useState(false);
   const [occasion, setOccasion] = useState("fashion-magazine");
   const [generationMode, setGenerationMode] = useState<"tryon-only" | "simple-scene" | "advanced-scene">("simple-scene");
+  const [customPrompt, setCustomPrompt] = useState<string>("");
   const router = useRouter();
 
   const hasRequiredImages = Boolean(selfiePreview && clothingPreview);
@@ -198,7 +199,7 @@ export default function HomePage() {
     }
   };
 
-  // Simplified generation handler - directly go to Chat Experience
+  // Modify handleStartGeneration to use customPrompt if provided
   const handleStartGeneration = () => {
     if (!hasRequiredImages) {
       alert("Please select both a photo and garment to continue.");
@@ -222,7 +223,8 @@ export default function HomePage() {
         type: clothingFile.type,
         size: clothingFile.size
       } : null,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      customPrompt // Add custom prompt to chat data
     };
 
     console.log('[MAIN DEBUG] Storing chat data to sessionStorage:', chatData);
@@ -335,6 +337,20 @@ export default function HomePage() {
                   onClick={() => handleGenerationModeSelect('advanced-scene')}
                 />
               </div>
+            </div>
+
+            {/* Add Step 5 for custom prompt input */}
+            <div className="space-y-3">
+              <h3 className="text-base font-semibold tracking-tight text-center">
+                <span className="text-primary font-bold">Step 5 (Optional):</span> Custom Stylization Prompt
+              </h3>
+              <textarea
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                placeholder="Enter custom prompt for stylization..."
+                className="w-full p-2 border border-gray-300 rounded-md"
+                rows={3}
+              />
             </div>
           </div>
 
