@@ -51,7 +51,8 @@ const KLING_ACCESS_KEY = process.env.KLING_AI_ACCESS_KEY;
 const KLING_SECRET_KEY = process.env.KLING_AI_SECRET_KEY;
 
 // Corrected API endpoints based on the official documentation
-const KLING_API_BASE_URL = "https://api-beijing.klingai.com";
+// const KLING_API_BASE_URL = "https://api-beijing.klingai.com";
+const KLING_API_BASE_URL = "https://api-singapore.klingai.com";
 const VIRTUAL_TRYON_SUBMIT_PATH = "/v1/images/kolors-virtual-try-on";
 const VIRTUAL_TRYON_STATUS_PATH = "/v1/images/kolors-virtual-try-on/"; // Note the trailing slash for appending task_id
 
