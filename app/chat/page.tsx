@@ -491,6 +491,9 @@ export default function ChatPage() {
       if (storedData) {
         const parsedData = JSON.parse(storedData)
         console.log("[CHAT DEBUG] Parsed chat data:", parsedData)
+        console.log("[CHAT DEBUG] Parsed customPrompt:", parsedData.customPrompt)
+        console.log("[CHAT DEBUG] CustomPrompt type:", typeof parsedData.customPrompt)
+        console.log("[CHAT DEBUG] CustomPrompt length:", parsedData.customPrompt?.length || 0)
         setChatData(parsedData)
 
         // Initialize with unified welcome message
@@ -1149,6 +1152,12 @@ Let's start chatting about styling now~`,
       })
       return
     }
+
+    // Debug chatData and customPrompt
+    console.log("[CHAT DEBUG] Current chatData:", chatData)
+    console.log("[CHAT DEBUG] Current customPrompt:", chatData.customPrompt)
+    console.log("[CHAT DEBUG] CustomPrompt type:", typeof chatData.customPrompt)
+    console.log("[CHAT DEBUG] CustomPrompt length:", chatData.customPrompt?.length || 0)
 
     setIsGenerating(true)
     setCurrentStep("generating")

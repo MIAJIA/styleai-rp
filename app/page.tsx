@@ -206,6 +206,11 @@ export default function HomePage() {
       return;
     }
 
+    // Debug customPrompt before storing
+    console.log('[MAIN DEBUG] Current customPrompt state:', customPrompt);
+    console.log('[MAIN DEBUG] CustomPrompt type:', typeof customPrompt);
+    console.log('[MAIN DEBUG] CustomPrompt length:', customPrompt?.length || 0);
+
     // Store current selection data to sessionStorage for Chat page to use
     const chatData = {
       selfiePreview,
@@ -228,6 +233,7 @@ export default function HomePage() {
     };
 
     console.log('[MAIN DEBUG] Storing chat data to sessionStorage:', chatData);
+    console.log('[MAIN DEBUG] ChatData customPrompt:', chatData.customPrompt);
     sessionStorage.setItem('chatModeData', JSON.stringify(chatData));
 
     // Navigate to Chat page
