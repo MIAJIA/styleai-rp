@@ -129,9 +129,29 @@ export async function getStyleSuggestionFromAI({
     // Build the user prompt following the structured format defined in systemPrompt.
     const userProfileSection = userProfile
       ? `# User Profile\n\`\`\`json\n${JSON.stringify(userProfile, null, 2)}\n\`\`\``
-      : "";
+      : "# User Profile\nNo user profile provided.";
 
-    const userMessageText = `Please provide styling suggestions based on the following information. My photo is the first image, and the garment is the second.\n\n${userProfileSection}\n\n# Essential Item\nThe garment in the second attached image is the "Essential Item".\n\n# Occasion\n${occasion}`;
+    // Build essential item details from the garment image context
+    const essentialItemSection = `# Essential Item
+The garment in the second attached image is the "Essential Item". This is the clothing piece that must be incorporated into the outfit suggestion.`;
+
+    // Build occasion details
+    const occasionSection = `# Occasion
+${occasion}`;
+
+    // Build style preference details (can be enhanced later with user preferences)
+    const stylePreferenceSection = `# Style Preference
+Create a stylish and flattering outfit that incorporates the essential item for the specified occasion. Focus on creating a cohesive look that enhances the user's features and suits the context.`;
+
+    const userMessageText = `Please provide styling suggestions based on the following information. My photo is the first image, and the garment is the second.
+
+${userProfileSection}
+
+${essentialItemSection}
+
+${occasionSection}
+
+${stylePreferenceSection}`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -573,10 +593,7 @@ export interface Job {
  */
 async function runStylizationMultiple(modelVersion: 'kling-v1-5' | 'kling-v2', suggestion: Job['suggestion'], humanImageUrl: string, humanImageName: string, humanImageType: string, job?: Job): Promise<string[]> {
   console.log(`[ATOMIC_STEP] Running Stylization with ${modelVersion}...`);
-  console.log(`[ATOMIC_STEP] Received job parameter:`, !!job);
   console.log(`[ATOMIC_STEP] Job customPrompt:`, job?.customPrompt);
-  console.log(`[ATOMIC_STEP] Job customPrompt type:`, typeof job?.customPrompt);
-  console.log(`[ATOMIC_STEP] Job customPrompt length:`, job?.customPrompt?.length || 0);
 
   let finalPrompt: string;
 
