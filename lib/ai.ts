@@ -3,12 +3,11 @@ import * as jwt from "jsonwebtoken";
 import { put } from "@vercel/blob";
 import { kv } from "@vercel/kv";
 import { type OnboardingData } from "@/lib/onboarding-storage";
-import { systemPrompt, IMAGE_GENERATION_MODEL } from "./prompts";
+import { systemPrompt, IMAGE_GENERATION_MODEL, IMAGE_FORMAT_DESCRIPTION } from "./prompts";
 import { z } from "zod";
 import zodToJsonSchema from "zod-to-json-schema";
 
-const PROMPT_APPENDIX = `#图片格式
-9:16，竖版，全身照，街拍质感`;
+
 
 // `# Image Generation Information
 // Image Format
@@ -69,7 +68,8 @@ const outfitSuggestionSchema = z.object({
 
 const styleSuggestionsSchema = z.object({
   outfit_suggestion: outfitSuggestionSchema.describe("A single complete outfit suggestion."),
-  image_prompt: z.string().describe("A creative, English-only prompt for AI image generator to create visual representation of the 视觉化穿搭建议的背景与场景，图片的气质描述 based on user profile and target scene."),
+  image_prompt: z.string().describe(
+    "A vivid, English-only visual prompt for an AI image generator. It should describe the user wearing the outfit in the intended scene, including outfit details, setting, atmosphere, and overall mood. This prompt will be passed to Midjourney or similar models to produce a full-body fashion image.")
 });
 
 // Convert Zod schema to JSON schema for the tool
@@ -135,15 +135,31 @@ export async function getStyleSuggestionFromAI({
 
     // Build essential item details from the garment image context
     const essentialItemSection = `# Essential Item
-The garment in the second attached image is the "Essential Item". This is the clothing piece that must be incorporated into the outfit suggestion.`;
+The garment in the second attached image is the "Essential Item" that must be incorporated into the outfit suggestion.
+
+**Item Analysis:**
+- This is the core piece that the outfit must be built around
+- Please analyze the garment's style, color, material, and formality level from the image
+- Consider how this item can be styled for the specified occasion
+- If this item seems challenging for the occasion, acknowledge it and suggest styling solutions`;
 
     // Build occasion details
     const occasionSection = `# Occasion
-${occasion}`;
+${occasion}
+
+**Context:** This occasion determines the appropriate style level, formality, and practical considerations for the outfit.`;
 
     // Build style preference details (can be enhanced later with user preferences)
     const stylePreferenceSection = `# Style Preference
-Create a stylish and flattering outfit that incorporates the essential item for the specified occasion. Focus on creating a cohesive look that enhances the user's features and suits the context.`;
+**Styling Goals:**
+- Create a flattering outfit that enhances the user's natural features
+- Incorporate the essential item in a way that suits the occasion
+- Focus on proportions that complement the user's body shape
+- Suggest styling techniques that boost confidence
+- Balance trendy elements with timeless appeal
+- Consider practical aspects like comfort and movement
+
+**Approach:** Build a complete, cohesive look that makes the user feel confident and appropriately dressed for the occasion.`;
 
     const userMessageText = `Please provide styling suggestions based on the following information. My photo is the first image, and the garment is the second.
 
@@ -611,7 +627,7 @@ async function runStylizationMultiple(modelVersion: 'kling-v1-5' | 'kling-v2', s
       throw new Error("Cannot generate styled image without a 'prompt'.");
     }
     const outfitSuggestionString = suggestion.outfit_suggestion ? JSON.stringify(suggestion.outfit_suggestion) : '';
-    finalPrompt = suggestion.image_prompt + ' ' + outfitSuggestionString + PROMPT_APPENDIX;
+    finalPrompt = suggestion.image_prompt + ' ' + IMAGE_FORMAT_DESCRIPTION;
     console.log(`[ATOMIC_STEP] Using generated prompt: ${finalPrompt.substring(0, 200)}...`);
   }
 
