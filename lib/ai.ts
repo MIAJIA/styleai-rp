@@ -153,10 +153,6 @@ The garment in the second attached image is the "Essential Item" that must be in
 
       // Add user-specific styling guidance if profile exists
       if (userProfile) {
-        const genderGuidance = userProfile.gender
-          ? `Design for ${userProfile.gender === 'male' ? 'masculine' : userProfile.gender === 'female' ? 'feminine' : 'gender-neutral'} styling preferences.`
-          : '';
-
         const bodyTypeGuidance = userProfile.aiAnalysis?.bodyType
           ? `Focus on silhouettes that flatter a ${userProfile.aiAnalysis.bodyType} body type.`
           : '';
@@ -165,7 +161,7 @@ The garment in the second attached image is the "Essential Item" that must be in
           ? `Align with the user's style preferences: ${userProfile.stylePreferences.join(', ')}.`
           : '';
 
-        return `${basePreferences} ${genderGuidance} ${bodyTypeGuidance} ${stylePersonalityGuidance} Emphasize creating a cohesive look that enhances the user's natural features and builds confidence.`;
+        return `${basePreferences} ${bodyTypeGuidance} ${stylePersonalityGuidance} Emphasize creating a cohesive look that enhances the user's natural features and builds confidence.`;
       }
 
       return `${basePreferences} Focus on creating a cohesive look that enhances the user's features and suits the context.`;
@@ -176,13 +172,21 @@ ${getStylePreferences()}`;
 
     const userMessageText = `Please provide styling suggestions based on the following information. My photo is the first image, and the garment is the second.
 
+**IMPORTANT: Please first analyze the person in the first image to determine their gender/presentation style, then design the outfit accordingly for masculine or feminine styling as appropriate.**
+
 ${userProfileSection}
 
 ${essentialItemSection}
 
 ${occasionSection}
 
-${stylePreferenceSection}`;
+${stylePreferenceSection}
+
+**Styling Instructions:**
+- Analyze the person's gender presentation from the first image
+- Design the complete outfit to match their masculine or feminine style preferences
+- Ensure all clothing items, accessories, and styling choices are appropriate for their gender presentation
+- The outfit should feel natural and authentic to how they present themselves`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
