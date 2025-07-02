@@ -158,10 +158,19 @@ The garment in the second attached image is the "Essential Item" that must be in
           : '';
 
         const stylePersonalityGuidance = userProfile.stylePreferences?.length
-          ? `Align with the user's style preferences: ${userProfile.stylePreferences.join(', ')}.`
+          ? `Align with the user's style preferences: ${userProfile.stylePreferences.join(', ')}`
           : '';
 
-        return `${basePreferences} ${bodyTypeGuidance} ${stylePersonalityGuidance} Emphasize creating a cohesive look that enhances the user's natural features and builds confidence.`;
+        const customStyleGuidance = userProfile.customStyle && userProfile.customStyle.trim()
+          ? `user's style notes: ${userProfile.customStyle.trim()}`
+          : '';
+
+        // Combine style guidance into one sentence
+        const combinedStyleGuidance = [stylePersonalityGuidance, customStyleGuidance]
+          .filter(Boolean)
+          .join(' and ') + (stylePersonalityGuidance || customStyleGuidance ? '.' : '');
+
+        return `${basePreferences} ${bodyTypeGuidance} ${combinedStyleGuidance} Emphasize creating a cohesive look that enhances the user's natural features and builds confidence.`;
       }
 
       return `${basePreferences} Focus on creating a cohesive look that enhances the user's features and suits the context.`;
