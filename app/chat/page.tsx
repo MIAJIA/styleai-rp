@@ -193,6 +193,36 @@ function ChatBubble({
 
   console.log(`[ChatBubble] Rendering message with sessionId: ${sessionId}, hasImage: ${!!message.imageUrl}`);
 
+  // 🔍 DEBUG: Add detailed logging for cancel button logic
+  if (message.imageUrl && isAI) {
+    console.log(`[ChatBubble DEBUG] Image message details:`, {
+      messageId: message.id,
+      hasImageUrl: !!message.imageUrl,
+      messageType: message.type,
+      isStyledImage: message.metadata?.isStyledImage,
+      canCancel: message.metadata?.canCancel,
+      hasOnCancel: !!onCancel,
+      metadata: message.metadata
+    });
+
+    if (message.metadata?.isStyledImage) {
+      console.log(`[ChatBubble DEBUG] ✅ This is a styled image!`);
+      if (message.metadata?.canCancel) {
+        console.log(`[ChatBubble DEBUG] ✅ Can cancel is true!`);
+        if (onCancel) {
+          console.log(`[ChatBubble DEBUG] ✅ onCancel function is provided!`);
+          console.log(`[ChatBubble DEBUG] 🎯 CANCEL BUTTON SHOULD BE VISIBLE!`);
+        } else {
+          console.log(`[ChatBubble DEBUG] ❌ onCancel function is missing!`);
+        }
+      } else {
+        console.log(`[ChatBubble DEBUG] ❌ canCancel is false or undefined`);
+      }
+    } else {
+      console.log(`[ChatBubble DEBUG] ❌ Not a styled image`);
+    }
+  }
+
   // Debug logging for product messages
   if (message.type === "products" || (message.products && message.products.length > 0)) {
     console.log("[ChatBubble] Rendering message with products:", {
@@ -267,22 +297,41 @@ function ChatBubble({
                 )}
 
                 {/* Cancel button for styled images */}
-                {isAI && message.imageUrl && message.metadata?.isStyledImage && message.metadata?.canCancel && onCancel && (
-                  <div className="absolute bottom-2 left-2 right-2">
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCancel();
-                      }}
-                      variant="destructive"
-                      size="sm"
-                      className="w-full bg-red-500 hover:bg-red-600 text-white text-xs py-1 px-2 rounded-md shadow-lg opacity-90 hover:opacity-100 transition-opacity duration-200"
-                    >
-                      <X className="w-3 h-3 mr-1" />
-                      不喜欢这套搭配
-                    </Button>
-                  </div>
-                )}
+                {(() => {
+                  const shouldShowButton = isAI && message.imageUrl && message.metadata?.isStyledImage && message.metadata?.canCancel && onCancel;
+                  console.log(`[ChatBubble RENDER] Cancel button conditions:`, {
+                    isAI,
+                    hasImageUrl: !!message.imageUrl,
+                    isStyledImage: message.metadata?.isStyledImage,
+                    canCancel: message.metadata?.canCancel,
+                    hasOnCancel: !!onCancel,
+                    shouldShowButton
+                  });
+
+                  if (shouldShowButton) {
+                    console.log(`[ChatBubble RENDER] 🎯 RENDERING CANCEL BUTTON!`);
+                    return (
+                      <div className="absolute bottom-2 left-2 right-2">
+                        <Button
+                          onClick={(e) => {
+                            console.log(`[ChatBubble] Cancel button clicked!`);
+                            e.stopPropagation();
+                            onCancel();
+                          }}
+                          variant="destructive"
+                          size="sm"
+                          className="w-full bg-red-500 hover:bg-red-600 text-white text-xs py-1 px-2 rounded-md shadow-lg opacity-90 hover:opacity-100 transition-opacity duration-200"
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          不喜欢这套搭配
+                        </Button>
+                      </div>
+                    );
+                  } else {
+                    console.log(`[ChatBubble RENDER] ❌ Cancel button NOT rendered`);
+                    return null;
+                  }
+                })()}
               </div>
             </div>
           )}
@@ -389,6 +438,11 @@ export default function ChatPage() {
 
   // Handle cancellation of generation
   const handleCancelGeneration = async () => {
+    console.log(`[CANCEL DEBUG] 🚀 handleCancelGeneration called`);
+    console.log(`[CANCEL DEBUG] - Current jobId: ${jobId}`);
+    console.log(`[CANCEL DEBUG] - Current isGenerating: ${isGenerating}`);
+    console.log(`[CANCEL DEBUG] - Current currentStep: ${currentStep}`);
+
     if (!jobId) {
       console.warn('[CANCEL] No jobId available for cancellation');
       return;
@@ -405,8 +459,11 @@ export default function ChatPage() {
         body: JSON.stringify({ jobId }),
       });
 
+      console.log(`[CANCEL DEBUG] Cancel API response status: ${response.status}`);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error(`[CANCEL DEBUG] Cancel API error:`, errorData);
         throw new Error(errorData.error || 'Failed to cancel job');
       }
 
@@ -417,6 +474,8 @@ export default function ChatPage() {
       setIsGenerating(false);
       setGenerationStatusText(null);
       setCurrentStep("complete");
+
+      console.log(`[CANCEL DEBUG] UI state updated after cancellation`);
 
       // Add a message to inform user about cancellation
       addMessage({
@@ -438,8 +497,11 @@ export default function ChatPage() {
         },
       });
 
+      console.log(`[CANCEL DEBUG] Cancellation message added`);
+
       // Clear any polling intervals
       if (pollingIntervalId) {
+        console.log(`[CANCEL DEBUG] Clearing polling interval`);
         clearInterval(pollingIntervalId);
         setPollingIntervalId(null);
       }
@@ -1432,6 +1494,13 @@ Let's start chatting about styling now~`,
         // Check for intermediate styled images
         if (job.status === 'stylization_completed' && job.processImages?.styledImages?.length > 0 && !hasDisplayedIntermediateImages.current) {
           console.log("[POLLING] Stylization completed. Displaying intermediate images.");
+          console.log(`[POLLING DEBUG] Styled images found:`, {
+            status: job.status,
+            styledImagesCount: job.processImages.styledImages.length,
+            styledImages: job.processImages.styledImages,
+            hasDisplayedIntermediateImages: hasDisplayedIntermediateImages.current
+          });
+
           hasDisplayedIntermediateImages.current = true; // Prevent re-rendering
 
           // Add a message indicating that these are intermediate results
@@ -1443,9 +1512,9 @@ Let's start chatting about styling now~`,
 
           // Display the styled images with cancel option
           job.processImages.styledImages.forEach((imageUrl: string, index: number) => {
-            addMessage({
-              role: 'ai',
-              type: 'image',
+            const messageData = {
+              role: 'ai' as const,
+              type: 'image' as const,
               imageUrl: imageUrl,
               content: index === 0 ? "场景预览 - 如果不喜欢可以取消" : `场景预览 ${index + 1}`,
               metadata: {
@@ -1453,8 +1522,19 @@ Let's start chatting about styling now~`,
                 canCancel: index === 0, // Only show cancel button on first image
                 imageIndex: index,
               }
+            };
+
+            console.log(`[POLLING DEBUG] Adding styled image ${index + 1}:`, {
+              imageUrl: imageUrl.substring(0, 100) + '...',
+              content: messageData.content,
+              metadata: messageData.metadata,
+              isFirstImage: index === 0
             });
+
+            addMessage(messageData);
           });
+
+          console.log(`[POLLING DEBUG] ✅ All ${job.processImages.styledImages.length} styled images added to messages`);
         }
 
         if (job.status === 'suggestion_generated' && !processedStatusesRef.current.has('suggestion_generated')) {
@@ -1611,15 +1691,27 @@ Let's start chatting about styling now~`,
           </div>
         ) : (
           <div className="max-w-2xl mx-auto">
-            {messages.map((message) => (
-              <ChatBubble
-                key={message.id}
-                message={message}
-                onImageClick={handleImageClick}
-                sessionId={sessionId}
-                onCancel={message.metadata?.canCancel ? handleCancelGeneration : undefined}
-              />
-            ))}
+            {messages.map((message) => {
+              const shouldPassOnCancel = message.metadata?.canCancel;
+              console.log(`[MAIN RENDER] Message ${message.id} rendering:`, {
+                messageType: message.type,
+                hasImageUrl: !!message.imageUrl,
+                isStyledImage: message.metadata?.isStyledImage,
+                canCancel: message.metadata?.canCancel,
+                shouldPassOnCancel,
+                willPassOnCancel: shouldPassOnCancel ? 'handleCancelGeneration' : 'undefined'
+              });
+
+              return (
+                <ChatBubble
+                  key={message.id}
+                  message={message}
+                  onImageClick={handleImageClick}
+                  sessionId={sessionId}
+                  onCancel={shouldPassOnCancel ? handleCancelGeneration : undefined}
+                />
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
         )}

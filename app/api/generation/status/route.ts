@@ -21,6 +21,19 @@ export async function GET(request: Request) {
     // Log the entire job object to see what's being fetched from KV
     console.log(`[API_STATUS] Fetched job ${jobId}:`, JSON.stringify(job.jobId, null, 2));
 
+    // 🔍 DEBUG: Add detailed logging for styled images
+    if (job.status === 'stylization_completed' && job.processImages?.styledImages) {
+      console.log(`[API_STATUS DEBUG] ✅ Job has stylization_completed status`);
+      console.log(`[API_STATUS DEBUG] - Styled images count: ${job.processImages.styledImages.length}`);
+      console.log(`[API_STATUS DEBUG] - Styled images:`, job.processImages.styledImages.map(url => url.substring(0, 100) + '...'));
+      console.log(`[API_STATUS DEBUG] - Full processImages:`, job.processImages);
+    } else {
+      console.log(`[API_STATUS DEBUG] Job status: ${job.status}, has processImages: ${!!job.processImages}`);
+      if (job.processImages) {
+        console.log(`[API_STATUS DEBUG] processImages keys:`, Object.keys(job.processImages));
+      }
+    }
+
     // The job's status is continuously updated by the background process.
     // This endpoint simply returns the current state of the job from the KV store.
     return NextResponse.json(job);

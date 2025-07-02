@@ -872,6 +872,15 @@ export async function executeSimpleScenePipeline(job: Job): Promise<string[]> {
     }
   });
 
+  console.log(`[PIPELINE DEBUG] ✅ Stylization completed for job ${job.jobId}:`);
+  console.log(`[PIPELINE DEBUG] - Status updated to: stylization_completed`);
+  console.log(`[PIPELINE DEBUG] - Styled images count: ${styledImageUrls.length}`);
+  console.log(`[PIPELINE DEBUG] - Styled image URLs:`, styledImageUrls.map(url => url.substring(0, 100) + '...'));
+  console.log(`[PIPELINE DEBUG] - Process images object:`, {
+    styledImages: styledImageUrls,
+    styledImage: styledImageUrls[0]
+  });
+
   // Check if job was cancelled after stylization
   const updatedJob = await kv.hgetall<Job>(job.jobId);
   if (updatedJob?.cancelled) {
@@ -947,6 +956,15 @@ export async function executeAdvancedScenePipeline(job: Job): Promise<string[]> 
       styledImages: styledImageUrls,
       styledImage: styledImageUrls[0] // Keep for backward compatibility
     }
+  });
+
+  console.log(`[ADVANCED PIPELINE DEBUG] ✅ Stylization completed for job ${job.jobId}:`);
+  console.log(`[ADVANCED PIPELINE DEBUG] - Status updated to: stylization_completed`);
+  console.log(`[ADVANCED PIPELINE DEBUG] - Styled images count: ${styledImageUrls.length}`);
+  console.log(`[ADVANCED PIPELINE DEBUG] - Styled image URLs:`, styledImageUrls.map(url => url.substring(0, 100) + '...'));
+  console.log(`[ADVANCED PIPELINE DEBUG] - Process images object:`, {
+    styledImages: styledImageUrls,
+    styledImage: styledImageUrls[0]
   });
 
   // Check if job was cancelled after stylization
