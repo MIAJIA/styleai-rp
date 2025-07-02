@@ -13,9 +13,6 @@ export interface OnboardingData {
     facialFeatures?: string;
   };
 
-  // Basic Demographics
-  gender?: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
-
   // Step 1: Body Analysis
   bodyAdvantages?: string[];
   bodyChallenges?: string[];

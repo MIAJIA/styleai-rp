@@ -13,13 +13,12 @@ import {
 } from "@/lib/onboarding-storage";
 
 // Import step components
-import GenderSelectionStep from "../components/onboarding/gender-selection-step";
 import PhotoUploadStep from "../components/onboarding/photo-upload-step";
 import BodyAnalysisStep from "../components/onboarding/body-analysis-step";
 import StylePreferenceStep from "../components/onboarding/style-preference-step";
 import StyleSummaryStep from "../components/onboarding/style-summary-step";
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
@@ -92,7 +91,7 @@ export default function OnboardingPage() {
     switch (currentStep) {
       case 0:
         return (
-          <GenderSelectionStep
+          <PhotoUploadStep
             data={onboardingData}
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
@@ -100,7 +99,7 @@ export default function OnboardingPage() {
         );
       case 1:
         return (
-          <PhotoUploadStep
+          <BodyAnalysisStep
             data={onboardingData}
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
@@ -108,21 +107,13 @@ export default function OnboardingPage() {
         );
       case 2:
         return (
-          <BodyAnalysisStep
-            data={onboardingData}
-            onUpdate={updateOnboardingData}
-            onValidationChange={handleValidationChange}
-          />
-        );
-      case 3:
-        return (
           <StylePreferenceStep
             data={onboardingData}
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
           />
         );
-      case 4:
+      case 3:
         return (
           <StyleSummaryStep
             data={onboardingData}
@@ -137,17 +128,16 @@ export default function OnboardingPage() {
 
   const getStepTitle = () => {
     const titles = [
-      "Gender Selection", // Step 0
-      "Photo Upload", // Step 1
-      "Body Analysis", // Step 2
-      "Style Preference", // Step 3
-      "Style Summary", // Step 4
+      "Photo Upload", // Step 0
+      "Body Analysis", // Step 1
+      "Style Preference", // Step 2
+      "Style Summary", // Step 3
     ];
     return titles[currentStep];
   };
 
   const getStepEmoji = () => {
-    const emojis = ["👤", "📸", "💪", "🎨", "✨"];
+    const emojis = ["📸", "💪", "🎨", "✨"];
     return emojis[currentStep];
   };
 
