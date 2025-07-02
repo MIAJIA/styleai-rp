@@ -159,3 +159,70 @@
   },
   "createdAt": "2025-06-30T18:49:51.293Z"
 }
+
+====
+// format following json
+
+!!! send final prompt: A high-fashion editorial scene in a studio
+setting, showcasing the model in a chic outfit with a vibrant
+ yellow illustrated shirt, high-waisted navy trousers,
+ and clean white sneakers.
+ The model exudes confidence, accessorized with a wide-brim hat
+  and silver necklace, against a minimalist backdrop.
+  The lighting is soft but focused, enhancing the sleek and
+   sophisticated ambiance, perfect for a fashion magazine spread.
+
+ {"outfit_title":"Editorial Cool Elegance",
+ "items":{
+    "tops":[
+        {
+            "item_name":"Yellow Silk Illustrated Shirt",
+              "style_details":"Yellow silk with artistic illustrations and a classic collar",
+            "wearing_details":"Semi-tuck into pants for a structured look",
+            "effect_description":"Draws attention upwards, lending a sophisticated flair suited for a magazine feature."
+! send final prompt: A high-fashion editorial scene in a studio
+setting, showcasing the model in a chic outfit with a vibrant
+ yellow illustrated shirt, high-waisted navy trousers, and clean
+ white sneakers. The model exudes confidence, accessorized with
+  a wide-brim hat and silver necklace, against a minimalist
+  backdrop. The lighting is soft but focused, enhancing the
+  sleek and sophisticated ambiance, perfect for a fashion
+  magazine spread. {"outfit_title":"Editorial Cool Elegance"
+  ,"items":{"tops":[{"item_name":"Yellow Silk Illustrated Shirt"
+  ,"style_details":"Yellow silk with artistic illustrations and
+  a classic collar","wearing_details":"Semi-tuck into pants for
+   a structured look","effect_description":"Draws attention
+   upwards, lending a sophisticated flair suited for a magazine
+   feature."}],"bottoms":{"item_name":"Navy Wool Trousers",
+   "style_details":"Tailored fit with a high waist to elongate
+   legs","wearing_details":"Wear high on the waist and pair
+   with the shirt","effect_description":"Creates a long, lean
+   line that highlights the user's long legs."},
+   "shoes":{"item_name":"White Leather Sneakers",
+   "style_details":"Minimalistic design",
+   "wearing_details":"Keep clean and polished",
+   "effect_description":"Adds a contemporary and fresh vibe
+   , balancing the outfit's artistic feel."},
+   "bag":{"item_name":"Black Leather Crossbody Bag",
+   style_details":"Compact with sleek lines and silver hardware"
+   ,"wearing_details":"Worn across the body for a chic touch"
+   ,"effect_description":"Provides a modern edge and practical
+    functionality."},"accessories":[{"item_name":"Silver Chain
+     Necklace","style_details":"Thin and subtle","wearing_details"
+     :"Worn over the shirt for a slight shine","effect_description":
+     "Accentuates the neck and adds a touch of elegance."},
+     {"item_name":"Black Wide-Brim Hat","style_details":
+     "Structured felt with a flat top","wearing_details":
+     "Tilt slightly for an avant-garde look","effect_description"
+     :"Complements the editorial theme, providing a high-fashion
+     edge."}],"layering_description":"The yellow silk shirt is
+     the statement piece, semi-tucked into tailored navy wool
+     trousers to enhance the user's long legs. The minimalist
+     white sneakers balance the vibrant top, while the black hat
+     and silver necklace add stylish, chic details.",
+     "hairstyle":{"style_name":"Sleek Pompadour","description"
+     :"Keeps hair off the face, emphasizing facial features
+      and enhancing the sophisticated style."}},"explanation":
+      "This editorial outfit leverages your unique style sense
+       with artistic touches and clean lines
+[Kling] Submit attempt 1/3...

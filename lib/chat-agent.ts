@@ -602,12 +602,12 @@ export class ChatAgent {
       const messageMentionsImage = imageKeywords.some(keyword => message.toLowerCase().includes(keyword));
 
       if (needsContext && messageMentionsImage && this.contextManager.hasRecentImage()) {
-        const contextImageUrl = this.contextManager.getLastUploadedImage();
-        if (contextImageUrl) {
-          userMessageContent.push({
-            type: "image_url",
-            image_url: { url: contextImageUrl },
-          });
+      const contextImageUrl = this.contextManager.getLastUploadedImage();
+      if (contextImageUrl) {
+        userMessageContent.push({
+          type: "image_url",
+          image_url: { url: contextImageUrl },
+        });
           imageWasAdded = true;
           console.log('[ChatAgent] User message seems to refer to an image, adding context image to the call.');
         }
@@ -661,8 +661,8 @@ export class ChatAgent {
           console.log(`[ChatAgent] Executing Google Shopping Light API search for:`, toolArgs);
           const searchResultsData = await searchGoogleShoppingLight(toolArgs.query, toolArgs.imageUrl);
           searchResults = searchResultsData;
-          toolOutput = JSON.stringify(searchResultsData);
-          console.log(`[ChatAgent] Google Shopping API search completed. Found ${searchResultsData.items.length} items.`);
+              toolOutput = JSON.stringify(searchResultsData);
+              console.log(`[ChatAgent] Google Shopping API search completed. Found ${searchResultsData.items.length} items.`);
         } else {
           console.warn(`[ChatAgent] Unknown tool function in first pass: ${toolFunctionName}`);
           toolOutput = JSON.stringify({ error: "Unknown tool function" });
@@ -673,20 +673,20 @@ export class ChatAgent {
           content: toolOutput
         }));
       }
-    }
+      }
 
     // "Fast Lane" for search results - bypass second LLM call
     if (searchWasTriggered) {
       console.log('[ChatAgent] Search tool was triggered. Bypassing second LLM call for a fast response.');
       const responseText = `Here are some items I found for you!`;
       this.contextManager.addMessage('ai', responseText, undefined, {
-        type: selectedAgent.id,
-        name: selectedAgent.name,
-        emoji: selectedAgent.emoji
-      });
+          type: selectedAgent.id,
+          name: selectedAgent.name,
+          emoji: selectedAgent.emoji
+        });
 
-      return {
-        agentInfo: selectedAgent,
+        return {
+          agentInfo: selectedAgent,
         aiResponse: responseText,
         quickReplies: [], // No dynamic quick replies for fast search
         searchResults: searchResults,

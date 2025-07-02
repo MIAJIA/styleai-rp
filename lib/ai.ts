@@ -130,65 +130,49 @@ export async function getStyleSuggestionFromAI({
 
     // Build the user prompt following the structured format defined in systemPrompt.
     const userProfileSection = userProfile
-      ? `# User Profile
-\`\`\`json
-${JSON.stringify(userProfile, null, 2)}
-\`\`\`
+      ? `# User Profile\n\`\`\`json\n${JSON.stringify(userProfile, null, 2)}\n\`\`\``
+      : "# User Profile\nNo user profile provided.";
 
-**Key Styling Considerations from Profile:**
-- Body Type: ${userProfile.aiAnalysis?.bodyType || 'Not specified'} - Choose cuts and fits that flatter this body shape
-- Face Shape: ${userProfile.aiAnalysis?.faceShape || 'Not specified'} - Consider hairstyles and accessories that complement face shape
-- Body Advantages: ${userProfile.bodyAdvantages?.join(', ') || 'Not specified'} - Highlight these positive features
-- Style Preferences: ${userProfile.stylePreferences?.join(', ') || 'Not specified'} - Ensure outfit aligns with preferred aesthetic
-- Sustainable Fashion: ${userProfile.sustainableFashion ? 'Prefers eco-friendly options' : 'No specific preference'} - Consider sustainability if important to user`
-      : `# User Profile
-No detailed user profile provided. Please create a versatile outfit suitable for various body types and style preferences.`;
-
-    // Build enhanced essential item details from the garment image context
+    // Build enhanced essential item details with context
     const essentialItemSection = `# Essential Item
-**Source:** The garment in the second attached image is the "Essential Item"
+The garment in the second attached image is the "Essential Item" that must be incorporated into the outfit suggestion.
 
-**Styling Requirements:**
-- This clothing piece MUST be incorporated as the central element of the outfit
-- Analyze the garment's style, color, fabric, and silhouette from the image
-- Consider the garment's formality level, season appropriateness, and style category
-- Build the complete outfit around this piece, ensuring harmony and balance
-- If the item presents styling challenges, acknowledge them and provide creative solutions
+**Item Context:**
+- This is the key piece that the user wants to style around
+- Consider the item's style, color, fabric, and formality level when building the complete outfit`;
 
-**Integration Strategy:**
-- Use this item as the foundation for the entire look
-- Select complementary pieces that enhance rather than compete with this garment
-- Consider layering opportunities if applicable
-- Ensure the styling showcases this item effectively`;
-
-    // Build enhanced occasion details with context
+    // Build occasion details with styling context
     const occasionSection = `# Occasion
 **Event/Setting:** ${occasion}
 
-**Occasion Analysis:**
-- Consider the appropriate dress code and formality level for "${occasion}"
-- Factor in the likely environment, time of day, and social context
-- Think about practical needs (comfort, mobility, weather considerations)
-- Ensure the outfit creates the right impression for this specific occasion
-- Balance style with appropriateness for the setting`;
+**Styling Goal:** Choose complementary pieces that match the formality and mood of this occasion`;
 
-    // Build enhanced style preference details with strategic guidance
+    // Build enhanced style preference details based on user profile and occasion
+    const getStylePreferences = () => {
+      const basePreferences = `Create a stylish and flattering outfit that incorporates the essential item for the specified occasion.`;
+
+      // Add user-specific styling guidance if profile exists
+      if (userProfile) {
+        const genderGuidance = userProfile.gender
+          ? `Design for ${userProfile.gender === 'male' ? 'masculine' : userProfile.gender === 'female' ? 'feminine' : 'gender-neutral'} styling preferences.`
+          : '';
+
+        const bodyTypeGuidance = userProfile.aiAnalysis?.bodyType
+          ? `Focus on silhouettes that flatter a ${userProfile.aiAnalysis.bodyType} body type.`
+          : '';
+
+        const stylePersonalityGuidance = userProfile.stylePreferences?.length
+          ? `Align with the user's style preferences: ${userProfile.stylePreferences.join(', ')}.`
+          : '';
+
+        return `${basePreferences} ${genderGuidance} ${bodyTypeGuidance} ${stylePersonalityGuidance} Emphasize creating a cohesive look that enhances the user's natural features and builds confidence.`;
+      }
+
+      return `${basePreferences} Focus on creating a cohesive look that enhances the user's features and suits the context.`;
+    };
+
     const stylePreferenceSection = `# Style Preference
-**Primary Objective:** Create a sophisticated, flattering outfit that seamlessly integrates the essential item for the "${occasion}" occasion.
-
-**Styling Strategy:**
-- Enhance the user's best features while minimizing any concerns
-- Create visual balance and proportion appropriate for their body type
-- Ensure color harmony that complements their skin tone
-- Maintain style consistency that reflects their personal aesthetic
-- Consider practical aspects like comfort and functionality
-- Aim for a confident, polished appearance that feels authentic to the user
-
-**Creative Direction:**
-- Think beyond basic coordination - create a compelling visual story
-- Consider texture, pattern, and silhouette interplay
-- Use accessories strategically to elevate the overall look
-- Ensure the outfit feels fresh, modern, and personally meaningful`;
+${getStylePreferences()}`;
 
     const userMessageText = `Please provide styling suggestions based on the following information. My photo is the first image, and the garment is the second.
 
