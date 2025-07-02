@@ -612,6 +612,7 @@ export interface Job {
   updatedAt: string;
   userProfile?: any; // User profile data
   customPrompt?: string; // Custom prompt for stylization
+  cancelled?: boolean; // Flag to indicate if job was cancelled by user
   suggestion?: {
     outfit_suggestion: any; // Single outfit suggestion
     image_prompt: string; // Single image prompt
@@ -871,6 +872,17 @@ export async function executeSimpleScenePipeline(job: Job): Promise<string[]> {
     }
   });
 
+  // Check if job was cancelled after stylization
+  const updatedJob = await kv.hgetall<Job>(job.jobId);
+  if (updatedJob?.cancelled) {
+    console.log(`[PIPELINE] Job ${job.jobId} was cancelled, stopping pipeline execution`);
+    await kv.hset(job.jobId, {
+      status: 'cancelled',
+      statusMessage: '用户取消了生成任务'
+    });
+    throw new Error('Job was cancelled by user');
+  }
+
   // Step 2: Perform virtual try-on on each new scene to ensure high clothing fidelity.
   const allTryOnImageUrls: string[] = [];
 
@@ -936,6 +948,17 @@ export async function executeAdvancedScenePipeline(job: Job): Promise<string[]> 
       styledImage: styledImageUrls[0] // Keep for backward compatibility
     }
   });
+
+  // Check if job was cancelled after stylization
+  const updatedJob = await kv.hgetall<Job>(job.jobId);
+  if (updatedJob?.cancelled) {
+    console.log(`[PIPELINE] Job ${job.jobId} was cancelled, stopping pipeline execution`);
+    await kv.hset(job.jobId, {
+      status: 'cancelled',
+      statusMessage: '用户取消了生成任务'
+    });
+    throw new Error('Job was cancelled by user');
+  }
 
   // Step 2: Perform virtual try-on using each newly stylized image as the canvas
   const allTryOnImageUrls: string[] = [];
@@ -1018,6 +1041,17 @@ export async function executeSimpleScenePipelineV2(job: Job): Promise<string[]> 
       styledImage: styledImageUrls[0] // Keep for backward compatibility
     }
   });
+
+  // Check if job was cancelled after stylization
+  const updatedJob = await kv.hgetall<Job>(job.jobId);
+  if (updatedJob?.cancelled) {
+    console.log(`[PIPELINE] Job ${job.jobId} was cancelled, stopping pipeline execution`);
+    await kv.hset(job.jobId, {
+      status: 'cancelled',
+      statusMessage: '用户取消了生成任务'
+    });
+    throw new Error('Job was cancelled by user');
+  }
 
   // Step 2: Parallel virtual try-on for all styled images
   const allTryOnPromises = styledImageUrls.map((styledImage, index) => {

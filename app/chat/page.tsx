@@ -27,6 +27,7 @@ import {
   Upload,
   ImageIcon,
   User,
+  X,
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 
@@ -64,6 +65,8 @@ type ChatMessage = {
     imageIndex?: number
     isOutfitPreview?: boolean
     isFallback?: boolean
+    isStyledImage?: boolean // Flag to identify styled images that can be cancelled
+    canCancel?: boolean // Flag to show cancel button
   }
 }
 
@@ -178,10 +181,12 @@ function ChatBubble({
   message,
   onImageClick,
   sessionId,
+  onCancel,
 }: {
   message: ChatMessage
   onImageClick: (imageUrl: string) => void
   sessionId?: string
+  onCancel?: () => void
 }) {
   const isAI = message.role === "ai"
   const isUser = message.role === "user"
@@ -258,6 +263,24 @@ function ChatBubble({
                         console.log(`[ChatBubble] SessionId used: ${sessionId}`);
                       }}
                     />
+                  </div>
+                )}
+
+                {/* Cancel button for styled images */}
+                {isAI && message.imageUrl && message.metadata?.isStyledImage && message.metadata?.canCancel && onCancel && (
+                  <div className="absolute bottom-2 left-2 right-2">
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCancel();
+                      }}
+                      variant="destructive"
+                      size="sm"
+                      className="w-full bg-red-500 hover:bg-red-600 text-white text-xs py-1 px-2 rounded-md shadow-lg opacity-90 hover:opacity-100 transition-opacity duration-200"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      不喜欢这套搭配
+                    </Button>
                   </div>
                 )}
               </div>
@@ -363,6 +386,73 @@ export default function ChatPage() {
 
   // Log the finalPrompt to verify its content and length
   console.log('[DEBUG] Final Prompt:', finalPrompt, 'Length:', finalPrompt.length);
+
+  // Handle cancellation of generation
+  const handleCancelGeneration = async () => {
+    if (!jobId) {
+      console.warn('[CANCEL] No jobId available for cancellation');
+      return;
+    }
+
+    try {
+      console.log(`[CANCEL] Attempting to cancel job: ${jobId}`);
+
+      const response = await fetch('/api/generation/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to cancel job');
+      }
+
+      const result = await response.json();
+      console.log(`[CANCEL] Job cancelled successfully:`, result);
+
+      // Update UI to reflect cancellation
+      setIsGenerating(false);
+      setGenerationStatusText(null);
+      setCurrentStep("complete");
+
+      // Add a message to inform user about cancellation
+      addMessage({
+        type: "text",
+        role: "ai",
+        content: "好的，我已经停止了这套搭配的生成。如果你想尝试其他风格，随时告诉我！",
+        agentInfo: {
+          id: "style",
+          name: "Styling Assistant",
+          emoji: "👗",
+        },
+        metadata: {
+          suggestions: [
+            "重新生成搭配",
+            "尝试不同风格",
+            "换个场合搭配",
+            "给我其他建议"
+          ],
+        },
+      });
+
+      // Clear any polling intervals
+      if (pollingIntervalId) {
+        clearInterval(pollingIntervalId);
+        setPollingIntervalId(null);
+      }
+
+    } catch (error) {
+      console.error('[CANCEL] Error cancelling job:', error);
+      addMessage({
+        type: "text",
+        role: "ai",
+        content: `取消生成时出现错误: ${error instanceof Error ? error.message : '未知错误'}`,
+      });
+    }
+  };
 
   // --- START: Image Handling Functions ---
   const handleImageUploadClick = () => {
@@ -1351,12 +1441,18 @@ Let's start chatting about styling now~`,
             content: "✨ 这是为你生成的初步场景预览，正在进行最终的细节处理...",
           });
 
-          // Display the styled images
-          job.processImages.styledImages.forEach((imageUrl: string) => {
+          // Display the styled images with cancel option
+          job.processImages.styledImages.forEach((imageUrl: string, index: number) => {
             addMessage({
               role: 'ai',
               type: 'image',
               imageUrl: imageUrl,
+              content: index === 0 ? "场景预览 - 如果不喜欢可以取消" : `场景预览 ${index + 1}`,
+              metadata: {
+                isStyledImage: true,
+                canCancel: index === 0, // Only show cancel button on first image
+                imageIndex: index,
+              }
             });
           });
         }
@@ -1367,11 +1463,18 @@ Let's start chatting about styling now~`,
           processedStatusesRef.current.add('suggestion_generated');
         }
 
-        if (job.status === "succeed" || job.status === "completed" || job.status === "failed") {
+        if (job.status === "succeed" || job.status === "completed" || job.status === "failed" || job.status === "cancelled") {
           clearInterval(intervalId);
           setJobId(null);
           setIsGenerating(false);
           setGenerationStatusText(null);
+
+          if (job.status === "cancelled") {
+            console.log("[POLLING] Job was cancelled by user");
+            // Don't add any additional messages as the cancel handler already added one
+            setCurrentStep("complete");
+            return;
+          }
 
           if ((job.status === "succeed" || job.status === "completed") && job.result?.imageUrls?.length > 0) {
             console.log("[POLLING] Job finished successfully. Preparing to display results.");
@@ -1509,7 +1612,13 @@ Let's start chatting about styling now~`,
         ) : (
           <div className="max-w-2xl mx-auto">
             {messages.map((message) => (
-              <ChatBubble key={message.id} message={message} onImageClick={handleImageClick} sessionId={sessionId} />
+              <ChatBubble
+                key={message.id}
+                message={message}
+                onImageClick={handleImageClick}
+                sessionId={sessionId}
+                onCancel={message.metadata?.canCancel ? handleCancelGeneration : undefined}
+              />
             ))}
             <div ref={messagesEndRef} />
           </div>
