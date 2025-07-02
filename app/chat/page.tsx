@@ -27,7 +27,6 @@ import {
   Upload,
   ImageIcon,
   User,
-  X,
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 
@@ -65,8 +64,7 @@ type ChatMessage = {
     imageIndex?: number
     isOutfitPreview?: boolean
     isFallback?: boolean
-    isStyledImage?: boolean // Flag to identify styled images that can be cancelled
-    canCancel?: boolean // Flag to show cancel button
+    isStyledImage?: boolean // Flag to identify styled images
   }
 }
 
@@ -181,47 +179,15 @@ function ChatBubble({
   message,
   onImageClick,
   sessionId,
-  onCancel,
 }: {
   message: ChatMessage
   onImageClick: (imageUrl: string) => void
   sessionId?: string
-  onCancel?: () => void
 }) {
   const isAI = message.role === "ai"
   const isUser = message.role === "user"
 
   console.log(`[ChatBubble] Rendering message with sessionId: ${sessionId}, hasImage: ${!!message.imageUrl}`);
-
-  // 🔍 DEBUG: Add detailed logging for cancel button logic
-  if (message.imageUrl && isAI) {
-    console.log(`[ChatBubble DEBUG] Image message details:`, {
-      messageId: message.id,
-      hasImageUrl: !!message.imageUrl,
-      messageType: message.type,
-      isStyledImage: message.metadata?.isStyledImage,
-      canCancel: message.metadata?.canCancel,
-      hasOnCancel: !!onCancel,
-      metadata: message.metadata
-    });
-
-    if (message.metadata?.isStyledImage) {
-      console.log(`[ChatBubble DEBUG] ✅ This is a styled image!`);
-      if (message.metadata?.canCancel) {
-        console.log(`[ChatBubble DEBUG] ✅ Can cancel is true!`);
-        if (onCancel) {
-          console.log(`[ChatBubble DEBUG] ✅ onCancel function is provided!`);
-          console.log(`[ChatBubble DEBUG] 🎯 CANCEL BUTTON SHOULD BE VISIBLE!`);
-        } else {
-          console.log(`[ChatBubble DEBUG] ❌ onCancel function is missing!`);
-        }
-      } else {
-        console.log(`[ChatBubble DEBUG] ❌ canCancel is false or undefined`);
-      }
-    } else {
-      console.log(`[ChatBubble DEBUG] ❌ Not a styled image`);
-    }
-  }
 
   // Debug logging for product messages
   if (message.type === "products" || (message.products && message.products.length > 0)) {
@@ -295,43 +261,6 @@ function ChatBubble({
                     />
                   </div>
                 )}
-
-                {/* Cancel button for styled images */}
-                {(() => {
-                  const shouldShowButton = isAI && message.imageUrl && message.metadata?.isStyledImage && message.metadata?.canCancel && onCancel;
-                  console.log(`[ChatBubble RENDER] Cancel button conditions:`, {
-                    isAI,
-                    hasImageUrl: !!message.imageUrl,
-                    isStyledImage: message.metadata?.isStyledImage,
-                    canCancel: message.metadata?.canCancel,
-                    hasOnCancel: !!onCancel,
-                    shouldShowButton
-                  });
-
-                  if (shouldShowButton) {
-                    console.log(`[ChatBubble RENDER] 🎯 RENDERING CANCEL BUTTON!`);
-                    return (
-                      <div className="absolute bottom-2 left-2 right-2">
-                        <Button
-                          onClick={(e) => {
-                            console.log(`[ChatBubble] Cancel button clicked!`);
-                            e.stopPropagation();
-                            onCancel();
-                          }}
-                          variant="destructive"
-                          size="sm"
-                          className="w-full bg-red-500 hover:bg-red-600 text-white text-xs py-1 px-2 rounded-md shadow-lg opacity-90 hover:opacity-100 transition-opacity duration-200"
-                        >
-                          <X className="w-3 h-3 mr-1" />
-                          不喜欢这套搭配
-                        </Button>
-                      </div>
-                    );
-                  } else {
-                    console.log(`[ChatBubble RENDER] ❌ Cancel button NOT rendered`);
-                    return null;
-                  }
-                })()}
               </div>
             </div>
           )}
@@ -781,6 +710,80 @@ Let's start chatting about styling now~`,
   const handleSendMessage = async (message: string) => {
     console.log(`[ChatPage] handleSendMessage called. Message: "${message}", Has Staged Image: ${!!stagedImage}`)
     if (message.trim() === "" && !stagedImage) return
+
+    // Check if this is a cancel request
+    if (message === "不喜欢这套搭配") {
+      console.log(`[QUICK_REPLY] Cancel request detected: ${message}`);
+
+      // Add user message first
+      addMessage({
+        type: "text",
+        role: "user",
+        content: message,
+      });
+
+      // Handle cancellation
+      await handleCancelGeneration();
+      return;
+    }
+
+    // Check for other generation-related quick replies
+    if (message === "继续生成最终效果") {
+      console.log(`[QUICK_REPLY] Continue generation request: ${message}`);
+
+      addMessage({
+        type: "text",
+        role: "user",
+        content: message,
+      });
+
+      addMessage({
+        type: "text",
+        role: "ai",
+        content: "好的！我会继续为你生成最终的试穿效果，请稍等...",
+        agentInfo: {
+          id: "style",
+          name: "Styling Assistant",
+          emoji: "👗",
+        },
+      });
+      return;
+    }
+
+    if (message === "重新生成场景" || message === "换个风格试试") {
+      console.log(`[QUICK_REPLY] Regeneration request: ${message}`);
+
+      addMessage({
+        type: "text",
+        role: "user",
+        content: message,
+      });
+
+      // Cancel current generation and suggest restart
+      if (jobId) {
+        await handleCancelGeneration();
+      }
+
+      addMessage({
+        type: "text",
+        role: "ai",
+        content: "好的！我已经停止当前生成。你可以返回首页重新上传照片，或者告诉我你想要什么样的风格。",
+        agentInfo: {
+          id: "style",
+          name: "Styling Assistant",
+          emoji: "👗",
+        },
+        metadata: {
+          suggestions: [
+            "返回首页重新开始",
+            "我想要休闲风格",
+            "我想要正式风格",
+            "我想要时尚风格"
+          ],
+        },
+      });
+      return;
+    }
 
     // The backend `ChatAgent` is now responsible for context.
     // The frontend only needs to send the newly uploaded image.
@@ -1510,16 +1513,15 @@ Let's start chatting about styling now~`,
             content: "✨ 这是为你生成的初步场景预览，正在进行最终的细节处理...",
           });
 
-          // Display the styled images with cancel option
+          // Display the styled images (without cancel buttons now)
           job.processImages.styledImages.forEach((imageUrl: string, index: number) => {
             const messageData = {
               role: 'ai' as const,
               type: 'image' as const,
               imageUrl: imageUrl,
-              content: index === 0 ? "场景预览 - 如果不喜欢可以取消" : `场景预览 ${index + 1}`,
+              content: `场景预览 ${index + 1}`,
               metadata: {
                 isStyledImage: true,
-                canCancel: index === 0, // Only show cancel button on first image
                 imageIndex: index,
               }
             };
@@ -1534,7 +1536,27 @@ Let's start chatting about styling now~`,
             addMessage(messageData);
           });
 
-          console.log(`[POLLING DEBUG] ✅ All ${job.processImages.styledImages.length} styled images added to messages`);
+          // Add Quick Reply options after showing styled images
+          addMessage({
+            role: 'ai',
+            type: 'text',
+            content: "🤔 你觉得这个场景效果怎么样？",
+            agentInfo: {
+              id: "style",
+              name: "Styling Assistant",
+              emoji: "👗",
+            },
+            metadata: {
+              suggestions: [
+                "不喜欢这套搭配",
+                "继续生成最终效果",
+                // "重新生成场景",
+                "换个风格试试"
+              ],
+            },
+          });
+
+          console.log(`[POLLING DEBUG] ✅ All ${job.processImages.styledImages.length} styled images added to messages with Quick Reply options`);
         }
 
         if (job.status === 'suggestion_generated' && !processedStatusesRef.current.has('suggestion_generated')) {
@@ -1692,14 +1714,10 @@ Let's start chatting about styling now~`,
         ) : (
           <div className="max-w-2xl mx-auto">
             {messages.map((message) => {
-              const shouldPassOnCancel = message.metadata?.canCancel;
               console.log(`[MAIN RENDER] Message ${message.id} rendering:`, {
                 messageType: message.type,
                 hasImageUrl: !!message.imageUrl,
                 isStyledImage: message.metadata?.isStyledImage,
-                canCancel: message.metadata?.canCancel,
-                shouldPassOnCancel,
-                willPassOnCancel: shouldPassOnCancel ? 'handleCancelGeneration' : 'undefined'
               });
 
               return (
@@ -1708,7 +1726,6 @@ Let's start chatting about styling now~`,
                   message={message}
                   onImageClick={handleImageClick}
                   sessionId={sessionId}
-                  onCancel={shouldPassOnCancel ? handleCancelGeneration : undefined}
                 />
               );
             })}
