@@ -410,7 +410,7 @@ export default function ChatPage() {
       addMessage({
         type: "text",
         role: "ai",
-        content: "好的，我已经停止了这套搭配的生成。如果你想尝试其他风格，随时告诉我！",
+        content: "OK! I've stopped the current generation. If you want to try other styles, just let me know!",
         agentInfo: {
           id: "style",
           name: "Styling Assistant",
@@ -740,7 +740,7 @@ Let's start chatting about styling now~`,
       addMessage({
         type: "text",
         role: "ai",
-        content: "好的！我会继续为你生成最终的试穿效果，请稍等...",
+        content: "OK! I'll continue to generate the final try-on effect for you, please wait...",
         agentInfo: {
           id: "style",
           name: "Styling Assistant",
@@ -767,7 +767,7 @@ Let's start chatting about styling now~`,
       addMessage({
         type: "text",
         role: "ai",
-        content: "好的！我已经停止当前生成。你可以返回首页重新上传照片，或者告诉我你想要什么样的风格。",
+        content: "OK! I've stopped the current generation. You can return to the homepage to re-upload your photos, or tell me what style you want.",
         agentInfo: {
           id: "style",
           name: "Styling Assistant",
@@ -776,9 +776,6 @@ Let's start chatting about styling now~`,
         metadata: {
           suggestions: [
             "返回首页重新开始",
-            "我想要休闲风格",
-            "我想要正式风格",
-            "我想要时尚风格"
           ],
         },
       });
@@ -1510,7 +1507,8 @@ Let's start chatting about styling now~`,
           addMessage({
             role: 'ai',
             type: 'text',
-            content: "✨ 这是为你生成的初步场景预览，正在进行最终的细节处理...",
+            // translate to english
+            content: "✨ This is a preview of the initial scene for you, with final details being processed...",
           });
 
           // Display the styled images (without cancel buttons now)
@@ -1519,7 +1517,7 @@ Let's start chatting about styling now~`,
               role: 'ai' as const,
               type: 'image' as const,
               imageUrl: imageUrl,
-              content: `场景预览 ${index + 1}`,
+              content: `In this vibe, here’s how we’d wear it~ ${index + 1}`,
               metadata: {
                 isStyledImage: true,
                 imageIndex: index,
@@ -1540,7 +1538,7 @@ Let's start chatting about styling now~`,
           addMessage({
             role: 'ai',
             type: 'text',
-            content: "🤔 你觉得这个场景效果怎么样？",
+            content: "🤔 how do you enjoy this vibe？",
             agentInfo: {
               id: "style",
               name: "Styling Assistant",
@@ -1593,7 +1591,7 @@ Let's start chatting about styling now~`,
               addMessage({
                 role: 'ai',
                 type: 'text',
-                content: "✨ 这是为你生成的初步场景预览，在最终处理之前：",
+                content: "✨ This is a preview of the initial scene for you, with final details being processed...",
               });
 
               job.processImages.styledImages.forEach((imageUrl: string) => {
@@ -1636,7 +1634,7 @@ Let's start chatting about styling now~`,
         replaceLastLoadingMessage({
           role: 'ai',
           type: 'text',
-          content: "轮询时发生错误，请稍后再试。"
+          content: "Opps... something went wrong. Please try again later."
         });
         setCurrentStep("error");
       }
