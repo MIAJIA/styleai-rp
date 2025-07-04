@@ -1,6 +1,11 @@
 // Image generation model configuration
 export const IMAGE_GENERATION_MODEL = "Kling AI (可灵AI)";
 
+export const STRICT_REALISM_PROMPT_BLOCK = `
+Maintain original body proportions based on the user's real physical structure — without beauty modifications. Keep the original face shape and jawline, shoulder width, head-to-body ratio and bone frame.
+Avoid elongating the legs or shortening the torso or reduce head size or raise waist position.
+This is a real person, not a stylized or idealized model.
+`;
 
 export const IMAGE_FORMAT_DESCRIPTION = `
 9:16 vertical full-body photo, street style photography aesthetic, natural lighting. Emphasize a full view of the outfit, captured in a real-world environment. `;
