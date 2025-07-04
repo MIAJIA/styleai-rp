@@ -3,10 +3,13 @@
 ## 核心思路
 
 ### 问题背景
+
 用户在看到第一套搭配的场景预览后，如果不满意，目前只能选择"不喜欢这套搭配"来取消整个生成流程。这导致用户需要重新开始整个流程，体验不佳，且浪费了已经生成的 AI 建议。
 
 ### 解决方案
+
 **预生成多套方案策略**：在初始 OpenAI 调用时一次性生成3套完全不同风格的搭配建议，然后按需使用：
+
 - 默认使用第一套搭配进行图像生成
 - 用户不满意时，直接使用第二套、第三套搭配
 - 避免重复调用 OpenAI API，提高响应速度
@@ -21,6 +24,7 @@
 ## 数据结构变更
 
 ### 当前结构
+
 ```typescript
 // Job 接口
 export interface Job {
@@ -38,6 +42,7 @@ const styleSuggestionsSchema = z.object({
 ```
 
 ### 新结构
+
 ```typescript
 // 更新后的 Job 接口
 export interface Job {
@@ -64,9 +69,11 @@ const styleSuggestionsSchema = z.object({
 ## 流程变更
 
 ### 当前流程
+
 1. 用户上传图片 → 2. OpenAI 生成1套建议 → 3. 图像生成 → 4. 用户查看结果
 
 ### 新流程
+
 1. 用户上传图片
 2. **OpenAI 生成3套不同风格建议**
 3. 使用第一套建议进行图像生成
@@ -77,6 +84,7 @@ const styleSuggestionsSchema = z.object({
    - "不喜欢这套搭配" → 取消整个流程
 
 ### Quick Reply 选项更新
+
 ```typescript
 // 场景预览后的选项
 metadata: {
@@ -92,6 +100,7 @@ metadata: {
 ## 状态管理设计
 
 ### 1. Job 状态扩展
+
 ```typescript
 // 新增状态
 type JobStatus =
@@ -108,6 +117,7 @@ type JobStatus =
 ```
 
 ### 2. 前端状态管理
+
 ```typescript
 // Chat 组件新增状态
 const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0);
@@ -127,6 +137,7 @@ const handleChangeStyle = async () => {
 ```
 
 ### 3. 向后兼容处理
+
 ```typescript
 // 在读取 Job 数据时进行兼容处理
 const getJobSuggestion = (job: Job, index: number = 0) => {
@@ -150,6 +161,7 @@ const getJobSuggestion = (job: Job, index: number = 0) => {
 ## 核心函数修改
 
 ### 1. OpenAI 调用修改
+
 ```typescript
 // lib/prompts.ts - 更新 system prompt
 "Generate 3 completely different outfit suggestions with distinct styles,
@@ -163,6 +175,7 @@ const styleSuggestionsSchema = z.object({
 ```
 
 ### 2. Pipeline 函数适配
+
 ```typescript
 // 所有 pipeline 函数添加 suggestionIndex 参数
 export async function executeSimpleScenePipeline(
@@ -175,6 +188,7 @@ export async function executeSimpleScenePipeline(
 ```
 
 ### 3. 新增 API 端点
+
 ```typescript
 // /api/generation/change-style
 export async function POST(request: Request) {
@@ -200,16 +214,19 @@ export async function POST(request: Request) {
 ## 用户体验流程
 
 ### 场景1：用户满意第一套搭配
+
 ```
 用户上传图片 → 生成3套建议 → 显示第一套场景预览 → 用户选择"继续生成" → 完成流程
 ```
 
 ### 场景2：用户要换风格
+
 ```
 显示第一套预览 → 用户选择"换一套搭配风格" → 使用第二套建议重新生成 → 显示新预览
 ```
 
 ### 场景3：用户用完所有建议
+
 ```
 第三套预览 → 用户仍选择"换风格" → 系统提示"已尝试所有风格，建议重新开始" → 引导回首页
 ```
@@ -217,17 +234,20 @@ export async function POST(request: Request) {
 ## 实现优先级
 
 ### Phase 1: 核心功能
+
 1. 更新 OpenAI schema 生成3套建议
 2. 修改 Job 数据结构
 3. 添加向后兼容逻辑
 4. 更新 Quick Reply 选项
 
 ### Phase 2: 状态管理
+
 1. 新增 API 端点处理风格切换
 2. 更新前端状态管理
 3. 修改 polling 逻辑处理新状态
 
 ### Phase 3: 用户体验优化
+
 1. 添加风格切换的过渡动画
 2. 优化错误处理和边界情况
 3. 添加使用统计和分析
@@ -235,14 +255,17 @@ export async function POST(request: Request) {
 ## 风险评估
 
 ### 低风险
+
 - 数据结构变更（项目处于开发阶段）
 - 向后兼容（Job 数据为临时数据）
 
 ### 中等风险
+
 - OpenAI API 调用成本增加（3套建议 vs 1套）
 - 响应时间可能增加（生成3套建议）
 
 ### 缓解措施
+
 - 监控 OpenAI API 使用量和成本
 - 优化 prompt 减少不必要的详细信息
 - 考虑实现建议缓存机制
@@ -258,7 +281,7 @@ export async function POST(request: Request) {
 
 ### 现有代码影响分析
 
-#### 高风险区域需要修改：
+#### 高风险区域需要修改
 
 1. **`getStyleSuggestionFromAI` 函数** (lib/ai.ts)
    - 需要修改 schema 从单个建议改为3个建议数组
@@ -278,7 +301,7 @@ export async function POST(request: Request) {
    - 需要处理新的 Quick Reply "换一套搭配风格"
    - 需要跟踪当前使用的建议索引
 
-#### 需要新增的组件：
+#### 需要新增的组件
 
 1. **API 端点**: `/api/generation/change-style`
 2. **前端状态**: `currentSuggestionIndex`, `availableSuggestions`
@@ -316,3 +339,7 @@ const getJobSuggestion = (job: Job, index: number = 0) => {
 4. **阶段4**: 测试和优化用户体验
 
 这个设计既解决了用户体验问题，又最大程度地重用了现有架构，是一个平衡的技术方案。
+
+
+
+//todo： final image继续生成
