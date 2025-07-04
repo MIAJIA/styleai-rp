@@ -9,29 +9,6 @@ import zodToJsonSchema from "zod-to-json-schema";
 
 
 
-// `# Image Generation Information
-// Image Format
-
-// 9:16 Vertical Composition
-// Two-thirds or full-body, model standing naturally or slightly sideways, with clear body proportions;
-// Natural small movements (e.g., one hand in pocket/holding a bag), but the body outline must be clearly discernible;
-// Street photography texture, suitable for outfit display.
-
-// Lens Suggestions
-// The lens should be two-thirds to full-body, avoiding too far or too close to prevent loss of outfit details;
-// The model's posture should avoid covering key areas of the outfit (such as waistline, pants shape, neckline);
-// Posture suggestions: natural standing, slightly sideways, hand in pocket or lightly holding a bag strap;
-// Recommended angle: front with a slight side, lens slightly tilted down to highlight the upper garment structure;
-// Keep the clothing naturally draped, avoiding exaggerated movements that affect fabric texture presentation.
-
-// Lighting Suggestions
-// Natural light or outdoor soft light, emphasizing real texture and color;
-// Avoid strong backlight, silhouette, and other effects that obscure the outfit.
-
-// Background and Scene
-// The background should match the occasion, have a sense of life but not steal the focus, and it is recommended to include some still life elements (such as green plants, chairs, fallen leaves, etc.) to enhance the atmosphere.
-// `;
-
 // Initialize the OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -83,6 +60,36 @@ interface StyleSuggestionInput {
   userProfile?: OnboardingData; // optional but encouraged for better personalization
 }
 
+// 🔍 TOKEN ANALYZER: Calculate approximate token usage for Base64 images
+function calculateImageTokens(base64DataUrl: string): number {
+  // Remove data:image/xxx;base64, prefix to get pure base64
+  const base64Content = base64DataUrl.split(',')[1] || base64DataUrl;
+
+  // OpenAI's token calculation for images is complex, but we can estimate:
+  // - High detail images: ~765 tokens + (width/512) * (height/512) * 170 tokens
+  // - Low detail images: ~85 tokens (fixed)
+  // For base64, we estimate based on content length as a proxy
+
+  const base64Length = base64Content.length;
+  const estimatedTokens = Math.ceil(base64Length / 1000) * 85; // Rough estimation
+
+  return estimatedTokens;
+}
+
+// 🔍 SIZE ANALYZER: Convert bytes to human-readable format
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// 🔍 LOG ANALYZER: Special identifier for easy searching
+const TOKEN_LOG_PREFIX = '🎯📊 TOKEN_ANALYSIS';
+const IMAGE_LOG_PREFIX = '🖼️📏 IMAGE_METRICS';
+
+
 export async function getStyleSuggestionFromAI({
   humanImageUrl,
   garmentImageUrl,
@@ -93,6 +100,7 @@ export async function getStyleSuggestionFromAI({
     throw new Error("Missing required inputs for style suggestion.");
   }
 
+  console.log(`${TOKEN_LOG_PREFIX} ===== STARTING IMAGE PROCESSING ANALYSIS =====`);
   console.log(`[AI DEBUG] Using image generation model: ${IMAGE_GENERATION_MODEL}`);
 
   // do not change userProfile, only update the log, do not need to log the fullbodyphoto in userProfile
@@ -104,8 +112,8 @@ export async function getStyleSuggestionFromAI({
   console.log("[AI DEBUG] Received userProfile for suggestion:", JSON.stringify(userProfileForLog, null, 2));
 
   try {
-    // Fetch images and convert to base64 data URLs in parallel
-    // This makes the process more robust by avoiding OpenAI timeout issues when fetching from our blob storage.
+    // 🔍 STEP 1: Download and analyze original images
+    console.log(`${IMAGE_LOG_PREFIX} Downloading images for analysis...`);
     const [humanImageResponse, garmentImageResponse] = await Promise.all([
       fetch(humanImageUrl),
       fetch(garmentImageUrl)
@@ -120,6 +128,18 @@ export async function getStyleSuggestionFromAI({
       garmentImageResponse.blob()
     ]);
 
+    // 🔍 LOG: Original image sizes
+    const humanImageOriginalSize = humanImageBlob.size;
+    const garmentImageOriginalSize = garmentImageBlob.size;
+
+    console.log(`${IMAGE_LOG_PREFIX} === ORIGINAL IMAGE SIZES ===`);
+    console.log(`${IMAGE_LOG_PREFIX} 👤 Human Image: ${formatBytes(humanImageOriginalSize)} (${humanImageOriginalSize} bytes)`);
+    console.log(`${IMAGE_LOG_PREFIX} 👔 Garment Image: ${formatBytes(garmentImageOriginalSize)} (${garmentImageOriginalSize} bytes)`);
+    console.log(`${IMAGE_LOG_PREFIX} 📊 Total Original Size: ${formatBytes(humanImageOriginalSize + garmentImageOriginalSize)}`);
+
+    // 🔍 STEP 2: Convert to Base64 and analyze
+    console.log(`${TOKEN_LOG_PREFIX} Converting images to Base64...`);
+
     const [humanImageBuffer, garmentImageBuffer] = await Promise.all([
       humanImageBlob.arrayBuffer(),
       garmentImageBlob.arrayBuffer()
@@ -127,6 +147,39 @@ export async function getStyleSuggestionFromAI({
 
     const humanImageBase64 = `data:${humanImageBlob.type};base64,${Buffer.from(humanImageBuffer).toString('base64')}`;
     const garmentImageBase64 = `data:${garmentImageBlob.type};base64,${Buffer.from(garmentImageBuffer).toString('base64')}`;
+
+    // 🔍 LOG: Base64 sizes and token calculations
+    const humanBase64Size = humanImageBase64.length;
+    const garmentBase64Size = garmentImageBase64.length;
+    const humanTokens = calculateImageTokens(humanImageBase64);
+    const garmentTokens = calculateImageTokens(garmentImageBase64);
+    const totalTokens = humanTokens + garmentTokens;
+
+    console.log(`${IMAGE_LOG_PREFIX} === BASE64 CONVERSION RESULTS ===`);
+    console.log(`${IMAGE_LOG_PREFIX} 👤 Human Image Base64: ${formatBytes(humanBase64Size)} (${humanBase64Size} chars)`);
+    console.log(`${IMAGE_LOG_PREFIX} 👔 Garment Image Base64: ${formatBytes(garmentBase64Size)} (${garmentBase64Size} chars)`);
+    console.log(`${IMAGE_LOG_PREFIX} 📊 Total Base64 Size: ${formatBytes(humanBase64Size + garmentBase64Size)}`);
+
+    console.log(`${TOKEN_LOG_PREFIX} === TOKEN USAGE ESTIMATION ===`);
+    console.log(`${TOKEN_LOG_PREFIX} 👤 Human Image Tokens: ~${humanTokens.toLocaleString()} tokens`);
+    console.log(`${TOKEN_LOG_PREFIX} 👔 Garment Image Tokens: ~${garmentTokens.toLocaleString()} tokens`);
+    console.log(`${TOKEN_LOG_PREFIX} 🎯 TOTAL IMAGE TOKENS: ~${totalTokens.toLocaleString()} tokens`);
+
+    // 🔍 LOG: Compression ratio analysis
+    const humanCompressionRatio = ((humanImageOriginalSize - humanBase64Size) / humanImageOriginalSize * 100);
+    const garmentCompressionRatio = ((garmentImageOriginalSize - garmentBase64Size) / garmentImageOriginalSize * 100);
+
+    console.log(`${IMAGE_LOG_PREFIX} === COMPRESSION ANALYSIS ===`);
+    console.log(`${IMAGE_LOG_PREFIX} 👤 Human Image Compression: ${humanCompressionRatio.toFixed(1)}% ${humanCompressionRatio > 0 ? 'reduction' : 'expansion'}`);
+    console.log(`${IMAGE_LOG_PREFIX} 👔 Garment Image Compression: ${garmentCompressionRatio.toFixed(1)}% ${garmentCompressionRatio > 0 ? 'reduction' : 'expansion'}`);
+
+    // 🔍 WARNING: Check for potential token limit issues
+    if (totalTokens > 50000) {
+      console.warn(`${TOKEN_LOG_PREFIX} ⚠️  WARNING: High token usage detected (${totalTokens.toLocaleString()}). This may cause API issues!`);
+    }
+    if (totalTokens > 100000) {
+      console.error(`${TOKEN_LOG_PREFIX} 🚨 CRITICAL: Very high token usage (${totalTokens.toLocaleString()}). High risk of hitting API limits!`);
+    }
 
     // Build the user prompt following the structured format defined in systemPrompt.
     const userProfileSection = userProfile
@@ -197,6 +250,26 @@ ${stylePreferenceSection}
 - Ensure all clothing items, accessories, and styling choices are appropriate for their gender presentation
 - The outfit should feel natural and authentic to how they present themselves`;
 
+    // 🔍 LOG: Final token estimation including text
+    const textTokenEstimate = Math.ceil(userMessageText.length / 4); // Rough estimate: 4 chars per token
+    const systemPromptTokens = Math.ceil(systemPrompt.length / 4);
+    const totalRequestTokens = totalTokens + textTokenEstimate + systemPromptTokens;
+
+    console.log(`${TOKEN_LOG_PREFIX} === FINAL REQUEST ANALYSIS ===`);
+    console.log(`${TOKEN_LOG_PREFIX} 📝 User Message Tokens: ~${textTokenEstimate.toLocaleString()}`);
+    console.log(`${TOKEN_LOG_PREFIX} 🔧 System Prompt Tokens: ~${systemPromptTokens.toLocaleString()}`);
+    console.log(`${TOKEN_LOG_PREFIX} 🎯 TOTAL REQUEST TOKENS: ~${totalRequestTokens.toLocaleString()}`);
+    console.log(`${TOKEN_LOG_PREFIX} 📊 OpenAI GPT-4o Limit: 128,000 tokens`);
+    console.log(`${TOKEN_LOG_PREFIX} 📈 Usage Percentage: ${(totalRequestTokens / 128000 * 100).toFixed(1)}%`);
+
+    if (totalRequestTokens > 128000) {
+      console.error(`${TOKEN_LOG_PREFIX} 🚨🚨 CRITICAL ERROR: Request exceeds OpenAI limit! (${totalRequestTokens.toLocaleString()} > 128,000)`);
+    } else if (totalRequestTokens > 100000) {
+      console.warn(`${TOKEN_LOG_PREFIX} ⚠️⚠️ WARNING: Approaching OpenAI limit! (${totalRequestTokens.toLocaleString()}/128,000)`);
+    }
+
+    console.log(`${TOKEN_LOG_PREFIX} ===== SENDING REQUEST TO OPENAI =====`);
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -215,12 +288,14 @@ ${stylePreferenceSection}
               type: "image_url",
               image_url: {
                 url: humanImageBase64,
+                detail: "low" // 🔧 Use low detail to reduce tokens
               },
             },
             {
               type: "image_url",
               image_url: {
                 url: garmentImageBase64,
+                detail: "low" // 🔧 Use low detail to reduce tokens
               },
             },
           ],
@@ -243,26 +318,31 @@ ${stylePreferenceSection}
       },
     });
 
+    console.log(`${TOKEN_LOG_PREFIX} ===== OPENAI RESPONSE RECEIVED =====`);
+    console.log(`${TOKEN_LOG_PREFIX} 📊 Response usage:`, response.usage);
+
     const message = response.choices[0].message;
 
     if (!message.tool_calls || message.tool_calls.length === 0) {
-      console.error("[AI DEBUG] OpenAI response did not include a tool call. Finish reason:", response.choices[0].finish_reason);
+      console.error(`${TOKEN_LOG_PREFIX} [AI DEBUG] OpenAI response did not include a tool call. Finish reason:`, response.choices[0].finish_reason);
       throw new Error(`AI did not return a structured suggestion. Finish reason: ${response.choices[0].finish_reason}`);
     }
 
     const toolCall = message.tool_calls[0];
 
     if (toolCall.function.name !== 'get_style_suggestions') {
-      console.error(`[AI DEBUG] Unexpected tool call: ${toolCall.function.name}`);
+      console.error(`${TOKEN_LOG_PREFIX} [AI DEBUG] Unexpected tool call: ${toolCall.function.name}`);
       throw new Error(`AI returned an unexpected tool: ${toolCall.function.name}`);
     }
 
     const suggestion = JSON.parse(toolCall.function.arguments);
-    console.log("[AI DEBUG] OpenAI Suggestion:", JSON.stringify(suggestion, null, 2));
+    console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] OpenAI Suggestion:`, JSON.stringify(suggestion, null, 2));
+    console.log(`${TOKEN_LOG_PREFIX} ===== IMAGE PROCESSING ANALYSIS COMPLETE =====`);
+
     return suggestion;
 
   } catch (error) {
-    console.error("Error getting style suggestion from OpenAI:", error);
+    console.error(`${TOKEN_LOG_PREFIX} 🚨 Error getting style suggestion from OpenAI:`, error);
     // Re-throw the error to be handled by the caller
     throw error;
   }
