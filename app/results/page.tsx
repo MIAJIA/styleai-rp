@@ -441,9 +441,9 @@ export default function ResultsPage() {
       {/* Modal for expanded look */}
       {selectedLook && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between rounded-t-2xl">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+            {/* Modal Header - Fixed */}
+            <div className="flex-shrink-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between rounded-t-2xl">
               <h2 className="text-lg font-semibold">Look Details</h2>
               <button
                 onClick={() => setSelectedLook(null)}
@@ -453,8 +453,8 @@ export default function ResultsPage() {
               </button>
             </div>
 
-            {/* Modal Content */}
-            <div className="p-6">
+            {/* Modal Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6">
               {/* Main Image */}
               <div className="relative aspect-[3/4] max-w-md mx-auto mb-6 rounded-xl overflow-hidden">
                 <img
@@ -623,25 +623,27 @@ export default function ResultsPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={() => setSelectedLook(null)}
-                    className="flex-1 py-2 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteLook(selectedLook.id);
-                    }}
-                    className="py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
-                  >
-                    Delete Look
-                  </button>
-                </div>
+            {/* Action Buttons - Fixed at Bottom */}
+            <div className="flex-shrink-0 p-4 border-t border-gray-100 bg-white rounded-b-2xl">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setSelectedLook(null)}
+                  className="flex-1 py-2 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteLook(selectedLook.id);
+                  }}
+                  className="py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
+                >
+                  Delete Look
+                </button>
               </div>
             </div>
           </div>

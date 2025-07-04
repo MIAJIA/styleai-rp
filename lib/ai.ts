@@ -3,7 +3,7 @@ import * as jwt from "jsonwebtoken";
 import { put } from "@vercel/blob";
 import { kv } from "@vercel/kv";
 import { type OnboardingData } from "@/lib/onboarding-storage";
-import { systemPrompt, IMAGE_GENERATION_MODEL, IMAGE_FORMAT_DESCRIPTION } from "./prompts";
+import { systemPrompt, IMAGE_GENERATION_MODEL, IMAGE_FORMAT_DESCRIPTION, STRICT_REALISM_PROMPT_BLOCK } from "./prompts";
 import { z } from "zod";
 import zodToJsonSchema from "zod-to-json-schema";
 
@@ -654,7 +654,7 @@ async function runStylizationMultiple(modelVersion: 'kling-v1-5' | 'kling-v2', s
       throw new Error("Cannot generate styled image without a 'prompt'.");
     }
     const outfitSuggestionString = suggestion.outfit_suggestion ? JSON.stringify(suggestion.outfit_suggestion) : '';
-    finalPrompt = suggestion.image_prompt + ' ' + IMAGE_FORMAT_DESCRIPTION;
+    finalPrompt = suggestion.image_prompt + ' ' + IMAGE_FORMAT_DESCRIPTION + ' ' + STRICT_REALISM_PROMPT_BLOCK;
     console.log(`[ATOMIC_STEP] Using generated prompt: ${finalPrompt.substring(0, 200)}...`);
   }
 
