@@ -1818,7 +1818,10 @@ Let's start chatting about styling now~`,
         </footer>
 
         {/* Debug panel */}
-        {process.env.NODE_ENV === "development" && (
+        {
+        // process.env.NODE_ENV === "development"  XXX TODO: remove this
+        true // XXX TODO: remove this
+        && (
           <div className="max-w-2xl mx-auto mt-4">
             <div
               className="bg-gray-100 rounded-lg cursor-pointer select-none"
