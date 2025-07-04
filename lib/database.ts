@@ -25,6 +25,7 @@ export interface DBLook {
     garmentImageUrl: string;
     finalImageUrl: string;
     styleSuggestion?: any;
+    finalPrompt?: string;
   };
 }
 
@@ -43,6 +44,7 @@ export interface PastLook {
     garmentImage: string;
     finalImage: string;
     styleSuggestion?: any;
+    finalPrompt?: string;
   };
 }
 
@@ -167,6 +169,7 @@ export async function saveLookToDB(look: PastLook, userId: string = 'default'): 
         garmentImageUrl,
         finalImageUrl: processImageUrl,
         styleSuggestion: look.processImages.styleSuggestion,
+        finalPrompt: look.processImages.finalPrompt,
       };
     }
 
@@ -380,6 +383,7 @@ export function dbLookToPastLook(dbLook: DBLook): PastLook {
       garmentImage: dbLook.processImages.garmentImageUrl,
       finalImage: dbLook.processImages.finalImageUrl,
       styleSuggestion: dbLook.processImages.styleSuggestion,
+      finalPrompt: dbLook.processImages.finalPrompt,
     } : undefined,
   };
 }

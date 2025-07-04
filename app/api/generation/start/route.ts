@@ -55,24 +55,28 @@ async function runImageGenerationPipeline(jobId: string) {
     console.log(`[Job ${jobId}] Starting image generation pipeline for mode: ${job.generationMode}`);
 
     // Execute the selected generation pipeline
-    let finalImageUrls: string[];
+    let pipelineResult: { imageUrls: string[], finalPrompt: string };
     switch (job.generationMode) {
       case 'tryon-only':
-        finalImageUrls = await executeTryOnOnlyPipeline(job);
+        pipelineResult = await executeTryOnOnlyPipeline(job);
         break;
       case 'simple-scene':
         // Use V2 pipeline for enhanced parallel generation
-        finalImageUrls = await executeSimpleScenePipelineV2(job);
+        pipelineResult = await executeSimpleScenePipelineV2(job);
         break;
       case 'advanced-scene':
-        finalImageUrls = await executeAdvancedScenePipeline(job);
+        pipelineResult = await executeAdvancedScenePipeline(job);
         break;
       default:
         throw new Error(`Unknown generation mode: ${job.generationMode}`);
     }
 
+    const finalImageUrls = pipelineResult.imageUrls;
+    const finalPrompt = pipelineResult.finalPrompt;
+
     // Mark job as complete with all images
     console.log(`[Job ${jobId}] Pipeline completed. Generated ${finalImageUrls.length} images:`, finalImageUrls);
+    console.log(`[Job ${jobId}] Final prompt used: ${finalPrompt?.substring(0, 100)}...`);
     await kv.hset(jobId, {
       status: 'completed',
       statusMessage: 'Your new look is ready!',
@@ -111,6 +115,7 @@ async function runImageGenerationPipeline(jobId: string) {
             garmentImage: finalJobState.garmentImage.url,
             finalImage: imageUrl, // Use the current image URL
             styleSuggestion: finalJobState.suggestion,
+            finalPrompt: finalPrompt, // Save the final prompt used
           },
         };
         await saveLookToDB(lookToSave, 'default');
