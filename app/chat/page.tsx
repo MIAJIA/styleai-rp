@@ -26,6 +26,13 @@ import ReactMarkdown from "react-markdown"
 // Import types and constants from separate files
 import type { ChatMessage, ChatModeData, ChatStep } from "./types"
 import { styles, stylePrompts } from "./constants"
+import {
+  createChatMessage,
+  generateUniqueId,
+  getOccasionName,
+  getFileFromPreview,
+  generateSmartSuggestions,
+} from "./utils"
 
 // ============================================================================
 // 🔧 REFACTOR PLAN - Chat页面重构计划标记 (当前1912行 → 目标<600行)
@@ -34,8 +41,7 @@ import { styles, stylePrompts } from "./constants"
 // 📋 Phase 1: 基础重构 (不破坏现有功能)
 // ✅ Step 1: 拆出类型定义 → app/chat/types.ts (约50行) - 已完成
 // ✅ Step 2: 拆出常量配置 → app/chat/constants.ts (约80行) - 已完成
-// Step 3: 拆出工具函数 → app/chat/utils.ts (约100行)
-//   ✅ 位置: 下方 - createChatMessage, generateUniqueId, getOccasionName 等
+// ✅ Step 3: 拆出工具函数 → app/chat/utils.ts (约100行) - 已完成
 //
 // 📦 Phase 2: 组件拆分 (约350行)
 // Step 4: 拆出UI组件 → app/chat/components/
@@ -83,29 +89,6 @@ function QuickReplyButtons({
     </div>
   )
 }
-
-
-// Helper for creating chat messages
-// 🔧 [REFACTOR] Step 3: 将此工具函数移动到 app/chat/utils.ts
-const createChatMessage = (
-  type: "text" | "image" | "loading" | "generation-request" | "products",
-  role: "ai" | "user",
-  content?: string,
-  imageUrl?: string,
-  loadingText?: string,
-  metadata?: ChatMessage["metadata"],
-  products?: ProductInfo[],
-): ChatMessage => ({
-  id: `msg-${Date.now()}-${Math.random()}`,
-  type,
-  role,
-  content,
-  imageUrl,
-  loadingText,
-  metadata,
-  products,
-  timestamp: new Date(),
-})
 
 // AI Avatar component
 // 🧩 [REFACTOR] Step 4: 将此组件移动到 app/chat/components/AIAvatar.tsx
@@ -515,7 +498,12 @@ export default function ChatPage() {
     // The rest of the initialization logic remains the same...
     try {
       const storedData = sessionStorage.getItem("chatModeData")
-      console.log("[CHAT DEBUG] Raw sessionStorage data:", storedData)
+      // do not log the fullbodyphoto in userProfile
+      const storedDataForLog = storedData ? JSON.parse(storedData) : null;
+      if (storedDataForLog?.userProfile?.fullBodyPhoto) {
+        storedDataForLog.userProfile.fullBodyPhoto = '***';
+      }
+      console.log("[CHAT DEBUG] Raw sessionStorage data:", storedDataForLog)
 
       if (storedData) {
         const parsedData = JSON.parse(storedData)
@@ -609,11 +597,6 @@ Let's start chatting about styling now~`,
 
     setIsInitialized(true)
   }, [isInitialized]) // Dependency array ensures it runs once
-
-  // 🔧 [REFACTOR] Step 3: 将以下工具函数移动到 app/chat/utils.ts
-  const generateUniqueId = () => {
-    return `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-  }
 
   const addMessage = (message: Omit<ChatMessage, "id" | "timestamp">) => {
     setMessages((prev) => [...prev, { ...message, id: generateUniqueId(), timestamp: new Date() }])
@@ -869,28 +852,6 @@ Let's start chatting about styling now~`,
         content: `Sorry, something went wrong: ${error.message}`,
       })
     }
-  }
-
-  const generateSmartSuggestions = (aiResponse: string): string[] => {
-    const suggestions: string[] = []
-
-    if (aiResponse.includes("color") || aiResponse.includes("matching")) {
-      suggestions.push("Different occasion styling")
-    }
-    if (aiResponse.includes("occasion") || aiResponse.includes("date") || aiResponse.includes("work")) {
-      suggestions.push("Different occasion styling")
-    }
-    if (aiResponse.includes("style") || aiResponse.includes("style analysis")) {
-      suggestions.push("Style analysis")
-    }
-    if (aiResponse.includes("styling") || aiResponse.includes("styling suggestions")) {
-      suggestions.push("Styling suggestions")
-    }
-
-    // Add some general suggestions
-    suggestions.push("Fashion trends", "Shopping advice")
-
-    return suggestions.slice(0, 4) // Limit to 4 suggestions
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -1221,25 +1182,6 @@ Let's start chatting about styling now~`,
     console.log(`[PERF] 🎨 IMAGES DISPLAY COMPLETED`);
   }
 
-  const getOccasionName = (occasionId: string) => {
-    const style = styles.find((s) => s.id === occasionId)
-    return style ? style.name : "Unknown Occasion"
-  }
-
-  const getFileFromPreview = async (previewUrl: string, defaultName: string): Promise<File | null> => {
-    if (!previewUrl) return null
-    try {
-      const response = await fetch(previewUrl)
-      const blob = await response.blob()
-      const fileType = blob.type || "image/jpeg"
-      const fileName = defaultName
-      return new File([blob], fileName, { type: fileType })
-    } catch (error) {
-      console.error("Error converting preview to file:", error)
-      return null
-    }
-  }
-
   const startGeneration = async () => {
     const startTime = Date.now()
     console.log(`[PERF] 🚀 GENERATION STARTED at ${new Date().toISOString()}`)
@@ -1431,8 +1373,9 @@ Let's start chatting about styling now~`,
         // --- DEBUG LOG ---
         // do not change userProfile, only update the log, do not need to log the fullbodyphoto in userProfile
         const jobForLog = { ...job };
-        if (jobForLog?.fullBodyPhoto) {
+        if (jobForLog?.fullBodyPhoto || jobForLog?.userProfile?.fullBodyPhoto) {
           jobForLog.fullBodyPhoto = '***';
+          jobForLog.userProfile.fullBodyPhoto = '***';
         }
         console.log("[POLLING] Received job status:", JSON.stringify(jobForLog, null, 2));
 
