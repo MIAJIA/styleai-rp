@@ -13,6 +13,9 @@ import {
 } from '@/lib/ai';
 import { saveLookToDB, type PastLook } from '@/lib/database';
 import { type OnboardingData } from '@/lib/onboarding-storage';
+// import { track } from "@vercel/analytics/server"
+// import { Ratelimit } from '@upstash/ratelimit';
+// import { headers } from 'next/headers';
 
 // This background function now ONLY handles the long-running image generation
 async function runImageGenerationPipeline(jobId: string) {
