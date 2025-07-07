@@ -1,0 +1,6 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+If any file exceeds 600 lines, please remind me immediately. No file is allowed to exceed 1000 lines.

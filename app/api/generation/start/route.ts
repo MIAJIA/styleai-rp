@@ -5,7 +5,6 @@ import { put } from '@vercel/blob';
 import {
   getStyleSuggestionFromAI,
   executeAdvancedScenePipeline,
-  executeSimpleScenePipeline,
   executeSimpleScenePipelineV2,
   executeTryOnOnlyPipeline,
   type Job,
