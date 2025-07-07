@@ -14,13 +14,6 @@ import {
   ArrowLeft,
   Loader2,
   Sparkles,
-  BookOpen,
-  Footprints,
-  Coffee,
-  Mic,
-  Palmtree,
-  PartyPopper,
-  Heart,
   ChevronDown,
   ChevronUp,
   Send,
@@ -30,45 +23,37 @@ import {
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 
-// Enhanced Chat message type definition with generation support
-type ChatMessage = {
-  id: string
-  type: "text" | "image" | "loading" | "generation-request" | "products"
-  role: "ai" | "user"
-  content?: string
-  imageUrl?: string
-  loadingText?: string
-  timestamp: Date
-  products?: ProductInfo[] // Add products field
-  agentInfo?: {
-    id: string
-    name: string
-    emoji: string
-  }
-  metadata?: {
-    // Generation-related data
-    generationData?: {
-      selfiePreview?: string
-      clothingPreview?: string
-      occasion?: string
-      generationMode?: string
-    }
-    // Suggestions for quick replies
-    suggestions?: string[]
-    isGenerationTrigger?: boolean
-    outfitIndex?: number
-    waitingForImage?: boolean
-    isImagePlaceholder?: boolean
-    totalImages?: number
-    variationIndex?: number
-    imageIndex?: number
-    isOutfitPreview?: boolean
-    isFallback?: boolean
-    isStyledImage?: boolean // Flag to identify styled images
-  }
-}
+// Import types and constants from separate files
+import type { ChatMessage, ChatModeData, ChatStep } from "./types"
+import { styles, stylePrompts } from "./constants"
+
+// ============================================================================
+// 🔧 REFACTOR PLAN - Chat页面重构计划标记 (当前1912行 → 目标<600行)
+// ============================================================================
+//
+// 📋 Phase 1: 基础重构 (不破坏现有功能)
+// ✅ Step 1: 拆出类型定义 → app/chat/types.ts (约50行) - 已完成
+// ✅ Step 2: 拆出常量配置 → app/chat/constants.ts (约80行) - 已完成
+// Step 3: 拆出工具函数 → app/chat/utils.ts (约100行)
+//   ✅ 位置: 下方 - createChatMessage, generateUniqueId, getOccasionName 等
+//
+// 📦 Phase 2: 组件拆分 (约350行)
+// Step 4: 拆出UI组件 → app/chat/components/
+//   ✅ QuickReplyButtons.tsx, AIAvatar.tsx, ChatBubble.tsx 等
+//
+// 🪝 Phase 3: Hooks抽取 (约600行)
+// Step 5: 拆出自定义Hooks → app/chat/hooks/
+//   ✅ useSessionManagement, useImageHandling, usePolling, useGeneration, useChat
+//
+// 🏗️ Phase 4: 主组件精简 (约200-300行)
+// Step 6: 精简主组件 → page.tsx
+//   ✅ 保留: 页面布局、路由逻辑、组件组合
+//   ✅ 移除: 所有业务逻辑到hooks，所有UI细节到components
+//
+// ============================================================================
 
 // Component to render quick reply buttons
+// 🧩 [REFACTOR] Step 4: 将此组件移动到 app/chat/components/QuickReplyButtons.tsx
 function QuickReplyButtons({
   suggestions,
   onSelect,
@@ -99,52 +84,9 @@ function QuickReplyButtons({
   )
 }
 
-// Data type for generation requests
-type ChatModeData = {
-  selfiePreview: string
-  clothingPreview: string
-  occasion: string
-  generationMode: "tryon-only" | "simple-scene" | "advanced-scene"
-  selectedPersona: object | null
-  selfieFile: any
-  clothingFile: any
-  timestamp: number
-  customPrompt?: string
-}
-
-type ChatStep = "suggestion" | "generating" | "complete" | "error"
-
-const styles = [
-  { id: "fashion-magazine", name: "Magazine", icon: BookOpen },
-  { id: "running-outdoors", name: "Outdoors", icon: Footprints },
-  { id: "coffee-shop", name: "Coffee", icon: Coffee },
-  { id: "music-show", name: "Music Show", icon: Mic },
-  { id: "date-night", name: "Date Night", icon: Heart },
-  { id: "beach-day", name: "Beach Day", icon: Palmtree },
-  { id: "casual-chic", name: "Casual Chic", icon: Sparkles },
-  { id: "party-glam", name: "Party Glam", icon: PartyPopper },
-]
-
-const stylePrompts = {
-  "fashion-magazine":
-    "standing in a semi-surreal environment blending organic shapes and architectural elements. The background features dreamlike washes of indigo and burnt orange, with subtle floating geometric motifs inspired by Ukiyo-e clouds. Lighting combines soft studio strobes with atmospheric glow, creating dimensional shadows. Composition balances realistic human proportions with slightly exaggerated fabric movement, evoking a living oil painting. Texture details: fine wool fibers visible, slight film grain. Style fusion: Richard Avedon's fashion realism + Egon Schiele's expressive lines + niji's color vibrancy (but photorealistic), 4k resolution.",
-  "running-outdoors":
-    "A vibrant, sun-drenched hillside with lush greenery under a clear blue sky, capturing an adventure lifestyle mood. The scene is bathed in soft, natural light, creating a sense of cinematic realism. Shot with the professional quality of a Canon EOS R5, emphasizing realistic textures and high definition, 4k resolution.",
-  "coffee-shop":
-    "A cozy, sunlit coffee shop with the warm aroma of freshly ground beans. The person is sitting at a rustic wooden table by a large window, holding a ceramic mug. The background shows soft, blurred details of a barista and an espresso machine. The style should be intimate and warm, with natural light creating soft shadows, reminiscent of a lifestyle magazine photograph, 4k resolution.",
-  "casual-chic":
-    "trendy Brooklyn street with colorful murals, chic coffee shop with exposed brick walls, urban rooftop garden with city views, stylish boutique district, contemporary art gallery setting, natural daylight with artistic shadows, street style fashion photography, 4k resolution",
-  "music-show":
-    "Group idol style, performing on stage, spotlight and dreamy lighting, high-definition portrait, soft glow and bokeh, dynamic hair movement, glamorous makeup, K-pop inspired outfit (shiny, fashionable), expressive pose, cinematic stage background, lens flare, fantasy concert vibe, ethereal lighting, 4k resolution.",
-  "date-night":
-    "A realistic romantic evening on a backyard patio--string lights overhead, wine glasses, laughing mid-conversation with friend. Subtle body language, soft bokeh lights, hint of connection. Created using: Sony Alpha A7R IV, cinematic lighting, shallow depth of field, natural expressions, sunset color grading Shot in kodak gold 200 with a canon EOS R6, 4k resolution.",
-  "beach-day":
-    "On the beach, soft sunlight, gentle waves in the background, highly detailed, lifelike textures, natural lighting, vivid colors, 4k resolution",
-  "party-glam":
-    "opulent ballroom with crystal chandeliers, luxurious velvet curtains and gold accents, dramatic spotlight effects with rich jewel tones, champagne bar with marble countertops, exclusive VIP lounge atmosphere, professional event photography with glamorous lighting, 4k resolution",
-}
 
 // Helper for creating chat messages
+// 🔧 [REFACTOR] Step 3: 将此工具函数移动到 app/chat/utils.ts
 const createChatMessage = (
   type: "text" | "image" | "loading" | "generation-request" | "products",
   role: "ai" | "user",
@@ -166,6 +108,7 @@ const createChatMessage = (
 })
 
 // AI Avatar component
+// 🧩 [REFACTOR] Step 4: 将此组件移动到 app/chat/components/AIAvatar.tsx
 function AIAvatar() {
   return (
     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-orange-300 flex items-center justify-center shadow-md flex-shrink-0">
@@ -175,6 +118,7 @@ function AIAvatar() {
 }
 
 // Enhanced Chat Bubble component with generation support
+// 🧩 [REFACTOR] Step 4: 将此组件移动到 app/chat/components/ChatBubble.tsx (约120行)
 function ChatBubble({
   message,
   onImageClick,
@@ -310,6 +254,9 @@ function ChatBubble({
   )
 }
 
+// 🏗️ [REFACTOR] Step 6: 主页面组件 - 精简为约200-300行
+// 保留: 页面布局、路由逻辑、组件组合
+// 移除: 所有业务逻辑到hooks，所有UI细节到components
 export default function ChatPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -446,6 +393,7 @@ export default function ChatPage() {
   };
 
   // --- START: Image Handling Functions ---
+  // 🪝 [REFACTOR] Step 5: 将以下图片处理逻辑移动到 app/chat/hooks/useImageHandling.ts
   const handleImageUploadClick = () => {
     imageInputRef.current?.click()
   }
@@ -662,6 +610,7 @@ Let's start chatting about styling now~`,
     setIsInitialized(true)
   }, [isInitialized]) // Dependency array ensures it runs once
 
+  // 🔧 [REFACTOR] Step 3: 将以下工具函数移动到 app/chat/utils.ts
   const generateUniqueId = () => {
     return `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   }
@@ -707,6 +656,7 @@ Let's start chatting about styling now~`,
     })
   }
 
+  // 🪝 [REFACTOR] Step 5: 将以下聊天消息处理逻辑移动到 app/chat/hooks/useChat.ts
   const handleSendMessage = async (message: string) => {
     console.log(`[ChatPage] handleSendMessage called. Message: "${message}", Has Staged Image: ${!!stagedImage}`)
     if (message.trim() === "" && !stagedImage) return
@@ -1517,7 +1467,7 @@ Let's start chatting about styling now~`,
               role: 'ai' as const,
               type: 'image' as const,
               imageUrl: imageUrl,
-              content: `In this vibe, here’s how we’d wear it~ ${index + 1}`,
+              content: `In this vibe, here's how we'd wear it~ ${index + 1}`,
               metadata: {
                 isStyledImage: true,
                 imageIndex: index,
@@ -1817,50 +1767,50 @@ Let's start chatting about styling now~`,
 
         {/* Debug panel */}
         {
-        // process.env.NODE_ENV === "development"  XXX TODO: remove this
-        true // XXX TODO: remove this
-        && (
-          <div className="max-w-2xl mx-auto mt-4">
-            <div
-              className="bg-gray-100 rounded-lg cursor-pointer select-none"
-              onClick={() => setIsDebugExpanded(!isDebugExpanded)}
-            >
-              <div className="flex items-center justify-between p-3 border-b border-gray-200">
-                <h3 className="font-bold text-sm text-gray-700">Debug Info</h3>
-                {isDebugExpanded ? (
-                  <ChevronUp className="w-4 h-4 text-gray-500" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
-                )}
+          // process.env.NODE_ENV === "development"  XXX TODO: remove this
+          true // XXX TODO: remove this
+          && (
+            <div className="max-w-2xl mx-auto mt-4">
+              <div
+                className="bg-gray-100 rounded-lg cursor-pointer select-none"
+                onClick={() => setIsDebugExpanded(!isDebugExpanded)}
+              >
+                <div className="flex items-center justify-between p-3 border-b border-gray-200">
+                  <h3 className="font-bold text-sm text-gray-700">Debug Info</h3>
+                  {isDebugExpanded ? (
+                    <ChevronUp className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  )}
+                </div>
               </div>
-            </div>
 
-            {isDebugExpanded && (
-              <div className="bg-gray-100 rounded-b-lg p-4 text-xs space-y-1">
-                <div className="font-semibold text-gray-800 mb-2">🎯 Unified Chat States:</div>
-                <div>sessionId: {sessionId}</div>
-                <div>
-                  isLoading: <span className="font-bold">{String(isLoading)}</span>
+              {isDebugExpanded && (
+                <div className="bg-gray-100 rounded-b-lg p-4 text-xs space-y-1">
+                  <div className="font-semibold text-gray-800 mb-2">🎯 Unified Chat States:</div>
+                  <div>sessionId: {sessionId}</div>
+                  <div>
+                    isLoading: <span className="font-bold">{String(isLoading)}</span>
+                  </div>
+                  <div className="font-semibold text-gray-800 mt-3 mb-2">📊 Generation States:</div>
+                  <div>
+                    isGenerating: <span className="font-bold">{String(isGenerating)}</span>
+                  </div>
+                  <div>
+                    currentStep: <span className="font-bold">{String(currentStep)}</span>
+                  </div>
+                  <div>hasAutoStarted: {String(hasAutoStarted)}</div>
+                  <div>pollingActive: {pollingIntervalId ? "yes" : "no"}</div>
+                  <div className="font-semibold text-gray-800 mt-3 mb-2">💾 Data States:</div>
+                  <div>chatData: {chatData ? "exists" : "null"}</div>
+                  <div>messages.length: {String(messages.length)}</div>
+                  <div>pollingError: {pollingError || "none"}</div>
+                  <div className="font-semibold text-gray-800 mt-3 mb-2">💡 Final Prompt:</div>
+                  <div>{finalPrompt}</div>
                 </div>
-                <div className="font-semibold text-gray-800 mt-3 mb-2">📊 Generation States:</div>
-                <div>
-                  isGenerating: <span className="font-bold">{String(isGenerating)}</span>
-                </div>
-                <div>
-                  currentStep: <span className="font-bold">{String(currentStep)}</span>
-                </div>
-                <div>hasAutoStarted: {String(hasAutoStarted)}</div>
-                <div>pollingActive: {pollingIntervalId ? "yes" : "no"}</div>
-                <div className="font-semibold text-gray-800 mt-3 mb-2">💾 Data States:</div>
-                <div>chatData: {chatData ? "exists" : "null"}</div>
-                <div>messages.length: {String(messages.length)}</div>
-                <div>pollingError: {pollingError || "none"}</div>
-                <div className="font-semibold text-gray-800 mt-3 mb-2">💡 Final Prompt:</div>
-                <div>{finalPrompt}</div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
 
         {/* Generation button for guided mode (when chat data exists but no auto-start) */}
         {!isGenerating && currentStep === "suggestion" && chatData && messages.length > 0 && !hasAutoStarted && (
