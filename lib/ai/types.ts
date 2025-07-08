@@ -28,7 +28,7 @@ export const outfitItemsSchema = z.object({
 export const outfitSuggestionSchema = z.object({
   outfit_title: z.string().describe("A short, catchy title for the outfit."),
   items: outfitItemsSchema,
-  explanation: z.string().describe("A detailed explanation of why this outfit works for the user, providing styling tips and emotional value."),
+  explanation: z.string().optional().describe("A detailed explanation of why this outfit works for the user, providing styling tips and emotional value."),
 });
 
 export const styleSuggestionsSchema = z.object({
@@ -51,35 +51,56 @@ export interface StyleSuggestionInput {
 // This interface needs to be in sync with the one in the status route and the frontend
 export type GenerationMode = "tryon-only" | "simple-scene" | "advanced-scene";
 
+/**
+ * Represents a single, self-contained styling suggestion.
+ * Each suggestion has its own status for the image generation process.
+ */
+export interface Suggestion {
+  index: number;
+  status: 'pending' | 'generating_images' | 'succeeded' | 'failed';
+
+  // Textual content from AI
+  styleSuggestion: any; // Can be refined to a more specific type later
+  personaProfile?: any;
+  finalPrompt: string;
+
+  // Visuals
+  imageUrls?: string[];
+  intermediateImageUrls?: string[]; // For stylization previews
+
+  // For error handling
+  error?: string;
+}
+
+/**
+ * Represents a top-level generation job that can contain multiple suggestions.
+ */
 export interface Job {
   jobId: string;
-  humanImage: { url: string; type: string; name: string };
-  garmentImage: { url: string; type: string; name: string };
-  generationMode: GenerationMode;
-  occasion: string;
-  status: string;
-  statusMessage: string;
-  createdAt: string;
-  updatedAt: string;
-  userProfile?: any; // User profile data
-  customPrompt?: string; // Custom prompt for stylization
-  cancelled?: boolean; // Flag to indicate if job was cancelled by user
-  suggestion?: {
-    outfit_suggestion: any; // Single outfit suggestion
-    image_prompt: string; // Single image prompt
-    [key: string]: any;
+  userId?: string; // Optional: can be added for user-specific jobs
+
+  // Overall status of the entire job, not individual suggestions
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+
+  // The core content of the job: an array of suggestions
+  suggestions: Suggestion[];
+
+  // Input parameters for the job
+  input: {
+    humanImage: { url: string; type: string; name: string };
+    garmentImage: { url: string; type: string; name: string };
+    generationMode: GenerationMode;
+    occasion: string;
+    userProfile?: any;
+    customPrompt?: string;
   };
-  processImages?: {
-    styledImages?: string[];  // Changed to array
-    styledImage?: string;     // Keep for backward compatibility
-    tryOnImages?: string[];   // Changed to array
-    tryOnImage?: string;      // Keep for backward compatibility
-  };
-  result?: {
-    imageUrls?: string[];     // Added array version
-    imageUrl?: string;        // Keep for backward compatibility
-    totalImages?: number;     // Added count
-  };
+
+  // Timestamps
+  createdAt: number;
+  updatedAt: number;
+
+  // For error handling at the job level
   error?: string;
-  [key: string]: any; // Index signature for Vercel KV compatibility
 }
+
+export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';

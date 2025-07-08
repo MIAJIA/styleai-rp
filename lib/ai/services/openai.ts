@@ -1,8 +1,13 @@
 import OpenAI from "openai";
 import { systemPrompt, IMAGE_GENERATION_MODEL } from "@/lib/prompts";
-import { type StyleSuggestionInput, styleSuggestionsJsonSchema } from "../types";
+import {
+  type StyleSuggestionInput,
+  styleSuggestionsSchema,
+} from "../types";
 import { calculateImageTokens, formatBytes } from "../utils";
 import { type OnboardingData } from "@/lib/onboarding-storage";
+import { z } from 'zod';
+import zodToJsonSchema from "zod-to-json-schema";
 
 // Initialize the OpenAI client
 const openai = new OpenAI({
@@ -13,13 +18,21 @@ const openai = new OpenAI({
 const TOKEN_LOG_PREFIX = '🎯📊 TOKEN_ANALYSIS';
 const IMAGE_LOG_PREFIX = '🖼️📏 IMAGE_METRICS';
 
+interface GetStyleSuggestionOptions {
+  count?: number;
+}
 
-export async function getStyleSuggestionFromAI({
-  humanImageUrl,
-  garmentImageUrl,
-  occasion,
-  userProfile,
-}: StyleSuggestionInput): Promise<any> {
+export async function getStyleSuggestionFromAI(
+  {
+    humanImageUrl,
+    garmentImageUrl,
+    occasion,
+    userProfile,
+  }: StyleSuggestionInput,
+  options: GetStyleSuggestionOptions = {}
+): Promise<any[]> {
+  const { count = 1 } = options;
+
   if (!humanImageUrl || !garmentImageUrl || !occasion) {
     throw new Error("Missing required inputs for style suggestion.");
   }
@@ -104,10 +117,10 @@ ${occasionSection}
 ${stylePreferenceSection}
 
 **Styling Instructions:**
-- Analyze the person's gender presentation from the first image
-- Design the complete outfit to match their masculine or feminine style preferences
-- Ensure all clothing items, accessories, and styling choices are appropriate for their gender presentation
-- The outfit should feel natural and authentic to how they present themselves`;
+- Generate ${count} different and distinct styling suggestions. Each suggestion should explore a unique style direction (e.g., one classic, one trendy, one edgy).
+- For each suggestion, analyze the person's gender presentation from the first image and design the complete outfit to match their masculine or feminine style preferences.
+- Ensure all clothing items, accessories, and styling choices are appropriate for their gender presentation.
+- Each outfit should feel natural and authentic to how they present themselves.`;
 
     // 🔍 LOG: Final token estimation including text
     const textTokenEstimate = Math.ceil(userMessageText.length / 4); // Rough estimate: 4 chars per token
@@ -119,6 +132,13 @@ ${stylePreferenceSection}
     console.log(`${TOKEN_LOG_PREFIX} 🔧 System Prompt Tokens: ~${systemPromptTokens.toLocaleString()}`);
     console.log(`${TOKEN_LOG_PREFIX} 🎯 TOTAL REQUEST TOKENS: ~${totalRequestTokens.toLocaleString()}`);
     console.log(`${TOKEN_LOG_PREFIX} ===== SENDING REQUEST TO OPENAI =====`);
+
+    // --- NEW: Dynamically create the schema based on the count ---
+    const multiSuggestionSchema = z.object({
+      suggestions: z.array(styleSuggestionsSchema).length(count),
+    });
+    const multiSuggestionJsonSchema = zodToJsonSchema(multiSuggestionSchema);
+    // --- END NEW ---
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -156,15 +176,15 @@ ${stylePreferenceSection}
         {
           type: "function",
           function: {
-            name: "get_style_suggestions",
-            description: "Get one complete outfit suggestions in a structured JSON format.",
-            parameters: styleSuggestionsJsonSchema,
+            name: "get_multiple_style_suggestions",
+            description: `Get ${count} complete and distinct outfit suggestions in a structured JSON format.`,
+            parameters: multiSuggestionJsonSchema,
           },
         },
       ],
       tool_choice: {
         type: "function",
-        function: { name: "get_style_suggestions" },
+        function: { name: "get_multiple_style_suggestions" },
       },
     });
 
@@ -180,16 +200,21 @@ ${stylePreferenceSection}
 
     const toolCall = message.tool_calls[0];
 
-    if (toolCall.function.name !== 'get_style_suggestions') {
+    if (toolCall.function.name !== 'get_multiple_style_suggestions') {
       console.error(`${TOKEN_LOG_PREFIX} [AI DEBUG] Unexpected tool call: ${toolCall.function.name}`);
       throw new Error(`AI returned an unexpected tool: ${toolCall.function.name}`);
     }
 
-    const suggestion = JSON.parse(toolCall.function.arguments);
-    console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] OpenAI Suggestion:`, JSON.stringify(suggestion, null, 2));
+    // --- FIX: Use Zod to parse and validate the AI's output ---
+    const unsafeResult = JSON.parse(toolCall.function.arguments);
+    const validatedResult = multiSuggestionSchema.parse(unsafeResult); // This will throw a detailed error if the schema is not met
+    // --- END FIX ---
+
+    console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] OpenAI Suggestion:`, JSON.stringify(validatedResult, null, 2));
     console.log(`${TOKEN_LOG_PREFIX} ===== IMAGE PROCESSING ANALYSIS COMPLETE =====`);
 
-    return suggestion;
+    // The result from the tool is an object with a "suggestions" property, which is the array we want.
+    return validatedResult.suggestions;
 
   } catch (error) {
     console.error(`${TOKEN_LOG_PREFIX} 🚨 Error getting style suggestion from OpenAI:`, error);
