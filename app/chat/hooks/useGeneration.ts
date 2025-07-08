@@ -27,6 +27,8 @@ export function useGeneration({
   const [generationStatusText, setGenerationStatusText] = useState<string | null>(null)
   const [pollingError, setPollingError] = useState<string | null>(null)
 
+  const lastStatusRef = useRef<string | null>(null);
+  const lastStatusMessageRef = useRef<string | null>(null);
   const processedStatusesRef = useRef<Set<string>>(new Set())
   const hasDisplayedIntermediateImages = useRef(false)
 
@@ -64,7 +66,16 @@ export function useGeneration({
 
   const onPollingUpdate = useCallback(
     (job: any) => {
-      console.log("[useGeneration] Polling update:", job)
+      if (job.status !== lastStatusRef.current || job.statusMessage !== lastStatusMessageRef.current) {
+        console.log('[Generation]', {
+          status: job.status,
+          message: job.statusMessage,
+          jobId: job.jobId?.slice(-8)
+        });
+        lastStatusRef.current = job.status;
+        lastStatusMessageRef.current = job.statusMessage;
+      }
+
       if (job.statusMessage) {
         setGenerationStatusText(job.statusMessage)
       }

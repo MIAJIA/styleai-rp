@@ -274,10 +274,10 @@ export default function ChatPage() {
     await sendChatMessage(message)
   }
 
-  const handleImageClick = (imageUrl: string) => {
+  const handleImageClick = useCallback((imageUrl: string) => {
     setModalImage(imageUrl)
     setIsModalOpen(true)
-  }
+  }, [])
 
   const handleCloseModal = () => {
     setIsModalOpen(false)

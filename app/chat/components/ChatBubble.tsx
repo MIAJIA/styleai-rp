@@ -1,33 +1,40 @@
+import React from "react"
 import ReactMarkdown from "react-markdown"
 import ImageVoteButtons from "@/components/image-vote-buttons"
 import { ProductGrid, type ProductInfo } from "../../components/product-card"
 import type { ChatMessage } from "../types"
 import { AIAvatar } from "./AIAvatar"
 
-// Enhanced Chat Bubble component with generation support
-export function ChatBubble({
-  message,
-  onImageClick,
-  sessionId,
-}: {
+interface ChatBubbleProps {
   message: ChatMessage
   onImageClick: (imageUrl: string) => void
   sessionId?: string
-}) {
+}
+
+// Enhanced Chat Bubble component with generation support
+export const ChatBubble = React.memo(function ChatBubble({
+  message,
+  onImageClick,
+  sessionId,
+}: ChatBubbleProps) {
   const isAI = message.role === "ai"
   const isUser = message.role === "user"
 
-  console.log(`[ChatBubble] Rendering message with sessionId: ${sessionId}, hasImage: ${!!message.imageUrl}`)
+  if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+    console.log('[ChatBubble] Rendering:', { sessionId: sessionId?.slice(-8), hasImage: !!message.imageUrl });
+  }
 
   // Debug logging for product messages
   if (message.type === "products" || (message.products && message.products.length > 0)) {
-    console.log("[ChatBubble] Rendering message with products:", {
-      messageId: message.id,
-      messageType: message.type,
-      hasProducts: !!message.products,
-      productCount: message.products?.length || 0,
-      products: message.products?.map((p) => ({ id: p.id, name: `${p.name.substring(0, 20)}...` })) || [],
-    })
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[ChatBubble] Rendering message with products:", {
+        messageId: message.id,
+        messageType: message.type,
+        hasProducts: !!message.products,
+        productCount: message.products?.length || 0,
+        products: message.products?.map((p) => ({ id: p.id, name: `${p.name.substring(0, 20)}...` })) || [],
+      })
+    }
   }
 
   return (
@@ -140,4 +147,4 @@ export function ChatBubble({
       </div>
     </div>
   )
-}
+})

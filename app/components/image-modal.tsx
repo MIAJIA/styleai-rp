@@ -63,7 +63,13 @@ export default function ImageModal({ isOpen, onClose, imageUrl, title, sessionId
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="image-modal-title"
+      aria-describedby="image-modal-description"
+    >
       {/* Background overlay */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
@@ -100,6 +106,12 @@ export default function ImageModal({ isOpen, onClose, imageUrl, title, sessionId
               onLoad={() => setIsLoading(false)}
               onError={() => setIsLoading(false)}
             />
+            <h2 id="image-modal-title" className="sr-only">
+              {title || "Generated Look"}
+            </h2>
+            <p id="image-modal-description" className="sr-only">
+              An enlarged view of the generated look with options to save and share.
+            </p>
           </div>
 
           {/* Action buttons */}
