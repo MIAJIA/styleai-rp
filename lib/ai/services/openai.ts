@@ -135,7 +135,7 @@ ${stylePreferenceSection}
 
     // --- NEW: Dynamically create the schema based on the count ---
     const multiSuggestionSchema = z.object({
-      suggestions: z.array(styleSuggestionsSchema).length(count),
+      suggestions: z.array(styleSuggestionsSchema).min(1).max(5),
     });
     const multiSuggestionJsonSchema = zodToJsonSchema(multiSuggestionSchema);
     // --- END NEW ---
@@ -214,7 +214,7 @@ ${stylePreferenceSection}
     console.log(`${TOKEN_LOG_PREFIX} ===== IMAGE PROCESSING ANALYSIS COMPLETE =====`);
 
     // The result from the tool is an object with a "suggestions" property, which is the array we want.
-    return validatedResult.suggestions;
+    return validatedResult.suggestions.slice(0, count);
 
   } catch (error) {
     console.error(`${TOKEN_LOG_PREFIX} 🚨 Error getting style suggestion from OpenAI:`, error);

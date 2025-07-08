@@ -40,14 +40,17 @@ export function useGeneration({
   const onPollingError = useCallback(
     (error: Error) => {
       console.error("[useGeneration | onPollingError] Polling failed:", error)
-      setPollingError(error.message)
+      const errorMessage = `Opps... something went wrong. Polling failed with status: ${error.message.replace('Polling failed with status: ', '')}`;
+      setPollingError(errorMessage);
       replaceLastLoadingMessage({
         role: "ai",
         type: "text",
-        content: `Opps... something went wrong: ${error.message}`,
+        content: errorMessage,
       })
       setCurrentStep("error")
-      setJobId(null) // Stop polling on error
+      // We no longer setJobId(null) here. This allows the user to potentially
+      // trigger another image generation for a different suggestion, which might
+      // restart the polling process if the backend call is successful.
     },
     [replaceLastLoadingMessage, setCurrentStep],
   )
@@ -76,7 +79,6 @@ export function useGeneration({
 
         // --- RE-ADDITION: Display intermediate images but ONLY for the CURRENT suggestion ---
         if (
-          index === currentSuggestionIndex && // This is the key condition
           status === 'generating_images' &&
           intermediateImageUrls &&
           !displayedIntermediateImages.current.has(index)
@@ -86,7 +88,7 @@ export function useGeneration({
           addMessage({
             role: 'ai',
             type: 'text',
-            content: '✨ 这是为你生成的场景预览，即将进行最终的细节处理...'
+            content: `✨ 这是为你生成的第 ${index + 1} 套搭配的场景预览，即将进行最终的细节处理...`
           });
           addMessage({
             type: "loading" as const,
@@ -162,11 +164,9 @@ export function useGeneration({
     ],
   )
 
-  usePolling<Job>({
-    jobId,
-    onUpdate: onPollingUpdate,
-    onError: onPollingError,
-  })
+  usePolling<Job>(jobId, onPollingUpdate, {
+    onPollingError: onPollingError,
+  });
 
   const startGeneration = async () => {
     if (!chatData) {
