@@ -198,6 +198,8 @@ export function useGeneration({
     })
 
     try {
+      const startTime = Date.now();
+      console.log(`[FE_PERF_LOG | startGeneration] API call initiated. Timestamp: ${startTime}`);
       const selfieFile = await getFileFromPreview(chatData.selfiePreview, "user_selfie.jpg")
       const clothingFile = await getFileFromPreview(chatData.clothingPreview, "user_clothing.jpg")
       if (!selfieFile || !clothingFile) {
@@ -228,16 +230,28 @@ export function useGeneration({
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to start the generation job.")
+        let errorDetails = "An unknown error occurred.";
+        try {
+          const errorJson = await response.json();
+          errorDetails = errorJson.details || errorJson.error || JSON.stringify(errorJson);
+        } catch (e) {
+          // If the response is not JSON, use the text content
+          errorDetails = await response.text();
+        }
+        throw new Error(`Failed to start generation. Server responded with ${response.status}: ${errorDetails}`);
       }
 
-      const data = await response.json()
-      console.log(`[useGeneration | startGeneration]  получили  получили jobId: ${data.jobId}. Triggering polling.`);
-      setJobId(data.jobId) // This will trigger the usePolling hook
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred."
-      console.error("[useGeneration | startGeneration] 💥 Error during generation start:", errorMessage);
+      const result = await response.json();
+      const endTime = Date.now();
+      console.log(`[FE_PERF_LOG | startGeneration] API call successful. JobId received. Total time: ${endTime - startTime}ms.`);
+
+      console.log("[useGeneration | startGeneration]  получили  получили jobId:", result.jobId, ". Triggering polling.");
+      setJobId(result.jobId);
+    } catch (error: any) {
+      const errorMessage =
+        error.message || "An unexpected error occurred while starting the generation."
+      console.error("[useGeneration | startGeneration] 💥 Error during generation start:", errorMessage)
+
       replaceLastLoadingMessage({
         type: "text",
         role: "ai",
