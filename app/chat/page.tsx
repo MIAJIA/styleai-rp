@@ -34,6 +34,8 @@ import {
   generateSmartSuggestions,
 } from "./utils"
 import { QuickReplyButtons, AIAvatar, ChatBubble, StatusIndicator, ChatInput, DebugPanel } from "./components"
+import { useImageHandling } from "./hooks/useImageHandling"
+import { useSessionManagement } from "./hooks/useSessionManagement"
 
 // ============================================================================
 // 🔧 REFACTOR PLAN - Chat页面重构计划标记 (当前1912行 → 目标<600行)
@@ -48,8 +50,9 @@ import { QuickReplyButtons, AIAvatar, ChatBubble, StatusIndicator, ChatInput, De
 // ✅ Step 4: 拆出UI组件 → app/chat/components/ - 已完成
 //
 // 🪝 Phase 3: Hooks抽取 (约600行)
-// Step 5: 拆出自定义Hooks → app/chat/hooks/
-//   ✅ useSessionManagement, useImageHandling, usePolling, useGeneration, useChat
+// 🔄 Step 5: 拆出自定义Hooks → app/chat/hooks/ - 进行中
+//   ✅ useImageHandling.ts
+//   ✅ useSessionManagement.ts
 //
 // 🏗️ Phase 4: 主组件精简 (约200-300行)
 // Step 6: 精简主组件 → page.tsx
@@ -254,10 +257,19 @@ export default function ChatPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  const {
+    stagedImage,
+    setStagedImage,
+    isImageProcessing,
+    imageInputRef,
+    handleImageUploadClick,
+    handleImageSelect,
+    clearStagedImage,
+  } = useImageHandling()
+  const sessionId = useSessionManagement()
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [stagedImage, setStagedImage] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState<boolean>(false)
   const [currentStep, setCurrentStep] = useState<ChatStep>("suggestion")
   const [messageIdCounter, setMessageIdCounter] = useState(0)
@@ -289,10 +301,7 @@ export default function ChatPage() {
 
   // Re-enable state variables that are still in use by other parts of the component
   const [userInput, setUserInput] = useState("")
-  const [sessionId, setSessionId] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
-
-  const [isImageProcessing, setIsImageProcessing] = useState(false)
 
   const [displayedIntermediateImages, setDisplayedIntermediateImages] = useState(false);
   const isGeneratingRef = useRef(false)
@@ -361,7 +370,7 @@ export default function ChatPage() {
             "重新生成搭配",
             "尝试不同风格",
             "换个场合搭配",
-            "给我其他建议"
+            "给我其他建议",
           ],
         },
       });
@@ -380,95 +389,10 @@ export default function ChatPage() {
       addMessage({
         type: "text",
         role: "ai",
-        content: `取消生成时出现错误: ${error instanceof Error ? error.message : '未知错误'}`,
+        content: `取消生成时出现错误: ${error instanceof Error ? error.message : "未知错误"}`,
       });
     }
   };
-
-  // --- START: Image Handling Functions ---
-  // 🪝 [REFACTOR] Step 5: 将以下图片处理逻辑移动到 app/chat/hooks/useImageHandling.ts
-  const handleImageUploadClick = () => {
-    imageInputRef.current?.click()
-  }
-
-  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    console.log(`[ChatPage] Image selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
-
-    // File type check
-    if (!file.type.startsWith("image/")) {
-      alert("Please select an image file")
-      return
-    }
-
-    // File size warning
-    if (file.size > 50 * 1024 * 1024) {
-      // >50MB
-      alert("Image too large (>50MB), please select a smaller image")
-      return
-    }
-
-    setIsImageProcessing(true)
-
-    try {
-      // Choose compression strategy based on file size
-      let compressionResult
-      if (file.size > 10 * 1024 * 1024) {
-        // >10MB
-        console.log("[ChatPage] Using aggressive compression for large file")
-        compressionResult = await import("@/lib/image-compression").then((m) => m.compressForChat(file))
-      } else if (file.size > 5 * 1024 * 1024) {
-        // >5MB
-        console.log("[ChatPage] Using standard compression for medium file")
-        compressionResult = await import("@/lib/image-compression").then((m) => m.compressForChat(file))
-      } else {
-        console.log("[ChatPage] Using standard compression for small file")
-        compressionResult = await import("@/lib/image-compression").then((m) => m.compressForChat(file))
-      }
-
-      console.log(
-        `[ChatPage] Image compression complete: ${(file.size / 1024).toFixed(1)}KB → ${(compressionResult.compressedSize / 1024).toFixed(1)}KB (reduced ${(compressionResult.compressionRatio * 100).toFixed(1)}%)`,
-      )
-
-      setStagedImage(compressionResult.dataUrl)
-
-      // Show compression result to user
-      if (compressionResult.compressionRatio > 0.5) {
-        console.log(
-          `[ChatPage] Image optimized: size reduced ${(compressionResult.compressionRatio * 100).toFixed(1)}%, improved transmission speed`,
-        )
-      }
-    } catch (error) {
-      console.error("[ChatPage] Image compression failed:", error)
-
-      // Fallback: for small images, still allow using original
-      if (file.size < 5 * 1024 * 1024) {
-        // <5MB
-        console.log("[ChatPage] Compression failed, using original image")
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          const result = reader.result as string
-          console.log("[ChatPage] Original image Data URL length:", result.length)
-          setStagedImage(result)
-        }
-        reader.readAsDataURL(file)
-      } else {
-        alert("Image processing failed, please try again or select a smaller image")
-      }
-    } finally {
-      setIsImageProcessing(false)
-    }
-
-    // Reset file input to allow selecting the same file again
-    event.target.value = ""
-  }
-
-  const clearStagedImage = () => {
-    setStagedImage(null)
-  }
-  // --- END: Image Handling Functions ---
 
   const handleImageClick = (imageUrl: string) => {
     setModalImage(imageUrl)
@@ -493,17 +417,6 @@ export default function ChatPage() {
     if (isInitialized) {
       return
     }
-
-    // 1. Ensure a session ID exists on the client
-    let currentSessionId = localStorage.getItem("chat_session_id")
-    if (!currentSessionId) {
-      currentSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      localStorage.setItem("chat_session_id", currentSessionId)
-    }
-
-    // Set the sessionId state
-    setSessionId(currentSessionId)
-    console.log("[ChatPage] Session ID initialized:", currentSessionId)
 
     // The rest of the initialization logic remains the same...
     try {
@@ -650,6 +563,13 @@ Let's start chatting about styling now~`,
   }
 
   // 🪝 [REFACTOR] Step 5: 将以下聊天消息处理逻辑移动到 app/chat/hooks/useChat.ts
+  // 什么是stagedImage？
+  // stagedImage is the image that the user has selected to be used in the generation
+  // it is set when the user clicks the image upload button
+  // it is cleared when the user sends the message
+  // it is used to display the image in the chat bubble
+  // it is used to send the image to the backend
+  // it is used to display the image in the chat bubble
   const handleSendMessage = async (message: string) => {
     console.log(`[ChatPage] handleSendMessage called. Message: "${message}", Has Staged Image: ${!!stagedImage}`)
     if (message.trim() === "" && !stagedImage) return
