@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const job = await kv.hgetall<Job>(jobId);
+    const job = await kv.get<Job>(jobId);
 
     if (!job) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });

@@ -8,141 +8,119 @@ import {
   executeSimpleScenePipelineV2,
   executeTryOnOnlyPipeline,
   type Job,
+  type Suggestion,
   type GenerationMode,
 } from '@/lib/ai';
 import { saveLookToDB, type PastLook } from '@/lib/database';
 import { type OnboardingData } from '@/lib/onboarding-storage';
-// import { track } from "@vercel/analytics/server"
-// import { Ratelimit } from '@upstash/ratelimit';
-// import { headers } from 'next/headers';
 
 // This background function now ONLY handles the long-running image generation
-async function runImageGenerationPipeline(jobId: string) {
+async function runImageGenerationPipeline(jobId: string, suggestionIndex: number) {
   let job: Job | null = null;
   try {
-    job = await kv.hgetall<Job>(jobId);
+    job = await kv.get<Job>(jobId);
     if (!job) {
       throw new Error(`Job with ID ${jobId} not found.`);
     }
 
-    console.log(`[Job ${jobId}] Starting AI style suggestion generation...`);
-    console.log(`[Job ${jobId}] Retrieved job from KV with customPrompt:`, job.customPrompt);
-    console.log(`[Job ${jobId}] CustomPrompt type:`, typeof job.customPrompt);
-    console.log(`[Job ${jobId}] CustomPrompt length:`, job.customPrompt?.length || 0);
-
-    // --- FIX: The suggestion generation is now part of the background job ---
-    const suggestion = await getStyleSuggestionFromAI({
-      humanImageUrl: job.humanImage.url,
-      garmentImageUrl: job.garmentImage.url,
-      occasion: job.occasion,
-      userProfile: job.userProfile, // Pass user profile to the AI
-    });
-    console.log(`[Job ${jobId}] Suggestion generated.`);
-
-    // Update job with suggestion
-    await kv.hset(jobId, {
-      suggestion: suggestion,
-      status: 'suggestion_generated',
-      statusMessage: 'Style advice generated. Preparing to create your look...',
-      updatedAt: new Date().toISOString(),
-    });
-
-    // To avoid KV race conditions, update the local job object instead of re-fetching.
-    if (!job) {
-      throw new Error("Job context was lost unexpectedly after suggestion generation.");
+    const suggestionToProcess = job.suggestions[suggestionIndex];
+    if (!suggestionToProcess) {
+      throw new Error(`Suggestion index ${suggestionIndex} not found in job ${jobId}.`);
     }
-    job.suggestion = suggestion;
-    job.status = 'suggestion_generated';
 
-    console.log(`[Job ${jobId}] Starting image generation pipeline for mode: ${job.generationMode}`);
+    console.log(`[Job ${jobId}] Starting image generation pipeline for suggestion ${suggestionIndex}...`);
 
-    // Execute the selected generation pipeline
+    // 为了兼容旧的 pipeline 函数，我们创建一个临时的"旧版" job 对象
+    // 这样就无需立刻重构所有 pipeline 函数
+    const legacyJobForPipeline = {
+      ...job.input,
+      jobId: job.jobId,
+      // pipeline 函数可能期望的是单个 suggestion 对象
+      suggestion: suggestionToProcess.styleSuggestion,
+      // HACK: 显式地将 image_prompt 提升到顶层，以兼容可能期望扁平结构的旧版 pipeline
+      image_prompt: suggestionToProcess.styleSuggestion?.image_prompt,
+      suggestionIndex: suggestionIndex,
+    };
+
     let pipelineResult: { imageUrls: string[], finalPrompt: string };
-    switch (job.generationMode) {
+    switch (job.input.generationMode) {
       case 'tryon-only':
-        pipelineResult = await executeTryOnOnlyPipeline(job);
+        // HACK: as any is used here to bridge the gap between old and new types
+        pipelineResult = await executeTryOnOnlyPipeline(legacyJobForPipeline as any);
         break;
       case 'simple-scene':
-        // Use V2 pipeline for enhanced parallel generation
-        pipelineResult = await executeSimpleScenePipelineV2(job);
+        pipelineResult = await executeSimpleScenePipelineV2(legacyJobForPipeline as any);
         break;
       case 'advanced-scene':
-        pipelineResult = await executeAdvancedScenePipeline(job);
+        pipelineResult = await executeAdvancedScenePipeline(legacyJobForPipeline as any);
         break;
       default:
-        throw new Error(`Unknown generation mode: ${job.generationMode}`);
+        throw new Error(`Unknown generation mode: ${job.input.generationMode}`);
     }
 
-    const finalImageUrls = pipelineResult.imageUrls;
-    const finalPrompt = pipelineResult.finalPrompt;
+    // --- 在 Job 对象中更新指定的 suggestion ---
+    job = await kv.get<Job>(jobId); // 重新获取以确保我们有最新的状态
+    if (!job) {
+      throw new Error(`Job with ID ${jobId} disappeared during processing.`);
+    }
 
-    // Mark job as complete with all images
-    console.log(`[Job ${jobId}] Pipeline completed. Generated ${finalImageUrls.length} images:`, finalImageUrls);
-    console.log(`[Job ${jobId}] Final prompt used: ${finalPrompt?.substring(0, 100)}...`);
-    await kv.hset(jobId, {
-      status: 'completed',
-      statusMessage: 'Your new look is ready!',
-      result: {
-        imageUrls: finalImageUrls,
-        imageUrl: finalImageUrls[0], // Keep for backward compatibility
-        totalImages: finalImageUrls.length,
-      },
-      updatedAt: new Date().toISOString(),
-    });
+    job.suggestions[suggestionIndex].status = 'succeeded';
+    job.suggestions[suggestionIndex].imageUrls = pipelineResult.imageUrls;
+    job.updatedAt = Date.now();
 
-    // Save the final look to the primary database
+    // 检查是否所有 suggestion 都已完成
+    const isJobComplete = job.suggestions.every(s => s.status === 'succeeded' || s.status === 'failed');
+    if (isJobComplete) {
+      job.status = 'completed';
+    }
+
+    await kv.set(jobId, job);
+    console.log(`[Job ${jobId}] Suggestion ${suggestionIndex} completed successfully.`);
+
+    // --- [NEW] Save the successfully generated look to the database ---
     try {
-      const finalJobState = await kv.hgetall<Job>(jobId);
-      if (!finalJobState) {
-        throw new Error("Job data not found for saving to DB.");
-      }
-
-      // --- FIX: Save all generated images to the database ---
-      for (let i = 0; i < finalImageUrls.length; i++) {
-        const imageUrl = finalImageUrls[i];
-        // Create a unique ID for each look by appending an index
-        const lookId = `${finalJobState.jobId}-${i}`;
-
+      if (pipelineResult.imageUrls && pipelineResult.imageUrls.length > 0) {
         const lookToSave: PastLook = {
-          id: lookId, // Use the unique ID
-          imageUrl: imageUrl, // Use the current image URL
-          style: finalJobState.suggestion?.style_alignment || 'AI Generated',
+          id: `${job.jobId}-${suggestionIndex}`, // Create a unique ID for this specific look
+          imageUrl: pipelineResult.imageUrls[0], // Use the first generated image as the primary one
+          style: job.suggestions[suggestionIndex]?.styleSuggestion?.outfit_suggestion?.outfit_title || 'AI Generated Style',
           timestamp: Date.now(),
-          originalHumanSrc: finalJobState.humanImage.url,
-          originalGarmentSrc: finalJobState.garmentImage.url,
-          garmentDescription: finalJobState.suggestion?.material_silhouette,
-          personaProfile: null,
+          originalHumanSrc: job.input.humanImage.url,
+          originalGarmentSrc: job.input.garmentImage.url,
           processImages: {
-            humanImage: finalJobState.humanImage.url,
-            garmentImage: finalJobState.garmentImage.url,
-            finalImage: imageUrl, // Use the current image URL
-            styleSuggestion: finalJobState.suggestion,
-            finalPrompt: finalPrompt, // Save the final prompt used
+            humanImage: job.input.humanImage.url,
+            garmentImage: job.input.garmentImage.url,
+            finalImage: pipelineResult.imageUrls[0],
+            styleSuggestion: job.suggestions[suggestionIndex]?.styleSuggestion,
+            finalPrompt: pipelineResult.finalPrompt,
           },
+          // personaProfile and garmentDescription can be added if available
         };
-        await saveLookToDB(lookToSave, 'default');
-        console.log(`[Job ${jobId}] Successfully saved look ${i + 1}/${finalImageUrls.length} to DB with ID: ${lookId}`);
-      }
-      console.log(`[Job ${jobId}] All ${finalImageUrls.length} looks saved to primary DB.`);
 
+        // We assume a 'default' user for now, this could be dynamic in a multi-user system
+        await saveLookToDB(lookToSave, 'default');
+        console.log(`[Job ${jobId}] Successfully saved look for suggestion ${suggestionIndex} to database.`);
+      }
     } catch (dbError) {
-      console.error(`[Job ${jobId}] CRITICAL: Pipeline succeeded but failed to save look(s) to DB.`, dbError);
+      console.error(`[Job ${jobId}] Failed to save look for suggestion ${suggestionIndex} to DB:`, dbError);
+      // We don't re-throw here, as failing to save to DB shouldn't fail the entire generation process.
     }
+    // --- [END NEW] ---
 
   } catch (error) {
-    console.error(`[Job ${jobId}] Background image pipeline failed:`, error);
-    if (jobId) {
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      await kv.hset(jobId, {
-        status: 'failed',
-        statusMessage: `Generation failed: ${errorMessage}`,
-        error: errorMessage,
-        updatedAt: new Date().toISOString(),
-      });
+    console.error(`[Job ${jobId}] Background pipeline for suggestion ${suggestionIndex} failed:`, error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+
+    // 在指定的 suggestion 中更新错误信息
+    const jobToUpdate = await kv.get<Job>(jobId);
+    if (jobToUpdate) {
+      jobToUpdate.suggestions[suggestionIndex].status = 'failed';
+      jobToUpdate.suggestions[suggestionIndex].error = errorMessage;
+      jobToUpdate.updatedAt = Date.now();
+      await kv.set(jobId, jobToUpdate);
     }
   }
 }
-
 
 export async function POST(request: Request) {
   try {
@@ -153,11 +131,6 @@ export async function POST(request: Request) {
     const generationMode = formData.get('generation_mode') as GenerationMode | null;
     const userProfileString = formData.get('user_profile') as string | null;
     const customPrompt = formData.get('custom_prompt') as string | null;
-
-    // Debug log for customPrompt
-    console.log('[GENERATION START API] Received customPrompt:', customPrompt);
-    console.log('[GENERATION START API] CustomPrompt type:', typeof customPrompt);
-    console.log('[GENERATION START API] CustomPrompt length:', customPrompt?.length || 0);
 
     let userProfile: OnboardingData | undefined = undefined;
     if (userProfileString) {
@@ -172,63 +145,63 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (!['tryon-only', 'simple-scene', 'advanced-scene'].includes(generationMode)) {
-      return NextResponse.json({ error: 'Invalid generation mode' }, { status: 400 });
-    }
+    // --- 阶段二: 新逻辑 ---
 
-    // Upload images to Vercel Blob
-    const humanImageBlob = await put(humanImageFile.name, humanImageFile, {
-      access: 'public',
-      addRandomSuffix: true,
-    });
-    const garmentImageBlob = await put(garmentImageFile.name, garmentImageFile, {
-      access: 'public',
-      addRandomSuffix: true,
-    });
+    // 1. 上传图片
+    const humanImageBlob = await put(humanImageFile.name, humanImageFile, { access: 'public', addRandomSuffix: true });
+    const garmentImageBlob = await put(garmentImageFile.name, garmentImageFile, { access: 'public', addRandomSuffix: true });
 
-    // --- REFACTORED LOGIC ---
-    // Step 1: Create the initial job record in KV.
+    // 2. 从 AI 服务获取三个建议 (单次调用)
+    console.log('[API | start] Requesting 3 style suggestions from AI in a single call...');
+    const aiSuggestions = await getStyleSuggestionFromAI(
+      {
+        humanImageUrl: humanImageBlob.url,
+        garmentImageUrl: garmentImageBlob.url,
+        occasion,
+        userProfile,
+      },
+      { count: 3 }
+    );
+    console.log(`[API | start] Successfully received ${aiSuggestions.length} suggestions from AI.`);
+
+    // 3. 创建包含 3 个 suggestion 的 Job 对象
     const jobId = randomUUID();
+    const now = Date.now();
 
-    // Build jobData object, only include customPrompt if it has a valid value
-    const jobData: Job = {
+    const suggestions: Suggestion[] = aiSuggestions.map((suggestion: any, index: number) => ({
+      index,
+      // 只有第一个 suggestion 会立刻开始生成图片
+      status: index === 0 ? 'generating_images' : 'pending',
+      styleSuggestion: suggestion, // 整个 AI 返回的 suggestion 对象
+      personaProfile: {}, // 可以在 pipeline 中填充
+      finalPrompt: suggestion.image_prompt, // 从 suggestion 中提取
+    }));
+
+    const newJob: Job = {
       jobId,
-      status: 'pending', // Start with a generic 'pending' status
-      statusMessage: 'Kicking off the magic... ✨',
-      humanImage: {
-        url: humanImageBlob.url,
-        type: humanImageFile.type,
-        name: humanImageFile.name,
+      status: 'processing',
+      suggestions,
+      input: {
+        humanImage: { url: humanImageBlob.url, type: humanImageFile.type, name: humanImageFile.name },
+        garmentImage: { url: garmentImageBlob.url, type: garmentImageFile.type, name: garmentImageFile.name },
+        generationMode,
+        occasion,
+        userProfile,
+        customPrompt: customPrompt?.trim() || undefined,
       },
-      garmentImage: {
-        url: garmentImageBlob.url,
-        type: garmentImageFile.type,
-        name: garmentImageFile.name,
-      },
-      occasion,
-      generationMode,
-      userProfile, // Store user profile
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
 
-    // Only add customPrompt field if it exists and is not empty
-    if (customPrompt && customPrompt.trim()) {
-      jobData.customPrompt = customPrompt.trim();
-      console.log(`[Job ${jobId}] Adding customPrompt to job data:`, customPrompt.trim());
-    } else {
-      console.log(`[Job ${jobId}] No customPrompt provided, using default prompt logic`);
-    }
+    // 4. 将完整的 job 对象存入 KV
+    await kv.set(jobId, newJob);
+    console.log(`[Job ${jobId}] Initial job record created with 3 suggestions.`);
 
-    await kv.hset(jobId, jobData);
-    console.log(`[Job ${jobId}] Initial job record created. Status: pending.`);
-    console.log(`[Job ${jobId}] Stored customPrompt:`, jobData.customPrompt || 'undefined (not set)');
+    // 5. 触发并忘记 (Fire-and-forget) 第一个 suggestion 的后台处理进程
+    runImageGenerationPipeline(jobId, 0);
+    console.log(`[Job ${jobId}] Background pipeline started for suggestion 0.`);
 
-    // Step 2: Fire and forget the background process for the entire pipeline.
-    runImageGenerationPipeline(jobId);
-    console.log(`[Job ${jobId}] Background pipeline started. API is returning response now.`);
-
-    // Step 3: Return immediately.
+    // 6. 立刻返回
     return NextResponse.json({ jobId });
   } catch (error) {
     console.error('Error starting generation job:', error);
