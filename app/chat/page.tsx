@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 
 import { useState, useEffect, useRef, useCallback } from "react"
@@ -226,7 +226,17 @@ export default function ChatPage() {
   )
 
   // 🪝 [REFACTOR] All generation logic is now in the useGeneration hook.
-  const { isGenerating, jobId, generationStatusText, pollingError, startGeneration } = useGeneration({
+  const {
+    isGenerating,
+    jobId,
+    pollingError,
+    startGeneration,
+    // --- New props from the refactored hook ---
+    status: jobStatus,
+    suggestions,
+    currentSuggestionIndex,
+    selectSuggestion
+  } = useGeneration({
     chatData,
     addMessage,
     replaceLastLoadingMessage,
@@ -243,6 +253,15 @@ export default function ChatPage() {
     if (message.trim() === "" && !stagedImage) return
 
     // Check for generation-related quick replies
+    if (message.startsWith("Show me option")) {
+      const index = parseInt(message.split(" ")[3], 10) - 1;
+      if (!isNaN(index) && selectSuggestion) {
+        console.log(`[ChatPage] User clicked quick reply to see option ${index + 1}`);
+        selectSuggestion(index);
+      }
+      return;
+    }
+
     if (message === "不喜欢这套搭配") {
       addMessage({ type: "text", role: "user", content: message })
       return
@@ -270,14 +289,25 @@ export default function ChatPage() {
       return
     }
 
-    // Default to free chat
+    if (message === "Start Generation") {
+      handleStartGeneration();
+      return;
+    }
+
     await sendChatMessage(message)
   }
 
-  const handleImageClick = useCallback((imageUrl: string) => {
+  const handleStartGeneration = () => {
+    if (startGeneration) {
+      console.log("[ChatPage] Manually starting generation...");
+      startGeneration()
+    }
+  }
+
+  const handleOpenModal = (imageUrl: string) => {
     setModalImage(imageUrl)
     setIsModalOpen(true)
-  }, [])
+  }
 
   const handleCloseModal = () => {
     setIsModalOpen(false)
@@ -288,109 +318,82 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
+  // Effect to scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom()
   }, [messages])
 
-  // This effect now handles all client-side initialization
+  // Effect for initializing chat data from sessionStorage
   useEffect(() => {
-    if (isInitialized) {
-      return
-    }
-
-    // The rest of the initialization logic remains the same...
-    try {
-      const storedData = sessionStorage.getItem("chatModeData")
-      const storedDataForLog = storedData ? JSON.parse(storedData) : null
-      if (storedDataForLog?.userProfile?.fullBodyPhoto) {
-        storedDataForLog.userProfile.fullBodyPhoto = "***"
-      }
-      console.log("[CHAT DEBUG] Raw sessionStorage data:", storedDataForLog)
-
-      if (storedData) {
-        const parsedData = JSON.parse(storedData)
-        setChatData(parsedData)
-
-        const initialMessages: ChatMessage[] = []
-        let idCounter = 0
+    const rawData = sessionStorage.getItem("chatModeData")
+    console.log("[ChatPage | useEffect] 🎯 Raw sessionStorage data:", rawData)
+    if (rawData) {
+      try {
+        const data = JSON.parse(rawData)
+        console.log("[ChatPage | useEffect] ✅ Parsed chatData:", data)
+        setChatData(data)
         const createMessage = (message: Omit<ChatMessage, "id" | "timestamp">): ChatMessage => ({
           ...message,
-          id: `msg-${Date.now()}-${++idCounter}`,
+          id: generateUniqueId(),
           timestamp: new Date(),
         })
-        initialMessages.push(
+
+        const initialMessages: ChatMessage[] = [
+          createMessage({ type: "text", role: "user", content: "Let's get started!" }),
           createMessage({
             type: "text",
             role: "ai",
-            content: `👋 Hello! I'm your professional AI styling consultant!
-
-💬 **You can:**
-• Say "Help me try on" or "Generate styling effect" to start image generation
-• Ask me any styling-related questions
-• Discuss color matching, style analysis, and other topics
-
-🎨 **Smart Generation**: When you mention try-on, styling, generation, and other keywords, I'll automatically create exclusive styling effect images for you!
-
-What would you like to know about?`,
+            content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
             metadata: {
-              suggestions: [
-                "Help me try on this outfit",
-                "Analyze my styling style",
-                "Recommend styling suggestions",
-                "Color matching tips",
-              ],
+              suggestions: ["Start Generation"],
             },
           }),
-        )
-        setMessages(initialMessages)
-      } else {
-        const defaultMessage: ChatMessage = {
-          id: `msg-${Date.now()}-1`,
-          type: "text",
-          role: "ai",
-          content: `👋 Hello! I'm your professional AI styling consultant!
+        ]
 
-💬 **I can help you with:**
-• Analyzing styling and color matching
-• Providing outfit advice for different occasions
-• Answering fashion styling questions
-• Recommending fashion items and styling tips
-
-🎨 **Want to generate styling effect images?**
-Please first return to the homepage to upload your photos and clothing you want to try on, then come back and tell me "Help me try on"!
-
-Let's start chatting about styling now~`,
-          timestamp: new Date(),
-          metadata: {
-            suggestions: [
-              "Return to homepage to upload photos",
-              "Styling analysis",
-              "Color matching principles",
-              "Occasion outfit advice",
-            ],
-          },
+        if (data.generationMode === "guided") {
+          // In guided mode, we don't start automatically
         }
-        setMessages([defaultMessage])
-      }
-    } catch (error) {
-      console.error("[CHAT DEBUG] Error reading chat data:", error)
-      const errorMessage: ChatMessage = {
-        id: `msg-${Date.now()}-1`,
-        type: "text",
-        role: "ai",
-        content: "Hello! I'm your personal AI stylist ✨\n\nFeel free to ask me anything about fashion and styling!",
-        timestamp: new Date(),
-      }
-      setMessages([errorMessage])
-    }
 
+        setMessages(initialMessages)
+      } catch (error) {
+        console.error("[ChatPage | useEffect] 💥 Failed to parse chatData from sessionStorage:", error)
+        // Handle error, maybe redirect or show a message
+      }
+    } else {
+      console.warn("[ChatPage | useEffect] No chatModeData found in sessionStorage. Redirecting to home.")
+      router.push("/") // Redirect if no data
+    }
     setIsInitialized(true)
-  }, [isInitialized, setMessages]) // setMessages is from useChat
+  }, [router, setMessages]) // removed dependency on addMessage
+
+  // Automatically start generation if in guided-mode and not already started
+  useEffect(() => {
+    // NOTE: This logic is from the original implementation for "guided" mode.
+    // We will keep it as is for now.
+    if (chatData?.generationMode === "simple-scene" && isInitialized && !jobId && !hasAutoStarted) {
+      console.log("[ChatPage | useEffect] 🚀 Auto-starting generation for guided mode (simple-scene)...");
+      setHasAutoStarted(true) // Prevent re-triggering
+      if (startGeneration) startGeneration()
+    }
+  }, [chatData, isInitialized, hasAutoStarted, startGeneration, jobId])
+
+  // LOGGING EFFECT: Log props from useGeneration whenever they change
+  useEffect(() => {
+    console.log('[ChatPage | LOG] 🩺 Generation State Update:', {
+      isGenerating,
+      jobId,
+      jobStatus,
+      pollingError,
+      suggestionsCount: suggestions.length,
+      currentSuggestionIndex,
+    });
+  }, [isGenerating, jobId, jobStatus, pollingError, suggestions, currentSuggestionIndex]);
 
   if (!isInitialized) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-[#FF6EC7]" />
+      <div className="flex flex-col items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <p className="mt-2 text-gray-500">Initializing Chat...</p>
       </div>
     )
   }
@@ -411,7 +414,7 @@ Let's start chatting about styling now~`,
         isGenerating={isGenerating}
         isLoading={isLoading}
         isImageProcessing={isImageProcessing}
-        generationStatusText={generationStatusText}
+        generationStatusText={jobStatus || "N/A"}
       />
 
       <div className="flex-1 px-4 py-6 space-y-4">
@@ -420,29 +423,57 @@ Let's start chatting about styling now~`,
             <ChatBubble
               key={message.id}
               message={message}
-              onImageClick={handleImageClick}
+              onImageClick={handleOpenModal}
               sessionId={sessionId}
             />
           ))}
           <div ref={messagesEndRef} />
         </div>
 
-        <ChatInput
-          stagedImage={stagedImage}
-          isImageProcessing={isImageProcessing}
-          handleSendMessage={handleSendMessage}
-          handleImageSelect={handleImageSelect}
-          clearStagedImage={clearStagedImage}
-          handleImageUploadClick={handleImageUploadClick}
-        />
+        {/* ============== [NEW] Multi-Suggestion UI ============== */}
+        {suggestions && suggestions.length > 0 && (
+          <div className="p-4 border-t bg-gray-50">
+            <h3 className="text-sm font-semibold mb-2 text-center text-gray-600">Style Options</h3>
+            <div className="flex justify-center items-center space-x-2">
+              {suggestions.map((suggestion, index) => (
+                <Button
+                  key={suggestion.index}
+                  variant={index === currentSuggestionIndex ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => selectSuggestion && selectSuggestion(index)}
+                  disabled={suggestion.status === 'generating_images' || suggestion.status === 'failed'}
+                >
+                  {suggestion.status === 'generating_images' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <span>Option {index + 1}</span>
+                </Button>
+              ))}
+            </div>
+            <div className="mt-2 text-center text-xs text-gray-500">
+              {suggestions[currentSuggestionIndex] && `Status: ${suggestions[currentSuggestionIndex].status}`}
+            </div>
+          </div>
+        )}
+        {/* ====================================================== */}
+
+        <div className="p-4 border-t">
+          <ChatInput
+            stagedImage={stagedImage}
+            isImageProcessing={isImageProcessing}
+            handleSendMessage={handleSendMessage}
+            handleImageSelect={handleImageSelect}
+            clearStagedImage={clearStagedImage}
+            handleImageUploadClick={handleImageUploadClick}
+          />
+          <input type="file" id="image-upload" className="hidden" onChange={handleImageSelect} accept="image/*" />
+        </div>
 
         <DebugPanel
-          sessionId={sessionId}
+          sessionId={sessionId || "none"}
           isLoading={isLoading}
           isGenerating={isGenerating}
           currentStep={currentStep}
           hasAutoStarted={hasAutoStarted}
-          jobId={jobId} // Pass jobId to show polling status
+          jobId={jobId}
           chatData={chatData}
           messagesLength={messages.length}
           pollingError={pollingError}
@@ -454,10 +485,7 @@ Let's start chatting about styling now~`,
             <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
               <p className="text-sm text-gray-600 mb-4 text-center">Ready to generate your personalized style?</p>
               <Button
-                onClick={() => {
-                  startGeneration()
-                  setHasAutoStarted(true)
-                }}
+                onClick={handleStartGeneration}
                 className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
               >
                 Generate My Style
