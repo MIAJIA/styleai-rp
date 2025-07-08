@@ -33,9 +33,7 @@ import {
   getFileFromPreview,
   generateSmartSuggestions,
 } from "./utils"
-import { QuickReplyButtons } from "./components/QuickReplyButtons"
-import { AIAvatar } from "./components/AIAvatar"
-import { ChatBubble } from "./components/ChatBubble"
+import { QuickReplyButtons, AIAvatar, ChatBubble, StatusIndicator, ChatInput, DebugPanel } from "./components"
 
 // ============================================================================
 // 🔧 REFACTOR PLAN - Chat页面重构计划标记 (当前1912行 → 目标<600行)
@@ -47,8 +45,7 @@ import { ChatBubble } from "./components/ChatBubble"
 // ✅ Step 3: 拆出工具函数 → app/chat/utils.ts (约100行) - 已完成
 //
 // 📦 Phase 2: 组件拆分 (约350行)
-// 🔄 Step 4: 拆出UI组件 → app/chat/components/ - 进行中
-//   ✅ QuickReplyButtons.tsx, AIAvatar.tsx, ChatBubble.tsx 等
+// ✅ Step 4: 拆出UI组件 → app/chat/components/ - 已完成
 //
 // 🪝 Phase 3: Hooks抽取 (约600行)
 // Step 5: 拆出自定义Hooks → app/chat/hooks/
@@ -1568,46 +1565,12 @@ Let's start chatting about styling now~`,
         </div>
       </header>
 
-      {/* Scenes generated, proceeding with virtual try-on.../ Creating visual preview... */}
-
-      {/* Status indicator for ongoing processes */}
-      {(isGenerating || isLoading || isImageProcessing) && (
-        <div className="sticky top-16 z-20 px-4 py-2 bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50">
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-3 shadow-lg border border-gray-200">
-              <div className="flex items-center gap-3">
-                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                <span className="text-sm text-gray-600 font-medium">
-                  {(() => {
-                    if (isImageProcessing) return "Optimizing your image so it looks fab and loads fast…";
-                    if (isGenerating) {
-                      const status = generationStatusText || "Making your styling magic happen—stay tuned!";
-                      const prompt = "While you wait, feel free to ask me anything else!";
-                      return (
-                        <span>
-                          {status}
-                          <span className="text-gray-500 font-normal italic mt-1 block">{prompt}</span>
-                        </span>
-                      );
-                    }
-                    if (isLoading) {
-                      const status = "Thinking through your look—this one's gonna be good…";
-                      const prompt = "We can keep chatting while I think.";
-                      return (
-                        <span>
-                          {status}
-                          <span className="text-gray-500 font-normal italic mt-1 block">{prompt}</span>
-                        </span>
-                      );
-                    }
-                    return null;
-                  })()}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <StatusIndicator
+        isGenerating={isGenerating}
+        isLoading={isLoading}
+        isImageProcessing={isImageProcessing}
+        generationStatusText={generationStatusText}
+      />
 
       {/* 2. Fix hydration error by rendering page shell and showing loader inside content area */}
       <div className="flex-1 px-4 py-6 space-y-4">
@@ -1637,136 +1600,27 @@ Let's start chatting about styling now~`,
           </div>
         )}
 
-        {/* Quick Replies - Render after the last message if it's from AI */}
-        {messages.length > 0 &&
-          messages[messages.length - 1].role === 'ai' &&
-          messages[messages.length - 1].metadata?.suggestions && (
-            <QuickReplyButtons
-              suggestions={messages[messages.length - 1].metadata!.suggestions!}
-              onSelect={handleSendMessage}
-            />
-          )}
+        <ChatInput
+          stagedImage={stagedImage}
+          isImageProcessing={isImageProcessing}
+          handleSendMessage={handleSendMessage}
+          handleImageSelect={handleImageSelect}
+          clearStagedImage={clearStagedImage}
+          handleImageUploadClick={handleImageUploadClick}
+        />
 
-        {/* Chat Input Area */}
-        <footer className="p-4 bg-white border-t border-gray-200">
-          <div className="max-w-2xl mx-auto">
-            {/* Staged image preview */}
-            {stagedImage && (
-              <div className="mb-2 relative w-24 h-24">
-                <img
-                  src={stagedImage || "/placeholder.svg"}
-                  alt="Preview"
-                  className="w-full h-full object-cover rounded-lg"
-                />
-                <button
-                  onClick={clearStagedImage}
-                  className="absolute -top-2 -right-2 bg-gray-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-lg"
-                  aria-label="Remove image"
-                >
-                  X
-                </button>
-              </div>
-            )}
-
-            {/* Image processing indicator */}
-            {isImageProcessing && (
-              <div className="mb-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                  <span className="text-sm text-blue-700">正在优化图片...</span>
-                </div>
-              </div>
-            )}
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                const message = (e.target as HTMLFormElement).message.value
-                if (!message.trim() && !stagedImage) return
-                handleSendMessage(message)
-                  ; (e.target as HTMLFormElement).reset()
-              }}
-              className="flex items-center gap-2"
-            >
-              <input type="file" ref={imageInputRef} onChange={handleImageSelect} className="hidden" accept="image/*" />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleImageUploadClick}
-                disabled={isImageProcessing}
-                aria-label="Upload image"
-              >
-                {isImageProcessing ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                ) : (
-                  <ImageIcon className="w-5 h-5 text-gray-500" />
-                )}
-              </Button>
-              <input
-                name="message"
-                placeholder="Talk to your personal stylist..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#FF6EC7] text-sm"
-                autoComplete="off"
-              />
-              <Button
-                type="submit"
-                className="bg-[#FF6EC7] hover:bg-[#ff5bb0] rounded-full"
-                size="icon"
-                aria-label="Send message"
-              >
-                <Send className="w-5 h-5 text-white" />
-              </Button>
-            </form>
-          </div>
-        </footer>
-
-        {/* Debug panel */}
-        {
-          // process.env.NODE_ENV === "development"  XXX TODO: remove this
-          true // XXX TODO: remove this
-          && (
-            <div className="max-w-2xl mx-auto mt-4">
-              <div
-                className="bg-gray-100 rounded-lg cursor-pointer select-none"
-                onClick={() => setIsDebugExpanded(!isDebugExpanded)}
-              >
-                <div className="flex items-center justify-between p-3 border-b border-gray-200">
-                  <h3 className="font-bold text-sm text-gray-700">Debug Info</h3>
-                  {isDebugExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-gray-500" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-gray-500" />
-                  )}
-                </div>
-              </div>
-
-              {isDebugExpanded && (
-                <div className="bg-gray-100 rounded-b-lg p-4 text-xs space-y-1">
-                  <div className="font-semibold text-gray-800 mb-2">🎯 Unified Chat States:</div>
-                  <div>sessionId: {sessionId}</div>
-                  <div>
-                    isLoading: <span className="font-bold">{String(isLoading)}</span>
-                  </div>
-                  <div className="font-semibold text-gray-800 mt-3 mb-2">📊 Generation States:</div>
-                  <div>
-                    isGenerating: <span className="font-bold">{String(isGenerating)}</span>
-                  </div>
-                  <div>
-                    currentStep: <span className="font-bold">{String(currentStep)}</span>
-                  </div>
-                  <div>hasAutoStarted: {String(hasAutoStarted)}</div>
-                  <div>pollingActive: {pollingIntervalId ? "yes" : "no"}</div>
-                  <div className="font-semibold text-gray-800 mt-3 mb-2">💾 Data States:</div>
-                  <div>chatData: {chatData ? "exists" : "null"}</div>
-                  <div>messages.length: {String(messages.length)}</div>
-                  <div>pollingError: {pollingError || "none"}</div>
-                  <div className="font-semibold text-gray-800 mt-3 mb-2">💡 Final Prompt:</div>
-                  <div>{finalPrompt}</div>
-                </div>
-              )}
-            </div>
-          )}
+        <DebugPanel
+          sessionId={sessionId}
+          isLoading={isLoading}
+          isGenerating={isGenerating}
+          currentStep={currentStep}
+          hasAutoStarted={hasAutoStarted}
+          pollingIntervalId={pollingIntervalId}
+          chatData={chatData}
+          messagesLength={messages.length}
+          pollingError={pollingError}
+          finalPrompt={finalPrompt}
+        />
 
         {/* Generation button for guided mode (when chat data exists but no auto-start) */}
         {!isGenerating && currentStep === "suggestion" && chatData && messages.length > 0 && !hasAutoStarted && (
