@@ -442,28 +442,33 @@ export default function ChatPage() {
         </div>
 
         {/* ============== [NEW] Multi-Suggestion UI ============== */}
-        {suggestions && suggestions.length > 0 && (
-          <div className="p-4 border-t bg-gray-50">
-            <h3 className="text-sm font-semibold mb-2 text-center text-gray-600">Style Options</h3>
-            <div className="flex justify-center items-center space-x-2">
-              {suggestions.map((suggestion, index) => (
-                <Button
-                  key={suggestion.index}
-                  variant={index === currentSuggestionIndex ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => selectSuggestion && selectSuggestion(index)}
-                  disabled={suggestion.status === 'generating_images' || suggestion.status === 'failed'}
-                >
-                  {suggestion.status === 'generating_images' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <span>Option {index + 1}</span>
-                </Button>
-              ))}
+        {suggestions &&
+          suggestions.length > 0 &&
+          !suggestions.every(s => s.status === 'succeeded' || s.status === 'failed') && (
+            <div className="p-4 border-t bg-gray-50">
+              <h3 className="text-sm font-semibold mb-2 text-center text-gray-600">Style Options</h3>
+              <div className="flex justify-center items-center space-x-2">
+                {suggestions.map((suggestion, index) => {
+                  const buttonLabels = ["Classic", "Trendy", "Edge"];
+                  return (
+                    <Button
+                      key={suggestion.index}
+                      variant={index === currentSuggestionIndex ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => selectSuggestion && selectSuggestion(index)}
+                      disabled={suggestion.status === 'generating_images' || suggestion.status === 'failed'}
+                    >
+                      {suggestion.status === 'generating_images' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <span>{buttonLabels[index] || `Option ${index + 1}`}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 text-center text-xs text-gray-500">
+                {suggestions[currentSuggestionIndex] && `Status: ${suggestions[currentSuggestionIndex].status}`}
+              </div>
             </div>
-            <div className="mt-2 text-center text-xs text-gray-500">
-              {suggestions[currentSuggestionIndex] && `Status: ${suggestions[currentSuggestionIndex].status}`}
-            </div>
-          </div>
-        )}
+          )}
         {/* ====================================================== */}
 
         <div className="p-4 border-t">
