@@ -1,15 +1,22 @@
 import { ProductInfo } from "../components/product-card"
 
+export interface QuickReplyAction {
+  id: string
+  label: string
+  type: "start-generation" | "navigate"
+}
+
 // Enhanced Chat message type definition with generation support
 export type ChatMessage = {
   id: string
-  type: "text" | "image" | "loading" | "generation-request" | "products"
+  type: "text" | "image" | "loading" | "generation-request" | "products" | "quick-reply"
   role: "ai" | "user"
   content?: string
   imageUrl?: string
   loadingText?: string
   timestamp: Date
   products?: ProductInfo[] // Add products field
+  actions?: QuickReplyAction[]
   agentInfo?: {
     id: string
     name: string

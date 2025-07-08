@@ -15,7 +15,7 @@ import {
 } from "lucide-react"
 
 // Import types and constants from separate files
-import type { ChatMessage, ChatModeData, ChatStep } from "./types"
+import type { ChatMessage, ChatModeData, ChatStep, QuickReplyAction } from "./types"
 import { generateUniqueId } from "./utils"
 import { ChatBubble, StatusIndicator, ChatInput, DebugPanel } from "./components"
 import { useImageHandling } from "./hooks/useImageHandling"
@@ -248,6 +248,36 @@ export default function ChatPage() {
   // Define finalPrompt based on chatData
   const finalPrompt = chatData?.customPrompt || "No custom prompt provided"
 
+  const handleQuickReplyAction = useCallback(
+    (action: QuickReplyAction) => {
+      if (action.type === "start-generation") {
+        console.log("[ChatPage] User clicked 'Start Generation' quick reply.")
+
+        // Replace the quick reply with a user message for context
+        setMessages(prev => {
+          const newMessages = [...prev]
+          const qrIndex = newMessages.findIndex(m => m.actions?.some(a => a.id === action.id))
+          if (qrIndex !== -1) {
+            newMessages[qrIndex] = {
+              id: newMessages[qrIndex].id,
+              role: "user",
+              type: "text",
+              content: action.label,
+              timestamp: new Date(),
+            }
+          }
+          return newMessages
+        })
+
+        if (startGeneration) {
+          // Delay startGeneration slightly to allow state to update
+          setTimeout(() => startGeneration(), 50)
+        }
+      }
+    },
+    [setMessages, startGeneration],
+  )
+
   // This orchestration layer remains in the main component
   const handleSendMessage = async (message: string) => {
     if (message.trim() === "" && !stagedImage) return
@@ -289,19 +319,7 @@ export default function ChatPage() {
       return
     }
 
-    if (message === "Start Generation") {
-      handleStartGeneration();
-      return;
-    }
-
     await sendChatMessage(message)
-  }
-
-  const handleStartGeneration = () => {
-    if (startGeneration) {
-      console.log("[ChatPage] Manually starting generation...");
-      startGeneration()
-    }
   }
 
   const handleOpenModal = (imageUrl: string) => {
@@ -339,14 +357,17 @@ export default function ChatPage() {
         })
 
         const initialMessages: ChatMessage[] = [
-          createMessage({ type: "text", role: "user", content: "Let's get started!" }),
           createMessage({
-            type: "text",
+            type: "quick-reply",
             role: "ai",
             content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
-            metadata: {
-              suggestions: ["Start Generation"],
-            },
+            actions: [
+              {
+                id: "start-generation-btn",
+                label: "Start Generation",
+                type: "start-generation",
+              },
+            ],
           }),
         ]
 
@@ -366,17 +387,6 @@ export default function ChatPage() {
     setIsInitialized(true)
   }, [router, setMessages]) // removed dependency on addMessage
 
-  // Automatically start generation if in guided-mode and not already started
-  useEffect(() => {
-    // NOTE: This logic is from the original implementation for "guided" mode.
-    // We will keep it as is for now.
-    if (chatData?.generationMode === "simple-scene" && isInitialized && !jobId && !hasAutoStarted) {
-      console.log("[ChatPage | useEffect] 🚀 Auto-starting generation for guided mode (simple-scene)...");
-      setHasAutoStarted(true) // Prevent re-triggering
-      if (startGeneration) startGeneration()
-    }
-  }, [chatData, isInitialized, hasAutoStarted, startGeneration, jobId])
-
   // LOGGING EFFECT: Log props from useGeneration whenever they change
   useEffect(() => {
     console.log('[ChatPage | LOG] 🩺 Generation State Update:', {
@@ -386,8 +396,8 @@ export default function ChatPage() {
       pollingError,
       suggestionsCount: suggestions.length,
       currentSuggestionIndex,
-    });
-  }, [isGenerating, jobId, jobStatus, pollingError, suggestions, currentSuggestionIndex]);
+    })
+  }, [isGenerating, jobId, jobStatus, pollingError, suggestions, currentSuggestionIndex])
 
   if (!isInitialized) {
     return (
@@ -424,6 +434,7 @@ export default function ChatPage() {
               key={message.id}
               message={message}
               onImageClick={handleOpenModal}
+              onQuickReplyAction={handleQuickReplyAction}
               sessionId={sessionId}
             />
           ))}
@@ -479,20 +490,6 @@ export default function ChatPage() {
           pollingError={pollingError}
           finalPrompt={finalPrompt}
         />
-
-        {!isGenerating && currentStep === "suggestion" && chatData && !hasAutoStarted && (
-          <div className="max-w-2xl mx-auto mt-8">
-            <div className="bg-white/80 rounded-2xl p-4 shadow-sm border border-gray-100">
-              <p className="text-sm text-gray-600 mb-4 text-center">Ready to generate your personalized style?</p>
-              <Button
-                onClick={handleStartGeneration}
-                className="w-full bg-[#FF6EC7] hover:bg-[#FF6EC7]/90"
-              >
-                Generate My Style
-              </Button>
-            </div>
-          </div>
-        )}
 
         {!chatData && messages.length >= 1 && (
           <div className="max-w-2xl mx-auto mt-8">

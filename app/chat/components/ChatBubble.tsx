@@ -2,12 +2,14 @@ import React from "react"
 import ReactMarkdown from "react-markdown"
 import ImageVoteButtons from "@/components/image-vote-buttons"
 import { ProductGrid, type ProductInfo } from "../../components/product-card"
-import type { ChatMessage } from "../types"
+import type { ChatMessage, QuickReplyAction } from "../types"
 import { AIAvatar } from "./AIAvatar"
+import { QuickReplyButtons } from "./QuickReplyButtons"
 
 interface ChatBubbleProps {
   message: ChatMessage
   onImageClick: (imageUrl: string) => void
+  onQuickReplyAction: (action: QuickReplyAction) => void
   sessionId?: string
 }
 
@@ -15,6 +17,7 @@ interface ChatBubbleProps {
 export const ChatBubble = React.memo(function ChatBubble({
   message,
   onImageClick,
+  onQuickReplyAction,
   sessionId,
 }: ChatBubbleProps) {
   const isAI = message.role === "ai"
@@ -141,6 +144,13 @@ export const ChatBubble = React.memo(function ChatBubble({
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Render quick replies if they exist */}
+          {message.type === "quick-reply" && message.actions && (
+            <div className={message.content ? "mt-2" : ""}>
+              <QuickReplyButtons actions={message.actions} onAction={onQuickReplyAction} />
             </div>
           )}
         </div>

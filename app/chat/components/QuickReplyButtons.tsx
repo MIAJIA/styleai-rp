@@ -1,31 +1,30 @@
 import { Button } from "@/components/ui/button"
+import { QuickReplyAction } from "../types"
 
 export function QuickReplyButtons({
-  suggestions,
-  onSelect,
+  actions,
+  onAction,
 }: {
-  suggestions: string[]
-  onSelect: (suggestion: string) => void
+  actions: QuickReplyAction[]
+  onAction: (action: QuickReplyAction) => void
 }) {
-  if (!suggestions || suggestions.length === 0) {
+  if (!actions || actions.length === 0) {
     return null
   }
 
   return (
-    <div className="max-w-2xl mx-auto mt-2 mb-4 px-4">
-      <div className="flex flex-wrap gap-2">
-        {suggestions.map((text, index) => (
-          <Button
-            key={index}
-            variant="outline"
-            size="sm"
-            className="rounded-full bg-white/80 backdrop-blur-lg"
-            onClick={() => onSelect(text)}
-          >
-            {text}
-          </Button>
-        ))}
-      </div>
+    <div className="flex flex-wrap gap-2 mt-2">
+      {actions.map(action => (
+        <Button
+          key={action.id}
+          variant="outline"
+          size="sm"
+          className="rounded-full bg-white/80 backdrop-blur-lg"
+          onClick={() => onAction(action)}
+        >
+          {action.label}
+        </Button>
+      ))}
     </div>
   )
 }
