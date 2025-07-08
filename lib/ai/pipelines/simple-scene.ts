@@ -16,7 +16,9 @@ interface LegacyJobForPipeline {
   // Add other fields that might be passed from the legacy adapter
 }
 
-export async function executeSimpleScenePipelineV2(job: LegacyJobForPipeline): Promise<{ imageUrls: string[], finalPrompt: string }> {
+export async function executeSimpleScenePipelineV2(
+  job: LegacyJobForPipeline
+): Promise<{ imageUrls: string[], finalPrompt: string, stylizedImageUrls: string[] }> {
   console.log(`[PIPELINE_START] Executing "Simple Scene V2" pipeline for job ${job.jobId}`);
 
   if (!job.suggestion?.finalPrompt) {
@@ -31,20 +33,31 @@ export async function executeSimpleScenePipelineV2(job: LegacyJobForPipeline): P
     job.humanImage.type
   );
 
-  const styledImageUrls = stylizationResult.imageUrls;
+  const tempStyledImageUrls = stylizationResult.imageUrls;
   const finalPrompt = stylizationResult.finalPrompt;
 
-  console.log(`[PIPELINE] Storing ${styledImageUrls.length} intermediate images for job ${job.jobId}, suggestion ${job.suggestionIndex}`);
+  // --- NEW: Save stylized images to our own blob storage ---
+  const stylizedImageUrls: string[] = [];
+  for (let i = 0; i < tempStyledImageUrls.length; i++) {
+    const finalUrl = await saveFinalImageToBlob(
+      tempStyledImageUrls[i],
+      `${job.jobId}-${job.suggestionIndex}-stylized-${i + 1}` // Unique name
+    );
+    stylizedImageUrls.push(finalUrl);
+  }
+  // --- END NEW ---
+
+  console.log(`[PIPELINE] Storing ${stylizedImageUrls.length} intermediate images for job ${job.jobId}, suggestion ${job.suggestionIndex}`);
   const jobToUpdate = await kv.get<Job>(job.jobId);
   if (jobToUpdate && jobToUpdate.suggestions[job.suggestionIndex]) {
-    jobToUpdate.suggestions[job.suggestionIndex].intermediateImageUrls = styledImageUrls;
+    jobToUpdate.suggestions[job.suggestionIndex].intermediateImageUrls = stylizedImageUrls;
     jobToUpdate.updatedAt = Date.now();
     await kv.set(job.jobId, jobToUpdate);
     console.log(`[PIPELINE] Successfully stored intermediate images.`);
   }
 
-  const allTryOnPromises = styledImageUrls.map((styledImage, index) => {
-    console.log(`[PIPELINE] Processing virtual try-on for styled image ${index + 1}/${styledImageUrls.length}`);
+  const allTryOnPromises = stylizedImageUrls.map((styledImage, index) => {
+    console.log(`[PIPELINE] Processing virtual try-on for styled image ${index + 1}/${stylizedImageUrls.length}`);
     return runVirtualTryOnMultiple(
       styledImage,
       job.garmentImage.url,
@@ -66,5 +79,5 @@ export async function executeSimpleScenePipelineV2(job: LegacyJobForPipeline): P
   }
 
   console.log(`[PIPELINE_END] "Simple Scene V2" pipeline finished for job ${job.jobId}. Generated ${finalImages.length} images.`);
-  return { imageUrls: finalImages, finalPrompt };
+  return { imageUrls: finalImages, finalPrompt, stylizedImageUrls };
 }

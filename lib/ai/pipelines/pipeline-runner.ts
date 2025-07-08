@@ -38,7 +38,11 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
       suggestionIndex: suggestionIndex,
     };
 
-    let pipelineResult: { imageUrls: string[], finalPrompt: string };
+    let pipelineResult: {
+      imageUrls: string[];
+      finalPrompt: string;
+      stylizedImageUrls?: string[];
+    };
     switch (job.input.generationMode) {
       case 'tryon-only':
         pipelineResult = await executeTryOnOnlyPipeline(pipelineAdapter as any);
@@ -86,6 +90,7 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
             humanImage: job.input.humanImage.url,
             garmentImage: job.input.garmentImage.url,
             finalImage: pipelineResult.imageUrls[0],
+            stylizedImageUrl: pipelineResult.stylizedImageUrls?.[0],
             styleSuggestion: job.suggestions[suggestionIndex]?.styleSuggestion,
             finalPrompt: pipelineResult.finalPrompt,
           },

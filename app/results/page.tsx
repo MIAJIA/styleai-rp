@@ -22,6 +22,7 @@ interface PastLook {
     humanImage: string;
     garmentImage: string;
     finalImage: string;
+    stylizedImageUrl?: string;
     styleSuggestion?: any;
     finalPrompt?: string;
   };
@@ -456,24 +457,41 @@ export default function ResultsPage() {
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
               {/* Main Image */}
-              <div className="relative aspect-[3/4] max-w-md mx-auto mb-6 rounded-xl overflow-hidden">
-                <img
-                  src={selectedLook.imageUrl}
-                  alt="Generated look"
-                  className="w-full h-full object-cover"
-                />
+              <div className="relative mb-4">
+                <img src={selectedLook.imageUrl} alt="Generated Look" className="w-full h-auto rounded-lg shadow-lg" />
+                <ImageVoteButtons lookId={selectedLook.id} />
+              </div>
 
-                {/* Vote buttons */}
-                <div className="absolute top-4 left-4">
-                  <ImageVoteButtons
-                    imageUrl={selectedLook.imageUrl}
-                    size="md"
-                    variant="overlay"
-                    onVoteChange={(voteType) => {
-                      console.log(`[Modal] Image vote changed: ${voteType} for look ${selectedLook.id}`);
-                    }}
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Original Images */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Originals</h3>
+                  <div className="flex space-x-2">
+                    {selectedLook.processImages?.garmentImage && (
+                      <div className="text-center">
+                        <img
+                          src={selectedLook.processImages.garmentImage}
+                          alt="Original Garment"
+                          className="w-24 h-24 object-cover rounded-md border"
+                        />
+                        <p className="text-xs mt-1">Garment</p>
+                      </div>
+                    )}
+                    {selectedLook.processImages?.stylizedImageUrl && (
+                      <div className="text-center">
+                        <img
+                          src={selectedLook.processImages.stylizedImageUrl}
+                          alt="Stylized Look"
+                          className="w-24 h-24 object-cover rounded-md border"
+                        />
+                        <p className="text-xs mt-1">Stylized</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* Vote Status */}
+                <ImageVoteStatus lookId={selectedLook.id} />
               </div>
 
               {/* Look Information */}

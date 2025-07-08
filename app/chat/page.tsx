@@ -414,7 +414,7 @@ export default function ChatPage() {
         isGenerating={isGenerating}
         isLoading={isLoading}
         isImageProcessing={isImageProcessing}
-        generationStatusText={jobStatus || "N/A"}
+        generationStatusText={jobStatus || "Designing..."}
       />
 
       <div className="flex-1 px-4 py-6 space-y-4">
