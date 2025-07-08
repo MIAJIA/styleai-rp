@@ -1,10 +1,11 @@
 import { fetchWithTimeout, sleep, urlToFile } from "../utils";
+import { Job } from '@/lib/ai/types';
 
 // --- Face Swap ---
 const FACE_SWAP_API_URL = "https://ai-face-swap2.p.rapidapi.com/public/process/files";
 const FACE_SWAP_API_HOST = "ai-face-swap2.p.rapidapi.com";
 
-async function runFaceSwap(sourceFile: File, targetFile: File, retries: number = 2): Promise<string> {
+async function _runFaceSwapWithRetry(sourceFile: File, targetFile: File, retries: number = 2): Promise<string> {
   const rapidApiKey = process.env.RAPIDAPI_KEY;
   if (!rapidApiKey) {
     throw new Error("RAPIDAPI_KEY is not set.");
@@ -66,17 +67,29 @@ async function runFaceSwap(sourceFile: File, targetFile: File, retries: number =
 /**
  * ATOMIC STEP: Performs face swap.
  */
-export async function runAndPerformFaceSwap(humanImageUrl: string, humanImageName: string, humanImageType: string, tryOnImageUrl: string): Promise<string> {
-  console.log("[ATOMIC_STEP] Running Face Swap...");
+export async function runFaceSwap({
+  targetImageUrl,
+  faceImageUrl,
+  jobId,
+}: {
+  targetImageUrl: string;
+  faceImageUrl: string;
+  jobId?: string;
+}) {
+  const startTime = Date.now();
+  console.log(`[PERF_LOG | Job ${jobId}] [ATOMIC_STEP] Running Face Swap...`);
 
   // Convert images to files in parallel
-  const [humanImageFile, tryOnImageFile] = await Promise.all([
-    urlToFile(humanImageUrl, humanImageName, humanImageType),
-    urlToFile(tryOnImageUrl, "tryon.jpg", "image/jpeg")
+  const [targetFile, faceFile] = await Promise.all([
+    urlToFile(targetImageUrl, "target.jpg", "image/jpeg"),
+    urlToFile(faceImageUrl, "face.jpg", "image/jpeg")
   ]);
 
   // Perform face swap
-  const swappedHttpUrl = await runFaceSwap(humanImageFile, tryOnImageFile);
+  const swappedHttpUrl = await _runFaceSwapWithRetry(faceFile, targetFile);
+
+  const endTime = Date.now();
+  console.log(`[PERF_LOG | Job ${jobId}] [ATOMIC_STEP] Face Swap complete. Elapsed: ${endTime - startTime}ms.`);
   console.log("[ATOMIC_STEP] Face Swap complete:", swappedHttpUrl.substring(0, 100));
   return swappedHttpUrl;
 }

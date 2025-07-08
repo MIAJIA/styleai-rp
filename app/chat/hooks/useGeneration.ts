@@ -32,6 +32,9 @@ export function useGeneration({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0)
 
+  // --- NEW: Refs for performance logging ---
+  const jobStartTime = useRef<number | null>(null);
+
   // Use refs to track which results have been displayed to avoid re-rendering
   const displayedTextSuggestions = useRef(new Set<number>());
   const displayedIntermediateImages = useRef(new Set<number>());
@@ -71,6 +74,10 @@ export function useGeneration({
           console.log(`[useGeneration] Checking text for suggestion ${index}.`);
           if (index === currentSuggestionIndex) {
             console.log(`[useGeneration] Displaying text for suggestion ${index} for the first time.`);
+            if (jobStartTime.current) {
+              const elapsed = Date.now() - jobStartTime.current;
+              console.log(`[FE_PERF_LOG] Text suggestions appeared on UI for index ${index}. Total time since start: ${elapsed}ms.`);
+            }
             displaySuggestionSequentially(styleSuggestion);
             // FIX: Only add to the set *after* the text has been displayed.
             displayedTextSuggestions.current.add(index);
@@ -84,6 +91,10 @@ export function useGeneration({
           !displayedIntermediateImages.current.has(index)
         ) {
           console.log(`[useGeneration] Displaying intermediate images for suggestion ${index}.`);
+          if (jobStartTime.current) {
+            const elapsed = Date.now() - jobStartTime.current;
+            console.log(`[FE_PERF_LOG] Intermediate images appeared on UI for index ${index}. Total time since start: ${elapsed}ms.`);
+          }
           displayImageResults(intermediateImageUrls);
           addMessage({
             role: 'ai',
@@ -106,6 +117,10 @@ export function useGeneration({
           !displayedFinalImages.current.has(index)
         ) {
           console.log(`[useGeneration] Displaying FINAL images for suggestion ${index} for the first time.`);
+          if (jobStartTime.current) {
+            const elapsed = Date.now() - jobStartTime.current;
+            console.log(`[FE_PERF_LOG] Final images appeared on UI for index ${index}. Total time since start: ${elapsed}ms.`);
+          }
           if (imageUrls && imageUrls.length > 0) {
             // This is the critical part. We assume that when a suggestion succeeds,
             // we should replace the loading placeholder associated with it.
@@ -190,6 +205,7 @@ export function useGeneration({
     displayedTextSuggestions.current.clear();
     displayedIntermediateImages.current.clear();
     displayedFinalImages.current.clear();
+    jobStartTime.current = Date.now(); // Start the timer
 
     addMessage({
       type: "loading",
@@ -227,18 +243,22 @@ export function useGeneration({
       const response = await fetch("/api/generation/start", {
         method: "POST",
         body: formData,
-      })
+      });
 
       if (!response.ok) {
         let errorDetails = "An unknown error occurred.";
+        const clonedResponse = response.clone();
         try {
           const errorJson = await response.json();
-          errorDetails = errorJson.details || errorJson.error || JSON.stringify(errorJson);
+          errorDetails =
+            errorJson.details || errorJson.error || JSON.stringify(errorJson);
         } catch (e) {
-          // If the response is not JSON, use the text content
-          errorDetails = await response.text();
+          // If the response is not JSON, use the text content from the cloned response
+          errorDetails = await clonedResponse.text();
         }
-        throw new Error(`Failed to start generation. Server responded with ${response.status}: ${errorDetails}`);
+        throw new Error(
+          `Failed to start generation. Server responded with ${response.status}: ${errorDetails}`
+        );
       }
 
       const result = await response.json();

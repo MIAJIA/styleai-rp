@@ -187,7 +187,8 @@ export async function runStylizationMultiple(
   humanImageType: string,
   job?: Job
 ): Promise<{ imageUrls: string[]; finalPrompt: string }> {
-  console.log(`[ATOMIC_STEP] Running Stylization with ${modelVersion}...`);
+  const startTime = Date.now();
+  console.log(`[PERF_LOG | Job ${job?.jobId}] [ATOMIC_STEP] Running Stylization with ${modelVersion}...`);
   console.log(`[ATOMIC_STEP] Job customPrompt:`, job?.input.customPrompt);
 
   let finalPrompt: string;
@@ -199,29 +200,29 @@ export async function runStylizationMultiple(
   } else {
     // Use default prompt construction logic
     console.log(`[ATOMIC_STEP] No custom prompt found, using default logic`);
-    const imagePrompt = suggestion.finalPrompt;
-    if (!imagePrompt) {
-      throw new Error("Cannot generate styled image without a 'finalPrompt' in the suggestion.");
+    const outfitDetails = suggestion?.styleSuggestion?.outfit_suggestion;
+    if (outfitDetails) {
+      finalPrompt = `${outfitDetails.outfit_title}. ${outfitDetails.explanation}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
+      console.log(`[ATOMIC_STEP] Using generated prompt: ${finalPrompt.substring(0, 200)}...`);
+    } else {
+      finalPrompt = suggestion?.finalPrompt || "A full-body shot of a woman in a stylish outfit, standing in a visually appealing, realistic setting. The image is well-lit, with a clear focus on the person and their clothing. The background is a real-world scene, like a chic city street, a modern interior, or a scenic outdoor location. The overall aesthetic is fashionable, clean, and high-quality.";
     }
-    finalPrompt = imagePrompt + " " + IMAGE_FORMAT_DESCRIPTION + " " + STRICT_REALISM_PROMPT_BLOCK;
-    console.log(`[ATOMIC_STEP] Using generated prompt: ${finalPrompt.substring(0, 200)}...`);
   }
 
-  // Check prompt length to prevent API errors
   if (finalPrompt.length > 2500) {
     console.warn(`[ATOMIC_STEP] Prompt too long (${finalPrompt.length} chars), truncating to 2500 chars`);
     finalPrompt = finalPrompt.substring(0, 2500);
   }
 
-  // print the final prompt
   console.log(`!!![ATOMIC_STEP] Final prompt: ${finalPrompt}`);
 
-  const humanImageFile = await urlToFile(humanImageUrl, humanImageName, humanImageType);
-  const humanImageBase64 = await fileToBase64(humanImageFile);
+  const humanImageBase64 = await fileToBase64(await urlToFile(humanImageUrl, humanImageName, humanImageType));
+  const requestBody = buildStylizeRequestBody(modelVersion, finalPrompt, humanImageBase64);
 
-  const stylizeRequestBody = buildStylizeRequestBody(modelVersion, finalPrompt, humanImageBase64);
-  const styledImageUrls = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, stylizeRequestBody);
+  const styledImageUrls = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, requestBody);
 
+  const endTime = Date.now();
+  console.log(`[PERF_LOG | Job ${job?.jobId}] [ATOMIC_STEP] Stylization with ${modelVersion} complete. Elapsed: ${endTime - startTime}ms.`);
   console.log(`[ATOMIC_STEP] Stylization with ${modelVersion} complete: ${styledImageUrls.length} images generated`);
   styledImageUrls.forEach((url, index) => {
     console.log(`[ATOMIC_STEP] Image ${index + 1} URL:`, url.substring(0, 100));
@@ -231,8 +232,7 @@ export async function runStylizationMultiple(
 }
 
 /**
- * ATOMIC STEP: Generates stylized images for multiple prompts in parallel.
- * Returns an array of results, where each result contains images and the final prompt.
+ * ATOMIC STEP: Runs stylization for multiple prompts in parallel.
  */
 export async function runStylizationParallel(
   modelVersion: 'kling-v1-5' | 'kling-v2',
@@ -242,84 +242,70 @@ export async function runStylizationParallel(
   humanImageType: string,
   job?: Job
 ): Promise<{ imageUrls: string[], finalPrompt: string }[]> {
-  console.log(`[ATOMIC_STEP] Running Parallel Stylization with ${modelVersion} for ${prompts.length} prompts...`);
+  const startTime = Date.now();
+  console.log(`[PERF_LOG | Job ${job?.jobId}] [ATOMIC_STEP] Running Parallel Stylization with ${modelVersion} for ${prompts.length} prompts...`);
 
-  // Execute all prompts in parallel
-  const allPromises = prompts.map((prompt, index) => {
-    console.log(`[PARALLEL] Starting stylization ${index + 1}/${prompts.length} for prompt: ${prompt.substring(0, 50)}...`);
-    const tempSuggestion: Suggestion = {
-      index: index,
-      status: 'pending',
-      styleSuggestion: {},
-      finalPrompt: prompt,
-    };
-    return runStylizationMultiple(modelVersion, tempSuggestion, humanImageUrl, humanImageName, humanImageType, job);
-  });
+  const humanImageBase64 = await fileToBase64(await urlToFile(humanImageUrl, humanImageName, humanImageType));
 
-  const results = await Promise.all(allPromises);
+  const results = await Promise.all(
+    prompts.map(async (prompt) => {
+      const requestBody = buildStylizeRequestBody(modelVersion, prompt, humanImageBase64);
+      const imageUrls = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, requestBody);
+      return { imageUrls, finalPrompt: prompt };
+    })
+  );
 
+  const endTime = Date.now();
+  console.log(`[PERF_LOG | Job ${job?.jobId}] [ATOMIC_STEP] Parallel Stylization complete. Elapsed: ${endTime - startTime}ms.`);
   console.log(`[ATOMIC_STEP] Parallel Stylization complete: Generated ${results.length} groups with total ${results.reduce((sum, result) => sum + result.imageUrls.length, 0)} images`);
   results.forEach((result, index) => {
     console.log(`[ATOMIC_STEP] Group ${index + 1}: ${result.imageUrls.length} images`);
   });
-
   return results;
 }
 
-/**
- * ATOMIC STEP: Generates stylized base image using a specific model.
- * Legacy version that returns only the first image for backward compatibility.
- */
 export async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string, job?: Job): Promise<string> {
-  const tempSuggestion: Suggestion = {
-    index: 0,
-    status: 'pending',
-    styleSuggestion: {},
-    finalPrompt: prompt,
-  };
-  const result = await runStylizationMultiple(modelVersion, tempSuggestion, humanImageUrl, humanImageName, humanImageType, job);
+  const result = await runStylizationMultiple(modelVersion, { finalPrompt: prompt } as Suggestion, humanImageUrl, humanImageName, humanImageType, job);
+  if (!result.imageUrls[0]) {
+    throw new Error("Stylization did not return an image.");
+  }
   return result.imageUrls[0];
 }
 
 /**
- * ATOMIC STEP: Performs virtual try-on.
- * Returns multiple images.
- * @param canvasImageUrl The URL of the image to apply the clothing to.
- * @param garmentImageUrl The URL of the clothing item.
+ * ATOMIC STEP: Performs virtual try-on, returning multiple images.
  */
-export async function runVirtualTryOnMultiple(canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string): Promise<string[]> {
-  console.log("[ATOMIC_STEP] Running Virtual Try-On...");
+export async function runVirtualTryOnMultiple(canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string, job?: Job): Promise<string[]> {
+  const startTime = Date.now();
+  console.log(`[PERF_LOG | Job ${job?.jobId}] [ATOMIC_STEP] Running Virtual Try-On...`);
 
-  // Convert canvas image and garment to files/base64 in parallel
-  const [canvasImageBase64, garmentImageBase64] = await Promise.all([
+  const [humanImageBase64, garmentImageBase64] = await Promise.all([
     urlToFile(canvasImageUrl, "canvas.jpg", "image/jpeg").then(fileToBase64),
     urlToFile(garmentImageUrl, garmentImageName, garmentImageType).then(fileToBase64)
   ]);
 
-  const tryOnRequestBody = {
+  const requestBody = {
     model_name: "kolors-virtual-try-on-v1-5",
-    human_image: canvasImageBase64,
+    human_image: humanImageBase64,
     cloth_image: garmentImageBase64,
-    n: 1, // Generate 1 images
+    n: 1,
   };
 
-  const tryOnImageUrls = await executeKlingTask(KOLORS_VIRTUAL_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, tryOnRequestBody);
+  const tryOnImageUrls = await executeKlingTask(KOLORS_VIRTUAL_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, requestBody);
 
+  const endTime = Date.now();
+  console.log(`[PERF_LOG | Job ${job?.jobId}] [ATOMIC_STEP] Virtual Try-On complete. Elapsed: ${endTime - startTime}ms.`);
   console.log(`[ATOMIC_STEP] Virtual Try-On complete: ${tryOnImageUrls.length} images generated`);
   tryOnImageUrls.forEach((url, index) => {
     console.log(`[ATOMIC_STEP] Try-on image ${index + 1} URL:`, url.substring(0, 100));
   });
-
   return tryOnImageUrls;
 }
 
-/**
- * ATOMIC STEP: Performs virtual try-on.
- * Legacy version that returns only the first image for backward compatibility.
- * @param canvasImageUrl The URL of the image to apply the clothing to.
- * @param garmentImageUrl The URL of the clothing item.
- */
-export async function runVirtualTryOn(canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string): Promise<string> {
-  const tryOnImageUrls = await runVirtualTryOnMultiple(canvasImageUrl, garmentImageUrl, garmentImageName, garmentImageType);
-  return tryOnImageUrls[0];
+export async function runVirtualTryOn(canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string, job?: Job): Promise<string> {
+  const results = await runVirtualTryOnMultiple(canvasImageUrl, garmentImageUrl, garmentImageName, garmentImageType, job);
+  if (!results[0]) {
+    throw new Error("Virtual Try-On did not return an image.");
+  }
+  return results[0];
 }
