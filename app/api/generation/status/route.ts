@@ -1,6 +1,11 @@
 import { kv } from '@vercel/kv';
 import { NextResponse, type NextRequest } from 'next/server';
-import { type Job, runImageGenerationPipeline } from '@/lib/ai';
+import {
+  type Job,
+  runImageGenerationPipeline,
+  getStyleSuggestionFromAI,
+  type Suggestion,
+} from '@/lib/ai';
 
 
 export async function GET(request: NextRequest) {
@@ -16,6 +21,41 @@ export async function GET(request: NextRequest) {
     if (!job) {
       console.error(`[API_STATUS | 404] Job not found in KV. Timestamp: ${new Date().toISOString()}, JobID: ${jobId}, kv.get() returned:`, job);
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
+    // [NEW LOGIC] If job status is 'pending', it means we need to generate suggestions first.
+    if (job.status === 'pending') {
+      console.log(`[API_STATUS | Job ${job.jobId}] Job is 'pending'. Fetching AI style suggestions...`);
+
+      // 1. Get style suggestions from AI
+      const aiSuggestions = await getStyleSuggestionFromAI(
+        {
+          humanImageUrl: job.input.humanImage.url,
+          garmentImageUrl: job.input.garmentImage.url,
+          occasion: job.input.occasion,
+          userProfile: job.input.userProfile,
+        },
+        { count: 3 }
+      );
+      console.log(`[API_STATUS | Job ${job.jobId}] Received ${aiSuggestions.length} suggestions.`);
+
+      // 2. Populate the suggestions in the job object
+      job.suggestions = aiSuggestions.map((suggestion: any, index: number): Suggestion => ({
+        index,
+        status: 'pending', // Each suggestion starts as pending
+        styleSuggestion: suggestion,
+        personaProfile: {},
+        finalPrompt: suggestion.image_prompt,
+      }));
+
+      // 3. Update job status to 'processing' and save back to KV
+      job.status = 'processing';
+      job.updatedAt = Date.now();
+      await kv.set(job.jobId, job);
+      console.log(`[API_STATUS | Job ${job.jobId}] Job status updated to 'processing' with new suggestions. Ready for image generation.`);
+
+      // Return the updated job immediately. The next poll will trigger image generation.
+      return NextResponse.json(job);
     }
 
     // Check if the first suggestion is pending and trigger it.

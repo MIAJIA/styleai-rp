@@ -1,7 +1,7 @@
 import { kv } from "@vercel/kv";
 import { Job } from "../types";
 import { runStylizationMultiple, runVirtualTryOnMultiple } from "../services/kling";
-import { runAndPerformFaceSwap } from "../services/face-swap";
+import { runFaceSwap } from "../services/face-swap";
 import { saveFinalImageToBlob } from "../services/blob";
 
 /**
@@ -88,12 +88,11 @@ export async function executeAdvancedScenePipeline(job: Job): Promise<{ imageUrl
 
   for (let i = 0; i < allTryOnImageUrls.length; i++) {
     console.log(`[PIPELINE] Processing face swap for try-on image ${i + 1}/${allTryOnImageUrls.length}`);
-    const swappedImageUrl = await runAndPerformFaceSwap(
-      job.humanImage.url,
-      job.humanImage.name,
-      job.humanImage.type,
-      allTryOnImageUrls[i]
-    );
+    const swappedImageUrl = await runFaceSwap({
+      targetImageUrl: allTryOnImageUrls[i],
+      faceImageUrl: job.input.humanImage.url,
+      jobId: job.jobId,
+    });
     allSwappedImageUrls.push(swappedImageUrl);
   }
 

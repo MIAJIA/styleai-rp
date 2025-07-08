@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { put } from '@vercel/blob';
 import {
-  getStyleSuggestionFromAI,
   runImageGenerationPipeline,
   type Job,
   type Suggestion,
@@ -48,36 +47,13 @@ export async function POST(request: Request) {
     const garmentUploadEndTime = Date.now();
     console.log(`[PERF_LOG | start] Garment image uploaded. Elapsed: ${garmentUploadEndTime - garmentUploadStartTime}ms.`);
 
-    console.log('[API | start] Requesting 3 style suggestions from AI in a single call...');
-    const aiCallStartTime = Date.now();
-    const aiSuggestions = await getStyleSuggestionFromAI(
-      {
-        humanImageUrl: humanImageBlob.url,
-        garmentImageUrl: garmentImageBlob.url,
-        occasion,
-        userProfile,
-      },
-      { count: 3 }
-    );
-    const aiCallEndTime = Date.now();
-    console.log(`[PERF_LOG | start] AI suggestions received. Elapsed: ${aiCallEndTime - aiCallStartTime}ms.`);
-    console.log(`[API | start] Successfully received ${aiSuggestions.length} suggestions from AI.`);
-
     const jobId = randomUUID();
     const now = Date.now();
 
-    const suggestions: Suggestion[] = aiSuggestions.map((suggestion: any, index: number) => ({
-      index,
-      status: 'pending',
-      styleSuggestion: suggestion,
-      personaProfile: {},
-      finalPrompt: suggestion.image_prompt,
-    }));
-
     const newJob: Job = {
       jobId,
-      status: 'processing',
-      suggestions,
+      status: 'pending', // IMPORTANT: Status is now 'pending'
+      suggestions: [], // Suggestions will be generated later
       input: {
         humanImage: { url: humanImageBlob.url, type: humanImageFile.type, name: humanImageFile.name },
         garmentImage: { url: garmentImageBlob.url, type: garmentImageFile.type, name: garmentImageFile.name },
@@ -94,7 +70,7 @@ export async function POST(request: Request) {
     await kv.set(jobId, newJob);
     const kvSetEndTime = Date.now();
     console.log(`[PERF_LOG | start] Job set in KV. Elapsed: ${kvSetEndTime - kvSetStartTime}ms.`);
-    console.log(`[Job ${jobId}] Initial job record created with 3 suggestions, all pending.`);
+    console.log(`[Job ${jobId}] Initial job record created with status 'pending'. AI processing will start on first status poll.`);
 
     // runImageGenerationPipeline(jobId, 0);
     // console.log(`[Job ${jobId}] Background pipeline started for suggestion 0.`);
