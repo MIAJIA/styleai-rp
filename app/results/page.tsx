@@ -459,7 +459,7 @@ export default function ResultsPage() {
               {/* Main Image */}
               <div className="relative mb-4">
                 <img src={selectedLook.imageUrl} alt="Generated Look" className="w-full h-auto rounded-lg shadow-lg" />
-                <ImageVoteButtons lookId={selectedLook.id} />
+                <ImageVoteButtons imageUrl={selectedLook.imageUrl} />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -484,14 +484,14 @@ export default function ResultsPage() {
                           alt="Stylized Look"
                           className="w-24 h-24 object-cover rounded-md border"
                         />
-                        <p className="text-xs mt-1">Stylized</p>
+                        <p className="text-xs mt-1">How to wear it!</p>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Vote Status */}
-                <ImageVoteStatus lookId={selectedLook.id} />
+                <ImageVoteStatus imageUrl={selectedLook.imageUrl} />
               </div>
 
               {/* Look Information */}
