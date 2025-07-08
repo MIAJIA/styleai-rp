@@ -444,7 +444,7 @@ export default function ChatPage() {
         {/* ============== [NEW] Multi-Suggestion UI ============== */}
         {suggestions &&
           suggestions.length > 0 &&
-          !suggestions.every(s => s.status === 'succeeded' || s.status === 'failed') && (
+          (chatData?.generationMode === 'simple-scene') && (
             <div className="p-4 border-t bg-gray-50">
               <h3 className="text-sm font-semibold mb-2 text-center text-gray-600">Style Options</h3>
               <div className="flex justify-center items-center space-x-2">
