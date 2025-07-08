@@ -43,6 +43,9 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
       finalPrompt: string;
       stylizedImageUrls?: string[];
     };
+    const pipelineStartTime = Date.now();
+    console.log(`[PERF_LOG | pipeline-runner] Starting pipeline for mode: ${job.input.generationMode}.`);
+
     switch (job.input.generationMode) {
       case 'tryon-only':
         pipelineResult = await executeTryOnOnlyPipeline(pipelineAdapter as any);
@@ -56,6 +59,8 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
       default:
         throw new Error(`Unknown generation mode: ${job.input.generationMode}`);
     }
+    const pipelineEndTime = Date.now();
+    console.log(`[PERF_LOG | pipeline-runner] Pipeline execution finished. Elapsed: ${pipelineEndTime - pipelineStartTime}ms.`);
 
     // --- Update the Job object with the successful result ---
     job = await kv.get<Job>(jobId); // Re-fetch to ensure we have the latest state

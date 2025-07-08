@@ -12,8 +12,12 @@ import {
 import { type OnboardingData } from '@/lib/onboarding-storage';
 
 export async function POST(request: Request) {
+  const startTime = Date.now();
+  console.log(`[PERF_LOG | start] Request received. Timestamp: ${startTime}`);
   try {
     const formData = await request.formData();
+    const formDataParseTime = Date.now();
+    console.log(`[PERF_LOG | start] FormData parsed. Elapsed: ${formDataParseTime - startTime}ms`);
     const humanImageFile = formData.get('human_image') as File | null;
     const garmentImageFile = formData.get('garment_image') as File | null;
     const occasion = formData.get('occasion') as string | null;
@@ -34,10 +38,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const humanUploadStartTime = Date.now();
     const humanImageBlob = await put(humanImageFile.name, humanImageFile, { access: 'public', addRandomSuffix: true });
+    const humanUploadEndTime = Date.now();
+    console.log(`[PERF_LOG | start] Human image uploaded. Elapsed: ${humanUploadEndTime - humanUploadStartTime}ms.`);
+
+    const garmentUploadStartTime = Date.now();
     const garmentImageBlob = await put(garmentImageFile.name, garmentImageFile, { access: 'public', addRandomSuffix: true });
+    const garmentUploadEndTime = Date.now();
+    console.log(`[PERF_LOG | start] Garment image uploaded. Elapsed: ${garmentUploadEndTime - garmentUploadStartTime}ms.`);
 
     console.log('[API | start] Requesting 3 style suggestions from AI in a single call...');
+    const aiCallStartTime = Date.now();
     const aiSuggestions = await getStyleSuggestionFromAI(
       {
         humanImageUrl: humanImageBlob.url,
@@ -47,6 +59,8 @@ export async function POST(request: Request) {
       },
       { count: 3 }
     );
+    const aiCallEndTime = Date.now();
+    console.log(`[PERF_LOG | start] AI suggestions received. Elapsed: ${aiCallEndTime - aiCallStartTime}ms.`);
     console.log(`[API | start] Successfully received ${aiSuggestions.length} suggestions from AI.`);
 
     const jobId = randomUUID();
@@ -76,12 +90,17 @@ export async function POST(request: Request) {
       updatedAt: now,
     };
 
+    const kvSetStartTime = Date.now();
     await kv.set(jobId, newJob);
+    const kvSetEndTime = Date.now();
+    console.log(`[PERF_LOG | start] Job set in KV. Elapsed: ${kvSetEndTime - kvSetStartTime}ms.`);
     console.log(`[Job ${jobId}] Initial job record created with 3 suggestions, all pending.`);
 
     // runImageGenerationPipeline(jobId, 0);
     // console.log(`[Job ${jobId}] Background pipeline started for suggestion 0.`);
 
+    const endTime = Date.now();
+    console.log(`[PERF_LOG | start] Total request time before response: ${endTime - startTime}ms.`);
     return NextResponse.json({ jobId });
   } catch (error) {
     console.error('Error starting generation job:', error);
