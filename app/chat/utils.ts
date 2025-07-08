@@ -1,6 +1,7 @@
 import type { ChatMessage } from "./types"
 import { styles } from "./constants"
 import type { ProductInfo } from "../components/product-card"
+import { compressImageToSpecificSize } from "@/lib/image-compression"
 
 // Helper for creating chat messages
 export const createChatMessage = (
@@ -44,11 +45,22 @@ export const getFileFromPreview = async (previewUrl: string, defaultName: string
   try {
     const response = await fetch(previewUrl)
     const blob = await response.blob()
-    const fileType = blob.type || "image/jpeg"
-    const fileName = defaultName
-    return new File([blob], fileName, { type: fileType })
+
+    // Create a temporary file to pass to the compressor
+    const tempFile = new File([blob], defaultName, { type: blob.type || "image/jpeg" })
+
+    console.log(`[Pre-compress] Original image ${defaultName}: ${(tempFile.size / 1024).toFixed(2)} KB`)
+
+    // Compress the file to be under 200KB
+    const compressedResult = await compressImageToSpecificSize(tempFile)
+
+    console.log(`[Post-compress] Compressed image ${defaultName}: ${(compressedResult.blob.size / 1024).toFixed(2)} KB, Format: ${compressedResult.format}`)
+
+    // Return the compressed file
+    return new File([compressedResult.blob], defaultName, { type: compressedResult.format })
+
   } catch (error) {
-    console.error("Error converting preview to file:", error)
+    console.error("Error converting and compressing preview to file:", error)
     return null
   }
 }

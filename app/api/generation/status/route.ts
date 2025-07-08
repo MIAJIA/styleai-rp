@@ -1,11 +1,10 @@
 import { kv } from '@vercel/kv';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { type Job } from '@/lib/ai';
 
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const jobId = searchParams.get('jobId');
+export async function GET(request: NextRequest) {
+  const jobId = request.nextUrl.searchParams.get('jobId');
 
   if (!jobId) {
     return NextResponse.json({ error: 'Missing jobId parameter' }, { status: 400 });
@@ -18,24 +17,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    // Log the entire job object to see what's being fetched from KV
-    console.log(`[API_STATUS] Fetched job ${jobId}:`, JSON.stringify(job.jobId, null, 2));
+    const loggedStatusKey = `logged_status:${jobId}`;
+    const previousStatus = await kv.get<string>(loggedStatusKey);
 
-    // 🔍 DEBUG: Add detailed logging for styled images
-    if (job.status === 'stylization_completed' && job.processImages?.styledImages) {
-      console.log(`[API_STATUS DEBUG] ✅ Job has stylization_completed status`);
-      console.log(`[API_STATUS DEBUG] - Styled images count: ${job.processImages.styledImages.length}`);
-      console.log(`[API_STATUS DEBUG] - Styled images:`, job.processImages.styledImages.map(url => url.substring(0, 100) + '...'));
-      console.log(`[API_STATUS DEBUG] - Full processImages:`, job.processImages);
-    } else {
-      console.log(`[API_STATUS DEBUG] Job status: ${job.status}, has processImages: ${!!job.processImages}`);
-      if (job.processImages) {
-        console.log(`[API_STATUS DEBUG] processImages keys:`, Object.keys(job.processImages));
-      }
+    if (job.status !== previousStatus) {
+      console.log(`⚠️⚠️⚠️[API_STATUS] Job ${jobId.slice(-8)} status changed: ${previousStatus || 'null'} → ${job.status}`);
+      // Set with expiration to avoid dangling keys
+      await kv.set(loggedStatusKey, job.status, { ex: 60 * 10 }); // 10 minutes expiration
     }
 
-    // The job's status is continuously updated by the background process.
-    // This endpoint simply returns the current state of the job from the KV store.
     return NextResponse.json(job);
 
   } catch (error) {

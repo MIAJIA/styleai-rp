@@ -34,81 +34,16 @@ export async function getStyleSuggestionFromAI({
   }
 
   console.log("[AI DEBUG] Received userProfile for suggestion:", JSON.stringify(userProfileForLog, null, 2));
+  console.log(`${IMAGE_LOG_PREFIX} 👤 Using Human Image URL: ${humanImageUrl}`);
+  console.log(`${IMAGE_LOG_PREFIX} 👔 Using Garment Image URL: ${garmentImageUrl}`);
 
   try {
-    // 🔍 STEP 1: Download and analyze original images
-    console.log(`${IMAGE_LOG_PREFIX} Downloading images for analysis...`);
-    const [humanImageResponse, garmentImageResponse] = await Promise.all([
-      fetch(humanImageUrl),
-      fetch(garmentImageUrl)
-    ]);
-
-    if (!humanImageResponse.ok || !garmentImageResponse.ok) {
-      throw new Error('Failed to download one of the images for AI suggestion.');
-    }
-
-    const [humanImageBlob, garmentImageBlob] = await Promise.all([
-      humanImageResponse.blob(),
-      garmentImageResponse.blob()
-    ]);
-
-    // 🔍 LOG: Original image sizes
-    const humanImageOriginalSize = humanImageBlob.size;
-    const garmentImageOriginalSize = garmentImageBlob.size;
-
-    console.log(`${IMAGE_LOG_PREFIX} === ORIGINAL IMAGE SIZES ===`);
-    console.log(`${IMAGE_LOG_PREFIX} 👤 Human Image: ${formatBytes(humanImageOriginalSize)} (${humanImageOriginalSize} bytes)`);
-    console.log(`${IMAGE_LOG_PREFIX} 👔 Garment Image: ${formatBytes(garmentImageOriginalSize)} (${garmentImageOriginalSize} bytes)`);
-    console.log(`${IMAGE_LOG_PREFIX} 📊 Total Original Size: ${formatBytes(humanImageOriginalSize + garmentImageOriginalSize)}`);
-
-    // 🔍 STEP 2: Convert to Base64 and analyze
-    console.log(`${TOKEN_LOG_PREFIX} Converting images to Base64...`);
-
-    const [humanImageBuffer, garmentImageBuffer] = await Promise.all([
-      humanImageBlob.arrayBuffer(),
-      garmentImageBlob.arrayBuffer()
-    ]);
-
-    const humanImageBase64 = `data:${humanImageBlob.type};base64,${Buffer.from(humanImageBuffer).toString('base64')}`;
-    const garmentImageBase64 = `data:${garmentImageBlob.type};base64,${Buffer.from(garmentImageBuffer).toString('base64')}`;
-
-    // 🔍 LOG: Base64 sizes and token calculations
-    const humanBase64Size = humanImageBase64.length;
-    const garmentBase64Size = garmentImageBase64.length;
-    const humanTokens = calculateImageTokens(humanImageBase64);
-    const garmentTokens = calculateImageTokens(garmentImageBase64);
-    const totalTokens = humanTokens + garmentTokens;
-
-    console.log(`${IMAGE_LOG_PREFIX} === BASE64 CONVERSION RESULTS ===`);
-    console.log(`${IMAGE_LOG_PREFIX} 👤 Human Image Base64: ${formatBytes(humanBase64Size)} (${humanBase64Size} chars)`);
-    console.log(`${IMAGE_LOG_PREFIX} 👔 Garment Image Base64: ${formatBytes(garmentBase64Size)} (${garmentBase64Size} chars)`);
-    console.log(`${IMAGE_LOG_PREFIX} 📊 Total Base64 Size: ${formatBytes(humanBase64Size + garmentBase64Size)}`);
-
-    console.log(`${TOKEN_LOG_PREFIX} === TOKEN USAGE ESTIMATION ===`);
-    console.log(`${TOKEN_LOG_PREFIX} 👤 Human Image Tokens: ~${humanTokens.toLocaleString()} tokens`);
-    console.log(`${TOKEN_LOG_PREFIX} 👔 Garment Image Tokens: ~${garmentTokens.toLocaleString()} tokens`);
-    console.log(`${TOKEN_LOG_PREFIX} 🎯 TOTAL IMAGE TOKENS: ~${totalTokens.toLocaleString()} tokens`);
-
-    // 🔍 LOG: Compression ratio analysis
-    const humanCompressionRatio = ((humanImageOriginalSize - humanBase64Size) / humanImageOriginalSize * 100);
-    const garmentCompressionRatio = ((garmentImageOriginalSize - garmentBase64Size) / garmentImageOriginalSize * 100);
-
-    console.log(`${IMAGE_LOG_PREFIX} === COMPRESSION ANALYSIS ===`);
-    console.log(`${IMAGE_LOG_PREFIX} 👤 Human Image Compression: ${humanCompressionRatio.toFixed(1)}% ${humanCompressionRatio > 0 ? 'reduction' : 'expansion'}`);
-    console.log(`${IMAGE_LOG_PREFIX} 👔 Garment Image Compression: ${garmentCompressionRatio.toFixed(1)}% ${garmentCompressionRatio > 0 ? 'reduction' : 'expansion'}`);
-
-    // 🔍 WARNING: Check for potential token limit issues
-    if (totalTokens > 50000) {
-      console.warn(`${TOKEN_LOG_PREFIX} ⚠️  WARNING: High token usage detected (${totalTokens.toLocaleString()}). This may cause API issues!`);
-    }
-    if (totalTokens > 100000) {
-      console.error(`${TOKEN_LOG_PREFIX} 🚨 CRITICAL: Very high token usage (${totalTokens.toLocaleString()}). High risk of hitting API limits!`);
-    }
-
-    // Build the user prompt following the structured format defined in systemPrompt.
-    const userProfileSection = userProfile
-      ? `# User Profile\n\`\`\`json\n${JSON.stringify(userProfile, null, 2)}\n\`\`\``
-      : "# User Profile\nNo user profile provided.";
+    // ⚠️ ⚠️⚠️TODO: Optimize user profile data for AI.
+    // Instead of sending the entire raw JSON object, create a concise, human-readable
+    // summary of the user's profile (e.g., body type, style preferences, skin tone).
+    // This will significantly reduce token consumption and improve AI comprehension.
+    // This optimization is pending a planned refactor of the OnboardingData structure.
+    const userProfileSection = ""; // Temporarily disabled to reduce tokens
 
     // Build enhanced essential item details with context
     const essentialItemSection = `# Essential Item
@@ -177,21 +112,12 @@ ${stylePreferenceSection}
     // 🔍 LOG: Final token estimation including text
     const textTokenEstimate = Math.ceil(userMessageText.length / 4); // Rough estimate: 4 chars per token
     const systemPromptTokens = Math.ceil(systemPrompt.length / 4);
-    const totalRequestTokens = totalTokens + textTokenEstimate + systemPromptTokens;
+    const totalRequestTokens = textTokenEstimate + systemPromptTokens; // No image tokens to add here
 
     console.log(`${TOKEN_LOG_PREFIX} === FINAL REQUEST ANALYSIS ===`);
     console.log(`${TOKEN_LOG_PREFIX} 📝 User Message Tokens: ~${textTokenEstimate.toLocaleString()}`);
     console.log(`${TOKEN_LOG_PREFIX} 🔧 System Prompt Tokens: ~${systemPromptTokens.toLocaleString()}`);
     console.log(`${TOKEN_LOG_PREFIX} 🎯 TOTAL REQUEST TOKENS: ~${totalRequestTokens.toLocaleString()}`);
-    console.log(`${TOKEN_LOG_PREFIX} 📊 OpenAI GPT-4o Limit: 128,000 tokens`);
-    console.log(`${TOKEN_LOG_PREFIX} 📈 Usage Percentage: ${(totalRequestTokens / 128000 * 100).toFixed(1)}%`);
-
-    if (totalRequestTokens > 128000) {
-      console.error(`${TOKEN_LOG_PREFIX} 🚨🚨 CRITICAL ERROR: Request exceeds OpenAI limit! (${totalRequestTokens.toLocaleString()} > 128,000)`);
-    } else if (totalRequestTokens > 100000) {
-      console.warn(`${TOKEN_LOG_PREFIX} ⚠️⚠️ WARNING: Approaching OpenAI limit! (${totalRequestTokens.toLocaleString()}/128,000)`);
-    }
-
     console.log(`${TOKEN_LOG_PREFIX} ===== SENDING REQUEST TO OPENAI =====`);
 
     const response = await openai.chat.completions.create({
@@ -211,15 +137,15 @@ ${stylePreferenceSection}
             {
               type: "image_url",
               image_url: {
-                url: humanImageBase64,
-                detail: "low" // 🔧 Use low detail to reduce tokens
+                url: humanImageUrl, // ✨ Use direct URL
+                detail: "low"
               },
             },
             {
               type: "image_url",
               image_url: {
-                url: garmentImageBase64,
-                detail: "low" // 🔧 Use low detail to reduce tokens
+                url: garmentImageUrl, // ✨ Use direct URL
+                detail: "low"
               },
             },
           ],

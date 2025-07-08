@@ -66,18 +66,15 @@ export function useGeneration({
 
   const onPollingUpdate = useCallback(
     (job: any) => {
-      if (job.status !== lastStatusRef.current || job.statusMessage !== lastStatusMessageRef.current) {
-        console.log('[Generation]', {
-          status: job.status,
-          message: job.statusMessage,
-          jobId: job.jobId?.slice(-8)
-        });
+      const importantStatuses = ['pending', 'suggestion_generated', 'stylization_completed', 'completed', 'failed'];
+      if (job.status !== lastStatusRef.current && importantStatuses.includes(job.status)) {
+        console.log(`⚠️⚠️⚠️[GENERATION] ${job.jobId?.slice(-8)}: ${lastStatusRef.current || 'null'} → ${job.status}`);
         lastStatusRef.current = job.status;
-        lastStatusMessageRef.current = job.statusMessage;
       }
 
-      if (job.statusMessage) {
-        setGenerationStatusText(job.statusMessage)
+      if (job.statusMessage && job.statusMessage !== lastStatusMessageRef.current) {
+        setGenerationStatusText(job.statusMessage);
+        lastStatusMessageRef.current = job.statusMessage;
       }
 
       if (

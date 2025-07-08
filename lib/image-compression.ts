@@ -69,6 +69,12 @@ export const COMPRESSION_PRESETS = {
     quality: 0.9,
     format: 'auto' as const,
     fallbackFormat: 'image/jpeg' as const
+  },
+  // New preset for targeting specific file size
+  forUpload: {
+    maxSizeMB: 0.19, // Target < 200KB
+    maxWidthOrHeight: 1024, // Max dimension
+    useWebWorker: true,
   }
 } as const;
 
@@ -377,6 +383,50 @@ export class SmartImageCompressor {
     }
     return 'desktop';
   }
+
+  /**
+   * Compress image to a target size - client-side safe version
+   */
+  async compressImageToSize(
+    file: File,
+    options: { maxSizeMB: number; maxWidthOrHeight: number; useWebWorker: boolean }
+  ): Promise<CompressedImageResult> {
+    if (!isClientSide()) {
+      throw new Error('Image compression is only available on the client side');
+    }
+
+    // Dynamic import of browser-image-compression
+    const imageCompression = (await import('browser-image-compression')).default;
+
+    this.ensureInitialized();
+    const startTime = performance.now();
+    const originalSize = file.size;
+
+    try {
+      const compressedFile = await imageCompression(file, options);
+      const compressedSize = compressedFile.size;
+      const compressionRatio = (originalSize - compressedSize) / originalSize;
+
+      const dataUrl = await imageCompression.getDataUrlFromFile(compressedFile);
+      const img = await imageCompression.loadImage(dataUrl);
+
+      const result: CompressedImageResult = {
+        blob: compressedFile,
+        dataUrl,
+        format: compressedFile.type,
+        originalSize,
+        compressedSize,
+        compressionRatio,
+        dimensions: { width: img.width, height: img.height },
+        processingTime: performance.now() - startTime
+      };
+
+      return result;
+    } catch (error) {
+      console.error('Compression to size failed:', error);
+      throw error;
+    }
+  }
 }
 
 // Lazy load singleton instance
@@ -409,4 +459,9 @@ export async function compressForPreview(file: File): Promise<CompressedImageRes
 
 export async function compressHighQuality(file: File): Promise<CompressedImageResult> {
   return getImageCompressor().compressImage(file, COMPRESSION_PRESETS.highQuality);
+}
+
+// New convenient method for size-based compression
+export async function compressImageToSpecificSize(file: File): Promise<CompressedImageResult> {
+  return getImageCompressor().compressImageToSize(file, COMPRESSION_PRESETS.forUpload);
 }
