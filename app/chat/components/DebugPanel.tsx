@@ -7,7 +7,7 @@ interface DebugPanelProps {
   isGenerating: boolean
   currentStep: string
   hasAutoStarted: boolean
-  pollingIntervalId: NodeJS.Timeout | null
+  jobId: string | null
   chatData: object | null
   messagesLength: number
   pollingError: string | null
@@ -20,7 +20,7 @@ export function DebugPanel({
   isGenerating,
   currentStep,
   hasAutoStarted,
-  pollingIntervalId,
+  jobId,
   chatData,
   messagesLength,
   pollingError,
@@ -64,7 +64,7 @@ export function DebugPanel({
             currentStep: <span className="font-bold">{String(currentStep)}</span>
           </div>
           <div>hasAutoStarted: {String(hasAutoStarted)}</div>
-          <div>pollingActive: {pollingIntervalId ? "yes" : "no"}</div>
+          <div>pollingActive (has jobId): {jobId ? "yes" : "no"}</div>
           <div className="font-semibold text-gray-800 mt-3 mb-2">💾 Data States:</div>
           <div>chatData: {chatData ? "exists" : "null"}</div>
           <div>messages.length: {String(messagesLength)}</div>
