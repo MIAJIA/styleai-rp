@@ -1,6 +1,6 @@
 import { kv } from '@vercel/kv';
 import { NextResponse, type NextRequest } from 'next/server';
-import { type Job } from '@/lib/ai';
+import { type Job, runImageGenerationPipeline } from '@/lib/ai';
 
 
 export async function GET(request: NextRequest) {
@@ -16,6 +16,20 @@ export async function GET(request: NextRequest) {
     if (!job) {
       console.error(`[API_STATUS | 404] Job not found in KV. Timestamp: ${new Date().toISOString()}, JobID: ${jobId}, kv.get() returned:`, job);
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
+    // Check if the first suggestion is pending and trigger it.
+    // This is the first time we see the job, so we kick off the generation.
+    if (job.suggestions[0]?.status === 'pending') {
+      console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] First suggestion is pending. Triggering image generation for suggestion 0.`);
+      job.suggestions[0].status = 'generating_images';
+      job.updatedAt = Date.now();
+
+      // Save the updated job status back to KV
+      await kv.set(job.jobId, job);
+
+      // Start the pipeline in the background.
+      runImageGenerationPipeline(job.jobId, 0);
     }
 
     const loggedStatusKey = `logged_status:${jobId}`;

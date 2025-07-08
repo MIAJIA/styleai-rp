@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
     const suggestions: Suggestion[] = aiSuggestions.map((suggestion: any, index: number) => ({
       index,
-      status: index === 0 ? 'generating_images' : 'pending',
+      status: 'pending',
       styleSuggestion: suggestion,
       personaProfile: {},
       finalPrompt: suggestion.image_prompt,
@@ -77,10 +77,10 @@ export async function POST(request: Request) {
     };
 
     await kv.set(jobId, newJob);
-    console.log(`[Job ${jobId}] Initial job record created with 3 suggestions.`);
+    console.log(`[Job ${jobId}] Initial job record created with 3 suggestions, all pending.`);
 
-    runImageGenerationPipeline(jobId, 0);
-    console.log(`[Job ${jobId}] Background pipeline started for suggestion 0.`);
+    // runImageGenerationPipeline(jobId, 0);
+    // console.log(`[Job ${jobId}] Background pipeline started for suggestion 0.`);
 
     return NextResponse.json({ jobId });
   } catch (error) {
