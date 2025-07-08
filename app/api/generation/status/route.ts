@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const job = await kv.get<Job>(jobId);
 
     if (!job) {
+      console.error(`[API_STATUS | 404] Job not found in KV. Timestamp: ${new Date().toISOString()}, JobID: ${jobId}, kv.get() returned:`, job);
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 

@@ -2,12 +2,11 @@ import { useState, useEffect, useRef } from "react"
 
 interface PollingOptions<T> {
   jobId: string | null
-  onSuccess: (result: T) => void
+  onUpdate: (data: T) => void
   onError: (error: Error) => void
-  onUpdate?: (status: any) => void
 }
 
-export function usePolling<T>({ jobId, onSuccess, onError, onUpdate }: PollingOptions<T>) {
+export function usePolling<T>({ jobId, onUpdate, onError }: PollingOptions<T>) {
   const [isPolling, setIsPolling] = useState(false)
   const pollingIntervalIdRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -27,24 +26,20 @@ export function usePolling<T>({ jobId, onSuccess, onError, onUpdate }: PollingOp
     }
 
     const poll = async () => {
+      if (!jobId) {
+        // This check is a safeguard, the main effect below should handle teardown.
+        stopPolling();
+        return;
+      }
       try {
         const response = await fetch(`/api/generation/status?jobId=${jobId}`)
         if (!response.ok) {
+          // For status codes like 404 or 500, we treat it as a terminal error for this polling session.
           throw new Error(`Polling failed with status: ${response.status}`)
         }
-        const job = await response.json()
+        const data = await response.json() as T;
+        onUpdate(data);
 
-        if (onUpdate) {
-          onUpdate(job)
-        }
-
-        if (job.status === "succeed" || job.status === "completed") {
-          onSuccess(job.result)
-          stopPolling()
-        } else if (job.status === "failed" || job.status === "cancelled") {
-          onError(new Error(job.error || `Job ${job.status}`))
-          stopPolling()
-        }
       } catch (error) {
         onError(error instanceof Error ? error : new Error("Unknown polling error"))
         stopPolling()
@@ -61,7 +56,7 @@ export function usePolling<T>({ jobId, onSuccess, onError, onUpdate }: PollingOp
     return () => {
       stopPolling()
     }
-  }, [jobId, onSuccess, onError, onUpdate])
+  }, [jobId, onUpdate, onError])
 
   return { isPolling, stopPolling }
 }

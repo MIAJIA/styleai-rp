@@ -19,10 +19,16 @@ export async function executeTryOnOnlyPipeline(job: Job): Promise<{ imageUrls: s
     job.garmentImage.type
   );
 
-  await kv.hset(job.jobId, {
-    tryOnImages: tryOnImageUrls,
-    tryOnImage: tryOnImageUrls[0] // Keep for backward compatibility
-  });
+  // Get the full job from KV
+  const currentJob = await kv.get<Job>(job.jobId);
+  if (currentJob) {
+    // This pipeline doesn't have a specific suggestion, so we can't update a single one.
+    // This part of the logic needs to be re-evaluated in the context of the new data model.
+    // For now, we are commenting out the direct update.
+    // The parent function `runImageGenerationPipeline` is responsible for setting the final status.
+    // currentJob.suggestions[0].tryOnImages = tryOnImageUrls; // Example of what might be done
+    // await kv.set(job.jobId, currentJob);
+  }
 
   // Step 2: Save all results to blob storage
   const finalUrls: string[] = [];

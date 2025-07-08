@@ -135,7 +135,7 @@ export function useGeneration({
           replaceLastLoadingMessage({
             role: "ai",
             type: "text",
-            content: `哎呀，建议 ${index + 1} 出错了: ${error}`,
+            content: `Opps, Error on Suggestion ${index + 1}: ${error}`,
           });
           displayedFinalImages.current.add(index); // Also "remember" failed attempts
         }

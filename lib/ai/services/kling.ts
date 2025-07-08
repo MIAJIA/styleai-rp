@@ -1,7 +1,11 @@
 import * as jwt from "jsonwebtoken";
 import { fetchWithTimeout, fileToBase64, sleep, urlToFile } from "../utils";
-import { IMAGE_GENERATION_MODEL, IMAGE_FORMAT_DESCRIPTION, STRICT_REALISM_PROMPT_BLOCK } from "@/lib/prompts";
-import { Job } from "../types";
+import {
+  IMAGE_GENERATION_MODEL,
+  IMAGE_FORMAT_DESCRIPTION,
+  STRICT_REALISM_PROMPT_BLOCK,
+} from "@/lib/prompts";
+import { Job, Suggestion } from "../types";
 
 // --- Kling AI ---
 const KLING_ACCESS_KEY = process.env.KLING_AI_ACCESS_KEY;
@@ -46,8 +50,9 @@ const buildStylizeRequestBody = (
     case 'kling-v1-5':
       return {
         ...baseBody,
-        image_reference: "face",
-        human_fidelity: 1,
+        image_reference: "subject",// "face" or "character"?
+        human_fidelity: 0.85,
+        image_fidelity: 0.6,
         n: 1,// number of images to generate
         model_name: "kling-v1-5",
       };
@@ -170,29 +175,35 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
   return finalImageUrls;
 }
 
-
 /**
  * ATOMIC STEP: Generates a stylized base image using a specific model.
  * Returns multiple images and the final prompt used.
  */
-export async function runStylizationMultiple(modelVersion: 'kling-v1-5' | 'kling-v2', suggestion: Job['suggestion'], humanImageUrl: string, humanImageName: string, humanImageType: string, job?: Job): Promise<{ imageUrls: string[], finalPrompt: string }> {
+export async function runStylizationMultiple(
+  modelVersion: "kling-v1-5" | "kling-v2",
+  suggestion: Suggestion,
+  humanImageUrl: string,
+  humanImageName: string,
+  humanImageType: string,
+  job?: Job
+): Promise<{ imageUrls: string[]; finalPrompt: string }> {
   console.log(`[ATOMIC_STEP] Running Stylization with ${modelVersion}...`);
-  console.log(`[ATOMIC_STEP] Job customPrompt:`, job?.customPrompt);
+  console.log(`[ATOMIC_STEP] Job customPrompt:`, job?.input.customPrompt);
 
   let finalPrompt: string;
 
   // Check if custom prompt is provided and prioritize it
-  if (job?.customPrompt && job.customPrompt.trim()) {
-    finalPrompt = job.customPrompt.trim();
+  if (job?.input.customPrompt && job.input.customPrompt.trim()) {
+    finalPrompt = job.input.customPrompt.trim();
     console.log(`[ATOMIC_STEP] Using custom prompt: ${finalPrompt}`);
   } else {
     // Use default prompt construction logic
     console.log(`[ATOMIC_STEP] No custom prompt found, using default logic`);
-    if (!suggestion?.image_prompt) {
-      throw new Error("Cannot generate styled image without a 'prompt'.");
+    const imagePrompt = suggestion.finalPrompt;
+    if (!imagePrompt) {
+      throw new Error("Cannot generate styled image without a 'finalPrompt' in the suggestion.");
     }
-    const outfitSuggestionString = suggestion.outfit_suggestion ? JSON.stringify(suggestion.outfit_suggestion) : '';
-    finalPrompt = suggestion.image_prompt + ' ' + IMAGE_FORMAT_DESCRIPTION + ' ' + STRICT_REALISM_PROMPT_BLOCK;
+    finalPrompt = imagePrompt + " " + IMAGE_FORMAT_DESCRIPTION + " " + STRICT_REALISM_PROMPT_BLOCK;
     console.log(`[ATOMIC_STEP] Using generated prompt: ${finalPrompt.substring(0, 200)}...`);
   }
 
@@ -236,8 +247,13 @@ export async function runStylizationParallel(
   // Execute all prompts in parallel
   const allPromises = prompts.map((prompt, index) => {
     console.log(`[PARALLEL] Starting stylization ${index + 1}/${prompts.length} for prompt: ${prompt.substring(0, 50)}...`);
-    const suggestion: Job['suggestion'] = { image_prompt: prompt, outfit_suggestion: '' };
-    return runStylizationMultiple(modelVersion, suggestion, humanImageUrl, humanImageName, humanImageType, job);
+    const tempSuggestion: Suggestion = {
+      index: index,
+      status: 'pending',
+      styleSuggestion: {},
+      finalPrompt: prompt,
+    };
+    return runStylizationMultiple(modelVersion, tempSuggestion, humanImageUrl, humanImageName, humanImageType, job);
   });
 
   const results = await Promise.all(allPromises);
@@ -255,8 +271,13 @@ export async function runStylizationParallel(
  * Legacy version that returns only the first image for backward compatibility.
  */
 export async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string, job?: Job): Promise<string> {
-  const suggestion: Job['suggestion'] = { image_prompt: prompt, outfit_suggestion: '' };
-  const result = await runStylizationMultiple(modelVersion, suggestion, humanImageUrl, humanImageName, humanImageType, job);
+  const tempSuggestion: Suggestion = {
+    index: 0,
+    status: 'pending',
+    styleSuggestion: {},
+    finalPrompt: prompt,
+  };
+  const result = await runStylizationMultiple(modelVersion, tempSuggestion, humanImageUrl, humanImageName, humanImageType, job);
   return result.imageUrls[0];
 }
 
