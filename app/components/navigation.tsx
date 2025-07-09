@@ -2,15 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Camera, Info } from "lucide-react";
+import { Home } from "lucide-react";
 
 export default function Navigation() {
   const pathname = usePathname();
 
   const navItems = [
     { href: "/", icon: Home, label: "Home" },
-    { href: "/result", icon: Camera, label: "Results" },
-    { href: "/about", icon: Info, label: "About" },
   ];
 
   return (
@@ -22,9 +20,8 @@ export default function Navigation() {
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center py-2 px-3 rounded-xl transition-all duration-200 ${
-                isActive ? "text-rose-600 bg-rose-50" : "text-gray-500 hover:text-rose-500"
-              }`}
+              className={`flex flex-col items-center py-2 px-3 rounded-xl transition-all duration-200 ${isActive ? "text-rose-600 bg-rose-50" : "text-gray-500 hover:text-rose-500"
+                }`}
             >
               <Icon size={20} />
               <span className="text-xs mt-1 font-medium">{label}</span>

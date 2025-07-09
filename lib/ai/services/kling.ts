@@ -201,11 +201,18 @@ export async function runStylizationMultiple(
     // Use default prompt construction logic
     console.log(`[ATOMIC_STEP] No custom prompt found, using default logic`);
     const outfitDetails = suggestion?.styleSuggestion?.outfit_suggestion;
-    if (outfitDetails) {
-      finalPrompt = `${outfitDetails.outfit_title}. ${outfitDetails.explanation}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
+    const imagePrompt = suggestion?.styleSuggestion?.image_prompt;
+
+    if (imagePrompt) {
+      finalPrompt = `${imagePrompt}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
       console.log(`[ATOMIC_STEP] Using generated prompt: ${finalPrompt.substring(0, 200)}...`);
+    } else if (outfitDetails) {
+      // Fallback if image_prompt is missing for some reason
+      finalPrompt = `${outfitDetails.outfit_title}. ${outfitDetails.style_summary}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
+      console.warn(`[ATOMIC_STEP] 'image_prompt' not found in suggestion. Using fallback with style_summary.`);
     } else {
       finalPrompt = suggestion?.finalPrompt || "A full-body shot of a woman in a stylish outfit, standing in a visually appealing, realistic setting. The image is well-lit, with a clear focus on the person and their clothing. The background is a real-world scene, like a chic city street, a modern interior, or a scenic outdoor location. The overall aesthetic is fashionable, clean, and high-quality.";
+      console.warn(`[ATOMIC_STEP] No 'image_prompt' or 'outfit_suggestion' found. Using default fallback prompt.`);
     }
   }
 
