@@ -341,7 +341,7 @@ You will receive user data in this format:
 
 const promptVersion = process.env.PROMPT_VERSION;
 
-console.log(`[Prompt Manager] Using prompt version: ${promptVersion === 'v2' ? 'v2' : 'v1'}`);
+console.warn(`[Prompt Manager] Using prompt version: ${promptVersion === 'v2' ? 'v2' : 'v1'}`);
 
 export const systemPrompt = promptVersion === 'v2' ? systemPromptV2 : systemPromptV1;
 
