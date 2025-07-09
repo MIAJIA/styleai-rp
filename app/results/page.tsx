@@ -456,14 +456,52 @@ export default function ResultsPage() {
 
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
-              {/* Main Image */}
-              <div className="relative mb-4">
-                <img src={selectedLook.imageUrl} alt="Generated Look" className="w-full h-auto rounded-lg shadow-lg" />
-                <ImageVoteButtons imageUrl={selectedLook.imageUrl} />
+              {/* 主图和"How to wear it!"图像并排展示 */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {/* 主图 (Generated Look) */}
+                <div className="relative">
+                  <img
+                    src={selectedLook.imageUrl}
+                    alt="Generated Look"
+                    className="w-full h-auto rounded-lg shadow-lg aspect-[3/4] object-cover"
+                  />
+                  <div className="absolute top-2 left-2">
+                    <ImageVoteButtons imageUrl={selectedLook.imageUrl} size="sm" variant="overlay" />
+                  </div>
+                  <div className="mt-2 text-center">
+                    <p className="text-sm font-medium text-gray-800">Generated Look</p>
+                  </div>
+                </div>
+
+                {/* "How to wear it!" 图像 */}
+                <div className="relative">
+                  {selectedLook.processImages?.stylizedImageUrl ? (
+                    <>
+                      <img
+                        src={selectedLook.processImages.stylizedImageUrl}
+                        alt="How to wear it!"
+                        className="w-full h-auto rounded-lg shadow-lg aspect-[3/4] object-cover"
+                      />
+                      <div className="mt-2 text-center">
+                        <p className="text-sm font-medium text-gray-800">How to wear it!</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full aspect-[3/4] bg-gray-100 rounded-lg shadow-lg flex items-center justify-center">
+                      <div className="text-center text-gray-500">
+                        <div className="w-12 h-12 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                          <span className="text-xl">👗</span>
+                        </div>
+                        <p className="text-sm">Style Guide</p>
+                        <p className="text-xs">Coming Soon</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Original Images */}
+                {/* 原始图片 (只显示服装图片) */}
                 <div>
                   <h3 className="text-md font-semibold mb-2">Originals</h3>
                   <div className="flex space-x-2">
@@ -475,16 +513,6 @@ export default function ResultsPage() {
                           className="w-24 h-24 object-cover rounded-md border"
                         />
                         <p className="text-xs mt-1">Garment</p>
-                      </div>
-                    )}
-                    {selectedLook.processImages?.stylizedImageUrl && (
-                      <div className="text-center">
-                        <img
-                          src={selectedLook.processImages.stylizedImageUrl}
-                          alt="Stylized Look"
-                          className="w-24 h-24 object-cover rounded-md border"
-                        />
-                        <p className="text-xs mt-1">How to wear it!</p>
                       </div>
                     )}
                   </div>
