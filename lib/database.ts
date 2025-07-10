@@ -224,10 +224,10 @@ export async function saveLookToDB(look: PastLook, userId: string = 'default'): 
 }
 
 // 从数据库获取用户的所有 Looks
-export async function getUserLooks(userId: string = 'default', limit: number = 50): Promise<DBLook[]> {
+export async function getUserLooks(userId: string = 'default', limit: number = 50, offset: number = 0): Promise<DBLook[]> {
   try {
     const userLooksKey = getUserLooksKey(userId);
-    const lookIds = await kv.lrange(userLooksKey, 0, limit - 1);
+    const lookIds = await kv.lrange(userLooksKey, offset, offset + limit - 1);
 
     if (!lookIds || lookIds.length === 0) {
       return [];

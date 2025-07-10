@@ -33,6 +33,11 @@ export default function ResultsPage() {
   const [pastLooks, setPastLooks] = useState<PastLook[]>([]);
   const [isRecentLooksExpanded, setIsRecentLooksExpanded] = useState(false);
   const [selectedLook, setSelectedLook] = useState<PastLook | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
   const [globalVoteStats, setGlobalVoteStats] = useState<{
     totalImages: number;
     totalVotes: number;
@@ -41,17 +46,86 @@ export default function ResultsPage() {
     upvotePercentage: number;
   } | null>(null);
 
+  // 缓存配置
+  const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
+  const CACHE_KEY = 'styleai_results_cache';
+  const CACHE_STATS_KEY = 'styleai_vote_stats_cache';
+
+  // 缓存辅助函数
+  const getCachedData = (key: string) => {
+    try {
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_DURATION) {
+          return data;
+        } else {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (error) {
+      console.error('Error reading cache:', error);
+    }
+    return null;
+  };
+
+  const setCachedData = (key: string, data: any) => {
+    try {
+      localStorage.setItem(key, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    } catch (error) {
+      console.error('Error setting cache:', error);
+    }
+  };
+
+  const isCacheValid = () => {
+    return cacheTimestamp && (Date.now() - cacheTimestamp < CACHE_DURATION);
+  };
+
   // Load past looks from database on initial render
   useEffect(() => {
     const loadLooks = async () => {
+      setIsInitialLoading(true);
+
+      try {
+        // 1. 首先尝试从缓存加载
+        const cachedLooks = getCachedData(CACHE_KEY);
+        if (cachedLooks) {
+          console.log(`Loaded ${cachedLooks.length} looks from cache`);
+          setPastLooks(cachedLooks);
+          setCacheTimestamp(Date.now());
+          setIsInitialLoading(false);
+
+          // 在后台异步检查是否有新数据
+          setTimeout(() => {
+            loadFreshData();
+          }, 100);
+          return;
+        }
+
+        // 2. 缓存未命中，加载新数据
+        await loadFreshData();
+
+      } catch (error) {
+        console.error('Error in loadLooks:', error);
+        setIsInitialLoading(false);
+      }
+    };
+
+    const loadFreshData = async () => {
       try {
         // First, try to load from the database
-        const response = await fetch('/api/looks?userId=default&limit=50');
+        const response = await fetch('/api/looks?userId=default&limit=100');
         const result = await response.json();
 
         if (result.success && result.looks.length > 0) {
           console.log(`Loaded ${result.looks.length} looks from database`);
           setPastLooks(result.looks);
+          setCachedData(CACHE_KEY, result.looks);
+          setCacheTimestamp(Date.now());
+          setIsInitialLoading(false);
           return;
         }
 
@@ -63,6 +137,9 @@ export default function ResultsPage() {
 
           // Display local data first
           setPastLooks(localLooks);
+          setCachedData(CACHE_KEY, localLooks);
+          setCacheTimestamp(Date.now());
+          setIsInitialLoading(false);
 
           // Migrate to the database in the background
           try {
@@ -86,10 +163,12 @@ export default function ResultsPage() {
               console.log('Migration completed, localStorage cleared');
 
               // Reload from the database to ensure data consistency
-              const freshResponse = await fetch('/api/looks?userId=default&limit=50');
+              const freshResponse = await fetch('/api/looks?userId=default&limit=100');
               const freshResult = await freshResponse.json();
               if (freshResult.success) {
                 setPastLooks(freshResult.looks);
+                setCachedData(CACHE_KEY, freshResult.looks);
+                setCacheTimestamp(Date.now());
               }
             }
           } catch (migrateError) {
@@ -99,21 +178,26 @@ export default function ResultsPage() {
         } else {
           console.log('No looks found in database or localStorage');
           setPastLooks([]);
+          setIsInitialLoading(false);
         }
       } catch (error) {
-        console.error('Error loading looks:', error);
+        console.error('Error loading fresh data:', error);
 
         // If all methods fail, try to read from localStorage
         try {
           const storedLooks = localStorage.getItem("pastLooks");
           if (storedLooks) {
-            setPastLooks(JSON.parse(storedLooks));
+            const localLooks = JSON.parse(storedLooks);
+            setPastLooks(localLooks);
+            setCachedData(CACHE_KEY, localLooks);
+            setCacheTimestamp(Date.now());
             console.log('Loaded looks from localStorage as fallback');
           }
         } catch (localError) {
           console.error('Failed to load from localStorage:', localError);
           setPastLooks([]);
         }
+        setIsInitialLoading(false);
       }
     };
 
@@ -124,6 +208,14 @@ export default function ResultsPage() {
   useEffect(() => {
     const loadGlobalVoteStats = async () => {
       if (pastLooks.length === 0) return;
+
+      // 首先尝试从缓存加载投票统计
+      const cachedStats = getCachedData(CACHE_STATS_KEY);
+      if (cachedStats) {
+        console.log(`[Results] Loaded vote stats from cache`);
+        setGlobalVoteStats(cachedStats);
+        return;
+      }
 
       console.log(`[Results] Loading global vote stats for ${pastLooks.length} images`);
       try {
@@ -162,6 +254,7 @@ export default function ResultsPage() {
 
           console.log(`[Results] Calculated global stats:`, stats);
           setGlobalVoteStats(stats);
+          setCachedData(CACHE_STATS_KEY, stats);
         } else {
           console.log(`[Results] No stats data received or API failed`);
         }
@@ -207,6 +300,13 @@ export default function ResultsPage() {
     const updatedLooks = pastLooks.filter((look) => look.id !== lookId);
     setPastLooks(updatedLooks);
 
+    // 更新缓存
+    setCachedData(CACHE_KEY, updatedLooks);
+    setCacheTimestamp(Date.now());
+
+    // 清理投票统计缓存，因为数据已更改
+    localStorage.removeItem(CACHE_STATS_KEY);
+
     // Close modal if the deleted look was selected
     if (selectedLook?.id === lookId) {
       setSelectedLook(null);
@@ -241,6 +341,46 @@ export default function ResultsPage() {
     // Update the UI anyway
     setPastLooks([]);
     setSelectedLook(null);
+    setCurrentPage(1);
+    setHasMoreData(true);
+
+    // 清理所有缓存
+    localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem(CACHE_STATS_KEY);
+    setCacheTimestamp(null);
+  };
+
+  const loadMoreLooks = async () => {
+    if (isLoadingMore || !hasMoreData) return;
+
+    setIsLoadingMore(true);
+    try {
+      const offset = pastLooks.length;
+      const response = await fetch(`/api/looks?userId=default&limit=20&offset=${offset}`);
+      const result = await response.json();
+
+      if (result.success && result.looks.length > 0) {
+        const newLooks = [...pastLooks, ...result.looks];
+        setPastLooks(newLooks);
+        setCurrentPage(prev => prev + 1);
+
+        // 更新缓存
+        setCachedData(CACHE_KEY, newLooks);
+        setCacheTimestamp(Date.now());
+
+        // If we got fewer than 20 looks, we've reached the end
+        if (result.looks.length < 20) {
+          setHasMoreData(false);
+        }
+      } else {
+        setHasMoreData(false);
+      }
+    } catch (error) {
+      console.error('Error loading more looks:', error);
+      setHasMoreData(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
   };
 
   const formatDate = (timestamp: number) => {
@@ -271,172 +411,211 @@ export default function ResultsPage() {
             <ArrowLeft size={20} />
           </button>
           <h1 className="text-lg font-semibold flex-1 text-center">My Looks</h1>
-          <div className="w-10"></div>
+          <div className="w-10">
+            {/* 缓存状态指示器 */}
+            {isCacheValid() && (
+              <div className="w-2 h-2 bg-green-500 rounded-full" title="Data cached"></div>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* 初始加载状态 */}
+      {isInitialLoading && (
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="mt-4 text-sm text-gray-500">Loading your looks...</p>
+        </div>
+      )}
+
       <div className="px-5 py-4 space-y-4">
-        {/* Global Vote Statistics */}
-        {globalVoteStats && globalVoteStats.totalVotes > 0 && (
-          <div className="ios-card p-5 animate-fade-up">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Global Vote Statistics
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Images with votes:</span>
-                  <span className="text-xs font-medium">{globalVoteStats.totalImages}</span>
+        {/* 只有在不是初始加载时才显示内容 */}
+        {!isInitialLoading && (
+          <>
+            {/* Global Vote Statistics */}
+            {globalVoteStats && globalVoteStats.totalVotes > 0 && (
+              <div className="ios-card p-5 animate-fade-up">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    Global Vote Statistics
+                  </h3>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Total votes:</span>
-                  <span className="text-xs font-medium">{globalVoteStats.totalVotes}</span>
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
-                    <ThumbsUp className="w-3 h-3 text-green-600" />
-                    Upvotes:
-                  </span>
-                  <span className="text-xs font-medium text-green-600">{globalVoteStats.upvotes}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
-                    <ThumbsDown className="w-3 h-3 text-red-600" />
-                    Downvotes:
-                  </span>
-                  <span className="text-xs font-medium text-red-600">{globalVoteStats.downvotes}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Progress bar for upvote percentage */}
-            <div className="mt-4">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-gray-500">Approval Rate:</span>
-                <span className="text-xs font-medium">{globalVoteStats.upvotePercentage.toFixed(1)}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${globalVoteStats.upvotePercentage}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Recent Looks Section */}
-        <div className="ios-card p-5 animate-fade-up">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium">Recent Looks</h3>
-            {pastLooks.length > 0 && (
-              <button
-                onClick={handleClearRecentLooks}
-                className="text-xs text-primary font-medium ios-btn"
-              >
-                Clear All
-              </button>
-            )}
-          </div>
-
-          {pastLooks.length > 0 ? (
-            <>
-              <div className="grid grid-cols-2 gap-4">
-                {displayedLooks.map((pastLook) => (
-                  <div key={pastLook.id} className="bg-white rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
-                    {/* Main Image */}
-                    <div
-                      className="relative aspect-[3/4] rounded-t-xl overflow-hidden group"
-                      onClick={() => handleCardClick(pastLook)}
-                    >
-                      <img
-                        src={pastLook.imageUrl}
-                        alt="Generated look"
-                        className="w-full h-full object-cover"
-                      />
-
-                      {/* Vote buttons - always visible if voted, otherwise show on hover */}
-                      <div className="absolute top-2 left-2" onClick={(e) => e.stopPropagation()}>
-                        <ImageVoteButtons
-                          imageUrl={pastLook.imageUrl}
-                          size="sm"
-                          variant="overlay"
-                          className="opacity-100 group-hover:opacity-100 transition-opacity duration-200"
-                          onVoteChange={(voteType) => {
-                            console.log(`[Results] Image vote changed: ${voteType} for look ${pastLook.id}`);
-                          }}
-                        />
-                      </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteLook(pastLook.id);
-                        }}
-                        className="absolute top-2 right-2 p-2 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        <X size={16} />
-                      </button>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Images with votes:</span>
+                      <span className="text-xs font-medium">{globalVoteStats.totalImages}</span>
                     </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Total votes:</span>
+                      <span className="text-xs font-medium">{globalVoteStats.totalVotes}</span>
+                    </div>
+                  </div>
 
-                    {/* Look Details */}
-                    <div className="p-3 space-y-2" onClick={() => handleCardClick(pastLook)}>
-                      <div className="flex-1">
-                        <div className="prose prose-sm max-w-none">
-                          <h4 className="font-semibold text-gray-800 text-sm line-clamp-1">
-                            {pastLook.processImages?.styleSuggestion?.outfit_suggestion?.outfit_title || "AI Generated"}
-                          </h4>
-                          <p className="text-xs text-gray-500 line-clamp-2">
-                            {pastLook.processImages?.styleSuggestion?.outfit_suggestion?.explanation || `Generated on ${formatDate(pastLook.timestamp)}`}
-                          </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <ThumbsUp className="w-3 h-3 text-green-600" />
+                        Upvotes:
+                      </span>
+                      <span className="text-xs font-medium text-green-600">{globalVoteStats.upvotes}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <ThumbsDown className="w-3 h-3 text-red-600" />
+                        Downvotes:
+                      </span>
+                      <span className="text-xs font-medium text-red-600">{globalVoteStats.downvotes}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress bar for upvote percentage */}
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-500">Approval Rate:</span>
+                    <span className="text-xs font-medium">{globalVoteStats.upvotePercentage.toFixed(1)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${globalVoteStats.upvotePercentage}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Recent Looks Section */}
+            <div className="ios-card p-5 animate-fade-up">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-medium">Recent Looks</h3>
+                {pastLooks.length > 0 && (
+                  <button
+                    onClick={handleClearRecentLooks}
+                    className="text-xs text-primary font-medium ios-btn"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              {pastLooks.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    {displayedLooks.map((pastLook) => (
+                      <div key={pastLook.id} className="bg-white rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
+                        {/* Main Image */}
+                        <div
+                          className="relative aspect-[3/4] rounded-t-xl overflow-hidden group"
+                          onClick={() => handleCardClick(pastLook)}
+                        >
+                          <img
+                            src={pastLook.imageUrl}
+                            alt="Generated look"
+                            className="w-full h-full object-cover"
+                          />
+
+                          {/* Vote buttons - always visible if voted, otherwise show on hover */}
+                          <div className="absolute top-2 left-2" onClick={(e) => e.stopPropagation()}>
+                            <ImageVoteButtons
+                              imageUrl={pastLook.imageUrl}
+                              size="sm"
+                              variant="overlay"
+                              className="opacity-100 group-hover:opacity-100 transition-opacity duration-200"
+                              onVoteChange={(voteType) => {
+                                console.log(`[Results] Image vote changed: ${voteType} for look ${pastLook.id}`);
+                              }}
+                            />
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteLook(pastLook.id);
+                            }}
+                            className="absolute top-2 right-2 p-2 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+
+                        {/* Look Details */}
+                        <div className="p-3 space-y-2" onClick={() => handleCardClick(pastLook)}>
+                          <div className="flex-1">
+                            <div className="prose prose-sm max-w-none">
+                              <h4 className="font-semibold text-gray-800 text-sm line-clamp-1">
+                                {pastLook.processImages?.styleSuggestion?.outfit_suggestion?.outfit_title || "AI Generated"}
+                              </h4>
+                              <p className="text-xs text-gray-500 line-clamp-2">
+                                {pastLook.processImages?.styleSuggestion?.outfit_suggestion?.explanation ||
+                                  pastLook.processImages?.styleSuggestion?.outfit_suggestion?.style_summary ||
+                                  `Generated on ${formatDate(pastLook.timestamp)}`}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
 
-              {pastLooks.length > 6 && (
-                <button
-                  onClick={() => setIsRecentLooksExpanded(!isRecentLooksExpanded)}
-                  className="w-full text-xs text-center text-primary font-medium p-2 mt-4 rounded-lg ios-btn bg-primary/10"
-                >
-                  {isRecentLooksExpanded ? "Show Less" : `Show ${pastLooks.length - 6} More Looks...`}
-                </button>
-              )}
-            </>
-          ) : (
-            // Empty placeholder boxes
-            <div className="grid grid-cols-2 gap-3">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div
-                  key={`placeholder-${index}`}
-                  className="aspect-[3/4] bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-lg flex items-center justify-center"
-                >
-                  <div className="text-center text-neutral-400">
-                    <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-neutral-200 flex items-center justify-center">
-                      <span className="text-xs">👗</span>
+                  {pastLooks.length > 6 && (
+                    <button
+                      onClick={async () => {
+                        if (!isRecentLooksExpanded) {
+                          // 第一次点击，展开本地数据
+                          setIsRecentLooksExpanded(true);
+                        } else if (hasMoreData && !isLoadingMore) {
+                          // 已经展开本地数据，加载更多数据库数据
+                          await loadMoreLooks();
+                        } else {
+                          // 收起数据
+                          setIsRecentLooksExpanded(false);
+                        }
+                      }}
+                      disabled={isLoadingMore}
+                      className="w-full text-xs text-center text-primary font-medium p-2 mt-4 rounded-lg ios-btn bg-primary/10 disabled:opacity-50"
+                    >
+                      {isLoadingMore
+                        ? "Loading..."
+                        : !isRecentLooksExpanded
+                          ? `Show ${pastLooks.length - 6} More Looks...`
+                          : hasMoreData
+                            ? "Load More from Database"
+                            : "Show Less"
+                      }
+                    </button>
+                  )}
+                </>
+              ) : (
+                // Empty placeholder boxes
+                <div className="grid grid-cols-2 gap-3">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div
+                      key={`placeholder-${index}`}
+                      className="aspect-[3/4] bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-lg flex items-center justify-center"
+                    >
+                      <div className="text-center text-neutral-400">
+                        <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-neutral-200 flex items-center justify-center">
+                          <span className="text-xs">👗</span>
+                        </div>
+                        <p className="text-xs">New Look</p>
+                      </div>
                     </div>
-                    <p className="text-xs">New Look</p>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
 
-          {pastLooks.length === 0 && (
-            <p className="text-xs text-neutral-500 text-center mt-3">
-              Your generated looks will appear here.
-            </p>
-          )}
-        </div>
+              {pastLooks.length === 0 && (
+                <p className="text-xs text-neutral-500 text-center mt-3">
+                  Your generated looks will appear here.
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Modal for expanded look */}
@@ -536,6 +715,12 @@ export default function ResultsPage() {
                       {selectedLook.processImages.styleSuggestion.outfit_suggestion.explanation}
                     </p>
                   )}
+                  {!selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.explanation &&
+                    selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.style_summary && (
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {selectedLook.processImages.styleSuggestion.outfit_suggestion.style_summary}
+                      </p>
+                    )}
                 </div>
 
                 {/* Final Prompt Section */}

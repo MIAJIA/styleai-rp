@@ -14,9 +14,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId') || 'default';
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = parseInt(searchParams.get('limit') || '100');
+    const offset = parseInt(searchParams.get('offset') || '0');
 
-    const dbLooks = await getUserLooks(userId, limit);
+    const dbLooks = await getUserLooks(userId, limit, offset);
 
     // Convert to PastLook format for compatibility
     const pastLooks = dbLooks.map(dbLookToPastLook);

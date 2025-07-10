@@ -66,7 +66,7 @@ Note: Generating a high-quality "image_prompt" is **extremely important** in thi
 
 ## ✦ Explanation Guidelines
 
-In \`style_summary\`, explain:
+In \`explanation\`, explain:
 - Why this outfit works for the user's body shape and personal style
 - Tips the user can learn to improve their own fashion decisions
 - Tone: elegant, confidence-boosting
@@ -121,7 +121,7 @@ Your reply should strictly follow the JSON format, containing two keys:
         "description": "..."
       }
     },
-    "style_summary": "Explanation as described above, Use language that is vivid, tasteful, and stylish. Avoid generic phrasing."
+    "explanation": "Explanation as described above, Use language that is vivid, tasteful, and stylish. Avoid generic phrasing."
   },
   "image_prompt": "A vivid Midjourney-style visual scene prompt describing the user wearing the outfit, in the specific setting. Follow the provided format guideline and ensure the prompt reflects outfit details, scene context, and user physical traits."
 }
@@ -232,7 +232,7 @@ Note: Generating a high-quality "image_prompt" is **extremely important** in thi
 
 ## ✦ Explanation Guidelines
 
-In \`style_summary\`, explain:
+In \`explanation\`, explain:
 - Why this outfit works for the user's body shape and personal style
 - Tips the user can learn to improve their own fashion decisions
 - Tone: elegant, confidence-boosting
@@ -287,7 +287,7 @@ Your reply should strictly follow the JSON format, containing two keys:
         "description": "..."
       }
     },
-    "style_summary": "Explanation as described above, Use language that is vivid, tasteful, and stylish. Avoid generic phrasing."
+    "explanation": "Explanation as described above, Use language that is vivid, tasteful, and stylish. Avoid generic phrasing."
   },
   "image_prompt": "A vivid Midjourney-style visual scene prompt describing the user wearing the outfit, in the specific setting. Follow the provided format guideline and ensure the prompt reflects outfit details, scene context, and user physical traits."
 }
@@ -399,7 +399,7 @@ Note: Generating a high-quality "image_prompt" is **extremely important** in thi
 
 ## ✦ Explanation Guidelines
 
-In \`style_summary\`, explain:
+In \`explanation\`, explain:
 - Why this outfit works for the user's body shape and personal style
 - Tips the user can learn to improve their own fashion decisions
 - Tone: elegant, confidence-boosting
@@ -454,7 +454,7 @@ Your reply should strictly follow the JSON format, containing two keys:
         "description": "..."
       }
     },
-    "style_summary": "Explanation as described above, Use language that is vivid, tasteful, and stylish. Avoid generic phrasing."
+    "explanation": "Explanation as described above, Use language that is vivid, tasteful, and stylish. Avoid generic phrasing."
   },
   "image_prompt": "A vivid Midjourney-style visual scene prompt describing the user wearing the outfit, in the specific setting. Follow the provided format guideline and ensure the prompt reflects outfit details, scene context, and user physical traits."
 }
@@ -511,6 +511,7 @@ const promptVersion = process.env.PROMPT_VERSION;
 console.warn(`[Prompt Manager] Using prompt version: ${promptVersion === 'v3' ? 'v3' : promptVersion === 'v2' ? 'v2' : 'v1'}`);
 
 export const systemPrompt = promptVersion === 'v3' ? systemPromptV3 : promptVersion === 'v2' ? systemPromptV2 : systemPromptV1;
+console.log(`=== 🧠 SYSTEM PROMPT VERSION === ${promptVersion} `);
 
 
 export const getChatWelcomeMessage = (occasionName: string): string => `Hi! I'm your personal stylist ✨
