@@ -614,273 +614,274 @@ export default function ResultsPage() {
                 </p>
               )}
             </div>
-          </div>
+          </>
         )}
+      </div>
 
-        {/* Modal for expanded look */}
-        {selectedLook && (
-          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-              {/* Modal Header - Fixed */}
-              <div className="flex-shrink-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between rounded-t-2xl">
-                <h2 className="text-lg font-semibold">Look Details</h2>
+      {/* Modal for expanded look */}
+      {selectedLook && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+            {/* Modal Header - Fixed */}
+            <div className="flex-shrink-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-lg font-semibold">Look Details</h2>
+              <button
+                onClick={() => setSelectedLook(null)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* 主图和"How to wear it!"图像并排展示 */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {/* 主图 (Generated Look) */}
+                <div className="relative">
+                  <img
+                    src={selectedLook.imageUrl}
+                    alt="Generated Look"
+                    className="w-full h-auto rounded-lg shadow-lg aspect-[3/4] object-cover"
+                  />
+                  <div className="absolute top-2 left-2">
+                    <ImageVoteButtons imageUrl={selectedLook.imageUrl} size="sm" variant="overlay" />
+                  </div>
+                  <div className="mt-2 text-center">
+                    <p className="text-sm font-medium text-gray-800">Generated Look</p>
+                  </div>
+                </div>
+
+                {/* "How to wear it!" 图像 */}
+                <div className="relative">
+                  {selectedLook.processImages?.stylizedImageUrl ? (
+                    <>
+                      <img
+                        src={selectedLook.processImages.stylizedImageUrl}
+                        alt="How to wear it!"
+                        className="w-full h-auto rounded-lg shadow-lg aspect-[3/4] object-cover"
+                      />
+                      <div className="mt-2 text-center">
+                        <p className="text-sm font-medium text-gray-800">How to wear it!</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full aspect-[3/4] bg-gray-100 rounded-lg shadow-lg flex items-center justify-center">
+                      <div className="text-center text-gray-500">
+                        <div className="w-12 h-12 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                          <span className="text-xl">👗</span>
+                        </div>
+                        <p className="text-sm">Style Guide</p>
+                        <p className="text-xs">Coming Soon</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 原始图片 (只显示服装图片) */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Originals</h3>
+                  <div className="flex space-x-2">
+                    {selectedLook.processImages?.garmentImage && (
+                      <div className="text-center">
+                        <img
+                          src={selectedLook.processImages.garmentImage}
+                          alt="Original Garment"
+                          className="w-24 h-24 object-cover rounded-md border"
+                        />
+                        <p className="text-xs mt-1">Garment</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Vote Status */}
+                <ImageVoteStatus imageUrl={selectedLook.imageUrl} />
+              </div>
+
+              {/* Look Information */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    {selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.outfit_title || "AI Generated Look"}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Generated on {formatDate(selectedLook.timestamp)}
+                  </p>
+                  {selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.explanation && (
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      {selectedLook.processImages.styleSuggestion.outfit_suggestion.explanation}
+                    </p>
+                  )}
+                  {!selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.explanation &&
+                    selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.style_summary && (
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {selectedLook.processImages.styleSuggestion.outfit_suggestion.style_summary}
+                      </p>
+                    )}
+                </div>
+
+                {/* Final Prompt Section */}
+                {selectedLook.processImages?.finalPrompt && (
+                  <div className="p-4 bg-gray-50 rounded-xl">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                      🎨 AI Generation Prompt
+                    </h4>
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      {selectedLook.processImages.finalPrompt}
+                    </p>
+                  </div>
+                )}
+
+                {/* Outfit Details Section */}
+                {selectedLook.processImages?.styleSuggestion?.outfit_suggestion && (
+                  <div className="p-4 bg-blue-50 rounded-xl">
+                    <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                      👔 Complete Outfit Details
+                    </h4>
+                    <div className="space-y-3">
+                      {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.tops?.map((top: any, index: number) => (
+                        <div key={index} className="p-3 bg-white rounded-lg">
+                          <h5 className="font-medium text-blue-900 mb-1">Top {index + 1}</h5>
+                          <p className="text-sm text-gray-700 font-medium mb-1">{top.item_name}</p>
+                          {top.style_details && (
+                            <p className="text-xs text-gray-600 mb-1">Style: {top.style_details}</p>
+                          )}
+                          {top.wearing_details && (
+                            <p className="text-xs text-gray-600">Wearing: {top.wearing_details}</p>
+                          )}
+                        </div>
+                      ))}
+
+                      {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.bottoms && (
+                        <div className="p-3 bg-white rounded-lg">
+                          <h5 className="font-medium text-blue-900 mb-1">Bottom</h5>
+                          <p className="text-sm text-gray-700 font-medium mb-1">
+                            {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bottoms.item_name}
+                          </p>
+                          {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bottoms.style_details && (
+                            <p className="text-xs text-gray-600 mb-1">
+                              Style: {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bottoms.style_details}
+                            </p>
+                          )}
+                          {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bottoms.wearing_details && (
+                            <p className="text-xs text-gray-600">
+                              Wearing: {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bottoms.wearing_details}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.shoes && (
+                        <div className="p-3 bg-white rounded-lg">
+                          <h5 className="font-medium text-blue-900 mb-1">Shoes</h5>
+                          <p className="text-sm text-gray-700 font-medium mb-1">
+                            {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.shoes.item_name}
+                          </p>
+                          {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.shoes.style_details && (
+                            <p className="text-xs text-gray-600 mb-1">
+                              Style: {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.shoes.style_details}
+                            </p>
+                          )}
+                          {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.shoes.wearing_details && (
+                            <p className="text-xs text-gray-600">
+                              Wearing: {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.shoes.wearing_details}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.bag && (
+                        <div className="p-3 bg-white rounded-lg">
+                          <h5 className="font-medium text-blue-900 mb-1">Bag</h5>
+                          <p className="text-sm text-gray-700 font-medium mb-1">
+                            {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bag.item_name}
+                          </p>
+                          {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bag.style_details && (
+                            <p className="text-xs text-gray-600 mb-1">
+                              Style: {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bag.style_details}
+                            </p>
+                          )}
+                          {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bag.wearing_details && (
+                            <p className="text-xs text-gray-600">
+                              Wearing: {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bag.wearing_details}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.accessories &&
+                        selectedLook.processImages.styleSuggestion.outfit_suggestion.items.accessories.length > 0 && (
+                          <div className="p-3 bg-white rounded-lg">
+                            <h5 className="font-medium text-blue-900 mb-2">Accessories</h5>
+                            <div className="space-y-2">
+                              {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.accessories.map((accessory: any, index: number) => (
+                                <div key={index} className="border-l-2 border-blue-200 pl-3">
+                                  <p className="text-sm text-gray-700 font-medium">{accessory.item_name}</p>
+                                  {accessory.style_details && (
+                                    <p className="text-xs text-gray-600">Style: {accessory.style_details}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                      {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.hairstyle && (
+                        <div className="p-3 bg-white rounded-lg">
+                          <h5 className="font-medium text-blue-900 mb-1">Hairstyle</h5>
+                          <p className="text-sm text-gray-700 font-medium mb-1">
+                            {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.hairstyle.style_name}
+                          </p>
+                          {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.hairstyle.description && (
+                            <p className="text-xs text-gray-600">
+                              {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.hairstyle.description}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.layering_description && (
+                        <div className="p-3 bg-white rounded-lg">
+                          <h5 className="font-medium text-blue-900 mb-1">Layering Guide</h5>
+                          <p className="text-xs text-gray-600 leading-relaxed">
+                            {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.layering_description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons - Fixed at Bottom */}
+            <div className="flex-shrink-0 p-4 border-t border-gray-100 bg-white rounded-b-2xl">
+              <div className="flex gap-3">
                 <button
                   onClick={() => setSelectedLook(null)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="flex-1 py-2 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
                 >
-                  <X size={20} />
+                  Close
                 </button>
-              </div>
-
-              {/* Modal Content - Scrollable */}
-              <div className="flex-1 overflow-y-auto p-6">
-                {/* 主图和"How to wear it!"图像并排展示 */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  {/* 主图 (Generated Look) */}
-                  <div className="relative">
-                    <img
-                      src={selectedLook.imageUrl}
-                      alt="Generated Look"
-                      className="w-full h-auto rounded-lg shadow-lg aspect-[3/4] object-cover"
-                    />
-                    <div className="absolute top-2 left-2">
-                      <ImageVoteButtons imageUrl={selectedLook.imageUrl} size="sm" variant="overlay" />
-                    </div>
-                    <div className="mt-2 text-center">
-                      <p className="text-sm font-medium text-gray-800">Generated Look</p>
-                    </div>
-                  </div>
-
-                  {/* "How to wear it!" 图像 */}
-                  <div className="relative">
-                    {selectedLook.processImages?.stylizedImageUrl ? (
-                      <>
-                        <img
-                          src={selectedLook.processImages.stylizedImageUrl}
-                          alt="How to wear it!"
-                          className="w-full h-auto rounded-lg shadow-lg aspect-[3/4] object-cover"
-                        />
-                        <div className="mt-2 text-center">
-                          <p className="text-sm font-medium text-gray-800">How to wear it!</p>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="w-full aspect-[3/4] bg-gray-100 rounded-lg shadow-lg flex items-center justify-center">
-                        <div className="text-center text-gray-500">
-                          <div className="w-12 h-12 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
-                            <span className="text-xl">👗</span>
-                          </div>
-                          <p className="text-sm">Style Guide</p>
-                          <p className="text-xs">Coming Soon</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* 原始图片 (只显示服装图片) */}
-                  <div>
-                    <h3 className="text-md font-semibold mb-2">Originals</h3>
-                    <div className="flex space-x-2">
-                      {selectedLook.processImages?.garmentImage && (
-                        <div className="text-center">
-                          <img
-                            src={selectedLook.processImages.garmentImage}
-                            alt="Original Garment"
-                            className="w-24 h-24 object-cover rounded-md border"
-                          />
-                          <p className="text-xs mt-1">Garment</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Vote Status */}
-                  <ImageVoteStatus imageUrl={selectedLook.imageUrl} />
-                </div>
-
-                {/* Look Information */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      {selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.outfit_title || "AI Generated Look"}
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Generated on {formatDate(selectedLook.timestamp)}
-                    </p>
-                    {selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.explanation && (
-                      <p className="text-sm text-gray-700 leading-relaxed">
-                        {selectedLook.processImages.styleSuggestion.outfit_suggestion.explanation}
-                      </p>
-                    )}
-                    {!selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.explanation &&
-                      selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.style_summary && (
-                        <p className="text-sm text-gray-700 leading-relaxed">
-                          {selectedLook.processImages.styleSuggestion.outfit_suggestion.style_summary}
-                        </p>
-                      )}
-                  </div>
-
-                  {/* Final Prompt Section */}
-                  {selectedLook.processImages?.finalPrompt && (
-                    <div className="p-4 bg-gray-50 rounded-xl">
-                      <h4 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
-                        🎨 AI Generation Prompt
-                      </h4>
-                      <p className="text-sm text-gray-700 leading-relaxed">
-                        {selectedLook.processImages.finalPrompt}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Outfit Details Section */}
-                  {selectedLook.processImages?.styleSuggestion?.outfit_suggestion && (
-                    <div className="p-4 bg-blue-50 rounded-xl">
-                      <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                        👔 Complete Outfit Details
-                      </h4>
-                      <div className="space-y-3">
-                        {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.tops?.map((top: any, index: number) => (
-                          <div key={index} className="p-3 bg-white rounded-lg">
-                            <h5 className="font-medium text-blue-900 mb-1">Top {index + 1}</h5>
-                            <p className="text-sm text-gray-700 font-medium mb-1">{top.item_name}</p>
-                            {top.style_details && (
-                              <p className="text-xs text-gray-600 mb-1">Style: {top.style_details}</p>
-                            )}
-                            {top.wearing_details && (
-                              <p className="text-xs text-gray-600">Wearing: {top.wearing_details}</p>
-                            )}
-                          </div>
-                        ))}
-
-                        {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.bottoms && (
-                          <div className="p-3 bg-white rounded-lg">
-                            <h5 className="font-medium text-blue-900 mb-1">Bottom</h5>
-                            <p className="text-sm text-gray-700 font-medium mb-1">
-                              {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bottoms.item_name}
-                            </p>
-                            {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bottoms.style_details && (
-                              <p className="text-xs text-gray-600 mb-1">
-                                Style: {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bottoms.style_details}
-                              </p>
-                            )}
-                            {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bottoms.wearing_details && (
-                              <p className="text-xs text-gray-600">
-                                Wearing: {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bottoms.wearing_details}
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.shoes && (
-                          <div className="p-3 bg-white rounded-lg">
-                            <h5 className="font-medium text-blue-900 mb-1">Shoes</h5>
-                            <p className="text-sm text-gray-700 font-medium mb-1">
-                              {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.shoes.item_name}
-                            </p>
-                            {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.shoes.style_details && (
-                              <p className="text-xs text-gray-600 mb-1">
-                                Style: {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.shoes.style_details}
-                              </p>
-                            )}
-                            {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.shoes.wearing_details && (
-                              <p className="text-xs text-gray-600">
-                                Wearing: {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.shoes.wearing_details}
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.bag && (
-                          <div className="p-3 bg-white rounded-lg">
-                            <h5 className="font-medium text-blue-900 mb-1">Bag</h5>
-                            <p className="text-sm text-gray-700 font-medium mb-1">
-                              {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bag.item_name}
-                            </p>
-                            {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bag.style_details && (
-                              <p className="text-xs text-gray-600 mb-1">
-                                Style: {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bag.style_details}
-                              </p>
-                            )}
-                            {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bag.wearing_details && (
-                              <p className="text-xs text-gray-600">
-                                Wearing: {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.bag.wearing_details}
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.accessories &&
-                          selectedLook.processImages.styleSuggestion.outfit_suggestion.items.accessories.length > 0 && (
-                            <div className="p-3 bg-white rounded-lg">
-                              <h5 className="font-medium text-blue-900 mb-2">Accessories</h5>
-                              <div className="space-y-2">
-                                {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.accessories.map((accessory: any, index: number) => (
-                                  <div key={index} className="border-l-2 border-blue-200 pl-3">
-                                    <p className="text-sm text-gray-700 font-medium">{accessory.item_name}</p>
-                                    {accessory.style_details && (
-                                      <p className="text-xs text-gray-600">Style: {accessory.style_details}</p>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                        {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.hairstyle && (
-                          <div className="p-3 bg-white rounded-lg">
-                            <h5 className="font-medium text-blue-900 mb-1">Hairstyle</h5>
-                            <p className="text-sm text-gray-700 font-medium mb-1">
-                              {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.hairstyle.style_name}
-                            </p>
-                            {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.hairstyle.description && (
-                              <p className="text-xs text-gray-600">
-                                {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.hairstyle.description}
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.layering_description && (
-                          <div className="p-3 bg-white rounded-lg">
-                            <h5 className="font-medium text-blue-900 mb-1">Layering Guide</h5>
-                            <p className="text-xs text-gray-600 leading-relaxed">
-                              {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.layering_description}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons - Fixed at Bottom */}
-              <div className="flex-shrink-0 p-4 border-t border-gray-100 bg-white rounded-b-2xl">
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setSelectedLook(null)}
-                    className="flex-1 py-2 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteLook(selectedLook.id);
-                    }}
-                    className="py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
-                  >
-                    Delete Look
-                  </button>
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteLook(selectedLook.id);
+                  }}
+                  className="py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
+                >
+                  Delete Look
+                </button>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        <IOSTabBar />
-      </div>
-      );
+      <IOSTabBar />
+    </div>
+  );
 }
