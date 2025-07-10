@@ -394,7 +394,9 @@ export default function ResultsPage() {
                             {pastLook.processImages?.styleSuggestion?.outfit_suggestion?.outfit_title || "AI Generated"}
                           </h4>
                           <p className="text-xs text-gray-500 line-clamp-2">
-                            {pastLook.processImages?.styleSuggestion?.outfit_suggestion?.explanation || `Generated on ${formatDate(pastLook.timestamp)}`}
+                            {pastLook.processImages?.styleSuggestion?.outfit_suggestion?.explanation ||
+                              pastLook.processImages?.styleSuggestion?.outfit_suggestion?.style_summary ||
+                              `Generated on ${formatDate(pastLook.timestamp)}`}
                           </p>
                         </div>
                       </div>
@@ -536,6 +538,12 @@ export default function ResultsPage() {
                       {selectedLook.processImages.styleSuggestion.outfit_suggestion.explanation}
                     </p>
                   )}
+                  {!selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.explanation &&
+                    selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.style_summary && (
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {selectedLook.processImages.styleSuggestion.outfit_suggestion.style_summary}
+                      </p>
+                    )}
                 </div>
 
                 {/* Final Prompt Section */}

@@ -174,7 +174,9 @@ export default function ChatPage() {
       }
 
       const formattedItems = formatItems(outfit.items)
-      const messageContent = `### ${outfit.outfit_title}\n\n${outfit.style_summary}\n\n---\n\n${formattedItems}`
+      // Support backward compatibility: use explanation if available, fallback to style_summary for old data
+      const outfitDescription = outfit.explanation || outfit.style_summary || "A stylish outfit designed for you."
+      const messageContent = `### ${outfit.outfit_title}\n\n${outfitDescription}\n\n---\n\n${formattedItems}`
 
       addMessage({
         type: "text",

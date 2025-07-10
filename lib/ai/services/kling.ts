@@ -208,8 +208,10 @@ export async function runStylizationMultiple(
       console.log(`[ATOMIC_STEP] Using generated prompt: ${finalPrompt.substring(0, 200)}...`);
     } else if (outfitDetails) {
       // Fallback if image_prompt is missing for some reason
-      finalPrompt = `${outfitDetails.outfit_title}. ${outfitDetails.style_summary}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
-      console.warn(`[ATOMIC_STEP] 'image_prompt' not found in suggestion. Using fallback with style_summary.`);
+      // Support backward compatibility: use explanation if available, fallback to style_summary for old data
+      const outfitDescription = outfitDetails.explanation || outfitDetails.style_summary || "A stylish outfit";
+      finalPrompt = `${outfitDetails.outfit_title}. ${outfitDescription}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
+      console.warn(`[ATOMIC_STEP] 'image_prompt' not found in suggestion. Using fallback with outfit description.`);
     } else {
       finalPrompt = suggestion?.finalPrompt || "A full-body shot of a woman in a stylish outfit, standing in a visually appealing, realistic setting. The image is well-lit, with a clear focus on the person and their clothing. The background is a real-world scene, like a chic city street, a modern interior, or a scenic outdoor location. The overall aesthetic is fashionable, clean, and high-quality.";
       console.warn(`[ATOMIC_STEP] No 'image_prompt' or 'outfit_suggestion' found. Using default fallback prompt.`);
