@@ -33,6 +33,9 @@ export default function ResultsPage() {
   const [pastLooks, setPastLooks] = useState<PastLook[]>([]);
   const [isRecentLooksExpanded, setIsRecentLooksExpanded] = useState(false);
   const [selectedLook, setSelectedLook] = useState<PastLook | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [globalVoteStats, setGlobalVoteStats] = useState<{
     totalImages: number;
     totalVotes: number;
@@ -46,7 +49,7 @@ export default function ResultsPage() {
     const loadLooks = async () => {
       try {
         // First, try to load from the database
-        const response = await fetch('/api/looks?userId=default&limit=50');
+        const response = await fetch('/api/looks?userId=default&limit=100');
         const result = await response.json();
 
         if (result.success && result.looks.length > 0) {
@@ -86,7 +89,7 @@ export default function ResultsPage() {
               console.log('Migration completed, localStorage cleared');
 
               // Reload from the database to ensure data consistency
-              const freshResponse = await fetch('/api/looks?userId=default&limit=50');
+              const freshResponse = await fetch('/api/looks?userId=default&limit=100');
               const freshResult = await freshResponse.json();
               if (freshResult.success) {
                 setPastLooks(freshResult.looks);
@@ -241,6 +244,36 @@ export default function ResultsPage() {
     // Update the UI anyway
     setPastLooks([]);
     setSelectedLook(null);
+    setCurrentPage(1);
+    setHasMoreData(true);
+  };
+
+  const loadMoreLooks = async () => {
+    if (isLoadingMore || !hasMoreData) return;
+
+    setIsLoadingMore(true);
+    try {
+      const offset = pastLooks.length;
+      const response = await fetch(`/api/looks?userId=default&limit=20&offset=${offset}`);
+      const result = await response.json();
+
+      if (result.success && result.looks.length > 0) {
+        setPastLooks(prev => [...prev, ...result.looks]);
+        setCurrentPage(prev => prev + 1);
+
+        // If we got fewer than 20 looks, we've reached the end
+        if (result.looks.length < 20) {
+          setHasMoreData(false);
+        }
+      } else {
+        setHasMoreData(false);
+      }
+    } catch (error) {
+      console.error('Error loading more looks:', error);
+      setHasMoreData(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
   };
 
   const formatDate = (timestamp: number) => {
@@ -407,10 +440,29 @@ export default function ResultsPage() {
 
               {pastLooks.length > 6 && (
                 <button
-                  onClick={() => setIsRecentLooksExpanded(!isRecentLooksExpanded)}
-                  className="w-full text-xs text-center text-primary font-medium p-2 mt-4 rounded-lg ios-btn bg-primary/10"
+                  onClick={async () => {
+                    if (!isRecentLooksExpanded) {
+                      // 第一次点击，展开本地数据
+                      setIsRecentLooksExpanded(true);
+                    } else if (hasMoreData && !isLoadingMore) {
+                      // 已经展开本地数据，加载更多数据库数据
+                      await loadMoreLooks();
+                    } else {
+                      // 收起数据
+                      setIsRecentLooksExpanded(false);
+                    }
+                  }}
+                  disabled={isLoadingMore}
+                  className="w-full text-xs text-center text-primary font-medium p-2 mt-4 rounded-lg ios-btn bg-primary/10 disabled:opacity-50"
                 >
-                  {isRecentLooksExpanded ? "Show Less" : `Show ${pastLooks.length - 6} More Looks...`}
+                  {isLoadingMore
+                    ? "Loading..."
+                    : !isRecentLooksExpanded
+                      ? `Show ${pastLooks.length - 6} More Looks...`
+                      : hasMoreData
+                        ? "Load More from Database"
+                        : "Show Less"
+                  }
                 </button>
               )}
             </>
