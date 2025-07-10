@@ -2,9 +2,7 @@
 export const IMAGE_GENERATION_MODEL = "Kling AI";
 
 export const STRICT_REALISM_PROMPT_BLOCK = `
-Maintain original body proportions based on the user's real physical structure — without beauty modifications. Keep the original face shape and jawline, shoulder width, head-to-body ratio and bone frame.
-Avoid elongating the legs or shortening the torso or reduce head size or raise waist position.
-This is a real person, not a stylized or idealized model.
+Preserve the subject's real body structure and face without beautification. Keep head size, shoulder width, and torso-to-leg ratio true to the original. Avoid skin smoothing, leg elongation, or waist raising. Background and lighting should be natural. This is a real person, not a stylized model.
 `;
 
 export const IMAGE_FORMAT_DESCRIPTION = `
