@@ -10,29 +10,19 @@ import {
   BookOpen,
   Coffee,
   Mic,
+  Wine,
+  Plane,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const styles = [
-  { id: "fashion-magazine", name: "Magazine", icon: BookOpen, color: "bg-pink-100 text-pink-900" },
-  {
-    id: "running-outdoors",
-    name: "Outdoors",
-    icon: Footprints,
-    color: "bg-emerald-100 text-emerald-900",
-  },
-  { id: "coffee-shop", name: "Coffee", icon: Coffee, color: "bg-amber-100 text-amber-900" },
-  { id: "music-show", name: "Music Show", icon: Mic, color: "bg-purple-100 text-purple-900" },
+  { id: "work", name: "Work", icon: Briefcase, color: "bg-slate-100 text-slate-900" },
+  { id: "casual-chic", name: "Casual Chic", icon: Sparkles, color: "bg-violet-100 text-violet-900" },
   { id: "date-night", name: "Date Night", icon: Heart, color: "bg-rose-100 text-rose-900" },
-  { id: "beach-day", name: "Beach Day", icon: Palmtree, color: "bg-sky-100 text-sky-900" },
-  // { id: "work-interview", name: "Work Interview", icon: Briefcase, color: "bg-slate-100 text-slate-900" },
-  {
-    id: "casual-chic",
-    name: "Casual Chic",
-    icon: Sparkles,
-    color: "bg-violet-100 text-violet-900",
-  },
-  { id: "party-glam", name: "Party Glam", icon: PartyPopper, color: "bg-amber-100 text-amber-900" },
+  { id: "cocktail", name: "Cocktail", icon: Wine, color: "bg-purple-100 text-purple-900" },
+  { id: "vacation", name: "Vacation", icon: Plane, color: "bg-sky-100 text-sky-900" },
+  { id: "formal", name: "Formal", icon: Crown, color: "bg-amber-100 text-amber-900" },
 ];
 
 interface StyleSelectorProps {
@@ -49,7 +39,7 @@ export default function StyleSelector({
   className,
 }: StyleSelectorProps) {
   return (
-    <div className={cn("grid grid-cols-4 gap-2", className)}>
+    <div className={cn("grid grid-cols-3 gap-2", className)}>
       {styles.map((style) => {
         const Icon = style.icon;
         const isSelected = selectedStyle === style.id;
