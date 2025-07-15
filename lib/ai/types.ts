@@ -46,6 +46,7 @@ export interface StyleSuggestionInput {
   garmentImageUrl: string;
   occasion: string;
   userProfile?: OnboardingData; // optional but encouraged for better personalization
+  stylePrompt?: string; // 🔍 新增：场景风格提示
 }
 
 // This interface needs to be in sync with the one in the status route and the frontend
@@ -93,7 +94,7 @@ export interface Job {
     occasion: string;
     userProfile?: any;
     customPrompt?: string;
-    stylePrompt?: string;
+    stylePrompt?: string; // 🔍 新增：场景风格提示
   };
 
   // Timestamps

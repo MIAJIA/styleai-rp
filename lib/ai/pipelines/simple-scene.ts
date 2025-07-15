@@ -13,16 +13,7 @@ interface LegacyJobForPipeline {
   suggestionIndex: number;
   humanImage: { url: string; name: string; type: string };
   garmentImage: { url: string; name: string; type: string };
-  // Add input field to access stylePrompt and other job parameters
-  input?: {
-    customPrompt?: string;
-    stylePrompt?: string;
-    occasion?: string;
-    generationMode?: string;
-    userProfile?: any;
-    humanImage?: { url: string; type: string; name: string };
-    garmentImage?: { url: string; type: string; name: string };
-  };
+  // Add other fields that might be passed from the legacy adapter
 }
 
 export async function executeSimpleScenePipelineV2(
@@ -39,19 +30,7 @@ export async function executeSimpleScenePipelineV2(
     job.suggestion,
     job.humanImage.url,
     job.humanImage.name,
-    job.humanImage.type,
-    {
-      jobId: job.jobId,
-      input: job.input || {
-        customPrompt: undefined,
-        stylePrompt: undefined,
-        occasion: undefined,
-        generationMode: undefined,
-        userProfile: undefined,
-        humanImage: job.humanImage,
-        garmentImage: job.garmentImage,
-      }
-    } as any // Pass a compatible job object to access stylePrompt
+    job.humanImage.type
   );
 
   const tempStyledImageUrls = stylizationResult.imageUrls;

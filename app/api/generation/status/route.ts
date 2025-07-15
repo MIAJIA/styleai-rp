@@ -27,6 +27,12 @@ export async function GET(request: NextRequest) {
     if (job.status === 'pending') {
       console.log(`[API_STATUS | Job ${job.jobId}] Job is 'pending'. Fetching AI style suggestions...`);
 
+      // 🔍 LOG: 确认 style_prompt 传递
+      console.log(`[STYLE_PROMPT_LOG] 🎯 Passing style_prompt to AI:`, job.input.stylePrompt ? 'YES' : 'NO');
+      if (job.input.stylePrompt) {
+        console.log(`[STYLE_PROMPT_LOG] 📝 Style prompt content (first 100 chars):`, job.input.stylePrompt.substring(0, 100));
+      }
+
       // 1. Get style suggestions from AI
       const aiSuggestions = await getStyleSuggestionFromAI(
         {
@@ -34,6 +40,7 @@ export async function GET(request: NextRequest) {
           garmentImageUrl: job.input.garmentImage.url,
           occasion: job.input.occasion,
           userProfile: job.input.userProfile,
+          stylePrompt: job.input.stylePrompt, // 🔍 新增：传递 stylePrompt
         },
         { count: 3 }
       );

@@ -28,6 +28,7 @@ export async function getStyleSuggestionFromAI(
     garmentImageUrl,
     occasion,
     userProfile,
+    stylePrompt, // 🔍 新增：接收 stylePrompt 参数
   }: StyleSuggestionInput,
   options: GetStyleSuggestionOptions = {}
 ): Promise<any[]> {
@@ -39,6 +40,12 @@ export async function getStyleSuggestionFromAI(
 
   console.log(`${TOKEN_LOG_PREFIX} ===== STARTING IMAGE PROCESSING ANALYSIS =====`);
   console.log(`[AI DEBUG] Using image generation model: ${IMAGE_GENERATION_MODEL}`);
+
+  // 🔍 LOG: 确认 stylePrompt 接收
+  console.log(`[STYLE_PROMPT_LOG] 🎯 OpenAI service received stylePrompt:`, stylePrompt ? 'YES' : 'NO');
+  if (stylePrompt) {
+    console.log(`[STYLE_PROMPT_LOG] 📝 StylePrompt content (first 150 chars):`, stylePrompt.substring(0, 150));
+  }
 
   // do not change userProfile, only update the log, do not need to log the fullbodyphoto in userProfile
   const userProfileForLog = { ...userProfile } as Partial<OnboardingData>;
@@ -66,11 +73,24 @@ The garment in the second attached image is the "Essential Item" that must be in
 - This is the key piece that the user wants to style around
 - Consider the item's style, color, fabric, and formality level when building the complete outfit`;
 
-    // Build occasion details with styling context
-    const occasionSection = `# Occasion
+    // 🔍 更新：Build occasion details with styling context and specific stylePrompt
+    const occasionSection = stylePrompt
+      ? `# Occasion & Scene Details
+**Event/Setting:** ${occasion}
+
+**Visual Scene Description:** ${stylePrompt}
+
+**Styling Goal:** Choose complementary pieces that match the formality and mood of this occasion. Use the visual scene description above to inform the atmosphere, lighting, and overall aesthetic for the image_prompt generation.`
+      : `# Occasion
 **Event/Setting:** ${occasion}
 
 **Styling Goal:** Choose complementary pieces that match the formality and mood of this occasion`;
+
+    // 🔍 LOG: 确认 occasionSection 构建
+    console.log(`[STYLE_PROMPT_LOG] 🎨 OccasionSection built with stylePrompt:`, stylePrompt ? 'YES' : 'NO');
+    if (stylePrompt) {
+      console.log(`[STYLE_PROMPT_LOG] 📄 OccasionSection content:`, occasionSection);
+    }
 
     // Build enhanced style preference details based on user profile and occasion
     const getStylePreferences = () => {
@@ -120,10 +140,7 @@ ${stylePreferenceSection}
 - Generate ${count} different and distinct styling suggestions. Each suggestion should explore a unique style direction (e.g., one classic, one trendy, one edgy).
 - For each suggestion, analyze the person's gender presentation from the first image and design the complete outfit to match their masculine or feminine style preferences.
 - Ensure all clothing items, accessories, and styling choices are appropriate for their gender presentation.
-- Each outfit should feel natural and authentic to how they present themselves.
-
-**CRITICAL OUTPUT FORMAT:**
-You must return a JSON object with a "suggestions" array containing ${count} complete styling suggestions. Each suggestion must include both "outfit_suggestion" and "image_prompt" fields as defined in the function schema. Do not return a single suggestion object - always return the array format with "suggestions" as the top-level key.`;
+- Each outfit should feel natural and authentic to how they present themselves.`;
 
     // 🔍 LOG: Final token estimation including text
     const textTokenEstimate = Math.ceil(userMessageText.length / 4); // Rough estimate: 4 chars per token
@@ -210,20 +227,6 @@ You must return a JSON object with a "suggestions" array containing ${count} com
 
     // --- FIX: Use Zod to parse and validate the AI's output ---
     const unsafeResult = JSON.parse(toolCall.function.arguments);
-    console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] Raw OpenAI response before validation:`, JSON.stringify(unsafeResult, null, 2));
-
-    // Check if OpenAI returned the old single-suggestion format instead of the new array format
-    if (unsafeResult.outfit_suggestion && unsafeResult.image_prompt) {
-      console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] Detected old single-suggestion format, converting to array format`);
-      // Convert single suggestion to array format
-      const convertedResult = {
-        suggestions: [unsafeResult]
-      };
-      const validatedResult = multiSuggestionSchema.parse(convertedResult);
-      console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] Converted and validated result:`, JSON.stringify(validatedResult, null, 2));
-      return validatedResult.suggestions.slice(0, count);
-    }
-
     const validatedResult = multiSuggestionSchema.parse(unsafeResult); // This will throw a detailed error if the schema is not met
     // --- END FIX ---
 

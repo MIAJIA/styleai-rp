@@ -190,7 +190,6 @@ export async function runStylizationMultiple(
   const startTime = Date.now();
   console.log(`[PERF_LOG | Job ${job?.jobId}] [ATOMIC_STEP] Running Stylization with ${modelVersion}...`);
   console.log(`[ATOMIC_STEP] Job customPrompt:`, job?.input.customPrompt);
-  console.log(`[ATOMIC_STEP] Job stylePrompt:`, job?.input.stylePrompt ? job.input.stylePrompt.substring(0, 100) + '...' : 'null');
 
   let finalPrompt: string;
 
@@ -205,41 +204,17 @@ export async function runStylizationMultiple(
     const imagePrompt = suggestion?.styleSuggestion?.image_prompt;
 
     if (imagePrompt) {
-      // Combine AI-generated image prompt with occasion-specific style prompt
-      let combinedPrompt = imagePrompt;
-
-      // If we have a stylePrompt from the occasion, incorporate it into the scene description
-      if (job?.input.stylePrompt && job.input.stylePrompt.trim()) {
-        combinedPrompt = `${imagePrompt}. Scene setting: ${job.input.stylePrompt.trim()}`;
-        console.log(`[ATOMIC_STEP] Enhanced prompt with occasion style: ${combinedPrompt.substring(0, 200)}...`);
-      }
-
-      finalPrompt = `${combinedPrompt}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
+      finalPrompt = `${imagePrompt}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
       console.log(`[ATOMIC_STEP] Using generated prompt: ${finalPrompt.substring(0, 200)}...`);
     } else if (outfitDetails) {
       // Fallback if image_prompt is missing for some reason
       // Support backward compatibility: use explanation if available, fallback to style_summary for old data
       const outfitDescription = outfitDetails.explanation || outfitDetails.style_summary || "A stylish outfit";
-      let combinedDescription = `${outfitDetails.outfit_title}. ${outfitDescription}`;
-
-      // Add style prompt for scene context even in fallback
-      if (job?.input.stylePrompt && job.input.stylePrompt.trim()) {
-        combinedDescription += `. Scene setting: ${job.input.stylePrompt.trim()}`;
-      }
-
-      finalPrompt = `${combinedDescription}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
+      finalPrompt = `${outfitDetails.outfit_title}. ${outfitDescription}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
       console.warn(`[ATOMIC_STEP] 'image_prompt' not found in suggestion. Using fallback with outfit description.`);
     } else {
-      // Ultimate fallback - use stylePrompt if available, otherwise use default
-      let fallbackPrompt = "A full-body shot of a woman in a stylish outfit, standing in a visually appealing, realistic setting. The image is well-lit, with a clear focus on the person and their clothing. The background is a real-world scene, like a chic city street, a modern interior, or a scenic outdoor location. The overall aesthetic is fashionable, clean, and high-quality.";
-
-      if (job?.input.stylePrompt && job.input.stylePrompt.trim()) {
-        fallbackPrompt = `A full-body shot of a woman in a stylish outfit. Scene setting: ${job.input.stylePrompt.trim()}. The image is well-lit, with a clear focus on the person and their clothing.`;
-        console.log(`[ATOMIC_STEP] Using stylePrompt in fallback: ${fallbackPrompt.substring(0, 200)}...`);
-      }
-
-      finalPrompt = suggestion?.finalPrompt || fallbackPrompt;
-      console.warn(`[ATOMIC_STEP] No 'image_prompt' or 'outfit_suggestion' found. Using fallback prompt.`);
+      finalPrompt = suggestion?.finalPrompt || "A full-body shot of a woman in a stylish outfit, standing in a visually appealing, realistic setting. The image is well-lit, with a clear focus on the person and their clothing. The background is a real-world scene, like a chic city street, a modern interior, or a scenic outdoor location. The overall aesthetic is fashionable, clean, and high-quality.";
+      console.warn(`[ATOMIC_STEP] No 'image_prompt' or 'outfit_suggestion' found. Using default fallback prompt.`);
     }
   }
 
