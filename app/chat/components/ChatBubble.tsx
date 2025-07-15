@@ -23,8 +23,14 @@ export const ChatBubble = React.memo(function ChatBubble({
   const isAI = message.role === "ai"
   const isUser = message.role === "user"
 
-  if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
-    console.log('[ChatBubble] Rendering:', { sessionId: sessionId?.slice(-8), hasImage: !!message.imageUrl });
+  // 🔍 FIX: 减少开发环境的调试日志频率，避免过度渲染
+  if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) { // 降低到1%的概率
+    console.log('[ChatBubble] Rendering:', {
+      sessionId: sessionId?.slice(-8),
+      hasImage: !!message.imageUrl,
+      messageType: message.type,
+      messageId: message.id
+    });
   }
 
   // Debug logging for product messages
@@ -72,17 +78,29 @@ export const ChatBubble = React.memo(function ChatBubble({
             </div>
           )}
 
-          {/* Render image if it exists, with a margin if text is also present */}
+          {/* 🔍 FIX: 优化图片渲染，减少重新渲染 */}
           {message.imageUrl && (
             <div className={message.content ? "mt-2" : ""}>
               <div className="relative group">
                 <img
-                  src={message.imageUrl || "/placeholder.svg"}
+                  src={message.imageUrl}
                   alt={isAI ? "Generated image" : "Uploaded image"}
                   width={300}
                   height={400}
                   className="rounded-lg cursor-pointer"
                   onClick={() => message.imageUrl && onImageClick(message.imageUrl)}
+                  onLoad={() => {
+                    // 🔍 FIX: 图片加载完成后的日志
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log(`[ChatBubble] 📸 Image loaded successfully: ${message.imageUrl?.substring(0, 50)}...`);
+                    }
+                  }}
+                  onError={() => {
+                    // 🔍 FIX: 图片加载失败的日志
+                    if (process.env.NODE_ENV === 'development') {
+                      console.warn(`[ChatBubble] ⚠️ Image failed to load: ${message.imageUrl?.substring(0, 50)}...`);
+                    }
+                  }}
                 />
 
                 {/* Vote buttons overlay - only show for AI generated images */}
@@ -130,14 +148,14 @@ export const ChatBubble = React.memo(function ChatBubble({
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   {message.metadata.generationData.selfiePreview && (
                     <img
-                      src={message.metadata.generationData.selfiePreview || "/placeholder.svg"}
+                      src={message.metadata.generationData.selfiePreview}
                       alt="Selfie"
                       className="w-full h-20 object-cover rounded-lg"
                     />
                   )}
                   {message.metadata.generationData.clothingPreview && (
                     <img
-                      src={message.metadata.generationData.clothingPreview || "/placeholder.svg"}
+                      src={message.metadata.generationData.clothingPreview}
                       alt="Clothing"
                       className="w-full h-20 object-cover rounded-lg"
                     />
@@ -157,4 +175,13 @@ export const ChatBubble = React.memo(function ChatBubble({
       </div>
     </div>
   )
+}, (prevProps, nextProps) => {
+  // 🔍 FIX: 自定义比较函数，减少不必要的重新渲染
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.imageUrl === nextProps.message.imageUrl &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.message.type === nextProps.message.type &&
+    prevProps.sessionId === nextProps.sessionId
+  );
 })

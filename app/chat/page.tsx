@@ -204,13 +204,15 @@ export default function ChatPage() {
         return
       }
 
+      console.log(`[displayImageResults] 📸 Displaying ${imageUrls.length} image(s):`, imageUrls.map(url => url.substring(0, 100) + '...'));
+
       setMessages((prevMessages) => {
         // Remove all loading placeholders
         const messagesWithoutPlaceholders = prevMessages.filter(
           (msg) => !(msg.type === "loading" && msg.metadata?.isImagePlaceholder),
         )
 
-        // Add the new image messages
+        // 🔍 FIX: 优化图片消息创建，确保立即显示
         const imageMessages: ChatMessage[] = imageUrls.map((url, i) => ({
           id: generateUniqueId(),
           type: "image",
@@ -221,8 +223,38 @@ export default function ChatPage() {
           metadata: { isOutfitPreview: true },
         }))
 
-        return [...messagesWithoutPlaceholders, ...imageMessages]
+        const newMessages = [...messagesWithoutPlaceholders, ...imageMessages];
+        console.log(`[displayImageResults] 📸 Added ${imageMessages.length} image messages, total messages: ${newMessages.length}`);
+
+        return newMessages;
       })
+
+      // 🔍 FIX: 确保图片预加载，减少显示延迟
+      try {
+        const imagePromises = imageUrls.map(url => {
+          return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+              console.log(`[displayImageResults] 📸 Image preloaded: ${url.substring(0, 100)}...`);
+              resolve(url);
+            };
+            img.onerror = () => {
+              console.warn(`[displayImageResults] ⚠️ Failed to preload image: ${url.substring(0, 100)}...`);
+              resolve(url); // 即使失败也继续，不阻塞显示
+            };
+            img.src = url;
+          });
+        });
+
+        // 不等待所有图片加载完成，只是启动预加载过程
+        Promise.all(imagePromises).then(() => {
+          console.log(`[displayImageResults] 📸 All images preloaded successfully`);
+        }).catch(err => {
+          console.warn(`[displayImageResults] ⚠️ Some images failed to preload:`, err);
+        });
+      } catch (error) {
+        console.warn(`[displayImageResults] ⚠️ Image preloading error:`, error);
+      }
     },
     [setMessages],
   )
@@ -350,7 +382,13 @@ export default function ChatPage() {
     if (rawData) {
       try {
         const data = JSON.parse(rawData)
-        console.log("[ChatPage | useEffect] ✅ Parsed chatData:", data)
+
+        // create dataForLog. do not show selfiePreview in the console log, replace it with "***"
+        const dataForLog = { ...data }
+        if (dataForLog.selfiePreview) {
+          dataForLog.selfiePreview = "***"
+        }
+        console.log("[ChatPage | useEffect] ✅ Parsed chatData:", dataForLog)
         setChatData(data)
         const createMessage = (message: Omit<ChatMessage, "id" | "timestamp">): ChatMessage => ({
           ...message,

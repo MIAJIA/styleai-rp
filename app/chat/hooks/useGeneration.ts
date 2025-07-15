@@ -84,36 +84,50 @@ export function useGeneration({
           }
         }
 
-        // --- RE-ADDITION: Display intermediate images but ONLY for the CURRENT suggestion ---
+        // --- 🔍 FIX: 重新设计中间图片显示逻辑 ---
+        // 不再依赖 status === 'generating_images'，而是直接检查 intermediateImageUrls 的存在
         if (
-          status === 'generating_images' &&
           intermediateImageUrls &&
+          intermediateImageUrls.length > 0 &&
           !displayedIntermediateImages.current.has(index)
         ) {
-          console.log(`[useGeneration] Displaying intermediate images for suggestion ${index}.`);
-          if (jobStartTime.current) {
-            const elapsed = Date.now() - jobStartTime.current;
-            console.log(`[FE_PERF_LOG] Intermediate images appeared on UI for index ${index}. Total time since start: ${elapsed}ms.`);
+          console.log(`[useGeneration] 🖼️ Found intermediate images for suggestion ${index}, status: ${status}`);
+          console.log(`[useGeneration] 🖼️ Intermediate images count: ${intermediateImageUrls.length}`);
+
+          // 只有当前选中的 suggestion 才显示中间图片
+          if (index === currentSuggestionIndex) {
+            console.log(`[useGeneration] Displaying INTERMEDIATE images for suggestion ${index} for the first time.`);
+            if (jobStartTime.current) {
+              const elapsed = Date.now() - jobStartTime.current;
+              console.log(`[FE_PERF_LOG] Intermediate images appeared on UI for index ${index}. Total time since start: ${elapsed}ms.`);
+            }
+
+            // 🔍 FIX: 确保intermediate images在final images之前显示
+            const currentTime = Date.now();
+            console.log(`[useGeneration] 🕐 Displaying intermediate images at timestamp: ${currentTime}`);
+
+            displayImageResults(intermediateImageUrls);
+            addMessage({
+              role: 'ai',
+              type: 'text',
+              content: `✨ 这是为你生成的第 ${index + 1} 套搭配的场景预览，即将进行最终的细节处理...`
+            });
+            addMessage({
+              type: "loading" as const,
+              role: "ai" as const,
+              loadingText: `正在进行最终处理...`,
+              metadata: { isImagePlaceholder: true },
+            });
+            displayedIntermediateImages.current.add(index);
           }
-          displayImageResults(intermediateImageUrls);
-          addMessage({
-            role: 'ai',
-            type: 'text',
-            content: `✨ 这是为你生成的第 ${index + 1} 套搭配的场景预览，即将进行最终的细节处理...`
-          });
-          addMessage({
-            type: "loading" as const,
-            role: "ai" as const,
-            loadingText: `正在进行最终处理...`,
-            metadata: { isImagePlaceholder: true },
-          });
-          displayedIntermediateImages.current.add(index);
         }
-        // --- END RE-ADDITION ---
+        // --- END 🔍 FIX ---
 
         // Display FINAL images for any completed suggestion that hasn't been displayed yet
         if (
           status === 'succeeded' &&
+          imageUrls &&
+          imageUrls.length > 0 &&
           !displayedFinalImages.current.has(index)
         ) {
           console.log(`[useGeneration] Displaying FINAL images for suggestion ${index} for the first time.`);
@@ -121,24 +135,34 @@ export function useGeneration({
             const elapsed = Date.now() - jobStartTime.current;
             console.log(`[FE_PERF_LOG] Final images appeared on UI for index ${index}. Total time since start: ${elapsed}ms.`);
           }
-          if (imageUrls && imageUrls.length > 0) {
-            // This is the critical part. We assume that when a suggestion succeeds,
-            // we should replace the loading placeholder associated with it.
-            // The current implementation targets the "last" loading message, which works
-            // because we add a new one each time we trigger a suggestion.
-            displayImageResults(imageUrls);
-            addMessage({
-              role: "ai",
-              type: "text",
-              content: `🎉 这是为你生成的第 ${index + 1} 套搭配建议！`,
-            });
-          } else {
-            addMessage({
-              role: "ai",
-              type: "text",
-              content: `✅ 任务 ${index + 1} 完成，但似乎没有生成图片。`,
-            });
-          }
+
+          // 🔍 FIX: 确保final images在intermediate images之后显示
+          const currentTime = Date.now();
+          console.log(`[useGeneration] 🕐 Displaying final images at timestamp: ${currentTime}`);
+
+          // 🔍 FIX: 确保图片立即显示，不等待额外的加载时间
+          console.log(`[useGeneration] 📸 About to display final images:`, imageUrls.map(url => url.substring(0, 100) + '...'));
+          displayImageResults(imageUrls);
+          addMessage({
+            role: "ai",
+            type: "text",
+            content: `🎉 这是为你生成的第 ${index + 1} 套搭配建议！`,
+          });
+          displayedFinalImages.current.add(index);
+        }
+
+        // 🔍 FIX: 处理没有imageUrls但status为succeeded的情况
+        if (
+          status === 'succeeded' &&
+          (!imageUrls || imageUrls.length === 0) &&
+          !displayedFinalImages.current.has(index)
+        ) {
+          console.warn(`[useGeneration] ⚠️ Suggestion ${index} succeeded but has no imageUrls`);
+          addMessage({
+            role: "ai",
+            type: "text",
+            content: `✅ 任务 ${index + 1} 完成，但似乎没有生成图片。`,
+          });
           displayedFinalImages.current.add(index);
         }
 
@@ -159,7 +183,18 @@ export function useGeneration({
       });
       // --- END NEW ITERATION LOGIC ---
 
-      // Check if the entire job is complete to stop polling
+      // 🔍 FIX: 更智能的完成状态检查 - 只要有一个成功的suggestion就可以认为job基本完成
+      const hasAnySucceeded = job.suggestions.some(s => s.status === 'succeeded');
+      const hasAnyGenerating = job.suggestions.some(s => s.status === 'generating_images' || s.status === 'processing_tryon');
+
+      // 如果有任何一个成功了，并且没有正在生成的，就认为当前阶段完成
+      if (hasAnySucceeded && !hasAnyGenerating) {
+        console.log("[useGeneration | onPollingUpdate] 🏁 At least one suggestion succeeded and no more generating. Updating step to complete.");
+        setCurrentStep("complete");
+        // 但不要停止轮询，因为用户可能还会选择其他suggestion
+      }
+
+      // 只有当所有suggestions都完成时才停止轮询
       const isJobComplete = job.suggestions.every(s => s.status === 'succeeded' || s.status === 'failed');
       if (isJobComplete) {
         console.log("[useGeneration | onPollingUpdate] 🏁 All suggestions processed. Stopping polling.");
