@@ -33,8 +33,8 @@ export const outfitSuggestionSchema = z.object({
 
 export const styleSuggestionsSchema = z.object({
   outfit_suggestion: outfitSuggestionSchema.describe("A single complete outfit suggestion."),
-  image_prompt: z.string().describe(
-    "A vivid, English-only visual prompt for an AI image generator. It should describe the user wearing the outfit in the intended scene, including outfit details, setting, atmosphere, and overall mood. This prompt will be passed to Midjourney or similar models to produce a full-body fashion image.")
+  image_prompt: z.string().optional().describe(
+    "A vivid, English-only visual prompt for an AI image generator. It should describe the user wearing the outfit in the intended scene, including outfit details, setting, atmosphere, and overall mood. This prompt will be passed to Midjourney or similar models to produce a full-body fashion image. This field is REQUIRED and extremely important.")
 });
 
 // Convert Zod schema to JSON schema for the tool
@@ -58,7 +58,7 @@ export type GenerationMode = "tryon-only" | "simple-scene" | "advanced-scene";
  */
 export interface Suggestion {
   index: number;
-  status: 'pending' | 'generating_images' | 'succeeded' | 'failed';
+  status: 'pending' | 'generating_images' | 'processing_tryon' | 'succeeded' | 'failed';
 
   // Textual content from AI
   styleSuggestion: any; // Can be refined to a more specific type later
