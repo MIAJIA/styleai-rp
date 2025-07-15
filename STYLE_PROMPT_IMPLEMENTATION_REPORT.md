@@ -123,6 +123,57 @@ export async function getStyleSuggestionFromAI(
 }
 ```
 
+## 🧹 Kling 服务清理
+
+### 为什么清理 Kling 服务？
+
+由于 OpenAI 已经在 `image_prompt` 生成阶段处理了场景描述，Kling 服务不需要再次处理 `stylePrompt`。这样可以：
+
+- 避免重复处理
+- 简化代码逻辑
+- 确保场景描述的一致性
+
+### 清理的修改 (`lib/ai/services/kling.ts`)
+
+```typescript
+// ❌ 移除：不必要的 stylePrompt 日志
+- console.log(`[ATOMIC_STEP] Job stylePrompt:`, job?.input.stylePrompt ? job.input.stylePrompt.substring(0, 100) + '...' : 'null');
+
+// ❌ 移除：不必要的 stylePrompt 处理逻辑
+- if (job?.input.stylePrompt && job.input.stylePrompt.trim()) {
+-   combinedPrompt = `${imagePrompt}. Scene setting: ${job.input.stylePrompt.trim()}`;
+- }
+
+// ✅ 保留：直接使用 OpenAI 生成的 image_prompt
+finalPrompt = `${imagePrompt}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
+```
+
+### 清理的修改 (`lib/ai/pipelines/simple-scene.ts`)
+
+```typescript
+// ❌ 移除：不必要的 stylePrompt 接口扩展
+- input?: {
+-   customPrompt?: string;
+-   stylePrompt?: string;
+-   // ... 其他字段
+- };
+
+// ❌ 移除：不必要的 job 对象构建
+- {
+-   jobId: job.jobId,
+-   input: job.input || { ... }
+- } as any
+
+// ✅ 保留：简化的调用
+const stylizationResult = await runStylizationMultiple(
+  'kling-v1-5',
+  job.suggestion,
+  job.humanImage.url,
+  job.humanImage.name,
+  job.humanImage.type
+);
+```
+
 ## 🔍 关键日志标识符
 
 为了便于调试和跟踪，我们添加了统一的日志标识符：
@@ -143,12 +194,14 @@ export async function getStyleSuggestionFromAI(
 3. **传递给 AI** → `status/route.ts` 从 job 中提取并传递给 `getStyleSuggestionFromAI`
 4. **AI 处理** → `openai.ts` 接收并用于增强 occasionSection
 5. **影响 image_prompt** → 增强的 occasionSection 影响 AI 生成的 image_prompt
+6. **Kling 使用** → `kling.ts` 直接使用 OpenAI 生成的增强 image_prompt
 
 ### 预期效果
 
 - 每个 occasion 现在都有具体的场景描述
 - AI 生成的 image_prompt 将包含更详细的环境、氛围和视觉元素
-- 生成的图片将更符合每个场景的特定风格要求
+- Kling 生成的图片将更符合每个场景的特定风格要求
+- 避免了重复的场景处理，确保一致性
 
 ## 🎨 Occasion 场景提示示例
 
@@ -173,6 +226,8 @@ Romantic evening setting with warm, intimate lighting - upscale restaurant with 
 - [x] occasionSection 使用具体的 stylePrompt 内容
 - [x] 添加关键日志确认传递过程
 - [x] 数据流完整：前端 → 后端 → AI 服务 → image_prompt
+- [x] 🧹 清理 Kling 服务中不必要的 stylePrompt 处理
+- [x] 🧹 简化 simple-scene pipeline 逻辑
 
 ## 🚀 部署建议
 
@@ -180,3 +235,18 @@ Romantic evening setting with warm, intimate lighting - upscale restaurant with 
 2. 确认每个环节都正确接收和传递 style_prompt
 3. 验证生成的图片质量是否有所提升
 4. 如有问题，可以通过日志快速定位问题环节
+
+## 📈 架构优化
+
+### 优化前的问题
+
+- Kling 服务重复处理场景描述
+- 可能导致场景描述不一致
+- 代码逻辑复杂，难以维护
+
+### 优化后的优势
+
+- **单一职责**：OpenAI 负责场景描述，Kling 负责图像生成
+- **避免重复**：场景描述只在 OpenAI 阶段处理一次
+- **保持一致**：所有图像使用相同的增强 image_prompt
+- **简化维护**：清晰的数据流和职责分离
