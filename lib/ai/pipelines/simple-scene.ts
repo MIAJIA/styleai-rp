@@ -21,9 +21,11 @@ export async function executeSimpleScenePipelineV2(
 ): Promise<{ imageUrls: string[], finalPrompt: string, stylizedImageUrls: string[] }> {
   console.log(`[PIPELINE_START] Executing "Simple Scene V2" pipeline for job ${job.jobId}`);
 
-  if (!job.suggestion?.finalPrompt) {
-    throw new Error("Cannot run simple scene pipeline V2 without 'finalPrompt' in suggestion.");
-  }
+  // 🔍 FIX: 移除不必要的 finalPrompt 检查
+  // runStylizationMultiple 函数已经有完整的 fallback 逻辑来构建 prompt
+  // 从 OpenAI 返回的 suggestion 对象中有 image_prompt 字段，这已经足够了
+  console.log(`[PIPELINE_DEBUG] Suggestion object keys:`, Object.keys(job.suggestion || {}));
+  console.log(`[PIPELINE_DEBUG] StyleSuggestion keys:`, Object.keys(job.suggestion?.styleSuggestion || {}));
 
   const stylizationResult = await runStylizationMultiple(
     'kling-v1-5',
@@ -50,10 +52,15 @@ export async function executeSimpleScenePipelineV2(
   console.log(`[PIPELINE] Storing ${stylizedImageUrls.length} intermediate images for job ${job.jobId}, suggestion ${job.suggestionIndex}`);
   const jobToUpdate = await kv.get<Job>(job.jobId);
   if (jobToUpdate && jobToUpdate.suggestions[job.suggestionIndex]) {
+    // 🔍 FIX: 确保中间图片及时存储并更新状态
     jobToUpdate.suggestions[job.suggestionIndex].intermediateImageUrls = stylizedImageUrls;
+    jobToUpdate.suggestions[job.suggestionIndex].status = 'processing_tryon'; // 更新状态表示正在处理虚拟试穿
     jobToUpdate.updatedAt = Date.now();
     await kv.set(job.jobId, jobToUpdate);
-    console.log(`[PIPELINE] Successfully stored intermediate images.`);
+    console.log(`[PIPELINE] Successfully stored intermediate images and updated status to processing_tryon.`);
+    console.log(`[PIPELINE] Intermediate images URLs:`, stylizedImageUrls.map(url => url.substring(0, 100) + '...'));
+  } else {
+    console.error(`[PIPELINE] Failed to update job ${job.jobId} with intermediate images - job or suggestion not found`);
   }
 
   const allTryOnPromises = stylizedImageUrls.map((styledImage, index) => {
