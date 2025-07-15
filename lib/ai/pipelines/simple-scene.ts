@@ -30,7 +30,8 @@ export async function executeSimpleScenePipelineV2(
     job.suggestion,
     job.humanImage.url,
     job.humanImage.name,
-    job.humanImage.type
+    job.humanImage.type,
+    job as any // Pass the job object to access stylePrompt
   );
 
   const tempStyledImageUrls = stylizationResult.imageUrls;

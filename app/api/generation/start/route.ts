@@ -23,6 +23,10 @@ export async function POST(request: Request) {
     const generationMode = formData.get('generation_mode') as GenerationMode | null;
     const userProfileString = formData.get('user_profile') as string | null;
     const customPrompt = formData.get('custom_prompt') as string | null;
+    const stylePrompt = formData.get('style_prompt') as string | null;
+
+    console.log(`[DEBUG] Received occasion: ${occasion}`);
+    console.log(`[DEBUG] Received style_prompt: ${stylePrompt ? stylePrompt.substring(0, 100) + '...' : 'null'}`);
 
     let userProfile: OnboardingData | undefined = undefined;
     if (userProfileString) {
@@ -61,6 +65,7 @@ export async function POST(request: Request) {
         occasion,
         userProfile,
         customPrompt: customPrompt?.trim() || undefined,
+        stylePrompt: stylePrompt?.trim() || undefined,
       },
       createdAt: now,
       updatedAt: now,

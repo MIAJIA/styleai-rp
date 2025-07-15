@@ -93,6 +93,7 @@ export interface Job {
     occasion: string;
     userProfile?: any;
     customPrompt?: string;
+    stylePrompt?: string;
   };
 
   // Timestamps

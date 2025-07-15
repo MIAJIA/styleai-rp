@@ -120,7 +120,10 @@ ${stylePreferenceSection}
 - Generate ${count} different and distinct styling suggestions. Each suggestion should explore a unique style direction (e.g., one classic, one trendy, one edgy).
 - For each suggestion, analyze the person's gender presentation from the first image and design the complete outfit to match their masculine or feminine style preferences.
 - Ensure all clothing items, accessories, and styling choices are appropriate for their gender presentation.
-- Each outfit should feel natural and authentic to how they present themselves.`;
+- Each outfit should feel natural and authentic to how they present themselves.
+
+**CRITICAL OUTPUT FORMAT:**
+You must return a JSON object with a "suggestions" array containing ${count} complete styling suggestions. Each suggestion must include both "outfit_suggestion" and "image_prompt" fields as defined in the function schema. Do not return a single suggestion object - always return the array format with "suggestions" as the top-level key.`;
 
     // 🔍 LOG: Final token estimation including text
     const textTokenEstimate = Math.ceil(userMessageText.length / 4); // Rough estimate: 4 chars per token
@@ -207,6 +210,20 @@ ${stylePreferenceSection}
 
     // --- FIX: Use Zod to parse and validate the AI's output ---
     const unsafeResult = JSON.parse(toolCall.function.arguments);
+    console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] Raw OpenAI response before validation:`, JSON.stringify(unsafeResult, null, 2));
+
+    // Check if OpenAI returned the old single-suggestion format instead of the new array format
+    if (unsafeResult.outfit_suggestion && unsafeResult.image_prompt) {
+      console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] Detected old single-suggestion format, converting to array format`);
+      // Convert single suggestion to array format
+      const convertedResult = {
+        suggestions: [unsafeResult]
+      };
+      const validatedResult = multiSuggestionSchema.parse(convertedResult);
+      console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] Converted and validated result:`, JSON.stringify(validatedResult, null, 2));
+      return validatedResult.suggestions.slice(0, count);
+    }
+
     const validatedResult = multiSuggestionSchema.parse(unsafeResult); // This will throw a detailed error if the schema is not met
     // --- END FIX ---
 

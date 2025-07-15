@@ -432,137 +432,137 @@ export default function ResultsPage() {
         {/* 只有在不是初始加载时才显示内容 */}
         {!isInitialLoading && (
           <>
-            {/* Global Vote Statistics */}
-            {globalVoteStats && globalVoteStats.totalVotes > 0 && (
-              <div className="ios-card p-5 animate-fade-up">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-medium flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" />
-                    Global Vote Statistics
-                  </h3>
+        {/* Global Vote Statistics */}
+        {globalVoteStats && globalVoteStats.totalVotes > 0 && (
+          <div className="ios-card p-5 animate-fade-up">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Global Vote Statistics
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Images with votes:</span>
+                  <span className="text-xs font-medium">{globalVoteStats.totalImages}</span>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">Images with votes:</span>
-                      <span className="text-xs font-medium">{globalVoteStats.totalImages}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">Total votes:</span>
-                      <span className="text-xs font-medium">{globalVoteStats.totalVotes}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500 flex items-center gap-1">
-                        <ThumbsUp className="w-3 h-3 text-green-600" />
-                        Upvotes:
-                      </span>
-                      <span className="text-xs font-medium text-green-600">{globalVoteStats.upvotes}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500 flex items-center gap-1">
-                        <ThumbsDown className="w-3 h-3 text-red-600" />
-                        Downvotes:
-                      </span>
-                      <span className="text-xs font-medium text-red-600">{globalVoteStats.downvotes}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress bar for upvote percentage */}
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-gray-500">Approval Rate:</span>
-                    <span className="text-xs font-medium">{globalVoteStats.upvotePercentage.toFixed(1)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${globalVoteStats.upvotePercentage}%` }}
-                    />
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Total votes:</span>
+                  <span className="text-xs font-medium">{globalVoteStats.totalVotes}</span>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500 flex items-center gap-1">
+                    <ThumbsUp className="w-3 h-3 text-green-600" />
+                    Upvotes:
+                  </span>
+                  <span className="text-xs font-medium text-green-600">{globalVoteStats.upvotes}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500 flex items-center gap-1">
+                    <ThumbsDown className="w-3 h-3 text-red-600" />
+                    Downvotes:
+                  </span>
+                  <span className="text-xs font-medium text-red-600">{globalVoteStats.downvotes}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress bar for upvote percentage */}
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-500">Approval Rate:</span>
+                <span className="text-xs font-medium">{globalVoteStats.upvotePercentage.toFixed(1)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${globalVoteStats.upvotePercentage}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Recent Looks Section */}
+        <div className="ios-card p-5 animate-fade-up">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium">Recent Looks</h3>
+            {pastLooks.length > 0 && (
+              <button
+                onClick={handleClearRecentLooks}
+                className="text-xs text-primary font-medium ios-btn"
+              >
+                Clear All
+              </button>
             )}
+          </div>
 
-            {/* Recent Looks Section */}
-            <div className="ios-card p-5 animate-fade-up">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium">Recent Looks</h3>
-                {pastLooks.length > 0 && (
-                  <button
-                    onClick={handleClearRecentLooks}
-                    className="text-xs text-primary font-medium ios-btn"
-                  >
-                    Clear All
-                  </button>
-                )}
-              </div>
+          {pastLooks.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                {displayedLooks.map((pastLook) => (
+                  <div key={pastLook.id} className="bg-white rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
+                    {/* Main Image */}
+                    <div
+                      className="relative aspect-[3/4] rounded-t-xl overflow-hidden group"
+                      onClick={() => handleCardClick(pastLook)}
+                    >
+                      <img
+                        src={pastLook.imageUrl}
+                        alt="Generated look"
+                        className="w-full h-full object-cover"
+                      />
 
-              {pastLooks.length > 0 ? (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    {displayedLooks.map((pastLook) => (
-                      <div key={pastLook.id} className="bg-white rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
-                        {/* Main Image */}
-                        <div
-                          className="relative aspect-[3/4] rounded-t-xl overflow-hidden group"
-                          onClick={() => handleCardClick(pastLook)}
-                        >
-                          <img
-                            src={pastLook.imageUrl}
-                            alt="Generated look"
-                            className="w-full h-full object-cover"
-                          />
+                      {/* Vote buttons - always visible if voted, otherwise show on hover */}
+                      <div className="absolute top-2 left-2" onClick={(e) => e.stopPropagation()}>
+                        <ImageVoteButtons
+                          imageUrl={pastLook.imageUrl}
+                          size="sm"
+                          variant="overlay"
+                          className="opacity-100 group-hover:opacity-100 transition-opacity duration-200"
+                          onVoteChange={(voteType) => {
+                            console.log(`[Results] Image vote changed: ${voteType} for look ${pastLook.id}`);
+                          }}
+                        />
+                      </div>
 
-                          {/* Vote buttons - always visible if voted, otherwise show on hover */}
-                          <div className="absolute top-2 left-2" onClick={(e) => e.stopPropagation()}>
-                            <ImageVoteButtons
-                              imageUrl={pastLook.imageUrl}
-                              size="sm"
-                              variant="overlay"
-                              className="opacity-100 group-hover:opacity-100 transition-opacity duration-200"
-                              onVoteChange={(voteType) => {
-                                console.log(`[Results] Image vote changed: ${voteType} for look ${pastLook.id}`);
-                              }}
-                            />
-                          </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteLook(pastLook.id);
+                        }}
+                        className="absolute top-2 right-2 p-2 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
 
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteLook(pastLook.id);
-                            }}
-                            className="absolute top-2 right-2 p-2 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-
-                        {/* Look Details */}
-                        <div className="p-3 space-y-2" onClick={() => handleCardClick(pastLook)}>
-                          <div className="flex-1">
-                            <div className="prose prose-sm max-w-none">
-                              <h4 className="font-semibold text-gray-800 text-sm line-clamp-1">
-                                {pastLook.processImages?.styleSuggestion?.outfit_suggestion?.outfit_title || "AI Generated"}
-                              </h4>
-                              <p className="text-xs text-gray-500 line-clamp-2">
+                    {/* Look Details */}
+                    <div className="p-3 space-y-2" onClick={() => handleCardClick(pastLook)}>
+                      <div className="flex-1">
+                        <div className="prose prose-sm max-w-none">
+                          <h4 className="font-semibold text-gray-800 text-sm line-clamp-1">
+                            {pastLook.processImages?.styleSuggestion?.outfit_suggestion?.outfit_title || "AI Generated"}
+                          </h4>
+                          <p className="text-xs text-gray-500 line-clamp-2">
                                 {pastLook.processImages?.styleSuggestion?.outfit_suggestion?.explanation ||
                                   pastLook.processImages?.styleSuggestion?.outfit_suggestion?.style_summary ||
                                   `Generated on ${formatDate(pastLook.timestamp)}`}
-                              </p>
-                            </div>
-                          </div>
+                          </p>
                         </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
+                ))}
+              </div>
 
-                  {pastLooks.length > 6 && (
-                    <button
+              {pastLooks.length > 6 && (
+                <button
                       onClick={async () => {
                         if (!isRecentLooksExpanded) {
                           // 第一次点击，展开本地数据
@@ -577,7 +577,7 @@ export default function ResultsPage() {
                       }}
                       disabled={isLoadingMore}
                       className="w-full text-xs text-center text-primary font-medium p-2 mt-4 rounded-lg ios-btn bg-primary/10 disabled:opacity-50"
-                    >
+                >
                       {isLoadingMore
                         ? "Loading..."
                         : !isRecentLooksExpanded
@@ -586,34 +586,34 @@ export default function ResultsPage() {
                             ? "Load More from Database"
                             : "Show Less"
                       }
-                    </button>
-                  )}
-                </>
-              ) : (
-                // Empty placeholder boxes
-                <div className="grid grid-cols-2 gap-3">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <div
-                      key={`placeholder-${index}`}
-                      className="aspect-[3/4] bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-lg flex items-center justify-center"
-                    >
-                      <div className="text-center text-neutral-400">
-                        <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-neutral-200 flex items-center justify-center">
-                          <span className="text-xs">👗</span>
-                        </div>
-                        <p className="text-xs">New Look</p>
-                      </div>
+                </button>
+              )}
+            </>
+          ) : (
+            // Empty placeholder boxes
+            <div className="grid grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={`placeholder-${index}`}
+                  className="aspect-[3/4] bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-lg flex items-center justify-center"
+                >
+                  <div className="text-center text-neutral-400">
+                    <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-neutral-200 flex items-center justify-center">
+                      <span className="text-xs">👗</span>
                     </div>
-                  ))}
+                    <p className="text-xs">New Look</p>
+                  </div>
                 </div>
-              )}
-
-              {pastLooks.length === 0 && (
-                <p className="text-xs text-neutral-500 text-center mt-3">
-                  Your generated looks will appear here.
-                </p>
-              )}
+              ))}
             </div>
+          )}
+
+          {pastLooks.length === 0 && (
+            <p className="text-xs text-neutral-500 text-center mt-3">
+              Your generated looks will appear here.
+            </p>
+          )}
+        </div>
           </>
         )}
       </div>
@@ -719,8 +719,8 @@ export default function ResultsPage() {
                     selectedLook.processImages?.styleSuggestion?.outfit_suggestion?.style_summary && (
                       <p className="text-sm text-gray-700 leading-relaxed">
                         {selectedLook.processImages.styleSuggestion.outfit_suggestion.style_summary}
-                      </p>
-                    )}
+                    </p>
+                  )}
                 </div>
 
                 {/* Final Prompt Section */}

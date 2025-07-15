@@ -236,8 +236,10 @@ export function useGeneration({
       if (chatData.customPrompt && chatData.customPrompt.trim()) {
         formData.append("custom_prompt", chatData.customPrompt.trim())
       }
+
       if (stylePrompts[chatData.occasion as keyof typeof stylePrompts]) {
-        formData.append("style_prompt", stylePrompts[chatData.occasion as keyof typeof stylePrompts])
+        const stylePrompt = stylePrompts[chatData.occasion as keyof typeof stylePrompts];
+        formData.append("style_prompt", stylePrompt);
       }
 
       const response = await fetch("/api/generation/start", {
