@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { systemPrompt, IMAGE_GENERATION_MODEL } from "@/lib/prompts";
+import { systemPrompt, IMAGE_GENERATION_MODEL, IMAGE_FORMAT_DESCRIPTION, STRICT_REALISM_PROMPT_BLOCK } from "@/lib/prompts";
 import {
   type StyleSuggestionInput,
   styleSuggestionsSchema,
@@ -191,13 +191,13 @@ ${stylePreferenceSection}
           ],
         },
       ],
-      max_tokens: 4000,
+      max_tokens: 6000, // 🔍 FIX: 增加 token 限制，防止响应被截断
       tools: [
         {
           type: "function",
           function: {
             name: "get_multiple_style_suggestions",
-            description: `Get ${count} complete and distinct outfit suggestions in a structured JSON format.`,
+            description: `Get ${count} complete and distinct outfit suggestions in a structured JSON format. The image_prompt field is highly recommended for best results.`,
             parameters: multiSuggestionJsonSchema,
           },
         },
@@ -210,6 +210,13 @@ ${stylePreferenceSection}
 
     console.log(`${TOKEN_LOG_PREFIX} ===== OPENAI RESPONSE RECEIVED =====`);
     console.log(`${TOKEN_LOG_PREFIX} 📊 Response usage:`, response.usage);
+    console.log(`${TOKEN_LOG_PREFIX} 📊 Finish reason:`, response.choices[0].finish_reason);
+
+    // 🔍 FIX: 检查是否因为 token 限制被截断
+    if (response.choices[0].finish_reason === 'length') {
+      console.warn(`${TOKEN_LOG_PREFIX} ⚠️ RESPONSE TRUNCATED DUE TO TOKEN LIMIT!`);
+      console.warn(`${TOKEN_LOG_PREFIX} ⚠️ This is likely why image_prompt is missing. Consider increasing max_tokens or reducing input length.`);
+    }
 
     const message = response.choices[0].message;
 
@@ -227,7 +234,17 @@ ${stylePreferenceSection}
 
     // --- FIX: Use Zod to parse and validate the AI's output ---
     const unsafeResult = JSON.parse(toolCall.function.arguments);
-    const validatedResult = multiSuggestionSchema.parse(unsafeResult); // This will throw a detailed error if the schema is not met
+    console.log(`${TOKEN_LOG_PREFIX} 🔍 RAW AI RESPONSE:`, JSON.stringify(unsafeResult, null, 2));
+
+    let validatedResult;
+    try {
+      validatedResult = multiSuggestionSchema.parse(unsafeResult); // This will throw a detailed error if the schema is not met
+      console.log(`${TOKEN_LOG_PREFIX} ✅ Zod validation successful`);
+
+    } catch (zodError) {
+      console.error(`${TOKEN_LOG_PREFIX} 💥 ZOD VALIDATION FAILED:`, zodError);
+      throw zodError;
+    }
     // --- END FIX ---
 
     console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] OpenAI Suggestion:`, JSON.stringify(validatedResult, null, 2));
