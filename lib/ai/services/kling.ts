@@ -10,6 +10,8 @@ import { Job, Suggestion } from "../types";
 // --- Kling AI ---
 const KLING_ACCESS_KEY = process.env.KLING_AI_ACCESS_KEY;
 const KLING_SECRET_KEY = process.env.KLING_AI_SECRET_KEY;
+const KLING_ACCESS_KEY_TRYON = process.env.KLING_AI_ACCESS_KEY_TRYON;
+const KLING_SECRET_KEY_TRYON = process.env.KLING_AI_SECRET_KEY_TRYON;
 // const KLING_API_BASE_URL = "https://api-beijing.klingai.com";
 const KLING_API_BASE_URL = "https://api-singapore.klingai.com";
 
@@ -72,18 +74,32 @@ const buildStylizeRequestBody = (
 
 // More robust, reusable polling function
 async function executeKlingTask(submitPath: string, queryPathPrefix: string, requestBody: object): Promise<string[]> {
-  if (!KLING_ACCESS_KEY || !KLING_SECRET_KEY) {
-    throw new Error("Kling AI API keys are not configured.");
+  const isTryOn = submitPath === KOLORS_VIRTUAL_TRYON_SUBMIT_PATH;
+
+  const accessKey = isTryOn ? KLING_ACCESS_KEY_TRYON : KLING_ACCESS_KEY;
+  const secretKey = isTryOn ? KLING_SECRET_KEY_TRYON : KLING_SECRET_KEY;
+  const keyType = isTryOn ? "TRY-ON" : "STYLIZATION";
+
+  console.log(`[KLING_API] 🔑 Using ${keyType} keys for path: ${submitPath}`);
+
+  if (!accessKey || !secretKey) {
+    console.error(`[KLING_API] ❌ ${keyType} API keys are not configured.`);
+    if (isTryOn) {
+      console.error(`[KLING_API] ❌ Ensure KLING_AI_ACCESS_KEY_TRYON and KLING_AI_SECRET_KEY_TRYON are set in your environment.`);
+    } else {
+      console.error(`[KLING_API] ❌ Ensure KLING_AI_ACCESS_KEY and KLING_AI_SECRET_KEY are set in your environment.`);
+    }
+    throw new Error(`Kling AI ${keyType} API keys are not configured.`);
   }
 
   // 🔍 NEW: Enhanced logging for API calls
-  console.log(`[KLING_API] 🔑 API keys check: ACCESS_KEY=${KLING_ACCESS_KEY ? 'SET' : 'MISSING'}, SECRET_KEY=${KLING_SECRET_KEY ? 'SET' : 'MISSING'}`);
+  console.log(`[KLING_API] 🔑 API keys check: ACCESS_KEY=${accessKey ? 'SET' : 'MISSING'}, SECRET_KEY=${secretKey ? 'SET' : 'MISSING'}`);
   console.log(`[KLING_API] 🌐 API Base URL: ${KLING_API_BASE_URL}`);
   console.log(`[KLING_API] 📞 Submit path: ${submitPath}`);
   console.log(`[KLING_API] 📞 Query path prefix: ${queryPathPrefix}`);
   console.log(`[KLING_API] 📦 Request body keys: ${Object.keys(requestBody).join(', ')}`);
 
-  const apiToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
+  const apiToken = getApiToken(accessKey, secretKey);
   let taskId = '';
 
   const maxSubmitRetries = 3;
@@ -155,7 +171,7 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
     attempts++;
     console.log(`[KLING_API] 🔄 Polling attempt #${attempts}/${maxAttempts} for task: ${taskId}`);
 
-    const pollingToken = getApiToken(KLING_ACCESS_KEY, KLING_SECRET_KEY);
+    const pollingToken = getApiToken(accessKey, secretKey);
 
     try {
       const statusCheckResponse = await fetchWithTimeout(`${KLING_API_BASE_URL}${queryPathPrefix}${taskId}`, {
@@ -365,13 +381,13 @@ export async function runVirtualTryOnMultiple(canvasImageUrl: string, garmentIma
 
   // 🔍 NEW: Environment check logging
   console.log(`[ENV_CHECK | Job ${job?.jobId}] NODE_ENV: ${process.env.NODE_ENV}`);
-  console.log(`[ENV_CHECK | Job ${job?.jobId}] Is development environment: ${process.env.NODE_ENV === 'development'}`);
+  console.log(`[ENV_CHECK | Job ${job?.jobId}] MOCK_VIRTUAL_TRYON: ${process.env.MOCK_VIRTUAL_TRYON}`);
   console.log(`[ENV_CHECK | Job ${job?.jobId}] Canvas image: ${canvasImageUrl.substring(0, 100)}...`);
   console.log(`[ENV_CHECK | Job ${job?.jobId}] Garment image: ${garmentImageUrl.substring(0, 100)}...`);
 
-  // 🔍 NEW: Development environment check - Mock virtual try-on
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[DEV_MOCK | Job ${job?.jobId}] 🎭 Development environment detected - Using mock virtual try-on images`);
+  // 🔍 NEW: Controlled mock for virtual try-on via environment flag
+  if (process.env.MOCK_VIRTUAL_TRYON === 'true') {
+    console.log(`[DEV_MOCK | Job ${job?.jobId}] 🎭 MOCK_VIRTUAL_TRYON is 'true' - Using mock virtual try-on images`);
     console.log(`[DEV_MOCK | Job ${job?.jobId}] 🎭 Skipping Kling AI virtual try-on API call (/v1/images/kolors-virtual-try-on)`);
     console.log(`[DEV_MOCK | Job ${job?.jobId}] 🎭 This would have called: ${KLING_API_BASE_URL}${KOLORS_VIRTUAL_TRYON_SUBMIT_PATH}`);
     console.log(`[DEV_MOCK | Job ${job?.jobId}] 🎭 Canvas image: ${canvasImageUrl.substring(0, 100)}...`);
@@ -396,11 +412,11 @@ export async function runVirtualTryOnMultiple(canvasImageUrl: string, garmentIma
     return mockTryOnImageUrls;
   }
 
-  // 🔍 Production environment - Real API call
-  console.log(`[PROD_API | Job ${job?.jobId}] 🚀 Production environment - Making real Kling AI virtual try-on API call`);
-  console.log(`[PROD_API | Job ${job?.jobId}] 🚀 API endpoint: ${KLING_API_BASE_URL}${KOLORS_VIRTUAL_TRYON_SUBMIT_PATH}`);
-  console.log(`[PROD_API | Job ${job?.jobId}] 🚀 Model: kolors-virtual-try-on-v1-5`);
-  console.log(`[PROD_API | Job ${job?.jobId}] 🚀 Processing images for API request...`);
+  // 🔍 Real API call (mocking is disabled)
+  console.log(`[REAL_API | Job ${job?.jobId}] 🚀 MOCK_VIRTUAL_TRYON is not 'true' - Making real Kling AI virtual try-on API call`);
+  console.log(`[REAL_API | Job ${job?.jobId}] 🚀 API endpoint: ${KLING_API_BASE_URL}${KOLORS_VIRTUAL_TRYON_SUBMIT_PATH}`);
+  console.log(`[REAL_API | Job ${job?.jobId}] 🚀 Model: kolors-virtual-try-on-v1-5`);
+  console.log(`[REAL_API | Job ${job?.jobId}] 🚀 Processing images for API request...`);
 
   const [humanImageBase64, garmentImageBase64] = await Promise.all([
     urlToFile(canvasImageUrl, "canvas.jpg", "image/jpeg").then(fileToBase64),
@@ -414,9 +430,9 @@ export async function runVirtualTryOnMultiple(canvasImageUrl: string, garmentIma
     n: 1,
   };
 
-  console.log(`[PROD_API | Job ${job?.jobId}] 🚀 Request body prepared, calling executeKlingTask...`);
-  console.log(`[PROD_API | Job ${job?.jobId}] 🚀 Human image size: ${humanImageBase64.length} characters`);
-  console.log(`[PROD_API | Job ${job?.jobId}] 🚀 Garment image size: ${garmentImageBase64.length} characters`);
+  console.log(`[REAL_API | Job ${job?.jobId}] 🚀 Request body prepared, calling executeKlingTask...`);
+  console.log(`[REAL_API | Job ${job?.jobId}] 🚀 Human image size: ${humanImageBase64.length} characters`);
+  console.log(`[REAL_API | Job ${job?.jobId}] 🚀 Garment image size: ${garmentImageBase64.length} characters`);
 
   const tryOnImageUrls = await executeKlingTask(KOLORS_VIRTUAL_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, requestBody);
 
