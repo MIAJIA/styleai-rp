@@ -19,14 +19,38 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
     console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🌍 Environment: ${process.env.NODE_ENV}`);
     console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 📝 Suggestion index: ${suggestionIndex}`);
 
+    // 🔥 FIX: 添加pipeline运行锁机制，防止重复执行
+    const pipelineLockKey = `pipeline_lock:${jobId}:${suggestionIndex}`;
+    const existingLock = await kv.get(pipelineLockKey);
+    if (existingLock) {
+      console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ⚠️ PIPELINE ALREADY RUNNING - Skipping duplicate execution`);
+      console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ⚠️ Lock found: ${existingLock}`);
+      return;
+    }
+
+    // 设置pipeline运行锁 (5分钟过期)
+    await kv.set(pipelineLockKey, `started_at_${Date.now()}`, { ex: 300 });
+    console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔒 Pipeline lock set for suggestion ${suggestionIndex}`);
+
     job = await kv.get<Job>(jobId);
     if (!job) {
+      // 清理锁
+      await kv.del(pipelineLockKey);
       throw new Error(`Job with ID ${jobId} not found.`);
     }
 
     const suggestionToProcess = job.suggestions[suggestionIndex];
     if (!suggestionToProcess) {
+      // 清理锁
+      await kv.del(pipelineLockKey);
       throw new Error(`Suggestion index ${suggestionIndex} not found in job ${jobId}.`);
+    }
+
+    // 🔥 FIX: 检查建议状态，如果已经在处理中或完成，则跳过
+    if (suggestionToProcess.status === 'succeeded' || suggestionToProcess.status === 'failed') {
+      console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ⚠️ Suggestion ${suggestionIndex} already processed (${suggestionToProcess.status}) - Skipping`);
+      await kv.del(pipelineLockKey);
+      return;
     }
 
     console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 📋 Job details:`);
@@ -90,29 +114,27 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
     console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 Generated ${pipelineResult.imageUrls.length} final images`);
     console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 Final prompt: ${pipelineResult.finalPrompt.substring(0, 100)}...`);
 
-    // --- Update the Job object with the successful result ---
-    job = await kv.get<Job>(jobId); // Re-fetch to ensure we have the latest state
-    if (!job) {
-      throw new Error(`Job with ID ${jobId} disappeared during processing.`);
-    }
+    // Update the suggestion with the results
+    job.suggestions[suggestionIndex] = {
+      ...suggestionToProcess,
+      status: 'succeeded',
+      imageUrls: pipelineResult.imageUrls,
+      finalPrompt: pipelineResult.finalPrompt,
+    };
 
-    job.suggestions[suggestionIndex].status = 'succeeded';
-    job.suggestions[suggestionIndex].imageUrls = pipelineResult.imageUrls;
-    job.updatedAt = Date.now();
-
-    // 🔍 FIX: 更智能的完成状态检查
-    // 对于 simple-scene 模式，只要有一个 suggestion 成功就可以认为 job 完成
-    // 对于其他模式，需要所有 suggestions 都完成
-    const isJobComplete = job.input.generationMode === 'simple-scene'
-      ? job.suggestions.some(s => s.status === 'succeeded')
-      : job.suggestions.every(s => s.status === 'succeeded' || s.status === 'failed');
-
-    if (isJobComplete) {
+    // Check if this is the last suggestion to be processed
+    const allCompleted = job.suggestions.every(s => s.status === 'succeeded' || s.status === 'failed');
+    if (allCompleted) {
       job.status = 'completed';
+      job.updatedAt = Date.now();
+      console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 All suggestions completed. Job marked as completed.`);
+    } else {
+      job.updatedAt = Date.now();
       console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 Job marked as completed (mode: ${job.input.generationMode})`);
     }
 
-    await kv.set(jobId, job);
+    // Save the updated job back to KV
+    await kv.set(job.jobId, job);
     console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] Suggestion ${suggestionIndex} completed successfully.`);
 
     // --- Save the successfully generated look to the database ---
@@ -142,7 +164,16 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
       console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] Failed to save look for suggestion ${suggestionIndex} to DB:`, dbError);
     }
 
+    // 🔥 FIX: 清理pipeline锁
+    await kv.del(pipelineLockKey);
+    console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔓 Pipeline lock cleared for suggestion ${suggestionIndex}`);
+
   } catch (error) {
+    // 🔥 FIX: 出错时也要清理锁
+    const pipelineLockKey = `pipeline_lock:${jobId}:${suggestionIndex}`;
+    await kv.del(pipelineLockKey);
+    console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔓 Pipeline lock cleared due to error`);
+
     console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💥 Background pipeline for suggestion ${suggestionIndex} failed:`, error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
 

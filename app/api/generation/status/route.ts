@@ -70,20 +70,30 @@ export async function GET(request: NextRequest) {
       // 3. Update job status to 'processing' and save back to KV
       job.status = 'processing';
       job.updatedAt = Date.now();
-      await kv.set(job.jobId, job);
-      console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🔄 Job status updated to 'processing' with new suggestions. Ready for image generation.`);
 
-      // Return the updated job immediately. The next poll will trigger image generation.
+      // 🔥 FIX: 立即触发第一个建议的图像生成，避免重复触发
+      if (job.suggestions[0]) {
+        console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🚀 Auto-triggering first suggestion after AI suggestions generated.`);
+        job.suggestions[0].status = 'generating_images';
+
+        // 立即启动pipeline
+        runImageGenerationPipeline(job.jobId, 0);
+        console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🚀 Pipeline started in background for suggestion 0.`);
+      }
+
+      await kv.set(job.jobId, job);
+      console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🔄 Job status updated to 'processing' with pipeline already triggered.`);
+
+      // Return the updated job immediately
       return NextResponse.json(job);
     }
 
-    // Check if the first suggestion is pending and trigger it.
-    // This is the first time we see the job, so we kick off the generation.
-    if (job.suggestions[0]?.status === 'pending') {
-      console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🚀 First suggestion is pending. Triggering image generation for suggestion 0.`);
-      console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🚀 Environment: ${process.env.NODE_ENV}`);
-      console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🚀 Generation mode: ${job.input.generationMode}`);
-      console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🚀 This will now call runImageGenerationPipeline -> Kling AI APIs`);
+    // 🔥 FIX: 只有当job状态仍然是'processing'且第一个建议仍然是'pending'时才触发
+    // 但是我们需要确保这种情况不会发生，因为上面的逻辑已经处理了
+    if (job.status === 'processing' && job.suggestions[0]?.status === 'pending') {
+      console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] ⚠️ REDUNDANT TRIGGER DETECTED - This should not happen!`);
+      console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] ⚠️ First suggestion is still pending after job moved to processing.`);
+      console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🚀 Triggering image generation for suggestion 0 as fallback.`);
 
       job.suggestions[0].status = 'generating_images';
       job.updatedAt = Date.now();
