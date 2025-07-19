@@ -2,6 +2,7 @@ import type React from "react";
 import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import SessionProviderWrapper from "@/components/SessionProviderWrapper";
 
 // Load Inter font
 const inter = Inter({
@@ -42,8 +43,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`h-full ${inter.variable} ${playfair.variable}`}
       suppressHydrationWarning
     >
-      <body className="h-full overflow-x-hidden">
+      <body className="h-full overflow-x-hidden" data-atm-ext-installed="1.29.10">
+      <SessionProviderWrapper>
         <main className="h-full pb-safe">{children}</main>
+      </SessionProviderWrapper>
       </body>
     </html>
   );
