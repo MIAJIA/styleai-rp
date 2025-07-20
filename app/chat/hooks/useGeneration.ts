@@ -110,12 +110,12 @@ export function useGeneration({
             addMessage({
               role: 'ai',
               type: 'text',
-              content: `✨ 这是为你生成的第 ${index + 1} 套搭配的场景预览，即将进行最终的细节处理...`
+              content: `✨ Here's the scene preview for outfit ${index + 1}, working on final details...`
             });
             addMessage({
               type: "loading" as const,
               role: "ai" as const,
-              loadingText: `正在进行最终处理...`,
+              loadingText: `Finalizing your look...`,
               metadata: { isImagePlaceholder: true },
             });
             displayedIntermediateImages.current.add(index);
@@ -146,7 +146,7 @@ export function useGeneration({
           addMessage({
             role: "ai",
             type: "text",
-            content: `🎉 这是为你生成的第 ${index + 1} 套搭配建议！`,
+            content: `🎉 Here's your outfit recommendation ${index + 1}!`,
           });
           displayedFinalImages.current.add(index);
         }
@@ -161,7 +161,7 @@ export function useGeneration({
           addMessage({
             role: "ai",
             type: "text",
-            content: `✅ 任务 ${index + 1} 完成，但似乎没有生成图片。`,
+            content: `✅ Task ${index + 1} completed, but no images were generated.`,
           });
           displayedFinalImages.current.add(index);
         }
