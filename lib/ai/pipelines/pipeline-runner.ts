@@ -6,6 +6,7 @@ import {
   executeTryOnOnlyPipeline,
 } from '@/lib/ai';
 import { saveLookToDB, type PastLook } from '@/lib/database';
+import { KlingBalanceError } from '../services/kling';
 
 /**
  * This is the single, shared background pipeline runner for all image generation tasks.
@@ -175,17 +176,28 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
     console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔓 Pipeline lock cleared due to error`);
 
     console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💥 Background pipeline for suggestion ${suggestionIndex} failed:`, error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
 
-    // 🔍 NEW: Enhanced error logging
-    console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💥 Error type: ${error instanceof Error ? error.constructor.name : 'Unknown'}`);
-    console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💥 Error message: ${errorMessage}`);
-    console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💥 Environment: ${process.env.NODE_ENV}`);
+    let errorMessage: string;
 
-    // Check if this is a balance-related error
-    if (errorMessage.includes('429') || errorMessage.includes('balance') || errorMessage.includes('Account balance not enough')) {
-      console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💰 BALANCE ERROR DETECTED IN PIPELINE!`);
-      console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💰 This is why users see 503 errors - Kling AI account needs recharge`);
+    // 🔍 新增：专门处理余额不足错误
+    if (error instanceof KlingBalanceError) {
+      console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💰 BALANCE ERROR in pipeline!`);
+      errorMessage = "我们的设计师团队暂时离开了一下，马上就回来！请稍等片刻再试试～ ✨";
+    } else {
+      const rawErrorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      errorMessage = rawErrorMessage;
+
+      // 🔍 NEW: Enhanced error logging for non-balance errors
+      console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💥 Error type: ${error instanceof Error ? error.constructor.name : 'Unknown'}`);
+      console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💥 Error message: ${rawErrorMessage}`);
+      console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💥 Environment: ${process.env.NODE_ENV}`);
+
+      // Check if this is a balance-related error (fallback check)
+      if (rawErrorMessage.includes('429') || rawErrorMessage.includes('balance') || rawErrorMessage.includes('Account balance not enough')) {
+        console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💰 BALANCE ERROR DETECTED IN PIPELINE!`);
+        console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💰 This is why users see 503 errors - Kling AI account needs recharge`);
+        errorMessage = "我们的设计师团队暂时离开了一下，马上就回来！请稍等片刻再试试～ ✨";
+      }
     }
 
     // Update the specific suggestion with the error

@@ -43,7 +43,21 @@ export function useGeneration({
   const onPollingError = useCallback(
     (error: Error) => {
       console.error("[useGeneration | onPollingError] Polling failed:", error)
-      const errorMessage = `Opps... something went wrong. Polling failed with status: ${error.message.replace('Polling failed with status: ', '')}`;
+
+      // 🔍 改进：检查是否是友好的错误消息（来自我们的 API）
+      let errorMessage: string;
+
+      // 如果错误消息中包含我们设置的友好消息，直接使用
+      if (error.message.includes('我们的设计师团队暂时离开了一下')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('503')) {
+        // 针对 503 错误提供友好提示
+        errorMessage = "服务暂时不可用，我们的团队正在努力恢复中～ ✨";
+      } else {
+        // 其他错误使用原有逻辑
+        errorMessage = `Oops... something went wrong. ${error.message.replace('Polling failed with status: ', '')}`;
+      }
+
       setPollingError(errorMessage);
       replaceLastLoadingMessage({
         role: "ai",
@@ -303,14 +317,30 @@ export function useGeneration({
       console.log("[useGeneration | startGeneration]  получили  получили jobId:", result.jobId, ". Triggering polling.");
       setJobId(result.jobId);
     } catch (error: any) {
-      const errorMessage =
-        error.message || "An unexpected error occurred while starting the generation."
-      console.error("[useGeneration | startGeneration] 💥 Error during generation start:", errorMessage)
+      let errorMessage: string;
+      const rawMessage = error.message || "An unexpected error occurred while starting the generation.";
+
+      console.error("[useGeneration | startGeneration] 💥 Error during generation start:", rawMessage);
+
+      // 🔍 改进：检查是否是友好的错误消息
+      if (rawMessage.includes('我们的设计师团队暂时离开了一下')) {
+        // 如果是我们设置的友好消息，提取实际的友好消息部分
+        const friendlyMatch = rawMessage.match(/我们的设计师团队暂时离开了一下[^。]*。[^✨]*✨/);
+        errorMessage = friendlyMatch ? friendlyMatch[0] : rawMessage;
+      } else if (rawMessage.includes('503')) {
+        // 针对 503 错误提供友好提示
+        errorMessage = "服务暂时不可用，我们的团队正在努力恢复中～ ✨";
+      } else {
+        // 其他错误使用原有逻辑，但去掉冗余的技术信息
+        errorMessage = rawMessage.includes('Failed to start generation. Server responded')
+          ? rawMessage.split(': ').slice(1).join(': ') || "生成服务遇到了一些问题，请稍后再试"
+          : rawMessage;
+      }
 
       replaceLastLoadingMessage({
         type: "text",
         role: "ai",
-        content: `Sorry, something went wrong: ${errorMessage}`,
+        content: errorMessage,
       })
       setIsGenerating(false)
       setCurrentStep("error")

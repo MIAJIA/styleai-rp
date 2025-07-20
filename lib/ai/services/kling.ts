@@ -7,6 +7,14 @@ import {
 } from "@/lib/prompts";
 import { Job, Suggestion } from "../types";
 
+// 🔍 新增：专门的余额不足错误类
+export class KlingBalanceError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "KlingBalanceError";
+  }
+}
+
 // --- Kling AI ---
 const KLING_ACCESS_KEY = process.env.KLING_AI_ACCESS_KEY;
 const KLING_SECRET_KEY = process.env.KLING_AI_SECRET_KEY;
@@ -151,6 +159,7 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
           console.error(`${KLING_API_PREFIX} 💰 BALANCE ERROR DETECTED! Status 429 - Account balance not enough`);
           console.error(`${KLING_API_PREFIX} 💰 This is the exact error that causes the 503 response to users`);
           console.error(`${KLING_API_PREFIX} 💰 Error details: ${errorBody}`);
+          throw new KlingBalanceError(`Kling AI ${keyType} API balance error: ${errorBody}`);
         }
 
         // 🔍 NEW: 输出完整的错误响应

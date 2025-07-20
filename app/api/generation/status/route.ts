@@ -6,6 +6,7 @@ import {
   getStyleSuggestionFromAI,
   type Suggestion,
 } from '@/lib/ai';
+import { KlingBalanceError } from '@/lib/ai/services/kling';
 
 
 export async function GET(request: NextRequest) {
@@ -126,13 +127,30 @@ export async function GET(request: NextRequest) {
     console.error(`[API_STATUS | ${jobId.slice(-8)}] 💥 Error type: ${error instanceof Error ? error.constructor.name : 'Unknown'}`);
     console.error(`[API_STATUS | ${jobId.slice(-8)}] 💥 Environment: ${process.env.NODE_ENV}`);
 
-    // Check if this is a balance-related error
-    if (error instanceof Error && (error.message.includes('429') || error.message.includes('balance') || error.message.includes('Account balance not enough'))) {
-      console.error(`[API_STATUS | ${jobId.slice(-8)}] 💰 BALANCE ERROR DETECTED IN STATUS API!`);
-      console.error(`[API_STATUS | ${jobId.slice(-8)}] 💰 This is why users see 503 errors - Kling AI account needs recharge`);
+    let errorMessage: string;
+    let statusCode = 500;
+
+    // 🔍 新增：专门处理余额不足错误
+    if (error instanceof KlingBalanceError) {
+      console.error(`[API_STATUS | ${jobId.slice(-8)}] 💰 BALANCE ERROR in API status!`);
+      errorMessage = "我们的设计师团队暂时离开了一下，马上就回来！请稍等片刻再试试～ ✨";
+      statusCode = 503; // Service temporarily unavailable
+    } else {
+      const rawErrorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
+      errorMessage = `Failed to process job status: ${rawErrorMessage}`;
+
+      // Check if this is a balance-related error (fallback check)
+      if (rawErrorMessage.includes('429') || rawErrorMessage.includes('balance') || rawErrorMessage.includes('Account balance not enough')) {
+        console.error(`[API_STATUS | ${jobId.slice(-8)}] 💰 BALANCE ERROR DETECTED IN STATUS API!`);
+        console.error(`[API_STATUS | ${jobId.slice(-8)}] 💰 This is why users see 503 errors - Kling AI account needs recharge`);
+        errorMessage = "我们的设计师团队暂时离开了一下，马上就回来！请稍等片刻再试试～ ✨";
+        statusCode = 503;
+      }
     }
 
-    const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
-    return NextResponse.json({ error: 'Failed to process job status', details: errorMessage }, { status: 500 });
+    return NextResponse.json({
+      error: errorMessage,
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: statusCode });
   }
 }

@@ -8,6 +8,7 @@ import {
   type Suggestion,
   type GenerationMode,
 } from '@/lib/ai';
+import { KlingBalanceError } from '@/lib/ai/services/kling'; // 🔍 新增导入
 import { type OnboardingData } from '@/lib/onboarding-storage';
 
 export async function POST(request: Request) {
@@ -91,7 +92,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ jobId });
   } catch (error) {
     console.error('Error starting generation job:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return NextResponse.json({ error: 'Failed to start generation job', details: errorMessage }, { status: 500 });
+
+    let errorMessage: string;
+    let statusCode = 500;
+
+    // 🔍 新增：专门处理余额不足错误
+    if (error instanceof KlingBalanceError) {
+      console.error('[GENERATION_START] 💰 BALANCE ERROR in generation start!');
+      errorMessage = "我们的设计师团队暂时离开了一下，马上就回来！请稍等片刻再试试～ ✨";
+      statusCode = 503; // Service temporarily unavailable
+    } else {
+      const rawErrorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      errorMessage = `Failed to start generation job: ${rawErrorMessage}`;
+
+      // Check if this is a balance-related error (fallback check)
+      if (rawErrorMessage.includes('429') || rawErrorMessage.includes('balance') || rawErrorMessage.includes('Account balance not enough')) {
+        console.error('[GENERATION_START] 💰 BALANCE ERROR DETECTED in generation start!');
+        errorMessage = "我们的设计师团队暂时离开了一下，马上就回来！请稍等片刻再试试～ ✨";
+        statusCode = 503;
+      }
+    }
+
+    return NextResponse.json({
+      error: errorMessage,
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: statusCode });
   }
 }
