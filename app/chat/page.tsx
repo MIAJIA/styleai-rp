@@ -176,14 +176,36 @@ export default function ChatPage() {
       const formattedItems = formatItems(outfit.items)
       // Support backward compatibility: use explanation if available, fallback to style_summary for old data
       const outfitDescription = outfit.explanation || outfit.style_summary || "A stylish outfit designed for you."
-      const messageContent = `### ${outfit.outfit_title}\n\n${outfitDescription}\n\n---\n\n${formattedItems}`
+
+      // 🔍 NEW: Only show main description first, with option to expand details
+      const messageContent = `### ${outfit.outfit_title}\n\n${outfitDescription}`
 
       addMessage({
         type: "text",
         role: "ai",
         content: messageContent,
-        metadata: { waitingForImage: true },
+        metadata: {
+          waitingForImage: true,
+          outfitDetails: formattedItems, // Store details for later expansion
+          isCollapsed: true,
+        },
       })
+
+      // Add quick reply button to show details
+      if (formattedItems && formattedItems.trim()) {
+        addMessage({
+          type: "quick-reply",
+          role: "ai",
+          content: "", // No additional content needed
+          actions: [
+            {
+              id: `show-details-${Date.now()}`,
+              label: "👗 Show Outfit Details",
+              type: "show-details",
+            },
+          ],
+        })
+      }
 
       addMessage({
         type: "loading" as const,
@@ -307,6 +329,55 @@ export default function ChatPage() {
           // Delay startGeneration slightly to allow state to update
           setTimeout(() => startGeneration(), 50)
         }
+      } else if (action.type === "show-details") {
+        console.log("[ChatPage] User clicked 'Show Details' quick reply.")
+
+        // Find the message with outfit details
+        setMessages(prev => {
+          const newMessages = [...prev]
+
+          // Replace the quick reply with a user message
+          const qrIndex = newMessages.findIndex(m => m.actions?.some(a => a.id === action.id))
+          if (qrIndex !== -1) {
+            newMessages[qrIndex] = {
+              id: newMessages[qrIndex].id,
+              role: "user",
+              type: "text",
+              content: action.label,
+              timestamp: new Date(),
+            }
+          }
+
+          // Find the message with outfitDetails and display them
+          const detailsMessageIndex = newMessages.findIndex(m =>
+            m.metadata?.outfitDetails && m.metadata?.isCollapsed
+          )
+
+          if (detailsMessageIndex !== -1 && newMessages[detailsMessageIndex].metadata?.outfitDetails) {
+            const outfitDetails = newMessages[detailsMessageIndex].metadata.outfitDetails
+
+            // Add the detailed information as a new AI message
+            const detailsMessage = {
+              id: `details-${Date.now()}`,
+              role: "ai" as const,
+              type: "text" as const,
+              content: `**Outfit Details:**\n\n${outfitDetails}`,
+              timestamp: new Date(),
+            }
+            newMessages.push(detailsMessage)
+
+            // Update the original message to mark it as expanded
+            newMessages[detailsMessageIndex] = {
+              ...newMessages[detailsMessageIndex],
+              metadata: {
+                ...newMessages[detailsMessageIndex].metadata,
+                isCollapsed: false,
+              }
+            }
+          }
+
+          return newMessages
+        })
       }
     },
     [setMessages, startGeneration],

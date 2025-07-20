@@ -3,7 +3,7 @@ import { ProductInfo } from "../components/product-card"
 export interface QuickReplyAction {
   id: string
   label: string
-  type: "start-generation" | "navigate"
+  type: "start-generation" | "navigate" | "show-details"
 }
 
 // Enhanced Chat message type definition with generation support
@@ -42,6 +42,9 @@ export type ChatMessage = {
     isOutfitPreview?: boolean
     isFallback?: boolean
     isStyledImage?: boolean // Flag to identify styled images
+    // 🔍 NEW: Support for collapsible outfit details
+    outfitDetails?: string
+    isCollapsed?: boolean
   }
 }
 
