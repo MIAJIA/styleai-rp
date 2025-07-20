@@ -1,11 +1,9 @@
 import { kv } from '@vercel/kv';
-import {
-  type Job,
-  executeAdvancedScenePipeline,
-  executeSimpleScenePipelineV2,
-  executeTryOnOnlyPipeline,
-} from '@/lib/ai';
 import { saveLookToDB, type PastLook } from '@/lib/database';
+import { type Job } from '../types';
+import { executeAdvancedScenePipeline } from './advanced-scene';
+import { executeSimpleScenePipelineV2 } from './simple-scene';
+import { executeTryOnOnlyPipeline } from './try-on-only';
 
 /**
  * This is the single, shared background pipeline runner for all image generation tasks.
@@ -88,20 +86,35 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
       case 'tryon-only':
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔀 Executing TRY-ON ONLY pipeline`);
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔀 This will call: runVirtualTryOnMultiple -> /v1/images/kolors-virtual-try-on`);
-        pipelineResult = await executeTryOnOnlyPipeline(pipelineAdapter as any);
+        // executeTryOnOnlyPipeline expects the full job object with specific structure
+        const tryOnJobAdapter = {
+          ...job,
+          humanImage: job.input.humanImage,
+          garmentImage: job.input.garmentImage,
+          suggestion: suggestionToProcess,
+        };
+        pipelineResult = await executeTryOnOnlyPipeline(tryOnJobAdapter as any);
         break;
       case 'simple-scene':
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔀 Executing SIMPLE SCENE pipeline`);
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔀 This will call: runStylizationMultiple -> /v1/images/generations`);
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔀 Then call: runVirtualTryOnMultiple -> /v1/images/kolors-virtual-try-on`);
-        pipelineResult = await executeSimpleScenePipelineV2(pipelineAdapter as any);
+        // executeSimpleScenePipelineV2 expects the LegacyJobForPipeline format
+        pipelineResult = await executeSimpleScenePipelineV2(pipelineAdapter);
         break;
       case 'advanced-scene':
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔀 Executing ADVANCED SCENE pipeline`);
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔀 This will call: runStylizationMultiple -> /v1/images/generations`);
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔀 Then call: runVirtualTryOnMultiple -> /v1/images/kolors-virtual-try-on`);
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔀 Then call: runFaceSwap -> Face replacement API`);
-        pipelineResult = await executeAdvancedScenePipeline(pipelineAdapter as any);
+        // executeAdvancedScenePipeline expects the full job object with specific structure
+        const advancedJobAdapter = {
+          ...job,
+          humanImage: job.input.humanImage,
+          garmentImage: job.input.garmentImage,
+          suggestion: suggestionToProcess,
+        };
+        pipelineResult = await executeAdvancedScenePipeline(advancedJobAdapter as any);
         break;
       default:
         throw new Error(`Unknown generation mode: ${job.input.generationMode}`);
