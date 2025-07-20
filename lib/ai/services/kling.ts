@@ -57,7 +57,7 @@ const buildStylizeRequestBody = (
     case 'kling-v1-5':
       return {
         ...baseBody,
-        image_reference: "subject",// "face" or "subject"?
+        image_reference: "face",// "face" or "subject"?
         human_fidelity: 0.8,
         image_fidelity: 0.5,
         n: 1,// number of images to generate
