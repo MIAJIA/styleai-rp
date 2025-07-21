@@ -47,6 +47,7 @@ export interface StyleSuggestionInput {
   occasion: string;
   userProfile?: OnboardingData; // optional but encouraged for better personalization
   stylePrompt?: string; // 🔍 新增：场景风格提示
+  customPrompt?: string; // 🔍 新增：用户自定义需求
 }
 
 // This interface needs to be in sync with the one in the status route and the frontend

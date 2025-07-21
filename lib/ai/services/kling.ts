@@ -348,34 +348,27 @@ export async function runStylizationMultiple(
   // 🔍 UNIFIED PROMPT CONSTRUCTION: 统一的 prompt 构建逻辑，明确优先级
   console.log(`${KLING_PROMPT_PREFIX} 🔧 Starting unified prompt construction...`);
 
-  // 1️⃣ 最高优先级：用户自定义 prompt
-  if (job?.input.customPrompt && job.input.customPrompt.trim()) {
-    finalPrompt = job.input.customPrompt.trim();
-    console.log(`${KLING_PROMPT_PREFIX} ✅ Using custom prompt (highest priority)`);
-  }
-  // 2️⃣ 次高优先级：AI 生成的 image_prompt
-  else if (suggestion?.styleSuggestion?.image_prompt) {
+  // 1️⃣ 最高优先级：AI 生成的 image_prompt
+  if (suggestion?.styleSuggestion?.image_prompt) {
     finalPrompt = suggestion.styleSuggestion.image_prompt;
-    console.log(`${KLING_PROMPT_PREFIX} ✅ Using AI-generated image_prompt`);
+    console.log(`${KLING_PROMPT_PREFIX} ✅ Using AI-generated image_prompt (highest priority)`);
   }
-  // 3️⃣ 中等优先级：根据 outfit 详情构建
+  // 2️⃣ 次高优先级：根据 outfit 详情构建
   else if (suggestion?.styleSuggestion?.outfit_suggestion) {
     const outfitDetails = suggestion.styleSuggestion.outfit_suggestion;
     const outfitDescription = outfitDetails.explanation || outfitDetails.style_summary || "A stylish outfit";
     finalPrompt = `${outfitDetails.outfit_title || "Stylish Look"}. ${outfitDescription}`;
     console.log(`${KLING_PROMPT_PREFIX} ✅ Using outfit details fallback`);
   }
-  // 4️⃣ 最低优先级：默认 fallback
+  // 3️⃣ 最低优先级：默认 fallback
   else {
     finalPrompt = "A full-body shot of a person in a stylish outfit, standing in a visually appealing, realistic setting. The image is well-lit, with a clear focus on the person and their clothing. The background is a real-world scene, like a chic city street, a modern interior, or a scenic outdoor location. The overall aesthetic is fashionable, clean, and high-quality.";
     console.log(`${KLING_PROMPT_PREFIX} ⚠️ Using default fallback prompt`);
   }
 
-  // 🔍 UNIFIED FORMATTING: 统一添加格式描述（只有非 custom prompt 才添加）
-  if (!job?.input.customPrompt || !job.input.customPrompt.trim()) {
-    finalPrompt = `${finalPrompt}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
-    console.log(`${KLING_PROMPT_PREFIX} ✅ Added format description and realism block`);
-  }
+  // 🔍 UNIFIED FORMATTING: 统一添加格式描述
+  finalPrompt = `${finalPrompt}. ${IMAGE_FORMAT_DESCRIPTION} ${STRICT_REALISM_PROMPT_BLOCK}`;
+  console.log(`${KLING_PROMPT_PREFIX} ✅ Added format description and realism block`);
 
   // 🔍 PROMPT VALIDATION: 长度检查和日志
   if (finalPrompt.length > 2500) {

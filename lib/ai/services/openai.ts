@@ -64,6 +64,7 @@ export async function getStyleSuggestionFromAI(
     occasion,
     userProfile,
     stylePrompt, // 🔍 新增：接收 stylePrompt 参数
+    customPrompt, // 🔍 新增：接收 customPrompt 参数
   }: StyleSuggestionInput,
   options: GetStyleSuggestionOptions = {}
 ): Promise<any[]> {
@@ -80,6 +81,12 @@ export async function getStyleSuggestionFromAI(
   console.log(`${OPENAI_LOG_PREFIX} 🎯 Received stylePrompt:`, stylePrompt ? 'YES' : 'NO');
   if (stylePrompt) {
     console.log(`${OPENAI_LOG_PREFIX} 📝 StylePrompt content (first 150 chars):`, stylePrompt.substring(0, 150));
+  }
+
+  // 🔍 LOG: 确认 customPrompt 接收
+  console.log(`${OPENAI_LOG_PREFIX} 🎯 Received customPrompt:`, customPrompt ? 'YES' : 'NO');
+  if (customPrompt) {
+    console.log(`${OPENAI_LOG_PREFIX} 📝 CustomPrompt content (first 150 chars):`, customPrompt.substring(0, 150));
   }
 
   // do not change userProfile, only update the log, do not need to log the fullbodyphoto in userProfile
@@ -160,6 +167,12 @@ Build the outfit around this "KEY PIECE" and make sure the KEY PIECE must be inc
     const stylePreferenceSection = `# Style Preference
 ${getStylePreferences()}`;
 
+    // 🔍 NEW: Build user requirement section if customPrompt exists
+    const userRequirementSection = customPrompt && customPrompt.trim()
+      ? `
+**User's Requirement:** User's requirement is ${customPrompt.trim()}. Besides the key piece, consider the user's requirement when putting together the outfit.`
+      : '';
+
     const userMessageText = `Please provide styling suggestions based on the following information. User's photo is the first image, and the Key Piece user wants to style is the second.
 
 **IMPORTANT: Please first analyze the user in the first image to understand the user's features, then build the outfit around the Key Piece in the second image according to the user's features and the occasion.**
@@ -170,7 +183,7 @@ ${essentialItemSection}
 
 ${occasionSection}
 
-${stylePreferenceSection}
+${stylePreferenceSection}${userRequirementSection}
 
 **Styling Instructions:**
 - Generate ${count} different and distinct styling suggestions. Each suggestion should feature a distinct style and color strategy that suits the user and complements the key piece for the occasion.

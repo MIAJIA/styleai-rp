@@ -51,7 +51,8 @@ export async function GET(request: NextRequest) {
           garmentImageUrl: job.input.garmentImage.url,
           occasion: job.input.occasion,
           userProfile: job.input.userProfile,
-          stylePrompt: job.input.stylePrompt, // 🔍 新增：传递 stylePrompt
+          stylePrompt: job.input.stylePrompt, // �� 新增：传递 stylePrompt
+          customPrompt: job.input.customPrompt, // 🔍 新增：传递 customPrompt
         },
         { count: 3 }
       );
