@@ -322,12 +322,12 @@ export default function HomePage() {
             {/* Add Step 5 for custom prompt input */}
             <div className="space-y-3">
               <h3 className="text-base font-semibold tracking-tight text-center">
-                <span className="text-primary font-bold">Step 5 (Optional):</span> Custom Stylization Prompt
+                <span className="text-primary font-bold">Step 5 (Optional):</span> Describe any specific add-ons or styling ideas
               </h3>
               <textarea
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
-                placeholder="Enter custom prompt for stylization..."
+                placeholder='(e.g. "add a white hat," "match with red heels," "include pearl earrings")'
                 className="w-full p-2 border border-gray-300 rounded-md"
                 rows={3}
               />
