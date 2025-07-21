@@ -42,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`h-full ${inter.variable} ${playfair.variable}`}
       suppressHydrationWarning
     >
-      <body className="h-full overflow-x-hidden">
+      <body className="h-full overflow-x-hidden" suppressHydrationWarning>
         <main className="h-full pb-safe">{children}</main>
       </body>
     </html>

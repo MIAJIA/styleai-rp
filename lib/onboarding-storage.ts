@@ -39,6 +39,7 @@ export interface OnboardingData {
 
 export const safeSetLocalStorage = (key: string, value: string): boolean => {
   try {
+    if (typeof window === 'undefined') return false; // Skip on server-side
     localStorage.setItem(key, value);
     return true;
   } catch (error) {
@@ -49,6 +50,7 @@ export const safeSetLocalStorage = (key: string, value: string): boolean => {
 
 export const safeGetLocalStorage = (key: string): string | null => {
   try {
+    if (typeof window === 'undefined') return null; // Skip on server-side
     return localStorage.getItem(key);
   } catch (error) {
     console.error(`Failed to read from localStorage (${key}):`, error);
@@ -198,8 +200,56 @@ export const getUserPhotos = () => {
 };
 
 export const clearOnboardingData = () => {
+  if (typeof window === 'undefined') return; // Skip on server-side
   localStorage.removeItem("styleMe_onboarding_data");
   localStorage.removeItem("styleMe_fullBodyPhoto");
   localStorage.removeItem("styleMe_user_profile");
   localStorage.removeItem("styleMe_onboarding_completed");
+};
+
+// Check if user has completed onboarding process
+export const hasCompletedOnboarding = (): boolean => {
+  try {
+    const profileData = loadCompleteOnboardingData();
+
+    // Same logic as used in my-style page
+    return profileData && (
+      (profileData.stylePreferences?.length || 0) > 0 ||
+      Object.keys(profileData).length > 2
+    );
+  } catch (error) {
+    console.error("Error checking onboarding status:", error);
+    return false;
+  }
+};
+
+// Check if user has completed onboarding and return detailed status
+export const getOnboardingStatus = (): {
+  isCompleted: boolean;
+  hasProfile: boolean;
+  hasPhotos: boolean;
+  hasStylePreferences: boolean;
+  profileKeys: number;
+} => {
+  try {
+    const profileData = loadCompleteOnboardingData();
+    const photos = getUserPhotos();
+
+    return {
+      isCompleted: hasCompletedOnboarding(),
+      hasProfile: !!profileData,
+      hasPhotos: !!(photos.fullBodyPhoto || profileData?.fullBodyPhoto),
+      hasStylePreferences: (profileData?.stylePreferences?.length || 0) > 0,
+      profileKeys: Object.keys(profileData || {}).length,
+    };
+  } catch (error) {
+    console.error("Error getting onboarding status:", error);
+    return {
+      isCompleted: false,
+      hasProfile: false,
+      hasPhotos: false,
+      hasStylePreferences: false,
+      profileKeys: 0,
+    };
+  }
 };

@@ -25,9 +25,14 @@ import {
   Wine,
   Plane,
   Crown,
+  User,
+  Camera,
+  X,
+  ArrowRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { hasCompletedOnboarding, getOnboardingStatus } from "@/lib/onboarding-storage";
 
 const styles = [
   { id: "work", name: "Work", icon: Briefcase, color: "bg-slate-100 text-slate-900" },
@@ -127,9 +132,58 @@ export default function HomePage() {
   const [occasion, setOccasion] = useState("work");
   const [generationMode, setGenerationMode] = useState<"tryon-only" | "simple-scene" | "advanced-scene">("simple-scene");
   const [customPrompt, setCustomPrompt] = useState<string>("");
+
+  // Onboarding check states
+  const [isMounted, setIsMounted] = useState(false);
+  const [showOnboardingPrompt, setShowOnboardingPrompt] = useState(false);
+  const [hasUserCompletedOnboarding, setHasUserCompletedOnboarding] = useState(true);
+  const [onboardingStatus, setOnboardingStatus] = useState<{
+    isCompleted: boolean;
+    hasProfile: boolean;
+    hasPhotos: boolean;
+    hasStylePreferences: boolean;
+    profileKeys: number;
+  }>({
+    isCompleted: true,
+    hasProfile: false,
+    hasPhotos: false,
+    hasStylePreferences: false,
+    profileKeys: 0,
+  });
+
   const router = useRouter();
 
   const hasRequiredImages = Boolean(selfiePreview && clothingPreview);
+
+  // Mount effect to prevent hydration issues
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Check onboarding status on component mount (client-side only)
+  useEffect(() => {
+    if (!isMounted) return; // Only run on client side after mount
+
+    const checkOnboardingStatus = () => {
+      const isCompleted = hasCompletedOnboarding();
+      const status = getOnboardingStatus();
+
+      setHasUserCompletedOnboarding(isCompleted);
+      setOnboardingStatus(status);
+
+      // Show onboarding prompt if user hasn't completed onboarding
+      // and hasn't dismissed it in this session
+      if (!isCompleted) {
+        const hasBeenDismissed = sessionStorage.getItem('onboarding_prompt_dismissed');
+
+        if (!hasBeenDismissed) {
+          setShowOnboardingPrompt(true);
+        }
+      }
+    };
+
+    checkOnboardingStatus();
+  }, [isMounted]);
 
   const handleSelfieUpload = (file: File) => {
     setSelfieFile(file);
@@ -213,6 +267,22 @@ export default function HomePage() {
     // Navigate to Chat page
     console.log('[MAIN DEBUG] Navigating to /chat');
     router.push('/chat');
+  };
+
+  // Handle onboarding prompt actions
+  const handleCompleteOnboarding = () => {
+    setShowOnboardingPrompt(false);
+    router.push('/onboarding');
+  };
+
+  const handleDismissOnboardingPrompt = () => {
+    setShowOnboardingPrompt(false);
+    sessionStorage.setItem('onboarding_prompt_dismissed', 'true');
+  };
+
+  const handleGoToMyStyle = () => {
+    setShowOnboardingPrompt(false);
+    router.push('/my-style');
   };
 
   return (
@@ -399,6 +469,91 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {/* Onboarding Prompt Modal */}
+      {showOnboardingPrompt && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full mx-4 relative">
+            {/* Close button */}
+            <button
+              onClick={handleDismissOnboardingPrompt}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-400" />
+            </button>
+
+            <div className="p-6 pt-8 text-center">
+              {/* Icon */}
+              <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="w-8 h-8 text-white" />
+              </div>
+
+              {/* Title */}
+              <h2 className="text-xl font-bold text-gray-800 mb-2">
+                Create Your Style Profile
+              </h2>
+
+              {/* Description */}
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                Get personalized styling recommendations by completing your style profile first. It only takes 2-3 minutes!
+              </p>
+
+              {/* Status indicators */}
+              <div className="bg-gray-50 rounded-lg p-3 mb-6 text-left">
+                <div className="text-sm space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${onboardingStatus.hasPhotos ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                    <span className={onboardingStatus.hasPhotos ? 'text-green-600' : 'text-gray-500'}>
+                      Upload your photo
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${onboardingStatus.hasStylePreferences ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                    <span className={onboardingStatus.hasStylePreferences ? 'text-green-600' : 'text-gray-500'}>
+                      Set style preferences
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${onboardingStatus.isCompleted ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                    <span className={onboardingStatus.isCompleted ? 'text-green-600' : 'text-gray-500'}>
+                      Complete profile
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="space-y-3">
+                <Button
+                  onClick={handleCompleteOnboarding}
+                  className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full font-semibold py-3"
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  Complete Style Profile
+                </Button>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleGoToMyStyle}
+                    variant="outline"
+                    className="flex-1 rounded-full border-gray-200 text-gray-600 hover:bg-gray-50"
+                  >
+                    View Profile
+                  </Button>
+
+                  <Button
+                    onClick={handleDismissOnboardingPrompt}
+                    variant="ghost"
+                    className="flex-1 rounded-full text-gray-400 hover:bg-gray-50"
+                  >
+                    Skip for now
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* iOS Tab Bar */}
       <IOSTabBar />
