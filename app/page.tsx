@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import CompactUpload from "./components/compact-upload";
 import FashionHeader from "./components/fashion-header";
@@ -122,6 +123,7 @@ const saveLook = (look: PastLook) => {
 };
 
 export default function HomePage() {
+  const { data: session, status } = useSession();
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
   const [clothingFile, setClothingFile] = useState<File | null>(null);
   const [selfiePreview, setSelfiePreview] = useState<string>("");
@@ -231,6 +233,13 @@ export default function HomePage() {
   const handleStartGeneration = () => {
     if (!hasRequiredImages) {
       alert("Please select both a photo and garment to continue.");
+      return;
+    }
+
+    // Check if user is logged in
+    if (!session) {
+      alert("Please log in to access the AI stylist feature.");
+      router.push('/login');
       return;
     }
 
@@ -412,11 +421,14 @@ export default function HomePage() {
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Sparkles className="w-5 h-5" />
-                    <span>Start Generation</span>
+                    <span>{session ? "Start Generation" : "Login to Start Generation"}</span>
                   </div>
                 </button>
                 <p className="text-xs text-gray-500 text-center">
-                  This will take you to the chat where your styling magic happens!
+                {session 
+                    ? "This will take you to the chat where your styling magic happens!"
+                    : "Please log in to access the AI stylist and start generating your looks!"
+                  }
                 </p>
               </div>
             )}
