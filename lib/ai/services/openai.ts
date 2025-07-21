@@ -98,15 +98,16 @@ export async function getStyleSuggestionFromAI(
     // summary of the user's profile (e.g., body type, style preferences, skin tone).
     // This will significantly reduce token consumption and improve AI comprehension.
     // This optimization is pending a planned refactor of the OnboardingData structure.
-    const userProfileSection = ""; // Temporarily disabled to reduce tokens
+    const userProfileSection = `# User Profile
+Analyze the user's ethnicity, skin tone, body type, body size, and face shape in the first attached image.
+Make sure the outfit recommendations are suitable for the user, helping them to highlight their strengths and downplay their weaknesses.
+`; // Updated to use actual analysis instead of being temporarily disabled
 
     // Build enhanced essential item details with context
-    const essentialItemSection = `# Essential Item
-The garment in the second attached image is the "Essential Item" that must be incorporated into the outfit suggestion.
-
-**Item Context:**
-- This is the key piece that the user wants to style around
-- Consider the item's style, color, fabric, and formality level when building the complete outfit`;
+    const essentialItemSection = `# KEY PIECE
+Analyze the Key Piece's style, color, material, silhouette and formality level in the second attached image.
+Build the outfit around this "KEY PIECE" and make sure the KEY PIECE must be incorporated into the outfit suggestion.
+`;
 
     // 🔍 更新：Build occasion details with styling context and specific stylePrompt
     const occasionSection = stylePrompt
@@ -159,9 +160,9 @@ The garment in the second attached image is the "Essential Item" that must be in
     const stylePreferenceSection = `# Style Preference
 ${getStylePreferences()}`;
 
-    const userMessageText = `Please provide styling suggestions based on the following information. My photo is the first image, and the garment is the second.
+    const userMessageText = `Please provide styling suggestions based on the following information. User's photo is the first image, and the Key Piece user wants to style is the second.
 
-**IMPORTANT: Please first analyze the person in the first image to determine their gender/presentation style, then design the outfit accordingly for masculine or feminine styling as appropriate.**
+**IMPORTANT: Please first analyze the user in the first image to understand the user's features, then build the outfit around the Key Piece in the second image according to the user's features and the occasion.**
 
 ${userProfileSection}
 
@@ -172,10 +173,8 @@ ${occasionSection}
 ${stylePreferenceSection}
 
 **Styling Instructions:**
-- Generate ${count} different and distinct styling suggestions. Each suggestion should explore a unique style direction (e.g., one classic, one trendy, one edgy).
-- For each suggestion, analyze the person's gender presentation from the first image and design the complete outfit to match their masculine or feminine style preferences.
-- Ensure all clothing items, accessories, and styling choices are appropriate for their gender presentation.
-- Each outfit should feel natural and authentic to how they present themselves.`;
+- Generate ${count} different and distinct styling suggestions. Each suggestion should feature a distinct style and color strategy that suits the user and complements the key piece for the occasion.
+`;
 
     // 🔍 LOG: Final token estimation including text
     const textTokenEstimate = Math.ceil(userMessageText.length / 4); // Rough estimate: 4 chars per token
@@ -373,7 +372,7 @@ ${stylePreferenceSection}
 
       // Check if image_prompt is missing or malformed
       if (!image_prompt || typeof image_prompt !== 'string') {
-        console.warn(`${OPENAI_LOG_PREFIX} [DATA_FIX] Suggestion ${index} missing or invalid image_prompt, generating fallback`);
+        console.warn(`‼️‼️‼️${OPENAI_LOG_PREFIX} [DATA_FIX] Suggestion ${index} missing or invalid image_prompt, generating fallback`);
 
         // Generate a fallback image_prompt from outfit details
         const fallbackPrompt = generateFallbackImagePrompt(outfit_suggestion);
@@ -405,7 +404,7 @@ ${stylePreferenceSection}
       return suggestion;
     });
 
-    console.log(`${OPENAI_LOG_PREFIX} ✅ OpenAI Suggestion:`, JSON.stringify(validatedResult, null, 2));
+    console.log(`${OPENAI_LOG_PREFIX} [AI DEBUG] Cleaned OpenAI Suggestion:`, JSON.stringify({ suggestions: cleanedSuggestions }, null, 2));
     console.log(`${TOKEN_LOG_PREFIX} ===== IMAGE PROCESSING ANALYSIS COMPLETE =====`);
 
     // The result from the tool is an object with a "suggestions" property, which is the array we want.
