@@ -40,13 +40,25 @@ export async function GET(request: NextRequest) {
       console.log(`[API_STATUS | Job ${job.jobId}] Received ${aiSuggestions.length} suggestions.`);
 
       // 2. Populate the suggestions in the job object
-      job.suggestions = aiSuggestions.map((suggestion: any, index: number): Suggestion => ({
-        index,
-        status: 'pending', // Each suggestion starts as pending
-        styleSuggestion: suggestion,
-        personaProfile: {},
-        finalPrompt: suggestion.image_prompt,
-      }));
+      job.suggestions = aiSuggestions.map((suggestion: any, index: number): Suggestion => {
+        // 🔧 SAFE ACCESS: Ensure we get the image_prompt correctly
+        let finalPrompt = suggestion.image_prompt;
+
+        // 🔧 FALLBACK: If image_prompt is missing, generate a basic fallback
+        if (!finalPrompt || typeof finalPrompt !== 'string') {
+          console.warn(`[API_STATUS | Job ${job.jobId}] Suggestion ${index} missing image_prompt, using fallback`);
+          const outfitTitle = suggestion.outfit_suggestion?.outfit_title || "Stylish Outfit";
+          finalPrompt = `A full-body fashion photo of a person wearing a ${outfitTitle.toLowerCase()}. The image shows a complete outfit in a natural, well-lit setting with clean composition and professional styling.`;
+        }
+
+        return {
+          index,
+          status: 'pending', // Each suggestion starts as pending
+          styleSuggestion: suggestion,
+          personaProfile: {},
+          finalPrompt: finalPrompt,
+        };
+      });
 
       // 3. Update job status to 'processing' and save back to KV
       job.status = 'processing';

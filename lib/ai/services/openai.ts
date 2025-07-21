@@ -18,6 +18,40 @@ const openai = new OpenAI({
 const TOKEN_LOG_PREFIX = '🎯📊 TOKEN_ANALYSIS';
 const IMAGE_LOG_PREFIX = '🖼️📏 IMAGE_METRICS';
 
+// 🔧 HELPER: Generate fallback image prompt when AI doesn't provide one
+function generateFallbackImagePrompt(outfitSuggestion: any): string {
+  const { outfit_title, items } = outfitSuggestion;
+
+  // Build a basic outfit description from the items
+  const outfitParts: string[] = [];
+
+  if (items.tops && items.tops.length > 0) {
+    const topNames = items.tops.map((top: any) => top.item_name).join(' and ');
+    outfitParts.push(topNames);
+  }
+
+  if (items.bottoms) {
+    outfitParts.push(items.bottoms.item_name);
+  }
+
+  if (items.shoes) {
+    outfitParts.push(items.shoes.item_name);
+  }
+
+  if (items.bag) {
+    outfitParts.push(items.bag.item_name);
+  }
+
+  if (items.accessories && items.accessories.length > 0) {
+    const accessoryNames = items.accessories.map((acc: any) => acc.item_name).join(', ');
+    outfitParts.push(accessoryNames);
+  }
+
+  const outfitDescription = outfitParts.join(', ');
+
+  return `A stylish person wearing ${outfitDescription}. The outfit is titled "${outfit_title}". Full-body fashion photography in a natural, well-lit setting with a clean background. The image captures the complete look with attention to detail and styling.`;
+}
+
 interface GetStyleSuggestionOptions {
   count?: number;
 }
@@ -207,14 +241,101 @@ ${stylePreferenceSection}
 
     // --- FIX: Use Zod to parse and validate the AI's output ---
     const unsafeResult = JSON.parse(toolCall.function.arguments);
+    console.log(`${TOKEN_LOG_PREFIX} 🔍 RAW AI RESPONSE:`, JSON.stringify(unsafeResult, null, 2));
+
+    // 🔧 RESTRUCTURE: Move image_prompt from outfit_suggestion to top level if needed
+    if (unsafeResult.suggestions) {
+      unsafeResult.suggestions = unsafeResult.suggestions.map((suggestion: any) => {
+        // If image_prompt is inside outfit_suggestion, move it to top level
+        if (!suggestion.image_prompt && suggestion.outfit_suggestion?.image_prompt) {
+          const imagePrompt = suggestion.outfit_suggestion.image_prompt;
+          delete suggestion.outfit_suggestion.image_prompt; // Remove from nested location
+          return {
+            ...suggestion,
+            image_prompt: imagePrompt // Add to top level
+          };
+        }
+        return suggestion;
+      });
+    }
+
+    console.log(`${TOKEN_LOG_PREFIX} 🔧 RESTRUCTURED DATA:`, JSON.stringify(unsafeResult, null, 2));
+
+    // 🔧 DEBUG: Check individual suggestions before validation
+    if (unsafeResult.suggestions) {
+      unsafeResult.suggestions.forEach((suggestion: any, index: number) => {
+        console.log(`${TOKEN_LOG_PREFIX} [PRE-VALIDATION] Suggestion ${index}:`, {
+          hasOutfitSuggestion: !!suggestion.outfit_suggestion,
+          hasImagePrompt: !!suggestion.image_prompt,
+          hasImagePromptInOutfitSuggestion: !!suggestion.outfit_suggestion?.image_prompt,
+          imagePromptType: typeof suggestion.image_prompt,
+          imagePromptInOutfitSuggestionType: typeof suggestion.outfit_suggestion?.image_prompt,
+          imagePromptPreview: suggestion.image_prompt ? suggestion.image_prompt.substring(0, 100) + '...' :
+            suggestion.outfit_suggestion?.image_prompt ? suggestion.outfit_suggestion.image_prompt.substring(0, 100) + '...' : 'MISSING'
+        });
+      });
+    }
+
     const validatedResult = multiSuggestionSchema.parse(unsafeResult); // This will throw a detailed error if the schema is not met
+
+    // 🔧 DEBUG: Check individual suggestions after validation
+    if (validatedResult.suggestions) {
+      validatedResult.suggestions.forEach((suggestion: any, index: number) => {
+        console.log(`${TOKEN_LOG_PREFIX} [POST-VALIDATION] Suggestion ${index}:`, {
+          hasOutfitSuggestion: !!suggestion.outfit_suggestion,
+          hasImagePrompt: !!suggestion.image_prompt,
+          imagePromptType: typeof suggestion.image_prompt,
+          imagePromptPreview: suggestion.image_prompt ? suggestion.image_prompt.substring(0, 100) + '...' : 'MISSING'
+        });
+      });
+    }
+
+    console.log(`${TOKEN_LOG_PREFIX} ✅ Zod validation successful`);
     // --- END FIX ---
 
-    console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] OpenAI Suggestion:`, JSON.stringify(validatedResult, null, 2));
+    // 🔧 POST-VALIDATION FIX: Ensure data integrity and clean up image_prompt
+    const cleanedSuggestions = validatedResult.suggestions.map((suggestion: any, index: number) => {
+      const { outfit_suggestion, image_prompt } = suggestion;
+
+      // Check if image_prompt is missing or malformed
+      if (!image_prompt || typeof image_prompt !== 'string') {
+        console.warn(`‼️‼️‼️${TOKEN_LOG_PREFIX} [DATA_FIX] Suggestion ${index} missing or invalid image_prompt, generating fallback`);
+
+        // Generate a fallback image_prompt from outfit details
+        const fallbackPrompt = generateFallbackImagePrompt(outfit_suggestion);
+        return {
+          ...suggestion,
+          image_prompt: fallbackPrompt
+        };
+      }
+
+      // Check if image_prompt contains explanation content (which should be separate)
+      const explanation = outfit_suggestion?.explanation || '';
+      if (explanation && image_prompt.includes(explanation)) {
+        console.warn(`${TOKEN_LOG_PREFIX} [DATA_FIX] Suggestion ${index} image_prompt contains explanation, cleaning up`);
+
+        // Remove the explanation part from image_prompt and clean up punctuation
+        let cleanedImagePrompt = image_prompt.replace(explanation, '').trim();
+        // Clean up multiple dots and spaces
+        cleanedImagePrompt = cleanedImagePrompt.replace(/\.+/g, '.').replace(/\s+/g, ' ').trim();
+        // Remove leading/trailing dots and clean up dot-space-dot patterns
+        cleanedImagePrompt = cleanedImagePrompt.replace(/^\.+/, '').replace(/\.+$/, '').trim();
+        cleanedImagePrompt = cleanedImagePrompt.replace(/\s*\.\s*\.\s*/g, '. ').trim();
+
+        return {
+          ...suggestion,
+          image_prompt: cleanedImagePrompt
+        };
+      }
+
+      return suggestion;
+    });
+
+    console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] Cleaned OpenAI Suggestion:`, JSON.stringify({ suggestions: cleanedSuggestions }, null, 2));
     console.log(`${TOKEN_LOG_PREFIX} ===== IMAGE PROCESSING ANALYSIS COMPLETE =====`);
 
     // The result from the tool is an object with a "suggestions" property, which is the array we want.
-    return validatedResult.suggestions.slice(0, count);
+    return cleanedSuggestions.slice(0, count);
 
   } catch (error) {
     console.error(`${TOKEN_LOG_PREFIX} 🚨 Error getting style suggestion from OpenAI:`, error);

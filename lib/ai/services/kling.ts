@@ -95,7 +95,51 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
 
       if (!submitResponse.ok) {
         const errorBody = await submitResponse.text();
-        throw new Error(`Kling API Error on submit to ${submitPath}: ${submitResponse.status} ${errorBody}`);
+
+        // Parse error body to check for specific error codes
+        let errorMessage = `Kling API Error on submit to ${submitPath}: ${submitResponse.status} ${errorBody}`;
+        let shouldRetry = true;
+
+        try {
+          const errorData = JSON.parse(errorBody);
+          if (errorData.code) {
+            switch (errorData.code) {
+              case 1102:
+                // Account balance not enough - regardless of HTTP status code
+                errorMessage = `💳 Sorry! Our AI designer is currently taking a coffee break due to insufficient account balance. We're working on topping up - please try again in a few minutes! ☕✨`;
+                shouldRetry = false;
+                break;
+              default:
+                // For other error codes, check if it's balance-related in the message
+                if (errorData.message && errorData.message.toLowerCase().includes('balance')) {
+                  errorMessage = `💳 Our AI stylist needs a quick recharge! We're working on resolving the balance issue. Please try again in a few minutes! 🔋✨`;
+                  shouldRetry = false;
+                } else {
+                  errorMessage = `🚨 Kling API Error (${errorData.code}): ${errorData.message || errorBody}`;
+                  // For non-balance errors, allow retry based on HTTP status
+                  shouldRetry = submitResponse.status >= 500 || submitResponse.status === 429;
+                }
+            }
+          } else if (submitResponse.status === 429) {
+            // Rate limit without specific error code
+            errorMessage = `⏰ Our AI designer is getting lots of requests! Taking a quick breather - will retry shortly! 🎨`;
+            shouldRetry = true;
+          }
+        } catch (parseError) {
+          // If we can't parse the error, use the original message
+          console.warn('Could not parse Kling API error response:', parseError);
+          // For 429 status, assume it's retryable
+          shouldRetry = submitResponse.status >= 500 || submitResponse.status === 429;
+        }
+
+        const error = new Error(errorMessage);
+        if (!shouldRetry) {
+          // For non-retryable errors like insufficient balance, throw immediately
+          throw error;
+        } else {
+          // For retryable errors, let the retry logic handle it
+          throw error;
+        }
       }
 
       const submitResult = await submitResponse.json();
@@ -107,7 +151,21 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
       if (attempt === maxSubmitRetries - 1) {
         throw new Error(`Failed to submit Kling task after ${maxSubmitRetries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
-      const waitTime = Math.pow(2, attempt) * 2000; // 2s, 4s
+
+      // Determine wait time based on error type
+      let waitTime = Math.pow(2, attempt) * 2000; // Default: 2s, 4s
+      if (error instanceof Error) {
+        if (error.message.includes('taking a quick breather') || error.message.includes('Rate limit')) {
+          // For rate limit errors, use longer delays
+          waitTime = Math.pow(2, attempt) * 10000; // 10s, 20s for rate limits
+          console.log(`[Kling] Rate limit detected, using longer delay: ${waitTime}ms`);
+        } else if (error.message.includes('getting lots of requests')) {
+          // For high traffic situations, use moderate delays
+          waitTime = Math.pow(2, attempt) * 5000; // 5s, 10s for high traffic
+          console.log(`[Kling] High traffic detected, using moderate delay: ${waitTime}ms`);
+        }
+      }
+
       console.log(`[Kling] Waiting ${waitTime}ms before next submit attempt...`);
       await sleep(waitTime);
     }
