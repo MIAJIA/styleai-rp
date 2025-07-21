@@ -3,8 +3,8 @@ import {
   Crown,
   Heart,
   Sparkles,
-  Palmtree,
-  PartyPopper,
+  Wine,
+  Plane,
 } from "lucide-react"
 
 // Style configuration for different occasions
@@ -12,17 +12,23 @@ export const styles = [
   { id: "work", name: "Work", icon: Briefcase },
   { id: "casual-chic", name: "Casual Chic", icon: Sparkles },
   { id: "date-night", name: "Date Night", icon: Heart },
-  { id: "cocktail", name: "Cocktail", icon: PartyPopper },
-  { id: "vacation", name: "Vacation", icon: Palmtree },
+  { id: "cocktail", name: "Cocktail", icon: Wine },
+  { id: "vacation", name: "Vacation", icon: Plane },
   { id: "formal", name: "Formal", icon: Crown },
 ]
 
 // Style prompts for different occasions
 export const stylePrompts = {
-  "work": "Professional office environment with modern architecture, clean lines, and natural lighting. The person is in a contemporary workplace setting with glass panels, minimalist furniture, and a sophisticated atmosphere. The style emphasizes business professionalism with high-quality textures and sharp details, shot with professional corporate photography standards, 4k resolution.",
-  "casual-chic": "trendy Brooklyn street with colorful murals, chic coffee shop with exposed brick walls, urban rooftop garden with city views, stylish boutique district, contemporary art gallery setting, natural daylight with artistic shadows, street style fashion photography, 4k resolution",
-  "date-night": "A realistic romantic evening on a backyard patio--string lights overhead, wine glasses, laughing mid-conversation with friend. Subtle body language, soft bokeh lights, hint of connection. Created using: Sony Alpha A7R IV, cinematic lighting, shallow depth of field, natural expressions, sunset color grading Shot in kodak gold 200 with a canon EOS R6, 4k resolution.",
-  "cocktail": "opulent ballroom with crystal chandeliers, luxurious velvet curtains and gold accents, dramatic spotlight effects with rich jewel tones, champagne bar with marble countertops, exclusive VIP lounge atmosphere, professional event photography with glamorous lighting, 4k resolution",
-  "vacation": "On the beach, soft sunlight, gentle waves in the background, highly detailed, lifelike textures, natural lighting, vivid colors, 4k resolution",
-  "formal": "Elegant formal event setting with sophisticated architecture, marble columns, and refined lighting. The atmosphere conveys luxury and elegance with attention to fine details, formal event photography with dramatic yet tasteful lighting, emphasizing classic beauty and timeless style, 4k resolution",
+  "work":
+    "Modern office environment with clean lines and professional atmosphere. Natural lighting from large windows, contemporary office furniture, neutral color palette with subtle textures. The setting conveys competence and reliability while maintaining approachability. Shot with professional business photography style, crisp details, confident posture, 4k resolution.",
+  "casual-chic":
+    "Trendy urban setting with artistic elements - exposed brick walls, modern coffee shop interior, or stylish boutique district. Natural daylight with soft shadows, contemporary art pieces in background, relaxed yet curated atmosphere. Street style photography aesthetic with effortless sophistication, 4k resolution.",
+  "date-night":
+    "Romantic evening setting with warm, intimate lighting - upscale restaurant with soft candlelight, elegant rooftop terrace with city lights, or charming wine bar atmosphere. Golden hour lighting with bokeh effects, sophisticated ambiance that's alluring yet tasteful. Shot with cinematic romantic photography style, 4k resolution.",
+  "cocktail":
+    "Sophisticated cocktail lounge or upscale bar setting with ambient lighting, rich textures like velvet and marble, elegant floral arrangements. Warm lighting with dramatic shadows, luxurious yet approachable atmosphere. Fashion-forward photography with emphasis on style and elegance, 4k resolution.",
+  "vacation":
+    "Bright, airy vacation destination - beachside resort with ocean views, tropical poolside setting, or charming European street cafe. Natural sunlight with vibrant colors, relaxed holiday atmosphere with palm trees or scenic backgrounds. Travel photography style with fresh, carefree energy, 4k resolution.",
+  "formal":
+    "Elegant formal venue with grand architecture - luxury hotel ballroom, opera house foyer, or prestigious gala setting. Dramatic lighting with crystal chandeliers, rich fabrics and ornate details. Classical formal photography with emphasis on dignity and sophistication, 4k resolution.",
 }

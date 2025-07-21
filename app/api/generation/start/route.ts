@@ -23,6 +23,13 @@ export async function POST(request: Request) {
     const generationMode = formData.get('generation_mode') as GenerationMode | null;
     const userProfileString = formData.get('user_profile') as string | null;
     const customPrompt = formData.get('custom_prompt') as string | null;
+    const stylePrompt = formData.get('style_prompt') as string | null;
+
+    // 🔍 LOG: 添加关键日志确认正确接收
+    console.log(`[STYLE_PROMPT_LOG] 🎯 Received style_prompt from frontend:`, stylePrompt ? 'YES' : 'NO');
+    if (stylePrompt) {
+      console.log(`[STYLE_PROMPT_LOG] 📝 Style prompt content (first 100 chars):`, stylePrompt.substring(0, 100));
+    }
 
     let userProfile: OnboardingData | undefined = undefined;
     if (userProfileString) {
@@ -61,10 +68,14 @@ export async function POST(request: Request) {
         occasion,
         userProfile,
         customPrompt: customPrompt?.trim() || undefined,
+        stylePrompt: stylePrompt?.trim() || undefined, // 🔍 新增：存储 style_prompt
       },
       createdAt: now,
       updatedAt: now,
     };
+
+    // 🔍 LOG: 确认 style_prompt 已存储
+    console.log(`[STYLE_PROMPT_LOG] 💾 Style prompt stored in job:`, newJob.input.stylePrompt ? 'YES' : 'NO');
 
     const kvSetStartTime = Date.now();
     await kv.set(jobId, newJob);

@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { systemPrompt, IMAGE_GENERATION_MODEL } from "@/lib/prompts";
+import { systemPrompt, IMAGE_GENERATION_MODEL, IMAGE_FORMAT_DESCRIPTION, STRICT_REALISM_PROMPT_BLOCK } from "@/lib/prompts";
 import {
   type StyleSuggestionInput,
   styleSuggestionsSchema,
@@ -14,9 +14,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// 🔍 LOG ANALYZER: Special identifier for easy searching
-const TOKEN_LOG_PREFIX = '🎯📊 TOKEN_ANALYSIS';
-const IMAGE_LOG_PREFIX = '🖼️📏 IMAGE_METRICS';
+// 🔍 统一日志前缀
+const OPENAI_LOG_PREFIX = '🤖 [OPENAI]';
+const TOKEN_LOG_PREFIX = '🤖📊 [OPENAI_TOKEN]';
+const IMAGE_LOG_PREFIX = '🤖🖼️ [OPENAI_IMAGE]';
 
 // 🔧 HELPER: Generate fallback image prompt when AI doesn't provide one
 function generateFallbackImagePrompt(outfitSuggestion: any): string {
@@ -62,6 +63,7 @@ export async function getStyleSuggestionFromAI(
     garmentImageUrl,
     occasion,
     userProfile,
+    stylePrompt, // 🔍 新增：接收 stylePrompt 参数
   }: StyleSuggestionInput,
   options: GetStyleSuggestionOptions = {}
 ): Promise<any[]> {
@@ -72,7 +74,13 @@ export async function getStyleSuggestionFromAI(
   }
 
   console.log(`${TOKEN_LOG_PREFIX} ===== STARTING IMAGE PROCESSING ANALYSIS =====`);
-  console.log(`[AI DEBUG] Using image generation model: ${IMAGE_GENERATION_MODEL}`);
+  console.log(`${OPENAI_LOG_PREFIX} Using image generation model: ${IMAGE_GENERATION_MODEL}`);
+
+  // 🔍 LOG: 确认 stylePrompt 接收
+  console.log(`${OPENAI_LOG_PREFIX} 🎯 Received stylePrompt:`, stylePrompt ? 'YES' : 'NO');
+  if (stylePrompt) {
+    console.log(`${OPENAI_LOG_PREFIX} 📝 StylePrompt content (first 150 chars):`, stylePrompt.substring(0, 150));
+  }
 
   // do not change userProfile, only update the log, do not need to log the fullbodyphoto in userProfile
   const userProfileForLog = { ...userProfile } as Partial<OnboardingData>;
@@ -80,7 +88,7 @@ export async function getStyleSuggestionFromAI(
     userProfileForLog.fullBodyPhoto = '***';
   }
 
-  console.log("[AI DEBUG] Received userProfile for suggestion:", JSON.stringify(userProfileForLog, null, 2));
+  console.log(`${OPENAI_LOG_PREFIX} Received userProfile for suggestion:`, JSON.stringify(userProfileForLog, null, 2));
   console.log(`${IMAGE_LOG_PREFIX} 👤 Using Human Image URL: ${humanImageUrl}`);
   console.log(`${IMAGE_LOG_PREFIX} 👔 Using Garment Image URL: ${garmentImageUrl}`);
 
@@ -100,11 +108,24 @@ The garment in the second attached image is the "Essential Item" that must be in
 - This is the key piece that the user wants to style around
 - Consider the item's style, color, fabric, and formality level when building the complete outfit`;
 
-    // Build occasion details with styling context
-    const occasionSection = `# Occasion
+    // 🔍 更新：Build occasion details with styling context and specific stylePrompt
+    const occasionSection = stylePrompt
+      ? `# Occasion & Scene Details
+**Event/Setting:** ${occasion}
+
+**Visual Scene Description:** ${stylePrompt}
+
+**Styling Goal:** Choose complementary pieces that match the formality and mood of this occasion. Use the visual scene description above to inform the atmosphere, lighting, and overall aesthetic for the image_prompt generation.`
+      : `# Occasion
 **Event/Setting:** ${occasion}
 
 **Styling Goal:** Choose complementary pieces that match the formality and mood of this occasion`;
+
+    // 🔍 LOG: 确认 occasionSection 构建
+    console.log(`${OPENAI_LOG_PREFIX} 🎨 OccasionSection built with stylePrompt:`, stylePrompt ? 'YES' : 'NO');
+    if (stylePrompt) {
+      console.log(`${OPENAI_LOG_PREFIX} 📄 OccasionSection content:`, occasionSection);
+    }
 
     // Build enhanced style preference details based on user profile and occasion
     const getStylePreferences = () => {
@@ -165,7 +186,12 @@ ${stylePreferenceSection}
     console.log(`${TOKEN_LOG_PREFIX} 📝 User Message Tokens: ~${textTokenEstimate.toLocaleString()}`);
     console.log(`${TOKEN_LOG_PREFIX} 🔧 System Prompt Tokens: ~${systemPromptTokens.toLocaleString()}`);
     console.log(`${TOKEN_LOG_PREFIX} 🎯 TOTAL REQUEST TOKENS: ~${totalRequestTokens.toLocaleString()}`);
-    console.log(`${TOKEN_LOG_PREFIX} ===== SENDING REQUEST TO OPENAI =====`);
+
+    // 🔍 NEW: 输出完整的 System Prompt 和 User Message
+    console.log(`${OPENAI_LOG_PREFIX} ===== COMPLETE SYSTEM PROMPT =====`);
+    console.log(`${OPENAI_LOG_PREFIX} 📝 SYSTEM PROMPT:`, systemPrompt);
+    console.log(`${OPENAI_LOG_PREFIX} ===== COMPLETE USER MESSAGE =====`);
+    console.log(`${OPENAI_LOG_PREFIX} 📝 USER MESSAGE:`, userMessageText);
 
     // --- NEW: Dynamically create the schema based on the count ---
     const multiSuggestionSchema = z.object({
@@ -174,74 +200,117 @@ ${stylePreferenceSection}
     const multiSuggestionJsonSchema = zodToJsonSchema(multiSuggestionSchema);
     // --- END NEW ---
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+    // 🔍 NEW: 构建完整的请求体用于日志
+    const requestBody = {
+      model: "gpt-4o" as const,
       messages: [
         {
-          role: "system",
+          role: "system" as const,
           content: systemPrompt,
         },
         {
-          role: "user",
+          role: "user" as const,
           content: [
             {
-              type: "text",
+              type: "text" as const,
               text: userMessageText,
             },
             {
-              type: "image_url",
+              type: "image_url" as const,
               image_url: {
                 url: humanImageUrl, // ✨ Use direct URL
-                detail: "low"
+                detail: "low" as const
               },
             },
             {
-              type: "image_url",
+              type: "image_url" as const,
               image_url: {
                 url: garmentImageUrl, // ✨ Use direct URL
-                detail: "low"
+                detail: "low" as const
               },
             },
           ],
         },
       ],
-      max_tokens: 4000,
+      max_tokens: 6000, // 🔍 FIX: 增加 token 限制，防止响应被截断
       tools: [
         {
-          type: "function",
+          type: "function" as const,
           function: {
             name: "get_multiple_style_suggestions",
-            description: `Get ${count} complete and distinct outfit suggestions in a structured JSON format.`,
+            description: `Get ${count} complete and distinct outfit suggestions in a structured JSON format. The image_prompt field is highly recommended for best results.`,
             parameters: multiSuggestionJsonSchema,
           },
         },
       ],
       tool_choice: {
-        type: "function",
+        type: "function" as const,
         function: { name: "get_multiple_style_suggestions" },
       },
-    });
+    };
+
+    // 🔍 NEW: 输出完整的请求体（但隐藏图片URL以避免日志过长）
+    const requestBodyForLog = {
+      ...requestBody,
+      messages: requestBody.messages.map(msg => {
+        if (msg.role === 'user' && Array.isArray(msg.content)) {
+          return {
+            ...msg,
+            content: msg.content.map(item => {
+              if (item.type === 'image_url' && item.image_url) {
+                return {
+                  ...item,
+                  image_url: {
+                    ...item.image_url,
+                    url: `${item.image_url.url.substring(0, 50)}...` // 只显示前50个字符
+                  }
+                };
+              }
+              return item;
+            })
+          };
+        }
+        return msg;
+      })
+    };
+
+    console.log(`${OPENAI_LOG_PREFIX} ===== COMPLETE REQUEST BODY =====`);
+    console.log(`${OPENAI_LOG_PREFIX} 📤 FULL REQUEST:`, JSON.stringify(requestBodyForLog, null, 2));
+    console.log(`${TOKEN_LOG_PREFIX} ===== SENDING REQUEST TO OPENAI =====`);
+
+    const response = await openai.chat.completions.create(requestBody);
 
     console.log(`${TOKEN_LOG_PREFIX} ===== OPENAI RESPONSE RECEIVED =====`);
     console.log(`${TOKEN_LOG_PREFIX} 📊 Response usage:`, response.usage);
+    console.log(`${TOKEN_LOG_PREFIX} 📊 Finish reason:`, response.choices[0].finish_reason);
+
+    // 🔍 FIX: 检查是否因为 token 限制被截断
+    if (response.choices[0].finish_reason === 'length') {
+      console.warn(`${TOKEN_LOG_PREFIX} ⚠️ RESPONSE TRUNCATED DUE TO TOKEN LIMIT!`);
+      console.warn(`${TOKEN_LOG_PREFIX} ⚠️ This is likely why image_prompt is missing. Consider increasing max_tokens or reducing input length.`);
+    }
 
     const message = response.choices[0].message;
 
+    // 🔍 NEW: 输出完整的响应消息
+    console.log(`${OPENAI_LOG_PREFIX} ===== COMPLETE RESPONSE MESSAGE =====`);
+    console.log(`${OPENAI_LOG_PREFIX} 📥 FULL RESPONSE MESSAGE:`, JSON.stringify(message, null, 2));
+
     if (!message.tool_calls || message.tool_calls.length === 0) {
-      console.error(`${TOKEN_LOG_PREFIX} [AI DEBUG] OpenAI response did not include a tool call. Finish reason:`, response.choices[0].finish_reason);
+      console.error(`${OPENAI_LOG_PREFIX} ❌ OpenAI response did not include a tool call. Finish reason:`, response.choices[0].finish_reason);
       throw new Error(`AI did not return a structured suggestion. Finish reason: ${response.choices[0].finish_reason}`);
     }
 
     const toolCall = message.tool_calls[0];
 
     if (toolCall.function.name !== 'get_multiple_style_suggestions') {
-      console.error(`${TOKEN_LOG_PREFIX} [AI DEBUG] Unexpected tool call: ${toolCall.function.name}`);
+      console.error(`${OPENAI_LOG_PREFIX} ❌ Unexpected tool call: ${toolCall.function.name}`);
       throw new Error(`AI returned an unexpected tool: ${toolCall.function.name}`);
     }
 
     // --- FIX: Use Zod to parse and validate the AI's output ---
     const unsafeResult = JSON.parse(toolCall.function.arguments);
-    console.log(`${TOKEN_LOG_PREFIX} 🔍 RAW AI RESPONSE:`, JSON.stringify(unsafeResult, null, 2));
+    console.log(`${OPENAI_LOG_PREFIX} 🔍 RAW AI RESPONSE:`, JSON.stringify(unsafeResult, null, 2));
 
     // 🔧 RESTRUCTURE: Move image_prompt from outfit_suggestion to top level if needed
     if (unsafeResult.suggestions) {
@@ -259,12 +328,12 @@ ${stylePreferenceSection}
       });
     }
 
-    console.log(`${TOKEN_LOG_PREFIX} 🔧 RESTRUCTURED DATA:`, JSON.stringify(unsafeResult, null, 2));
+    console.log(`${OPENAI_LOG_PREFIX} 🔧 RESTRUCTURED DATA:`, JSON.stringify(unsafeResult, null, 2));
 
     // 🔧 DEBUG: Check individual suggestions before validation
     if (unsafeResult.suggestions) {
       unsafeResult.suggestions.forEach((suggestion: any, index: number) => {
-        console.log(`${TOKEN_LOG_PREFIX} [PRE-VALIDATION] Suggestion ${index}:`, {
+        console.log(`${OPENAI_LOG_PREFIX} [PRE-VALIDATION] Suggestion ${index}:`, {
           hasOutfitSuggestion: !!suggestion.outfit_suggestion,
           hasImagePrompt: !!suggestion.image_prompt,
           hasImagePromptInOutfitSuggestion: !!suggestion.outfit_suggestion?.image_prompt,
@@ -276,22 +345,27 @@ ${stylePreferenceSection}
       });
     }
 
-    const validatedResult = multiSuggestionSchema.parse(unsafeResult); // This will throw a detailed error if the schema is not met
+    let validatedResult;
+    try {
+      validatedResult = multiSuggestionSchema.parse(unsafeResult); // This will throw a detailed error if the schema is not met
+      console.log(`${OPENAI_LOG_PREFIX} ✅ Zod validation successful`);
 
-    // 🔧 DEBUG: Check individual suggestions after validation
-    if (validatedResult.suggestions) {
-      validatedResult.suggestions.forEach((suggestion: any, index: number) => {
-        console.log(`${TOKEN_LOG_PREFIX} [POST-VALIDATION] Suggestion ${index}:`, {
-          hasOutfitSuggestion: !!suggestion.outfit_suggestion,
-          hasImagePrompt: !!suggestion.image_prompt,
-          imagePromptType: typeof suggestion.image_prompt,
-          imagePromptPreview: suggestion.image_prompt ? suggestion.image_prompt.substring(0, 100) + '...' : 'MISSING'
+      // 🔧 DEBUG: Check individual suggestions after validation
+      if (validatedResult.suggestions) {
+        validatedResult.suggestions.forEach((suggestion: any, index: number) => {
+          console.log(`${OPENAI_LOG_PREFIX} [POST-VALIDATION] Suggestion ${index}:`, {
+            hasOutfitSuggestion: !!suggestion.outfit_suggestion,
+            hasImagePrompt: !!suggestion.image_prompt,
+            imagePromptType: typeof suggestion.image_prompt,
+            imagePromptPreview: suggestion.image_prompt ? suggestion.image_prompt.substring(0, 100) + '...' : 'MISSING'
+          });
         });
-      });
-    }
+      }
 
-    console.log(`${TOKEN_LOG_PREFIX} ✅ Zod validation successful`);
-    // --- END FIX ---
+    } catch (zodError) {
+      console.error(`${OPENAI_LOG_PREFIX} 💥 ZOD VALIDATION FAILED:`, zodError);
+      throw zodError;
+    }
 
     // 🔧 POST-VALIDATION FIX: Ensure data integrity and clean up image_prompt
     const cleanedSuggestions = validatedResult.suggestions.map((suggestion: any, index: number) => {
@@ -299,7 +373,7 @@ ${stylePreferenceSection}
 
       // Check if image_prompt is missing or malformed
       if (!image_prompt || typeof image_prompt !== 'string') {
-        console.warn(`‼️‼️‼️${TOKEN_LOG_PREFIX} [DATA_FIX] Suggestion ${index} missing or invalid image_prompt, generating fallback`);
+        console.warn(`${OPENAI_LOG_PREFIX} [DATA_FIX] Suggestion ${index} missing or invalid image_prompt, generating fallback`);
 
         // Generate a fallback image_prompt from outfit details
         const fallbackPrompt = generateFallbackImagePrompt(outfit_suggestion);
@@ -312,7 +386,7 @@ ${stylePreferenceSection}
       // Check if image_prompt contains explanation content (which should be separate)
       const explanation = outfit_suggestion?.explanation || '';
       if (explanation && image_prompt.includes(explanation)) {
-        console.warn(`${TOKEN_LOG_PREFIX} [DATA_FIX] Suggestion ${index} image_prompt contains explanation, cleaning up`);
+        console.warn(`${OPENAI_LOG_PREFIX} [DATA_FIX] Suggestion ${index} image_prompt contains explanation, cleaning up`);
 
         // Remove the explanation part from image_prompt and clean up punctuation
         let cleanedImagePrompt = image_prompt.replace(explanation, '').trim();
@@ -331,14 +405,14 @@ ${stylePreferenceSection}
       return suggestion;
     });
 
-    console.log(`${TOKEN_LOG_PREFIX} [AI DEBUG] Cleaned OpenAI Suggestion:`, JSON.stringify({ suggestions: cleanedSuggestions }, null, 2));
+    console.log(`${OPENAI_LOG_PREFIX} ✅ OpenAI Suggestion:`, JSON.stringify(validatedResult, null, 2));
     console.log(`${TOKEN_LOG_PREFIX} ===== IMAGE PROCESSING ANALYSIS COMPLETE =====`);
 
     // The result from the tool is an object with a "suggestions" property, which is the array we want.
     return cleanedSuggestions.slice(0, count);
 
   } catch (error) {
-    console.error(`${TOKEN_LOG_PREFIX} 🚨 Error getting style suggestion from OpenAI:`, error);
+    console.error(`${OPENAI_LOG_PREFIX} 🚨 Error getting style suggestion from OpenAI:`, error);
     // Re-throw the error to be handled by the caller
     throw error;
   }

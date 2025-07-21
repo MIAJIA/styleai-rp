@@ -16,6 +16,9 @@ export function usePolling<T>(
   const [consecutiveFails, setConsecutiveFails] = useState(0);
   const pollingIntervalIdRef = useRef<NodeJS.Timeout | null>(null)
 
+  // 🔍 FIX: 添加上次数据的引用，避免不必要的更新
+  const lastDataRef = useRef<T | null>(null);
+
   const stopPolling = useCallback(() => {
     if (pollingIntervalIdRef.current) {
       clearInterval(pollingIntervalIdRef.current)
@@ -29,6 +32,7 @@ export function usePolling<T>(
     if (!jobId) {
       stopPolling()
       setConsecutiveFails(0);
+      lastDataRef.current = null;
       return
     }
 
@@ -44,14 +48,26 @@ export function usePolling<T>(
         }
         const data = await response.json() as T;
 
+        // 🔍 FIX: 简单的数据变化检测，减少不必要的更新
+        const dataString = JSON.stringify(data);
+        const lastDataString = lastDataRef.current ? JSON.stringify(lastDataRef.current) : null;
+
+        if (dataString !== lastDataString) {
+          console.log(`[usePolling] 📡 Data changed, triggering update for job ${jobId?.slice(-8)}`);
+          lastDataRef.current = data;
+          onUpdate(data);
+        } else {
+          // 数据没有变化，不触发更新
+          console.log(`[usePolling] 📡 No data change detected for job ${jobId?.slice(-8)}`);
+        }
+
         // Reset fail counter on success
         setConsecutiveFails(0);
-        onUpdate(data);
 
       } catch (error) {
         const newFailCount = consecutiveFails + 1;
         setConsecutiveFails(newFailCount);
-        console.warn(`[usePolling] Poll failed for job ${jobId}. Consecutive fails: ${newFailCount}`);
+        console.warn(`[usePolling] Poll failed for job ${jobId?.slice(-8)}. Consecutive fails: ${newFailCount}`);
 
         if (newFailCount >= MAX_CONSECUTIVE_FAILS) {
           console.error(`[usePolling] Reached max consecutive fails (${MAX_CONSECUTIVE_FAILS}). Stopping polling.`);
