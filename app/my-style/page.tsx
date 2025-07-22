@@ -232,7 +232,7 @@ export default function MyStylePage() {
                   </Badge>
                 ))}
               </div>
-                </div>
+            </div>
           )}
 
           {profileData?.bodyChallenges && profileData.bodyChallenges.length > 0 && (
@@ -252,14 +252,14 @@ export default function MyStylePage() {
             <div className="mb-4">
               <p className="text-sm font-medium text-gray-600 mb-2">Custom Strengths</p>
               <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">{profileData.customAdvantages}</p>
-        </div>
+            </div>
           )}
 
           {profileData?.customChallenges && (
             <div>
               <p className="text-sm font-medium text-gray-600 mb-2">Custom Challenges</p>
               <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">{profileData.customChallenges}</p>
-      </div>
+            </div>
           )}
         </Card>
 
@@ -287,8 +287,8 @@ export default function MyStylePage() {
             <div className="mb-4">
               <p className="text-sm font-medium text-gray-600 mb-2">Custom Style Description</p>
               <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">{profileData.customStyle}</p>
-        </div>
-      )}
+            </div>
+          )}
 
           {profileData?.specificStyles && profileData.specificStyles.length > 0 && (
             <div>
