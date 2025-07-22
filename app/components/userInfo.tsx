@@ -1,14 +1,14 @@
 'use client'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogOut, Settings, CreditCard } from "lucide-react"
+import { User, LogOut } from "lucide-react"
 import { useRouter } from 'next/navigation'
 
 export default function UserInfo() {
@@ -23,14 +23,6 @@ export default function UserInfo() {
 
     const handleSignOut = () => {
         signOut({ callbackUrl: '/' })
-    }
-
-    const handleAccountClick = () => {
-        router.push('/account')
-    }
-
-    const handleSettingsClick = () => {
-        router.push('/settings')
     }
 
     return (
@@ -57,15 +49,6 @@ export default function UserInfo() {
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleAccountClick}>
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    <span>账户余额</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSettingsClick}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>设置</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>退出登录</span>
@@ -73,4 +56,4 @@ export default function UserInfo() {
             </DropdownMenuContent>
         </DropdownMenu>
     )
-} 
+}

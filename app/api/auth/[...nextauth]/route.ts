@@ -1,8 +1,13 @@
 import NextAuth from "next-auth"
+import GoogleProvider from "next-auth/providers/google"
 import GithubProvider from "next-auth/providers/github"
 
 export const authOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    }),
     GithubProvider({
       clientId: process.env.GITHUB_ID as string,
       clientSecret: process.env.GITHUB_SECRET as string,
@@ -11,9 +16,11 @@ export const authOptions = {
   callbacks: {
     async signIn(params: any) {
       console.log("Sign in attempt:", params);
+      console.log("Google Client ID:", process.env.GOOGLE_CLIENT_ID ? "Set" : "Not Set");
+      console.log("Google Client Secret:", process.env.GOOGLE_CLIENT_SECRET ? "Set" : "Not Set");
       console.log("GitHub ID:", process.env.GITHUB_ID ? "Set" : "Not Set");
       console.log("GitHub Secret:", process.env.GITHUB_SECRET ? "Set" : "Not Set");
-      
+
       return true;
     },
     async redirect(params: any) {
@@ -33,21 +40,21 @@ export const authOptions = {
     },
     async session({ session, token, user }: any) {
       console.log("Session callback - Input:", { session, token, user });
-      
-      // 保存 GitHub 用户信息到 session
+
+      // 保存用户信息到 session
       if (token) {
         session.user.id = token.sub;
         session.user.provider = token.provider;
         session.accessToken = token.accessToken;
       }
-      
+
       console.log("Session callback - Output:", session);
       return session;
     },
     async jwt({ token, user, account, profile }: any) {
       console.log("JWT callback - Input:", { token, user, account, profile });
-      
-      // 保存 GitHub 账户信息到 JWT
+
+      // 保存账户信息到 JWT
       if (account) {
         token.accessToken = account.access_token;
         token.provider = account.provider;
@@ -55,7 +62,7 @@ export const authOptions = {
       if (user) {
         token.id = user.id;
       }
-      
+
       console.log("JWT callback - Output:", token);
       return token;
     },
@@ -70,7 +77,7 @@ export const authOptions = {
   jwt: {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  secret: process.env.NEXTAUTH_SECRET ,
+  secret: process.env.NEXTAUTH_SECRET,
 }
 
 const handler = NextAuth(authOptions)

@@ -3,7 +3,7 @@
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Github } from "lucide-react";
+import { Chrome, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
@@ -14,7 +14,7 @@ export default function LoginPage() {
   useEffect(() => {
     console.log("Login page - Status:", status);
     console.log("Login page - Session:", session);
-    
+
     if (status === "authenticated" && session) {
       console.log("User authenticated, redirecting to /");
       router.push("/");
@@ -42,6 +42,28 @@ export default function LoginPage() {
     );
   }
 
+  const handleGoogleLogin = async () => {
+    console.log("Google login button clicked");
+    try {
+      const result = await signIn("google", {
+        callbackUrl: "/",
+        redirect: false,
+      });
+      console.log("Sign in result:", result);
+
+      if (result?.error) {
+        console.error("Sign in error:", result.error);
+        alert(`Google 登录失败: ${result.error}`);
+      } else if (result?.url) {
+        console.log("Redirecting to:", result.url);
+        window.location.href = result.url;
+      }
+    } catch (error) {
+      console.error("Sign in error:", error);
+      alert("Google 登录失败，请检查网络连接或联系管理员。");
+    }
+  };
+
   const handleGitHubLogin = async () => {
     console.log("GitHub login button clicked");
     try {
@@ -50,17 +72,17 @@ export default function LoginPage() {
         redirect: false,
       });
       console.log("Sign in result:", result);
-      
+
       if (result?.error) {
         console.error("Sign in error:", result.error);
-        alert(`登录失败: ${result.error}`);
+        alert(`GitHub 登录失败: ${result.error}`);
       } else if (result?.url) {
         console.log("Redirecting to:", result.url);
         window.location.href = result.url;
       }
     } catch (error) {
       console.error("Sign in error:", error);
-      alert("登录失败，请检查网络连接或联系管理员。");
+      alert("GitHub 登录失败，请检查网络连接或联系管理员。");
     }
   };
 
@@ -79,10 +101,21 @@ export default function LoginPage() {
           </div>
 
           {/* Login Form */}
-          <div className="space-y-6">
+          <div className="space-y-4">
+            {/* Google Login Button */}
+            <Button
+              onClick={handleGoogleLogin}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-3"
+              size="lg"
+            >
+              <Chrome className="w-5 h-5" />
+              使用 Google 登录
+            </Button>
+
+            {/* GitHub Login Button */}
             <Button
               onClick={handleGitHubLogin}
-              className="w-full bg-black hover:bg-gray-800 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-3"
+              className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-3"
               size="lg"
             >
               <Github className="w-5 h-5" />
@@ -123,4 +156,4 @@ export default function LoginPage() {
       </div>
     </div>
   );
-} 
+}
