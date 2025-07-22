@@ -152,7 +152,7 @@ export default function ResultsPage() {
               },
               body: JSON.stringify({
                 looks: localLooks,
-                userId: 'default',
+                userId: userId,
               }),
             });
 
