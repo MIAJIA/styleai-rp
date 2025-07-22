@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Upload, Database, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useSession } from 'next-auth/react'
 
 interface MigrationStatus {
   status: 'idle' | 'checking' | 'migrating' | 'completed' | 'error';
@@ -24,7 +25,8 @@ export default function MigrationTool() {
     localStorageCount: 0,
     databaseCount: 0,
   });
-
+  const { data: session, status } = useSession();
+  const userId = (session?.user as { id?: string })?.id;
   const checkStatus = async () => {
     setMigration(prev => ({ ...prev, status: 'checking' }));
 

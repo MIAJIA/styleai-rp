@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import { ArrowLeft, X, ChevronDown, ChevronUp, Image as ImageIcon, BarChart3, ThumbsUp, ThumbsDown } from "lucide-react";
 import IOSTabBar from "../components/ios-tab-bar";
@@ -45,7 +46,8 @@ export default function ResultsPage() {
     downvotes: number;
     upvotePercentage: number;
   } | null>(null);
-
+  const { data: session, status } = useSession();
+  const userId = (session?.user as { id?: string })?.id;
   // 缓存配置
   const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
   const CACHE_KEY = 'styleai_results_cache';
@@ -117,7 +119,7 @@ export default function ResultsPage() {
     const loadFreshData = async () => {
       try {
         // First, try to load from the database
-        const response = await fetch('/api/looks?userId=default&limit=100');
+        const response = await fetch(`/api/looks?userId=${userId}&limit=100`);
         const result = await response.json();
 
         if (result.success && result.looks.length > 0) {
@@ -163,7 +165,7 @@ export default function ResultsPage() {
               console.log('Migration completed, localStorage cleared');
 
               // Reload from the database to ensure data consistency
-              const freshResponse = await fetch('/api/looks?userId=default&limit=100');
+              const freshResponse = await fetch(`/api/looks?userId=${userId}&limit=100`);
               const freshResult = await freshResponse.json();
               if (freshResult.success) {
                 setPastLooks(freshResult.looks);
@@ -269,7 +271,7 @@ export default function ResultsPage() {
   const handleDeleteLook = async (lookId: string) => {
     try {
       // Try to delete from the database
-      const response = await fetch(`/api/looks?lookId=${lookId}&userId=default`, {
+      const response = await fetch(`/api/looks?lookId=${lookId}&userId=${userId}`, {
         method: 'DELETE',
       });
 
@@ -316,7 +318,7 @@ export default function ResultsPage() {
   const handleClearRecentLooks = async () => {
     try {
       // Try to clear from the database
-      const response = await fetch('/api/looks?clearAll=true&userId=default', {
+      const response = await fetch(`/api/looks?clearAll=true&userId=${userId}`, {
         method: 'DELETE',
       });
 
@@ -356,7 +358,7 @@ export default function ResultsPage() {
     setIsLoadingMore(true);
     try {
       const offset = pastLooks.length;
-      const response = await fetch(`/api/looks?userId=default&limit=20&offset=${offset}`);
+      const response = await fetch(`/api/looks?userId=${userId}&limit=20&offset=${offset}`);
       const result = await response.json();
 
       if (result.success && result.looks.length > 0) {
