@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from 'next-auth/react'
+import { getSession, useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import { ArrowLeft, X, ChevronDown, ChevronUp, Image as ImageIcon, BarChart3, ThumbsUp, ThumbsDown } from "lucide-react";
 import IOSTabBar from "../components/ios-tab-bar";
@@ -31,6 +31,7 @@ interface PastLook {
 
 export default function ResultsPage() {
   const router = useRouter();
+  const [userId, setuserId] = useState();
   const [pastLooks, setPastLooks] = useState<PastLook[]>([]);
   const [isRecentLooksExpanded, setIsRecentLooksExpanded] = useState(false);
   const [selectedLook, setSelectedLook] = useState<PastLook | null>(null);
@@ -46,8 +47,17 @@ export default function ResultsPage() {
     downvotes: number;
     upvotePercentage: number;
   } | null>(null);
-  const { data: session, status } = useSession();
-  const userId = (session?.user as { id?: string })?.id;
+
+  
+  const session = useSession();
+  useEffect(() => {
+    if (session.status === "authenticated") {
+      const id = (session.data?.user as { id?: string })?.id || "";
+      setuserId(id as any); // You may want to type userId as string | undefined in useState
+    }
+    console.log(session);
+  }, [session.status, session.data]);
+
   // 缓存配置
   const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
   const CACHE_KEY = 'styleai_results_cache';
@@ -117,6 +127,7 @@ export default function ResultsPage() {
     };
 
     const loadFreshData = async () => {
+      if (userId != undefined){
       try {
         // First, try to load from the database
         const response = await fetch(`/api/looks?userId=${userId}&limit=100`);
@@ -152,7 +163,7 @@ export default function ResultsPage() {
               },
               body: JSON.stringify({
                 looks: localLooks,
-                userId: 'default',
+                userId: userId,
               }),
             });
 
@@ -184,7 +195,7 @@ export default function ResultsPage() {
         }
       } catch (error) {
         console.error('Error loading fresh data:', error);
-
+      }
         // If all methods fail, try to read from localStorage
         try {
           const storedLooks = localStorage.getItem("pastLooks");
@@ -204,7 +215,7 @@ export default function ResultsPage() {
     };
 
     loadLooks();
-  }, []);
+  }, [userId]);
 
   // Load global vote statistics
   useEffect(() => {

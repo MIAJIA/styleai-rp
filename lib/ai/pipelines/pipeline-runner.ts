@@ -4,7 +4,7 @@ import { type Job } from '../types';
 import { executeAdvancedScenePipeline } from './advanced-scene';
 import { executeSimpleScenePipelineV2 } from './simple-scene';
 import { executeTryOnOnlyPipeline } from './try-on-only';
-
+import { getSession } from 'next-auth/react'
 /**
  * This is the single, shared background pipeline runner for all image generation tasks.
  * It is called via "fire-and-forget" from the API routes.
@@ -169,8 +169,9 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
             finalPrompt: pipelineResult.finalPrompt,
           },
         };
-
-        await saveLookToDB(lookToSave, 'default');
+        const session = await getSession();
+        const userId = (session?.user as { id?: string })?.id;
+        await saveLookToDB(lookToSave, userId);
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] Successfully saved look for suggestion ${suggestionIndex} to database.`);
       }
     } catch (dbError) {

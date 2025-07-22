@@ -294,6 +294,12 @@ export default function HomePage() {
     router.push('/my-style');
   };
 
+  // exist session but have not styleMe_user_profile
+  const userProfile = window.localStorage.getItem("styleMe_user_profile");
+  if (session && userProfile == undefined){
+    router.push('/my-style');
+  }
+
   return (
     <div className="min-h-full pb-20 relative overflow-hidden">
       {/* Gradient background elements */}
