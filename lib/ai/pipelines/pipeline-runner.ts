@@ -125,29 +125,69 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
     console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 Pipeline completed successfully!`);
     console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 Generated ${pipelineResult.imageUrls.length} final images`);
     console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 Final prompt: ${pipelineResult.finalPrompt.substring(0, 100)}...`);
-
-    // Update the suggestion with the results
-    job.suggestions[suggestionIndex] = {
-      ...suggestionToProcess,
-      status: 'succeeded',
-      imageUrls: pipelineResult.imageUrls,
-      finalPrompt: pipelineResult.finalPrompt,
-    };
-
-    // Check if this is the last suggestion to be processed
-    const allCompleted = job.suggestions.every(s => s.status === 'succeeded' || s.status === 'failed');
-    if (allCompleted) {
-      job.status = 'completed';
-      job.updatedAt = Date.now();
-      console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 All suggestions completed. Job marked as completed.`);
-    } else {
-      job.updatedAt = Date.now();
-      console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 Job marked as completed (mode: ${job.input.generationMode})`);
+    if (pipelineResult.stylizedImageUrls && pipelineResult.stylizedImageUrls.length > 0) {
+      console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎨 Generated ${pipelineResult.stylizedImageUrls.length} intermediate images`);
+      console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎨 Intermediate images:`, pipelineResult.stylizedImageUrls.map(url => url.substring(0, 100) + '...'));
     }
 
-    // Save the updated job back to KV
-    await kv.set(job.jobId, job);
-    console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] Suggestion ${suggestionIndex} completed successfully.`);
+    // Update the suggestion with the results
+    // 🔧 FIX: 获取最新的job数据，保留在pipeline执行过程中添加的中间数据
+    const updatedJob = await kv.get<Job>(jobId);
+    if (updatedJob && updatedJob.suggestions[suggestionIndex]) {
+      // 使用最新的suggestion数据，保留intermediateImageUrls等中间状态
+      updatedJob.suggestions[suggestionIndex] = {
+        ...updatedJob.suggestions[suggestionIndex], // 保留中间状态（如intermediateImageUrls）
+        status: 'succeeded',
+        imageUrls: pipelineResult.imageUrls,
+        finalPrompt: pipelineResult.finalPrompt,
+      };
+
+      // 检查是否所有suggestions都完成了
+      const allCompleted = updatedJob.suggestions.every(s => s.status === 'succeeded' || s.status === 'failed');
+      if (allCompleted) {
+        updatedJob.status = 'completed';
+        updatedJob.updatedAt = Date.now();
+        console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 All suggestions completed. Job marked as completed.`);
+      } else {
+        updatedJob.updatedAt = Date.now();
+        console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 Job marked as completed (mode: ${updatedJob.input.generationMode})`);
+      }
+
+      // 保存更新的job回到KV
+      await kv.set(updatedJob.jobId, updatedJob);
+      job = updatedJob; // 更新本地job引用以供后续使用
+
+      // 🔍 NEW: 验证中间图片数据是否被正确保留
+      const finalSuggestion = updatedJob.suggestions[suggestionIndex];
+      console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ✅ Suggestion ${suggestionIndex} final state:`);
+      console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ✅ - Status: ${finalSuggestion.status}`);
+      console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ✅ - Final images: ${finalSuggestion.imageUrls?.length || 0}`);
+      console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ✅ - Intermediate images: ${finalSuggestion.intermediateImageUrls?.length || 0}`);
+      if (finalSuggestion.intermediateImageUrls && finalSuggestion.intermediateImageUrls.length > 0) {
+        console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ✅ - Intermediate URLs:`, finalSuggestion.intermediateImageUrls.map(url => url.substring(0, 100) + '...'));
+      }
+    } else {
+      console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ⚠️ Could not find updated job or suggestion to preserve intermediate data`);
+      // Fallback to old logic if job retrieval fails
+      job.suggestions[suggestionIndex] = {
+        ...suggestionToProcess,
+        status: 'succeeded',
+        imageUrls: pipelineResult.imageUrls,
+        finalPrompt: pipelineResult.finalPrompt,
+      };
+
+      const allCompleted = job.suggestions.every(s => s.status === 'succeeded' || s.status === 'failed');
+      if (allCompleted) {
+        job.status = 'completed';
+        job.updatedAt = Date.now();
+        console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 All suggestions completed. Job marked as completed.`);
+      } else {
+        job.updatedAt = Date.now();
+        console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 Job marked as completed (mode: ${job.input.generationMode})`);
+      }
+
+      await kv.set(job.jobId, job);
+    }
 
     // --- Save the successfully generated look to the database ---
     try {

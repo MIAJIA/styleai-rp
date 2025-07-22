@@ -61,6 +61,23 @@ export function useGeneration({
   const onPollingUpdate = useCallback(
     (job: Job) => {
       console.log(`[useGeneration | onPollingUpdate] 🎯 Received job update for ID: ${job.jobId}`, job);
+
+      // 🔍 DEBUG: 详细检查每个suggestion的中间图片状态
+      console.log(`[useGeneration | DEBUG] 🕵️ Checking all suggestions for intermediate images:`);
+      job.suggestions.forEach((suggestion, idx) => {
+        console.log(`[useGeneration | DEBUG] 📋 Suggestion ${idx}:`, {
+          status: suggestion.status,
+          hasIntermediateImages: !!(suggestion.intermediateImageUrls && suggestion.intermediateImageUrls.length > 0),
+          intermediateCount: suggestion.intermediateImageUrls?.length || 0,
+          hasFinalImages: !!(suggestion.imageUrls && suggestion.imageUrls.length > 0),
+          finalCount: suggestion.imageUrls?.length || 0,
+        });
+        if (suggestion.intermediateImageUrls && suggestion.intermediateImageUrls.length > 0) {
+          console.log(`[useGeneration | DEBUG] 🖼️ Intermediate URLs for suggestion ${idx}:`,
+            suggestion.intermediateImageUrls.map(url => url.substring(0, 100) + '...'));
+        }
+      });
+
       setCurrentJob(job);
       // This state update is crucial for the UI to react.
       setSuggestions(job.suggestions);
@@ -94,9 +111,15 @@ export function useGeneration({
           console.log(`[useGeneration] 🖼️ Found intermediate images for suggestion ${index}, status: ${status}`);
           console.log(`[useGeneration] 🖼️ Intermediate images count: ${intermediateImageUrls.length}`);
 
-          // 只有当前选中的 suggestion 才显示中间图片
-          if (index === currentSuggestionIndex) {
+          // 🔧 FIX: 放宽显示条件 - 对于single suggestion模式或当前选中的suggestion都显示
+          const shouldDisplayIntermediate =
+            job.suggestions.length === 1 || // Single suggestion模式（如simple-scene），直接显示
+            index === currentSuggestionIndex; // Multi suggestion模式，只显示当前选中的
+
+          if (shouldDisplayIntermediate) {
             console.log(`[useGeneration] Displaying INTERMEDIATE images for suggestion ${index} for the first time.`);
+            console.log(`[useGeneration] 📊 Display logic: suggestions.length=${job.suggestions.length}, currentIndex=${currentSuggestionIndex}, targetIndex=${index}`);
+
             if (jobStartTime.current) {
               const elapsed = Date.now() - jobStartTime.current;
               console.log(`[FE_PERF_LOG] Intermediate images appeared on UI for index ${index}. Total time since start: ${elapsed}ms.`);
@@ -110,7 +133,9 @@ export function useGeneration({
             addMessage({
               role: 'ai',
               type: 'text',
-              content: `✨ Here's the scene preview for outfit ${index + 1}, working on final details...`
+              content: job.suggestions.length === 1
+                ? `✨ Here's your scene preview, working on final details...`
+                : `✨ Here's the scene preview for outfit ${index + 1}, working on final details...`
             });
             addMessage({
               type: "loading" as const,
@@ -119,6 +144,8 @@ export function useGeneration({
               metadata: { isImagePlaceholder: true },
             });
             displayedIntermediateImages.current.add(index);
+          } else {
+            console.log(`[useGeneration] ⏸️ Skipping intermediate images for suggestion ${index} (not current: ${currentSuggestionIndex})`);
           }
         }
         // --- END 🔍 FIX ---
@@ -146,7 +173,9 @@ export function useGeneration({
           addMessage({
             role: "ai",
             type: "text",
-            content: `🎉 Here's your outfit recommendation ${index + 1}!`,
+            content: job.suggestions.length === 1
+              ? `🎉 Here's your final outfit recommendation!`
+              : `🎉 Here's your outfit recommendation ${index + 1}!`,
           });
           displayedFinalImages.current.add(index);
         }
