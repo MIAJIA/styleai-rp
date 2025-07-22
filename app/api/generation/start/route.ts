@@ -9,6 +9,8 @@ import {
   type GenerationMode,
 } from '@/lib/ai';
 import { type OnboardingData } from '@/lib/onboarding-storage';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function POST(request: Request) {
   const startTime = Date.now();
@@ -57,8 +59,14 @@ export async function POST(request: Request) {
     const jobId = randomUUID();
     const now = Date.now();
 
+    // Get user session to store userId in job
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string })?.id || 'default';
+    console.log(`[GENERATION_START] User ID for job ${jobId.slice(-8)}: ${userId}`);
+
     const newJob: Job = {
       jobId,
+      userId, // Store userId in job for pipeline access
       status: 'pending', // IMPORTANT: Status is now 'pending'
       suggestions: [], // Suggestions will be generated later
       input: {

@@ -4,7 +4,6 @@ import { type Job } from '../types';
 import { executeAdvancedScenePipeline } from './advanced-scene';
 import { executeSimpleScenePipelineV2 } from './simple-scene';
 import { executeTryOnOnlyPipeline } from './try-on-only';
-import { getSession } from 'next-auth/react'
 /**
  * This is the single, shared background pipeline runner for all image generation tasks.
  * It is called via "fire-and-forget" from the API routes.
@@ -169,13 +168,34 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
             finalPrompt: pipelineResult.finalPrompt,
           },
         };
-        const session = await getSession();
-        const userId = (session?.user as { id?: string })?.id;
+        // Use userId from job object instead of getSession()
+        const userId = job.userId || 'default';
+        console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] Saving look with userId: ${userId}`);
         await saveLookToDB(lookToSave, userId);
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] Successfully saved look for suggestion ${suggestionIndex} to database.`);
       }
     } catch (dbError) {
+      // Use userId from job object instead of getSession()
+      const userId = job.userId || 'default';
       console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] Failed to save look for suggestion ${suggestionIndex} to DB:`, dbError);
+      console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] User ID: ${userId}`);
+      const lookToSave: PastLook = {
+        id: `${job.jobId}-${suggestionIndex}`,
+        imageUrl: pipelineResult.imageUrls[0],
+        style: job.suggestions[suggestionIndex]?.styleSuggestion?.outfit_suggestion?.outfit_title || 'AI Generated Style',
+        timestamp: Date.now(),
+        originalHumanSrc: job.input.humanImage.url,
+        originalGarmentSrc: job.input.garmentImage.url,
+        processImages: {
+          humanImage: job.input.humanImage.url,
+          garmentImage: job.input.garmentImage.url,
+          finalImage: pipelineResult.imageUrls[0],
+          stylizedImageUrl: pipelineResult.stylizedImageUrls?.[0],
+          styleSuggestion: job.suggestions[suggestionIndex]?.styleSuggestion,
+          finalPrompt: pipelineResult.finalPrompt,
+        },
+      };
+      console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] Look to Save:`, JSON.stringify(lookToSave, null, 2));
     }
 
     // 🔥 FIX: 清理pipeline锁

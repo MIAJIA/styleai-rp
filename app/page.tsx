@@ -295,8 +295,8 @@ export default function HomePage() {
   };
 
   // exist session but have not styleMe_user_profile
-  const userProfile = window.localStorage.getItem("styleMe_user_profile");
-  if (session && userProfile == undefined){
+  const userProfile = typeof window !== 'undefined' ? window.localStorage.getItem("styleMe_user_profile") : null;
+  if (session && userProfile == undefined) {
     router.push('/my-style');
   }
 
@@ -431,7 +431,7 @@ export default function HomePage() {
                   </div>
                 </button>
                 <p className="text-xs text-gray-500 text-center">
-                {session 
+                  {session
                     ? "This will take you to the chat where your styling magic happens!"
                     : "Please log in to access the AI stylist and start generating your looks!"
                   }
