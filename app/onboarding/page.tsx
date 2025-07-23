@@ -17,8 +17,16 @@ import PhotoUploadStep from "../components/onboarding/photo-upload-step";
 import BodyAnalysisStep from "../components/onboarding/body-analysis-step";
 import StylePreferenceStep from "../components/onboarding/style-preference-step";
 import StyleSummaryStep from "../components/onboarding/style-summary-step";
+import OnBoardingZero from "../components/onboarding/on-boarding-zero";
+import OnBoardingFirst from "../components/onboarding/on-boarding-first";
+import OnBoardingTwo from "../components/onboarding/on-boarding-two";
+import OnBoardingThree from "../components/onboarding/on-boarding-three";
+import OnBoardingFour from "../components/onboarding/on-boarding-four";
+import OnBoardingFive from "../components/onboarding/on-boarding-five";
+import OnBoardingSix from "../components/onboarding/on-boarding-six";
 
-const TOTAL_STEPS = 4;
+
+const TOTAL_STEPS = 8;
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
@@ -26,7 +34,7 @@ export const dynamic = 'force-dynamic';
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({});
-  const [isStepValid, setIsStepValid] = useState(false);
+  const [isStepValid, setIsStepValid] = useState(true);
   const router = useRouter();
 
   // Load saved data on mount with improved loading
@@ -79,6 +87,8 @@ export default function OnboardingPage() {
   const handlePrevious = () => {
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
+    }else{
+      router.push("/my-style");
     }
   };
 
@@ -91,15 +101,13 @@ export default function OnboardingPage() {
     switch (currentStep) {
       case 0:
         return (
-          <PhotoUploadStep
-            data={onboardingData}
-            onUpdate={updateOnboardingData}
+          <OnBoardingZero
             onValidationChange={handleValidationChange}
           />
         );
       case 1:
         return (
-          <BodyAnalysisStep
+          <OnBoardingFirst
             data={onboardingData}
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
@@ -107,13 +115,45 @@ export default function OnboardingPage() {
         );
       case 2:
         return (
-          <StylePreferenceStep
+          <OnBoardingTwo
             data={onboardingData}
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
           />
         );
       case 3:
+        return (
+          <OnBoardingThree
+            data={onboardingData}
+            onUpdate={updateOnboardingData}
+            onValidationChange={handleValidationChange}
+          />
+        );
+      case 4:
+        return (
+          <OnBoardingFour
+            data={onboardingData}
+            onUpdate={updateOnboardingData}
+            onValidationChange={handleValidationChange}
+          />
+        );
+      case 5:
+        return (
+          <OnBoardingFive
+            data={onboardingData}
+            onUpdate={updateOnboardingData}
+            onValidationChange={handleValidationChange}
+          />
+        );
+      case 6:
+        return (
+          <OnBoardingSix
+            data={onboardingData}
+            onUpdate={updateOnboardingData}
+            onValidationChange={handleValidationChange}
+          />
+        );
+      case 7:
         return (
           <StyleSummaryStep
             data={onboardingData}
@@ -153,7 +193,7 @@ export default function OnboardingPage() {
             variant="ghost"
             size="icon"
             onClick={handlePrevious}
-            disabled={currentStep === 0}
+            // disabled={currentStep === 0}
             className="p-2 h-auto disabled:opacity-30"
           >
             <ChevronLeft className="w-6 h-6" />

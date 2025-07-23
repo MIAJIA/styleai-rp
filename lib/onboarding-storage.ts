@@ -35,6 +35,19 @@ export interface OnboardingData {
     styleLabels?: string[];
     recommendedKeywords?: string[];
   };
+
+  // Step 5: Body Analysis Details
+  skinTone?: string;
+  bodyType?: string;
+  bodyStructure?: string;
+  faceShape?: string;
+
+  
+  userGoal?:{
+    hasStylingDifficulty?:boolean;
+    styleFocus?:string[];
+  }
+  selectedStyles?: string[];
 }
 
 export const safeSetLocalStorage = (key: string, value: string): boolean => {
