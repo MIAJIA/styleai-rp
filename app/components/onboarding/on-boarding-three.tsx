@@ -7,12 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Camera, X, CheckCircle, Info, Loader2 } from "lucide-react";
 import { OnboardingData } from "@/lib/onboarding-storage";
 import { useImageCompression } from "@/lib/hooks/use-image-compression";
+import { StepProps } from "./on-boarding-step";
 
-interface PhotoUploadStepProps {
-    data: OnboardingData;
-    onUpdate: (data: Partial<OnboardingData>) => void;
-    onValidationChange: (isValid: boolean) => void;
-}
 // Dynamically import SmartImageUploader to prevent SSR issues
 const SmartImageUploader = dynamic(
     () => import('@/components/smart-image-uploader').then(mod => ({ default: mod.SmartImageUploader })),
@@ -31,7 +27,7 @@ const SmartImageUploader = dynamic(
 export default function OnBoardingThree({ data,
     onUpdate,
     onValidationChange,
-}: PhotoUploadStepProps) {
+}: StepProps) {
     const [useSmartUploader, setUseSmartUploader] = useState(true);
     const fullBodyInputRef = useRef<HTMLInputElement>(null);
     const [fullBodyPhoto, setFullBodyPhoto] = useState<string>("");

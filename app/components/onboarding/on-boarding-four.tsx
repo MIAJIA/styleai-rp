@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { OnboardingData } from "@/lib/onboarding-storage";
+import { StepProps } from "./on-boarding-step";
 
 // 圆圈循环动画组件
 const CircleLoadingAnimation = ({ isVisible }: { isVisible: boolean }) => {
@@ -34,17 +35,11 @@ const CircleLoadingAnimation = ({ isVisible }: { isVisible: boolean }) => {
   );
 };
 
-interface PhotoUploadStepProps {
-    data: OnboardingData;
-    onUpdate: (data: Partial<OnboardingData>) => void;
-    onValidationChange: (isValid: boolean) => void;
-}
-  
 
 export default function OnBoardingFour({ data,
     onUpdate,
     onValidationChange,
-}: PhotoUploadStepProps) {
+}: StepProps) {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisComplete, setAnalysisComplete] = useState(false);
     const [analysisError, setAnalysisError] = useState<string | null>(null);

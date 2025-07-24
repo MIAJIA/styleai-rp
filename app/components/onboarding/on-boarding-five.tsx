@@ -56,68 +56,63 @@ const SKIN_TONE_OPTIONS = [
 // 体型选项数据
 const BODY_TYPE_OPTIONS = [
     {
-        id: "slim",
-        label: "Slim",
-        icon: "🦴",
-        description: "Thin and slender build"
+        id: "Hourglass",
+        label: "Hourglass",
+        image: "/onboarding/BodyType/hourglass.jpeg",
     },
     {
-        id: "athletic",
-        label: "Athletic",
-        icon: "💪",
-        description: "Muscular and toned"
+        id: "Pear",
+        label: "Pear",
+        image: "/onboarding/BodyType/pear.jpeg",
     },
     {
-        id: "average",
-        label: "Average",
-        icon: "👤",
-        description: "Standard body type"
+        id: "Triangle",
+        label: "Triangle",
+        image: "/onboarding/BodyType/triangle.jpeg",
     },
     {
-        id: "curvy",
-        label: "Curvy",
-        icon: "🍐",
-        description: "Fuller figure with curves"
+        id: "Inverted Triangle",
+        label: "Inverted",
+        image: "/onboarding/BodyType/invertedTriangle.jpeg",
     },
     {
-        id: "plus-size",
-        label: "Plus Size",
-        icon: "🌟",
-        description: "Larger body frame"
+        id: "Rectangle",
+        label: "Rectangle",
+        image: "/onboarding/BodyType/rectangle.jpeg",
     },
     {
-        id: "petite",
-        label: "Petite",
-        icon: "🌸",
-        description: "Small and delicate frame"
+        id: "Apple",
+        label: "Apple",
+        image: "/onboarding/BodyType/apple.jpeg",
     }
 ];
 
 // 身体量感结构选项数据
 const BODY_STRUCTURE_OPTIONS = [
     {
-        id: "delicate",
-        label: "Delicate",
-        icon: "🌱",
-        description: "Fine and light structure"
+        id: "Petite",
+        label: "Petite",
+        image: "/onboarding/BodyStructure/petite.jpeg",
     },
     {
-        id: "balanced",
-        label: "Balanced",
-        icon: "⚖️",
-        description: "Proportional structure"
+        id: "Slim",
+        label: "Slim",
+        image: "/onboarding/BodyStructure/slim.jpeg",
     },
     {
-        id: "substantial",
-        label: "Substantial",
-        icon: "🏗️",
-        description: "Strong and solid structure"
+        id: "Average",
+        label: "Average",
+        image: "/onboarding/BodyStructure/average.jpeg",
     },
     {
-        id: "dramatic",
-        label: "Dramatic",
-        icon: "🎭",
-        description: "Bold and striking structure"
+        id: "Chubby",
+        label: "Chubby",
+        image: "/onboarding/BodyStructure/chubby.jpeg",
+    },
+    {
+        id: "Plus-size",
+        label: "Plus-size",
+        image: "/onboarding/BodyStructure/plus.jpeg",
     }
 ];
 
@@ -149,6 +144,65 @@ const FACE_SHAPE_OPTIONS = [
     }
 ];
 
+function FaceShape(selectedFaceShape: string, setSelectedFaceShape: (value: string) => void){
+    return (
+        <div className="space-y-4">
+            {/* 脸型选择器 */}
+            <div className="space-y-4">
+                    <div className="text-left space-y-2">
+                        <p className="text-sm text-gray-600">
+                            Face Shape
+                        </p>
+                    </div>
+    
+                    <RadioGroup
+                        value={selectedFaceShape}
+                        onValueChange={setSelectedFaceShape}
+                        className="grid grid-cols-2 md:grid-cols-4 gap-3"
+                    >
+                        {FACE_SHAPE_OPTIONS.map((option) => (
+                            <div key={option.id} className="flex">
+                                <RadioGroupItem
+                                    value={option.id}
+                                    id={option.id}
+                                    className="peer sr-only"
+                                />
+                                <label
+                                    htmlFor={option.id}
+                                    className="flex flex-col items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer transition-all duration-200 hover:border-primary/50 hover:shadow-md peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:shadow-md peer-data-[state=checked]:opacity-100 peer-data-[state=checked]:scale-105 peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-primary/20 opacity-60 hover:opacity-80 hover:scale-102"
+                                >
+                                    {/* 脸型图标 */}
+                                    <div className="text-2xl mb-2">
+                                        {option.icon}
+                                    </div>
+                                    
+                                    {/* 标签和描述 */}
+                                    <div className="text-center space-y-1">
+                                        <span className="text-sm font-medium text-gray-900 peer-data-[state=checked]:text-primary">
+                                            {option.label}
+                                        </span>
+                                        <p className="text-xs text-gray-500">
+                                            {option.description}
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
+                        ))}
+                    </RadioGroup>
+                </div>
+    
+                {/* 脸型选择提示信息 */}
+                {selectedFaceShape && (
+                    <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                        <p className="text-sm text-orange-800 text-center">
+                            Selected: <span className="font-medium">{FACE_SHAPE_OPTIONS.find(opt => opt.id === selectedFaceShape)?.label}</span>
+                        </p>
+                    </div>
+                )}
+            </div>
+    )
+}
+
 export default function OnBoardingFive({ data, onUpdate, onValidationChange }: StepProps) {
     const [selectedSkinTone, setSelectedSkinTone] = useState<string>(data.skinTone || "");
     const [selectedBodyType, setSelectedBodyType] = useState<string>(data.bodyType || "");
@@ -160,7 +214,7 @@ export default function OnBoardingFive({ data, onUpdate, onValidationChange }: S
         setSelectedSkinTone(data.skinTone || "");
         setSelectedBodyType(data.bodyType || "");
         setSelectedBodyStructure(data.bodyStructure || "");
-        setSelectedFaceShape(data.faceShape || "");
+        setSelectedFaceShape(data.faceShape || "round");
     }, [data]);
 
     // 当选择改变时，更新数据
@@ -269,9 +323,9 @@ export default function OnBoardingFive({ data, onUpdate, onValidationChange }: S
                                 htmlFor={option.id}
                                 className="flex flex-col items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer transition-all duration-200 hover:border-primary/50 hover:shadow-md peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:shadow-md peer-data-[state=checked]:opacity-100 peer-data-[state=checked]:scale-105 peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-primary/20 opacity-60 hover:opacity-80 hover:scale-102"
                             >
-                                {/* 体型图标 */}
-                                <div className="text-2xl mb-2">
-                                    {option.icon}
+                                {/* 体型图片 */}
+                                <div className="mb-2 w-full h-20 flex items-center justify-center">
+                                    <img src={option.image} alt={option.label} className="w-full h-full object-cover rounded-lg" />
                                 </div>
                                 
                                 {/* 标签和描述 */}
@@ -279,9 +333,7 @@ export default function OnBoardingFive({ data, onUpdate, onValidationChange }: S
                                     <span className="text-sm font-medium text-gray-900 peer-data-[state=checked]:text-primary">
                                         {option.label}
                                     </span>
-                                    <p className="text-xs text-gray-500">
-                                        {option.description}
-                                    </p>
+
                                 </div>
                             </label>
                         </div>
@@ -309,7 +361,7 @@ export default function OnBoardingFive({ data, onUpdate, onValidationChange }: S
                 <RadioGroup
                     value={selectedBodyStructure}
                     onValueChange={setSelectedBodyStructure}
-                    className="grid grid-cols-2 md:grid-cols-4 gap-3"
+                    className="grid grid-cols-3 md:grid-cols-3 gap-3"
                 >
                     {BODY_STRUCTURE_OPTIONS.map((option) => (
                         <div key={option.id} className="flex">
@@ -322,9 +374,9 @@ export default function OnBoardingFive({ data, onUpdate, onValidationChange }: S
                                 htmlFor={option.id}
                                 className="flex flex-col items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer transition-all duration-200 hover:border-primary/50 hover:shadow-md peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:shadow-md peer-data-[state=checked]:opacity-100 peer-data-[state=checked]:scale-105 peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-primary/20 opacity-60 hover:opacity-80 hover:scale-102"
                             >
-                                {/* 身体量感结构图标 */}
-                                <div className="text-2xl mb-2">
-                                    {option.icon}
+                                {/* 身体量感结构图片 */}
+                                <div className="mb-2 w-full h-20 flex items-center justify-center">
+                                    <img src={option.image} alt={option.label} className="w-full h-full object-cover rounded-lg" />
                                 </div>
                                 
                                 {/* 标签和描述 */}
@@ -332,9 +384,6 @@ export default function OnBoardingFive({ data, onUpdate, onValidationChange }: S
                                     <span className="text-sm font-medium text-gray-900 peer-data-[state=checked]:text-primary">
                                         {option.label}
                                     </span>
-                                    <p className="text-xs text-gray-500">
-                                        {option.description}
-                                    </p>
                                 </div>
                             </label>
                         </div>
@@ -351,58 +400,7 @@ export default function OnBoardingFive({ data, onUpdate, onValidationChange }: S
                 </div>
             )}
 
-            {/* 脸型选择器 */}
-            <div className="space-y-4">
-                <div className="text-left space-y-2">
-                    <p className="text-sm text-gray-600">
-                        Face Shape
-                    </p>
-                </div>
 
-                <RadioGroup
-                    value={selectedFaceShape}
-                    onValueChange={setSelectedFaceShape}
-                    className="grid grid-cols-2 md:grid-cols-4 gap-3"
-                >
-                    {FACE_SHAPE_OPTIONS.map((option) => (
-                        <div key={option.id} className="flex">
-                            <RadioGroupItem
-                                value={option.id}
-                                id={option.id}
-                                className="peer sr-only"
-                            />
-                            <label
-                                htmlFor={option.id}
-                                className="flex flex-col items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer transition-all duration-200 hover:border-primary/50 hover:shadow-md peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:shadow-md peer-data-[state=checked]:opacity-100 peer-data-[state=checked]:scale-105 peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-primary/20 opacity-60 hover:opacity-80 hover:scale-102"
-                            >
-                                {/* 脸型图标 */}
-                                <div className="text-2xl mb-2">
-                                    {option.icon}
-                                </div>
-                                
-                                {/* 标签和描述 */}
-                                <div className="text-center space-y-1">
-                                    <span className="text-sm font-medium text-gray-900 peer-data-[state=checked]:text-primary">
-                                        {option.label}
-                                    </span>
-                                    <p className="text-xs text-gray-500">
-                                        {option.description}
-                                    </p>
-                                </div>
-                            </label>
-                        </div>
-                    ))}
-                </RadioGroup>
-            </div>
-
-            {/* 脸型选择提示信息 */}
-            {selectedFaceShape && (
-                <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                    <p className="text-sm text-orange-800 text-center">
-                        Selected: <span className="font-medium">{FACE_SHAPE_OPTIONS.find(opt => opt.id === selectedFaceShape)?.label}</span>
-                    </p>
-                </div>
-            )}
         </div>
     );
 }

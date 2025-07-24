@@ -3,26 +3,26 @@
 import { useState, useEffect } from "react";
 import { Check, Heart, Briefcase, Sparkles, Wine, Plane, Crown, Palette, Star, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StepProps } from "./on-boarding-step";
 
-interface ZeroStepProps {
-    onValidationChange: (isValid: boolean) => void;
-    data?: any;
-    onUpdate?: (data: any) => void;
-}
 
 const STYLE_OPTIONS = [
-  { id: "work", name: "Work", icon: Briefcase, color: "bg-slate-100 text-slate-900", description: "Professional and business attire" },
-  { id: "casual-chic", name: "Casual Chic", icon: Sparkles, color: "bg-violet-100 text-violet-900", description: "Effortlessly stylish everyday looks" },
-  { id: "date-night", name: "Date Night", icon: Heart, color: "bg-rose-100 text-rose-900", description: "Romantic and elegant evening wear" },
-  { id: "cocktail", name: "Cocktail", icon: Wine, color: "bg-purple-100 text-purple-900", description: "Sophisticated party and event wear" },
-  { id: "vacation", name: "Vacation", icon: Plane, color: "bg-sky-100 text-sky-900", description: "Comfortable and stylish travel outfits" },
-  { id: "formal", name: "Formal", icon: Crown, color: "bg-amber-100 text-amber-900", description: "High-end formal and special occasions" },
-  { id: "artistic", name: "Artistic", icon: Palette, color: "bg-emerald-100 text-emerald-900", description: "Creative and expressive fashion" },
-  { id: "trendy", name: "Trendy", icon: Star, color: "bg-pink-100 text-pink-900", description: "Latest fashion trends and styles" },
-  { id: "edgy", name: "Edgy", icon: Zap, color: "bg-gray-100 text-gray-900", description: "Bold and unconventional fashion" },
+    { id: "Casual", name: "Casual", icon: "/onboarding/Style/casual.png", },
+    { id: "Classy", name: "Classy", icon: "/onboarding/Style/Classy.jpg", },
+    { id: "Old Money", name: "Old Money", icon: "/onboarding/Style/OldMoney.png", },
+    { id: "Preppy", name: "Preppy", icon: "/onboarding/Style/Preppy.png", },
+    { id: "Coastal", name: "Coastal", icon: "/onboarding/Style/Coastal.png", },
+    { id: "Boho", name: "Boho", icon: "/onboarding/Style/Boho.png", },
+    { id: "Coquette", name: "Coquette", icon: "/onboarding/Style/Coquette.png", },
+    { id: "Edgy", name: "Edgy", icon: "/onboarding/Style/Edgy.png", },
+    { id: "Sporty", name: "Sporty", icon: "/onboarding/Style/Sporty.png", },
+    { id: "Streetstyle", name: "Streetstyle", icon: "/onboarding/Style/Streetstyle.png", },
+    { id: "Dopamine", name: "Dopamine", icon: "/onboarding/Style/Dopamine.png", },
+    { id: "Y2K", name: "Y2K", icon: "/onboarding/Style/Y2K.png", },
+
 ];
 
-export default function OnBoardingSix({ onValidationChange, data, onUpdate }: ZeroStepProps) {
+export default function OnBoardingSix({ data, onUpdate, onValidationChange }: StepProps) {
     const [selectedStyles, setSelectedStyles] = useState<string[]>(data?.selectedStyles || []);
 
     // Check validation whenever selectedStyles changes
@@ -40,8 +40,8 @@ export default function OnBoardingSix({ onValidationChange, data, onUpdate }: Ze
 
     const toggleStyle = (styleId: string) => {
         setSelectedStyles((prev) =>
-            prev.includes(styleId) 
-                ? prev.filter((id) => id !== styleId) 
+            prev.includes(styleId)
+                ? prev.filter((id) => id !== styleId)
                 : [...prev, styleId]
         );
     };
@@ -58,7 +58,7 @@ export default function OnBoardingSix({ onValidationChange, data, onUpdate }: Ze
             </div>
 
             {/* Style Grid */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-2">
                 {STYLE_OPTIONS.map((style) => {
                     const Icon = style.icon;
                     const isSelected = selectedStyles.includes(style.id);
@@ -68,12 +68,7 @@ export default function OnBoardingSix({ onValidationChange, data, onUpdate }: Ze
                             key={style.id}
                             onClick={() => toggleStyle(style.id)}
                             className={cn(
-                                "flex flex-col items-center justify-center p-4 rounded-xl transition-all duration-200 aspect-square relative",
-                                style.color,
-                                isSelected 
-                                    ? "ring-2 ring-primary ring-offset-2 scale-105 shadow-lg" 
-                                    : "hover:scale-105 hover:shadow-md",
-                                "border border-transparent"
+                                "flex flex-col items-center justify-center p-1 rounded-xl transition-all duration-200 aspect-square relative border border-transparent"
                             )}
                         >
                             {/* Selection indicator */}
@@ -82,8 +77,8 @@ export default function OnBoardingSix({ onValidationChange, data, onUpdate }: Ze
                                     <Check className="w-4 h-4 text-white" />
                                 </div>
                             )}
-                            
-                            <Icon size={24} className="mb-2" />
+
+                            <img src={Icon} alt={style.name} className="mb-2 w-17 h-17 object-cover rounded-lg border-2 border-gray-200" />
                             <span className="text-xs font-medium text-center leading-tight">
                                 {style.name}
                             </span>
