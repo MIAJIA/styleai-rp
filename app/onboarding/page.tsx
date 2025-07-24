@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -35,7 +36,9 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({});
   const [isStepValid, setIsStepValid] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
 
   // Load saved data on mount with improved loading
   useEffect(() => {
@@ -60,26 +63,54 @@ export default function OnboardingPage() {
     setIsStepValid(isValid);
   }, []);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < TOTAL_STEPS - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
       // Complete onboarding with improved error handling
       try {
+        setIsSaving(true);
         localStorage.setItem("styleMe_onboarding_completed", "true");
 
-        // Save user profile using the utility function
+        // Save user profile using the utility function (local storage)
         const profileSaved = saveUserProfile(onboardingData);
 
         if (!profileSaved) {
-          console.warn("Failed to save complete user profile, but continuing...");
+          console.warn("Failed to save complete user profile to local storage, but continuing...");
+        }
+
+        // Save to database if user is authenticated
+        if (session?.user && (session.user as { id?: string }).id) {
+          try {
+            const response = await fetch('/api/user/profile', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                onboardingData: onboardingData,
+              }),
+            });
+
+            if (!response.ok) {
+              console.warn("Failed to save user profile to database:", response.statusText);
+            } else {
+              console.log("User profile saved to database successfully");
+            }
+          } catch (error) {
+            console.error("Error saving user profile to database:", error);
+          }
+        } else {
+          console.log("User not authenticated, skipping database save");
         }
 
         router.push("/");
-      } catch (error) {
+      } catch (error) { 
         console.error("Error completing onboarding:", error);
         // Still try to navigate even if storage fails
         router.push("/");
+      } finally {
+        setIsSaving(false);
       }
     }
   };
@@ -227,12 +258,21 @@ export default function OnboardingPage() {
         <div className="max-w-md mx-auto">
           <Button
             onClick={handleNext}
-            disabled={!isStepValid}
+            disabled={!isStepValid || isSaving}
             className="w-full h-12 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50"
           >
             <span className="flex items-center justify-center space-x-2">
-              <span>{currentStep === TOTAL_STEPS - 1 ? "Complete Setup" : "Continue"}</span>
-              {currentStep < TOTAL_STEPS - 1 && <ChevronRight className="w-4 h-4" />}
+              {isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <span>{currentStep === TOTAL_STEPS - 1 ? "Complete Setup" : "Continue"}</span>
+                  {currentStep < TOTAL_STEPS - 1 && <ChevronRight className="w-4 h-4" />}
+                </>
+              )}
             </span>
           </Button>
         </div>

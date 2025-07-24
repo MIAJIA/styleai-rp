@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
 import { put, del } from '@vercel/blob';
+import { OnboardingData } from './onboarding-storage';
 
 // 数据库中的 Look 结构
 export interface DBLook {
@@ -391,3 +392,29 @@ export function dbLookToPastLook(dbLook: DBLook): PastLook {
     } : undefined,
   };
 }
+
+
+export async function saveOnboardingDataToDB(userId: string, onboardingData: string) {
+  try {
+    // Store onboardingData as a field in a hash, e.g., { data: onboardingData }
+    // await kv.hdel("onboardingData_" + userId, "boarding");
+    await kv.hset("onboardingData_" + userId, { boarding: onboardingData });
+    console.log('Onboarding data saved successfully to database');
+  } catch (error) {
+    console.error('Error saving onboarding data to database:', error);
+    throw error;
+  }
+}
+
+export async function getOnboardingDataFromDB(userId: string): Promise<OnboardingData> {
+  try {
+    const onboardingData = await kv.hget("onboardingData_" + userId, "boarding");
+    // Assuming onboardingData is a JSON string, parse it to OnboardingData
+    return onboardingData as OnboardingData;
+  } catch (error) {
+    console.error('Error getting onboarding data from database:', error);
+    throw error;
+  }
+}
+
+

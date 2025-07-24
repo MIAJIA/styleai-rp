@@ -6,7 +6,9 @@ import {
   getStyleSuggestionFromAI,
   type Suggestion,
 } from '@/lib/ai';
-
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getOnboardingDataFromDB } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   const jobId = request.nextUrl.searchParams.get('jobId');
@@ -43,14 +45,23 @@ export async function GET(request: NextRequest) {
       if (job.input.stylePrompt) {
         console.log(`[STYLE_PROMPT_LOG] 📝 Style prompt content (first 100 chars):`, job.input.stylePrompt.substring(0, 100));
       }
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id) {
+        return NextResponse.json(
+          { error: 'Unauthorized - User not authenticated' },
+          { status: 401 }
+        );
+      }
 
+      const userProfile = await getOnboardingDataFromDB(session?.user?.id);
+      console.log("userProfile", userProfile);
       // 1. Get style suggestions from AI
       const aiSuggestions = await getStyleSuggestionFromAI(
         {
           humanImageUrl: job.input.humanImage.url,
           garmentImageUrl: job.input.garmentImage.url,
           occasion: job.input.occasion,
-          userProfile: job.input.userProfile,
+          userProfile: userProfile,
           stylePrompt: job.input.stylePrompt, // �� 新增：传递 stylePrompt
           customPrompt: job.input.customPrompt, // 🔍 新增：传递 customPrompt
         },
