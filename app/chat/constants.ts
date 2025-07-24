@@ -17,18 +17,11 @@ export const styles = [
   { id: "formal", name: "Formal", icon: Crown },
 ]
 
-// Style prompts for different occasions
 export const stylePrompts = {
-  "work":
-    "Modern office environment with clean lines and professional atmosphere. Natural lighting from large windows, contemporary office furniture, neutral color palette with subtle textures. The setting conveys competence and reliability while maintaining approachability. Shot with professional business photography style, crisp details, confident posture, 4k resolution.",
-  "casual-chic":
-    "Trendy urban setting with artistic elements - exposed brick walls, modern coffee shop interior, or stylish boutique district. Natural daylight with soft shadows, contemporary art pieces in background, relaxed yet curated atmosphere. Street style photography aesthetic with effortless sophistication, 4k resolution.",
-  "date-night":
-    "Romantic evening setting with warm, intimate lighting - upscale restaurant with soft candlelight, elegant rooftop terrace with city lights, or charming wine bar atmosphere. Golden hour lighting with bokeh effects, sophisticated ambiance that's alluring yet tasteful. Shot with cinematic romantic photography style, 4k resolution.",
-  "cocktail":
-    "Sophisticated cocktail lounge or upscale bar setting with ambient lighting, rich textures like velvet and marble, elegant floral arrangements. Warm lighting with dramatic shadows, luxurious yet approachable atmosphere. Fashion-forward photography with emphasis on style and elegance, 4k resolution.",
-  "vacation":
-    "Bright, airy vacation destination - beachside resort with ocean views, tropical poolside setting, or charming European street cafe. Natural sunlight with vibrant colors, relaxed holiday atmosphere with palm trees or scenic backgrounds. Travel photography style with fresh, carefree energy, 4k resolution.",
-  "formal":
-    "Elegant formal venue with grand architecture - luxury hotel ballroom, opera house foyer, or prestigious gala setting. Dramatic lighting with crystal chandeliers, rich fabrics and ornate details. Classical formal photography with emphasis on dignity and sophistication, 4k resolution.",
+  "work": "office outfit, professional and polished, comfortable and well-fitted, with flexible piece combinations that are appropriate for both office work and everyday client meetings. The scene is a bright and open-plan office with glass partitions",
+  "casual-chic": "casual outfit, relaxed and comfortable, effortlessly stylish, easy to move in, ideal for weekend downtime, coffee and shopping. The scene is a urban street lined with outdoor café tables and chairs",
+  "date-night": "date night outfit, alluring and confidently charming, creating a soft, romantic atmosphere that showcases personal style without revealing too much. The scene is an intimate candlelit bistro terrace",
+  "cocktail": "cocktail attire, fashionable and elegant, semi-formal with the right balance of sophistication and personality, thoughtfully chosen colors without appearing overly grand. The scene is an upscale lounge bar with sleek marble counters, ambient pendant lighting",
+  "vacation": "vacation outfit, fresh and comfortable with a clear vacation vibe, perfectly suited for beach days, resort lounging, or city sightseeing. The scene is a pristine beachfront resort featuring turquoise waves and palm trees",
+  "formal": " formal attire, elegant and dignified with a strong sense of luxury, strictly adheres to formal-event dress codes. The scene is an opulent ballroom with crystal chandeliers",
 }

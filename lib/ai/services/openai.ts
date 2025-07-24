@@ -116,14 +116,10 @@ Analyze the Key Piece's style, color, material, silhouette and formality level i
 Build the outfit around this "KEY PIECE" and make sure the KEY PIECE must be incorporated into the outfit suggestion.
 `;
 
-    // 🔍 更新：Build occasion details with styling context and specific stylePrompt
     const occasionSection = stylePrompt
       ? `# Occasion & Scene Details
-**Event/Setting:** ${occasion}
-
-**Visual Scene Description:** ${stylePrompt}
-
-**Styling Goal:** Choose complementary pieces that match the formality and mood of this occasion. Use the visual scene description above to inform the atmosphere, lighting, and overall aesthetic for the image_prompt generation.`
+Build the outfit for ${occasion}. The styling guidelines are ${stylePrompt}.
+Make sure the outfit is suitable for the occasion and meet the styling guidelines.`
       : `# Occasion
 **Event/Setting:** ${occasion}
 

@@ -123,9 +123,9 @@ Your reply should strictly follow the JSON format, containing two keys:
         "description": "..."
       }
     },
-    "explanation": "Explanation as described above, Use language that is vivid, tasteful, and stylish. Avoid generic phrasing."
+    "explanation": "Briefly summarize the outfit suggestion in one sentence in user-facing language."
   },
-  "image_prompt": "A vivid Midjourney-style visual scene prompt describing the user wearing the outfit, in the specific setting. Follow the provided format guideline and ensure the prompt reflects outfit details, scene context, and user physical traits."
+  "image_prompt": "A Midjourney-style prompt describing the user wearing the outfit in the occasion setting. Follow the provided format guideline and ensure the prompt reflects outfit details, scene context, and user physical traits."
 }
 \`\`\`
 
@@ -294,9 +294,9 @@ Your reply should strictly follow the JSON format, containing two keys:
         "description": "..."
       }
     },
-    "explanation": "Explanation as described above, Use language that is vivid, tasteful, and stylish. Avoid generic phrasing."
+    "explanation": "Briefly summarize the outfit suggestion in one sentence in user-facing language."
   },
-  "image_prompt": "A vivid Midjourney-style visual scene prompt describing the user wearing the outfit, in the specific setting. Follow the provided format guideline and ensure the prompt reflects outfit details, scene context, and user physical traits."
+  "image_prompt": "A Midjourney-style prompt describing the user wearing the outfit in the occasion setting. Follow the provided format guideline and ensure the prompt reflects outfit details, scene context, and user physical traits."
 }
 \`\`\`
 
@@ -467,9 +467,9 @@ Your reply should strictly follow the JSON format, containing two keys:
         "description": "..."
       }
     },
-    "explanation": "Explanation as described above, Use language that is vivid, tasteful, and stylish. Avoid generic phrasing."
+    "explanation": "Briefly summarize the outfit suggestion in one sentence in user-facing language."
   },
-  "image_prompt": "A vivid Midjourney-style visual scene prompt describing the user wearing the outfit, in the specific setting. Follow the provided format guideline and ensure the prompt reflects outfit details, scene context, and user physical traits."
+  "image_prompt": "A Midjourney-style prompt describing the user wearing the outfit in the occasion setting. Follow the provided format guideline and ensure the prompt reflects outfit details, scene context, and user physical traits."
 }
 \`\`\`
 
@@ -637,9 +637,9 @@ Your reply should strictly follow the JSON format, containing two keys:
         "description": "..."
       }
     },
-    "explanation": "Explanation as described above, Use language that is vivid, tasteful, and stylish. Avoid generic phrasing."
+    "explanation": "Briefly summarize the outfit suggestion in one sentence in user-facing language."
   },
-  "image_prompt": "A Midjourney-style visual scene prompt describing the user wearing the outfit in the specific setting. Follow the provided format guideline and ensure the prompt reflects outfit details, scene context, and user physical traits."
+  "image_prompt": "A Midjourney-style prompt describing the user wearing the outfit in the occasion setting. Follow the provided format guideline and ensure the prompt reflects outfit details, scene context, and user physical traits."
 }
 \`\`\`
 
