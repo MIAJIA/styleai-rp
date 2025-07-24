@@ -79,7 +79,7 @@ export default function OnBoardingSix({ data, onUpdate, onValidationChange }: St
                             )}
 
                             <img src={Icon} alt={style.name} className="mb-2 w-17 h-17 object-cover rounded-lg border-2 border-gray-200" />
-                            <span className="text-xs font-medium text-center leading-tight">
+                            <span className="text-xs font-medium text-center leading-tight text-gray-500/70">
                                 {style.name}
                             </span>
                         </button>

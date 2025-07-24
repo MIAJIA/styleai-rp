@@ -310,7 +310,7 @@ export default function OnBoardingFive({ data, onUpdate, onValidationChange }: S
                 <RadioGroup
                     value={selectedBodyType}
                     onValueChange={setSelectedBodyType}
-                    className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3"
+                    className="grid grid-cols-3 md:grid-cols-3 gap-3"
                 >
                     {BODY_TYPE_OPTIONS.map((option) => (
                         <div key={option.id} className="flex">
