@@ -6,6 +6,7 @@ import {
   getStyleSuggestionFromAI,
   type Suggestion,
 } from '@/lib/ai';
+import { KlingBusinessError } from '@/lib/ai/services/kling';
 
 
 export async function GET(request: NextRequest) {
@@ -127,12 +128,28 @@ export async function GET(request: NextRequest) {
     console.error(`[API_STATUS | ${jobId.slice(-8)}] 💥 Error type: ${error instanceof Error ? error.constructor.name : 'Unknown'}`);
     console.error(`[API_STATUS | ${jobId.slice(-8)}] 💥 Environment: ${process.env.NODE_ENV}`);
 
-    // Check if this is a balance-related error
+    // Check if this is a business error (like balance issues)
+    if (error instanceof KlingBusinessError) {
+      console.error(`[API_STATUS | ${jobId.slice(-8)}] 💰 BUSINESS ERROR DETECTED! Returning user-friendly message`);
+      return NextResponse.json({ 
+        error: 'Business Error', 
+        details: error.message,
+        isBusinessError: true 
+      }, { status: 400 });
+    }
+
+    // Check if this is a balance-related error (fallback)
     if (error instanceof Error && (error.message.includes('429') || error.message.includes('balance') || error.message.includes('Account balance not enough'))) {
       console.error(`[API_STATUS | ${jobId.slice(-8)}] 💰 BALANCE ERROR DETECTED IN STATUS API!`);
       console.error(`[API_STATUS | ${jobId.slice(-8)}] 💰 This is why users see 503 errors - Kling AI account needs recharge`);
+      return NextResponse.json({ 
+        error: 'Balance Error', 
+        details: error.message.includes('💳') ? error.message : '💳 Our AI stylist needs a quick recharge! We\'re working on resolving the balance issue. Please try again in a few minutes! 🔋✨',
+        isBusinessError: true 
+      }, { status: 400 });
     }
 
+    // For all other system errors, return 500
     const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
     return NextResponse.json({ error: 'Failed to process job status', details: errorMessage }, { status: 500 });
   }

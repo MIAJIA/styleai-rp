@@ -43,7 +43,17 @@ export function useGeneration({
   const onPollingError = useCallback(
     (error: Error) => {
       console.error("[useGeneration | onPollingError] Polling failed:", error)
-      const errorMessage = `Opps... something went wrong. Polling failed with status: ${error.message.replace('Polling failed with status: ', '')}`;
+      
+      // Check if this is a user-friendly business error message
+      let errorMessage: string;
+      if (error.message.includes('💳') || error.message.includes('⏰') || error.message.includes('🚨')) {
+        // This is already a user-friendly message from Kling API
+        errorMessage = error.message;
+      } else {
+        // This is a system error, format it
+        errorMessage = `Opps... something went wrong. Polling failed with status: ${error.message.replace('Polling failed with status: ', '')}`;
+      }
+      
       setPollingError(errorMessage);
       replaceLastLoadingMessage({
         role: "ai",

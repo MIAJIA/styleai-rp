@@ -44,6 +44,20 @@ export function usePolling<T>(
       try {
         const response = await fetch(`/api/generation/status?jobId=${jobId}`)
         if (!response.ok) {
+          // Try to extract user-friendly error message from response body
+          try {
+            const errorData = await response.json();
+            if (errorData.details && errorData.isBusinessError) {
+              console.log(`[usePolling] 💰 Business error detected: ${errorData.details}`);
+              // For business errors, stop polling immediately
+              const businessError = new Error(errorData.details);
+              onPollingError?.(businessError);
+              stopPolling();
+              return;
+            }
+          } catch (parseError) {
+            console.warn(`[usePolling] Could not parse error response:`, parseError);
+          }
           throw new Error(`Polling failed with status: ${response.status}`)
         }
         const data = await response.json() as T;

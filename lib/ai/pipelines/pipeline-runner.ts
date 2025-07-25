@@ -1,6 +1,7 @@
 import { kv } from '@vercel/kv';
 import { saveLookToDB, type PastLook } from '@/lib/database';
 import { type Job } from '../types';
+import { KlingBusinessError } from '../services/kling';
 import { executeAdvancedScenePipeline } from './advanced-scene';
 import { executeSimpleScenePipelineV2 } from './simple-scene';
 import { executeTryOnOnlyPipeline } from './try-on-only';
@@ -256,8 +257,11 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
     console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💥 Error message: ${errorMessage}`);
     console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💥 Environment: ${process.env.NODE_ENV}`);
 
-    // Check if this is a balance-related error
-    if (errorMessage.includes('429') || errorMessage.includes('balance') || errorMessage.includes('Account balance not enough')) {
+    // Check if this is a business error (like balance issues)
+    if (error instanceof KlingBusinessError) {
+      console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💰 BUSINESS ERROR DETECTED IN PIPELINE!`);
+      console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💰 User-friendly message: ${error.message}`);
+    } else if (errorMessage.includes('429') || errorMessage.includes('balance') || errorMessage.includes('Account balance not enough')) {
       console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💰 BALANCE ERROR DETECTED IN PIPELINE!`);
       console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 💰 This is why users see 503 errors - Kling AI account needs recharge`);
     }

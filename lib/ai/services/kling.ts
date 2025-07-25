@@ -7,6 +7,18 @@ import {
 } from "@/lib/prompts";
 import { Job, Suggestion } from "../types";
 
+// Custom error class for business errors (like balance issues)
+export class KlingBusinessError extends Error {
+  public readonly isBusinessError = true;
+  public readonly statusCode: number;
+  
+  constructor(message: string, statusCode: number = 429) {
+    super(message);
+    this.name = 'KlingBusinessError';
+    this.statusCode = statusCode;
+  }
+}
+
 // --- Kling AI ---
 const KLING_ACCESS_KEY = process.env.KLING_AI_ACCESS_KEY;
 const KLING_SECRET_KEY = process.env.KLING_AI_SECRET_KEY;
@@ -197,7 +209,7 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
         const error = new Error(errorMessage);
         if (!shouldRetry) {
           // For non-retryable errors like insufficient balance, throw immediately
-          throw error;
+          throw new KlingBusinessError(errorMessage, submitResponse.status);
         } else {
           // For retryable errors, let the retry logic handle it
           throw error;
