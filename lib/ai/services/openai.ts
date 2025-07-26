@@ -137,14 +137,24 @@ Make sure the outfit is suitable for the occasion and meet the styling guideline
 
       // Add user-specific styling guidance if profile exists
       if (userProfile) {
-        const bodyTypeGuidance = userProfile.aiAnalysis?.bodyType
-          ? `Focus on silhouettes that flatter a ${userProfile.aiAnalysis.bodyType} body type.`
+        const skinToneGuidance = userProfile.skinTone
+          ? `Choose colors that complement the user's ${userProfile.skinTone} skin tone.`
           : '';
 
-        const stylePersonalityGuidance = userProfile.stylePreferences?.length
-          ? `Align with the user's style preferences: ${userProfile.stylePreferences.join(', ')}`
+        const bodyTypeGuidance = userProfile.bodyType
+          ? `Focus on silhouettes that flatter a ${userProfile.bodyType} body type.`
           : '';
 
+        const bodyStructureGuidance = userProfile.bodyStructure
+          ? `Consider the user's ${userProfile.bodyStructure} body structure for optimal fit and proportion.`
+          : '';
+
+        const stylePersonalityGuidance = userProfile.selectedStyles?.length
+          ? `Align with the user's style preferences: ${userProfile.selectedStyles.join(', ')}`
+          : '';
+
+
+        // style-preference-step 页面 已废弃 所以不使用 customStyle
         const customStyleGuidance = userProfile.customStyle && userProfile.customStyle.trim()
           ? `user's style notes: ${userProfile.customStyle.trim()}`
           : '';
@@ -154,7 +164,7 @@ Make sure the outfit is suitable for the occasion and meet the styling guideline
           .filter(Boolean)
           .join(' and ') + (stylePersonalityGuidance || customStyleGuidance ? '.' : '');
 
-        return `${basePreferences} ${bodyTypeGuidance} ${combinedStyleGuidance} Emphasize creating a cohesive look that enhances the user's natural features and builds confidence.`;
+        return `${basePreferences} ${bodyTypeGuidance} ${bodyStructureGuidance} ${skinToneGuidance} ${combinedStyleGuidance} Emphasize creating a cohesive look that enhances the user's natural features and builds confidence.`;
       }
 
       return `${basePreferences} Focus on creating a cohesive look that enhances the user's features and suits the context.`;
