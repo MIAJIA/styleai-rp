@@ -15,6 +15,7 @@ export function usePolling<T>(
   const [isPolling, setIsPolling] = useState(false)
   const [consecutiveFails, setConsecutiveFails] = useState(0);
   const pollingIntervalIdRef = useRef<NodeJS.Timeout | null>(null)
+  const pollingNumber = useRef<number>(0)
 
   // 🔍 FIX: 添加上次数据的引用，避免不必要的更新
   const lastDataRef = useRef<T | null>(null);
@@ -24,6 +25,7 @@ export function usePolling<T>(
       clearInterval(pollingIntervalIdRef.current)
       pollingIntervalIdRef.current = null
       setIsPolling(false)
+      pollingNumber.current = 0;
       console.log("[usePolling] Polling stopped.")
     }
   }, []);
@@ -34,15 +36,29 @@ export function usePolling<T>(
       setConsecutiveFails(0);
       lastDataRef.current = null;
       return
+    
     }
+    if (!isPolling) return
+    if (pollingIntervalIdRef.current) return
 
     const poll = async () => {
       if (!jobId) {
         stopPolling();
         return;
       }
+      const now = new Date().toUTCString()
+      console.log(`[usePolling] Polling for job ${jobId?.slice(-8)} at ${now}`)
       try {
-        const response = await fetch(`/api/generation/status?jobId=${jobId}`)
+        // 创建 AbortController 用于超时控制
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+
+        const response = await fetch(`/api/generation/status?jobId=${jobId}`, {
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId); // 清除超时定时器
+        
         if (!response.ok) {
           throw new Error(`Polling failed with status: ${response.status}`)
         }
@@ -63,39 +79,49 @@ export function usePolling<T>(
 
         // Reset fail counter on success
         setConsecutiveFails(0);
-
+        stopPolling();
       } catch (error) {
-        const newFailCount = consecutiveFails + 1;
-        setConsecutiveFails(newFailCount);
-        console.warn(`[usePolling] Poll failed for job ${jobId?.slice(-8)}. Consecutive fails: ${newFailCount}`);
+        // 解决异步 useState 问题
+        const newFailCount = pollingNumber.current + 1;
+        pollingNumber.current = newFailCount;
+        setConsecutiveFails(pollingNumber.current);
+          console.warn(`[usePolling] Poll failed for job ${jobId?.slice(-8)}. Consecutive fails: ${newFailCount}`);
 
         if (newFailCount >= MAX_CONSECUTIVE_FAILS) {
           console.error(`[usePolling] Reached max consecutive fails (${MAX_CONSECUTIVE_FAILS}). Stopping polling.`);
           onPollingError?.(error instanceof Error ? error : new Error("Unknown polling error"));
           stopPolling();
+        }else{
+          pollingIntervalIdRef.current = setTimeout(poll, 1000)
         }
       }
     }
 
-    // Start polling immediately and then set an interval
-    setIsPolling(true)
     setConsecutiveFails(0);
     console.log(`[usePolling] Starting polling for jobId: ${jobId}`)
-    poll() // Initial poll
-    pollingIntervalIdRef.current = setInterval(poll, 5000)
+    pollingIntervalIdRef.current = setTimeout(poll, 1000) // Initial poll
+    
 
-    // Cleanup function
-    return () => {
-      stopPolling()
-    }
-  }, [jobId, onUpdate, onPollingError, stopPolling, consecutiveFails])
+    // // Cleanup function
+    // return () => {
+    //   stopPolling()
+    // }
+  }, [jobId, isPolling])
 
   const startPolling = useCallback(() => {
     if (!jobId || isPolling) return;
     setIsPolling(true);
     setConsecutiveFails(0);
-    // The useEffect will handle the rest
   }, [jobId, isPolling]);
+
+  // auto start polling
+  useEffect(() => {
+    if (!jobId || isPolling) return;
+    setIsPolling(true);
+    setConsecutiveFails(0);
+  }, [jobId]);
+
+
 
   return { isPolling, startPolling, stopPolling }
 }
