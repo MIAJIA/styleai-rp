@@ -216,12 +216,25 @@ export function useGeneration({
           !displayedFinalImages.current.has(index)
         ) {
           console.error(`[useGeneration | onPollingUpdate] ❌ Suggestion ${index} failed:`, error);
-          // Same logic as above, this will target the last loading message.
+          
+          // 💡 NEW (Scalable): Directly use the error message from the backend 
+          // as the single source of truth.
+          const errorMessage = error || "An unknown error occurred. Please try again.";
+
+          // Always provide a retry mechanism for any failure.
           replaceLastLoadingMessage({
             role: "ai",
-            type: "text",
-            content: `Opps, Error on Suggestion ${index + 1}: ${error}`,
+            type: "quick-reply",
+            content: errorMessage, // Display the exact error from the backend.
+            actions: [
+              {
+                id: `retry-failed-suggestion-${index}`,
+                label: "Retry Generation",
+                type: "retry-start-generation",
+              },
+            ],
           });
+          
           displayedFinalImages.current.add(index); // Also "remember" failed attempts
         }
       });
@@ -318,10 +331,33 @@ export function useGeneration({
       if (stylePrompts[chatData.occasion as keyof typeof stylePrompts]) {
         formData.append("style_prompt", stylePrompts[chatData.occasion as keyof typeof stylePrompts])
       }
-      const tempjobId = jobId;
-      setJobId(null);
+      const response = await fetch("/api/generation/start", {
+        method: "POST",
+        body: formData,
+      });
 
-     setTimeout(() => setJobId(tempjobId), 500 );
+      if (!response.ok) {
+        let errorDetails = "An unknown error occurred.";
+        const clonedResponse = response.clone();
+        try {
+          const errorJson = await response.json();
+          errorDetails =
+            errorJson.details || errorJson.error || JSON.stringify(errorJson);
+        } catch (e) {
+          // If the response is not JSON, use the text content from the cloned response
+          errorDetails = await clonedResponse.text();
+        }
+        throw new Error(
+          `Failed to start generation. Server responded with ${response.status}: ${errorDetails}`
+        );
+      }
+
+      const result = await response.json();
+      const endTime = Date.now();
+      console.log(`[FE_PERF_LOG | restartGeneration] API call successful. JobId received. Total time: ${endTime - startTime}ms.`);
+
+      console.log("[useGeneration | restartGeneration] получили jobId:", result.jobId, ". Triggering polling.");
+      setJobId(result.jobId);
     } catch (error: any) {
       const errorMessage =
         error.message || "An unexpected error occurred while starting the generation."

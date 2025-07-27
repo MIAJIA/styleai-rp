@@ -7,6 +7,14 @@ import {
 } from "@/lib/prompts";
 import { Job, Suggestion } from "../types";
 
+// 🛡️ NEW: Custom error for terminal task failures to distinguish from transient network errors.
+class TaskFailedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TaskFailedError';
+  }
+}
+
 // --- Kling AI ---
 const KLING_ACCESS_KEY = process.env.KLING_AI_ACCESS_KEY;
 const KLING_SECRET_KEY = process.env.KLING_AI_SECRET_KEY;
@@ -298,18 +306,35 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
         console.log(`${KLING_API_PREFIX} 🎉 Task ${taskId} completed successfully! Total images: ${finalImageUrls.length}`);
         break;
       } else if (taskData.task_status === "failed") {
-        console.error(`${KLING_API_PREFIX} ❌ Task failed. Status: ${taskData.task_status}, Message: ${taskData.task_status_msg || 'Unknown'}`);
+        const failureMsg = taskData.task_status_msg || 'Unknown';
+        console.error(`${KLING_API_PREFIX} ❌ Task failed. Status: ${taskData.task_status}, Message: ${failureMsg}`);
 
         // 🔍 NEW: 输出完整的失败响应
         console.error(`${KLING_API_PREFIX} ===== COMPLETE FAILURE RESPONSE =====`);
         console.error(`${KLING_API_PREFIX} 📥 FAILURE RESPONSE:`, JSON.stringify(statusResult, null, 2));
 
-        throw new Error(`Kling task failed. Reason: ${taskData.task_status_msg || 'Unknown'}`);
+        // 🛡️ NEW: Handle specific "risk control" failure with a user-friendly message
+        if (failureMsg.includes("Failure to pass the risk control system")) {
+          // Use the custom error to signal a terminal failure
+          throw new TaskFailedError(`Your request could not be processed due to our content policy. Please try a different image or prompt.`);
+        }
+
+        // Use the custom error for any terminal failure
+        throw new TaskFailedError(`Kling task failed. Reason: ${failureMsg}`);
       }
     } catch (pollError) {
-      console.warn(`${KLING_API_PREFIX} ⚠️ Polling attempt ${attempts} encountered error:`, pollError);
+      // 🛡️ NEW: Differentiated error handling
+      // If it's a terminal task failure, stop polling immediately by re-throwing.
+      if (pollError instanceof TaskFailedError) {
+        throw pollError;
+      }
+
+      // Otherwise, it's a transient error (network, temporary server issue). Log and continue polling.
+      console.warn(`${KLING_API_PREFIX} ⚠️ Polling attempt ${attempts} encountered a transient error:`, pollError);
+
       // Continue to next attempt unless it's the last one
       if (attempts >= maxAttempts) {
+        console.error(`${KLING_API_PREFIX} ❌ Exceeded max polling attempts after transient errors.`);
         throw pollError;
       }
     }
