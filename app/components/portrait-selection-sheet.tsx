@@ -146,9 +146,19 @@ const EXAMPLE_PHOTOS: Portrait[] = [
 
 // Using the real idol images now located in /public/idols
 const DEFAULT_IDOLS: Portrait[] = [
-  { id: "idol-1", imageSrc: "/idols/idol_xiao_zhan.jpg" },
-  { id: "idol-2", imageSrc: "/idols/idol_peng_yuyan_fullbody.png" },
-  { id: "idol-3", imageSrc: "/idols/idol_liu_yifei_denim.jpg" },
+  // { id: "idol-1", imageSrc: "/idols/idol_xiao_zhan.jpg" },
+  // { id: "idol-2", imageSrc: "/idols/idol_peng_yuyan_fullbody.png" },
+  // { id: "idol-3", imageSrc: "/idols/idol_liu_yifei_denim.jpg" },
+  { id: "idol-1", imageSrc: "/idols/01_fair_average.png" },
+  { id: "idol-2", imageSrc: "/idols/01_fair_slim.png" },
+  { id: "idol-3", imageSrc: "/idols/03_fair_plus.png" },
+  { id: "idol-4", imageSrc: "/idols/03_light_average.png" },
+  { id: "idol-5", imageSrc: "/idols/04_light_average.png" },
+  { id: "idol-6", imageSrc: "/idols/05_medium_average.png" },
+  { id: "idol-7", imageSrc: "/idols/07_medium_chubby.png" },
+  { id: "idol-8", imageSrc: "/idols/08_deep tan_slim.png" },
+  { id: "idol-9", imageSrc: "/idols/09_deep tan_average.png" },
+  { id: "idol-10", imageSrc: "/idols/10_deep tan_chubby.png" },
 ];
 
 const MY_PHOTOS_STORAGE_KEY = "styleai_portraits";
