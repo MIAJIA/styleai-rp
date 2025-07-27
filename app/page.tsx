@@ -350,15 +350,8 @@ export default function HomePage() {
     router.push('/my-style');
   };
 
-  // Check session and user profile after component mounts
-  useEffect(() => {
-    if (!isMounted || !session) return; // Only run on client side after mount and when session exists
-    
-    const userProfile = window.localStorage.getItem("styleMe_user_profile");
-    if (userProfile === null) {
-      router.push('/my-style');
-    }
-  }, [isMounted, session, router]);
+  // Note: Removed automatic redirect to /my-style to prevent unwanted forced navigation
+  // The existing onboarding prompt system will guide users to complete their profile when needed
 
   return (
     <div className="min-h-full pb-20 relative overflow-hidden">
