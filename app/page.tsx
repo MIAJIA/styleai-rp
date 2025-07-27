@@ -135,6 +135,15 @@ export default function HomePage() {
   const [generationMode, setGenerationMode] = useState<"tryon-only" | "simple-scene" | "advanced-scene">("simple-scene");
   const [customPrompt, setCustomPrompt] = useState<string>("");
 
+  // Job count states
+  const [jobCount, setJobCount] = useState<{
+    currentJobCount: number;
+    maxJobs: number;
+    remainingJobs: number;
+    canStartNewJob: boolean;
+  } | null>(null);
+  const [isLoadingJobCount, setIsLoadingJobCount] = useState(false);
+
   // Onboarding check states
   const [isMounted, setIsMounted] = useState(false);
   const [showOnboardingPrompt, setShowOnboardingPrompt] = useState(false);
@@ -157,10 +166,43 @@ export default function HomePage() {
 
   const hasRequiredImages = Boolean(selfiePreview && clothingPreview);
 
+  // Fetch job count for logged in users
+  const fetchJobCount = async () => {
+    const userId = (session?.user as { id?: string })?.id;
+    if (!userId) return;
+    
+    setIsLoadingJobCount(true);
+    try {
+      const response = await fetch('/api/user/job-count');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Job count API response:', data);
+        if (data.success) {
+          setJobCount(data.data);
+          console.log('Job count set:', data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching job count:', error);
+    } finally {
+      setIsLoadingJobCount(false);
+    }
+  };
+
   // Mount effect to prevent hydration issues
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Fetch job count when session changes
+  useEffect(() => {
+    const userId = (session?.user as { id?: string })?.id;
+    if (userId) {
+      fetchJobCount();
+    } else {
+      setJobCount(null);
+    }
+  }, [(session?.user as { id?: string })?.id]);
 
   // Check onboarding status on component mount (client-side only)
   useEffect(() => {
@@ -231,6 +273,13 @@ export default function HomePage() {
 
   // Modify handleStartGeneration to use customPrompt if provided
   const handleStartGeneration = () => {
+    console.log('handleStartGeneration called with:', {
+      hasRequiredImages,
+      session: !!session,
+      jobCount,
+      canStartNewJob: jobCount?.canStartNewJob
+    });
+
     if (!hasRequiredImages) {
       alert("Please select both a photo and garment to continue.");
       return;
@@ -240,6 +289,13 @@ export default function HomePage() {
     if (!session) {
       alert("Please log in to access the AI stylist feature.");
       router.push('/login');
+      return;
+    }
+
+    // Check job count limit
+    if (jobCount && !jobCount.canStartNewJob) {
+      console.log('Job count limit reached, preventing generation');
+      alert("您今日的生成次数已用完，请明天再来！");
       return;
     }
 
@@ -425,18 +481,76 @@ export default function HomePage() {
             {/* Start Generation Button - Show when all required steps are completed */}
             {hasRequiredImages && (
               <div className="space-y-3">
+                {/* Job Count Display */}
+                {session && jobCount && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-blue-900">
+                          {jobCount.remainingJobs > 0 
+                            ? `剩余 ${jobCount.remainingJobs} 次生成机会`
+                            : "今日生成次数已用完"
+                          }
+                        </span>
+                      </div>
+                      <div className="text-xs text-blue-600">
+                        {jobCount.currentJobCount}/{jobCount.maxJobs}
+                      </div>
+                    </div>
+                    {jobCount.remainingJobs === 0 && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        请明天再来或联系客服增加次数
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {/* Loading state for job count */}
+                {session && isLoadingJobCount && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                      <span className="text-sm text-gray-600">加载中...</span>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   onClick={handleStartGeneration}
-                  className="w-full bg-gradient-to-r from-[#FF6EC7] to-[#FF9B3E] text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                  disabled={Boolean(session && jobCount && !jobCount.canStartNewJob)}
+                  className={cn(
+                    "w-full font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-300",
+                    session && jobCount && !jobCount.canStartNewJob
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-50"
+                      : "bg-gradient-to-r from-[#FF6EC7] to-[#FF9B3E] text-white hover:shadow-xl transform hover:scale-[1.02]"
+                  )}
+                  onMouseEnter={() => {
+                    console.log('Button debug:', {
+                      session: !!session,
+                      jobCount: jobCount,
+                      canStartNewJob: jobCount?.canStartNewJob,
+                      disabled: Boolean(session && jobCount && !jobCount.canStartNewJob)
+                    });
+                  }}
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Sparkles className="w-5 h-5" />
-                    <span>{session ? "Start Generation" : "Login to Start Generation"}</span>
+                    <span>
+                      {session 
+                        ? (jobCount && !jobCount.canStartNewJob 
+                            ? "今日次数已用完" 
+                            : "Start Generation")
+                        : "Login to Start Generation"
+                      }
+                    </span>
                   </div>
                 </button>
                 <p className="text-xs text-gray-500 text-center">
                   {session
-                    ? "This will take you to the chat where your styling magic happens!"
+                    ? (jobCount && !jobCount.canStartNewJob
+                        ? "您今日的生成次数已用完，请明天再来！"
+                        : "This will take you to the chat where your styling magic happens!")
                     : "Please log in to access the AI stylist and start generating your looks!"
                   }
                 </p>

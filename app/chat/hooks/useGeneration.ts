@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react"
 import { usePolling } from "./usePolling"
-import { getFileFromPreview } from "../utils"
+import { generateUniqueId, getFileFromPreview } from "../utils"
 import { loadCompleteOnboardingData } from "@/lib/onboarding-storage"
 import { stylePrompts } from "../constants"
 import type { ChatMessage, ChatModeData } from "../types"
@@ -12,7 +12,8 @@ interface UseGenerationProps {
   replaceLastLoadingMessage: (message: Omit<ChatMessage, "id" | "timestamp">) => void
   displaySuggestionSequentially: (suggestion: any) => Promise<void>
   displayImageResults: (imageUrls: string[]) => Promise<void>
-  setCurrentStep: (step: "suggestion" | "generating" | "complete" | "error") => void
+  setCurrentStep: (step: "suggestion" | "generating" | "complete" | "error") => void,
+  setMessages: (messages: ChatMessage[]) => void
 }
 
 export function useGeneration({
@@ -22,6 +23,7 @@ export function useGeneration({
   displaySuggestionSequentially,
   displayImageResults,
   setCurrentStep,
+  setMessages
 }: UseGenerationProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [jobId, setJobId] = useState<string | null>(null)
@@ -45,15 +47,28 @@ export function useGeneration({
       console.error("[useGeneration | onPollingError] Polling failed:", error)
       const errorMessage = `Opps... something went wrong. Polling failed with status: ${error.message.replace('Polling failed with status: ', '')}`;
       setPollingError(errorMessage);
-      replaceLastLoadingMessage({
-        role: "ai",
-        type: "text",
-        content: errorMessage,
+      const createMessage = (message: Omit<ChatMessage, "id" | "timestamp">): ChatMessage => ({
+        ...message,
+        id: generateUniqueId(),
+        timestamp: new Date(),
       })
-      setCurrentStep("error")
-      // We no longer setJobId(null) here. This allows the user to potentially
-      // trigger another image generation for a different suggestion, which might
-      // restart the polling process if the backend call is successful.
+      const initialMessages: ChatMessage[] = [
+        createMessage({
+          type: "quick-reply",
+          role: "ai",
+          content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
+          actions: [
+            {
+              id: "start-generation-btn",
+              label: "retry-generation",
+              type: "retry-start-generation",
+            },
+          ],
+        }),
+      ]
+
+      setMessages(initialMessages)
+      // setJobId(null) // Clear the job ID to allow restart
     },
     [replaceLastLoadingMessage, setCurrentStep],
   )
@@ -247,6 +262,80 @@ export function useGeneration({
     onPollingError: onPollingError,
   });
 
+  const restartGeneration = async () => {
+    if (!chatData) {
+      addMessage({
+        type: "text",
+        role: "ai",
+        content: "Error: Chat data is missing. Please start over.",
+      })
+      return
+    }
+
+    console.log("[useGeneration | restartGeneration] 🚀 Starting generation process with chatData:", chatData);
+
+    setIsGenerating(true)
+    setCurrentStep("generating")
+    setPollingError(null)
+    // --- Reset new state ---
+    setCurrentJob(null);
+    setSuggestions([]);
+    setCurrentSuggestionIndex(0);
+    displayedTextSuggestions.current.clear();
+    displayedIntermediateImages.current.clear();
+    displayedFinalImages.current.clear();
+    jobStartTime.current = Date.now(); // Start the timer
+
+    addMessage({
+      type: "loading",
+      role: "ai",
+      loadingText: "Hold on—I'm putting together a killer look just for you!",
+    })
+
+    try {
+      const startTime = Date.now();
+      console.log(`[FE_PERF_LOG | startGeneration] API call initiated. Timestamp: ${startTime}`);
+      const selfieFile = await getFileFromPreview(chatData.selfiePreview, "user_selfie.jpg")
+      const clothingFile = await getFileFromPreview(chatData.clothingPreview, "user_clothing.jpg")
+      if (!selfieFile || !clothingFile) {
+        throw new Error("Could not prepare image files for upload.")
+      }
+
+      const formData = new FormData()
+      formData.append("human_image", selfieFile)
+      formData.append("garment_image", clothingFile)
+      formData.append("occasion", chatData.occasion)
+      formData.append("generation_mode", chatData.generationMode)
+
+      const onboardingData = loadCompleteOnboardingData()
+      if (onboardingData) {
+        formData.append("user_profile", JSON.stringify(onboardingData))
+      }
+
+      if (chatData.customPrompt && chatData.customPrompt.trim()) {
+        formData.append("custom_prompt", chatData.customPrompt.trim())
+      }
+      if (stylePrompts[chatData.occasion as keyof typeof stylePrompts]) {
+        formData.append("style_prompt", stylePrompts[chatData.occasion as keyof typeof stylePrompts])
+      }
+      const tempjobId = jobId;
+      setJobId(null);
+
+     setTimeout(() => setJobId(tempjobId), 500 );
+    } catch (error: any) {
+      const errorMessage =
+        error.message || "An unexpected error occurred while starting the generation."
+      console.error("[useGeneration | startGeneration] 💥 Error during generation start:", errorMessage)
+
+      replaceLastLoadingMessage({
+        type: "text",
+        role: "ai",
+        content: `Sorry, something went wrong: ${errorMessage}`,
+      })
+      setIsGenerating(false)
+      setCurrentStep("error")
+    }
+  }
   const startGeneration = async () => {
     if (!chatData) {
       addMessage({
@@ -397,6 +486,7 @@ export function useGeneration({
     jobId,
     pollingError,
     startGeneration,
+    restartGeneration,
     // --- Expose new state ---
     status: currentJob?.status,
     suggestions,

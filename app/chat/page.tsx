@@ -287,6 +287,7 @@ export default function ChatPage() {
     jobId,
     pollingError,
     startGeneration,
+    restartGeneration,
     // --- New props from the refactored hook ---
     status: jobStatus,
     suggestions,
@@ -299,6 +300,7 @@ export default function ChatPage() {
     displaySuggestionSequentially,
     displayImageResults,
     setCurrentStep,
+    setMessages
   })
 
   // Define finalPrompt based on chatData
@@ -306,7 +308,7 @@ export default function ChatPage() {
 
   const handleQuickReplyAction = useCallback(
     (action: QuickReplyAction) => {
-      if (action.type === "start-generation") {
+      if (action.type === "start-generation" || action.type === "retry-start-generation") {
         console.log("[ChatPage] User clicked 'Start Generation' quick reply.")
 
         // Replace the quick reply with a user message for context
@@ -326,8 +328,18 @@ export default function ChatPage() {
         })
 
         if (startGeneration) {
-          // Delay startGeneration slightly to allow state to update
-          setTimeout(() => startGeneration(), 50)
+          // Clear any existing error messages and start fresh
+          setMessages(prev => prev.filter(m => 
+            !m.content?.includes("Opps... something went wrong") && 
+            !m.content?.includes("Polling failed")
+          ))
+          
+          if (action.type === "start-generation") {
+            // Delay startGeneration slightly to allow state to update
+            setTimeout(() => startGeneration(), 50)
+          } else if (action.type === "retry-start-generation") {
+            restartGeneration()
+          }
         }
       } else if (action.type === "show-details") {
         console.log("[ChatPage] User clicked 'Show Details' quick reply.")
@@ -380,7 +392,7 @@ export default function ChatPage() {
         })
       }
     },
-    [setMessages, startGeneration],
+    [setMessages, startGeneration, restartGeneration],
   )
 
   // This orchestration layer remains in the main component

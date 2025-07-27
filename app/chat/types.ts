@@ -3,7 +3,7 @@ import { ProductInfo } from "../components/product-card"
 export interface QuickReplyAction {
   id: string
   label: string
-  type: "start-generation" | "navigate" | "show-details"
+  type: "start-generation" | "navigate" | "show-details" | "retry-start-generation"
 }
 
 // Enhanced Chat message type definition with generation support
