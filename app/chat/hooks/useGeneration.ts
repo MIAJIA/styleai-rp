@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { usePolling } from "./usePolling"
 import { generateUniqueId, getFileFromPreview } from "../utils"
 import { loadCompleteOnboardingData } from "@/lib/onboarding-storage"
@@ -36,6 +36,8 @@ export function useGeneration({
 
   // --- NEW: Refs for performance logging ---
   const jobStartTime = useRef<number | null>(null);
+  // 🔧 NEW: Ref for managing recovery timeout
+  const recoveryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use refs to track which results have been displayed to avoid re-rendering
   const displayedTextSuggestions = useRef(new Set<number>());
@@ -47,35 +49,60 @@ export function useGeneration({
       console.error("[useGeneration | onPollingError] Polling failed:", error)
       const errorMessage = `Opps... something went wrong. Polling failed with status: ${error.message.replace('Polling failed with status: ', '')}`;
       setPollingError(errorMessage);
-      const createMessage = (message: Omit<ChatMessage, "id" | "timestamp">): ChatMessage => ({
-        ...message,
-        id: generateUniqueId(),
-        timestamp: new Date(),
-      })
-      const initialMessages: ChatMessage[] = [
-        createMessage({
-          type: "quick-reply",
-          role: "ai",
-          content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
-          actions: [
-            {
-              id: "start-generation-btn",
-              label: "retry-generation",
-              type: "retry-start-generation",
-            },
-          ],
-        }),
-      ]
-
-      setMessages(initialMessages)
+      
+      // 🔧 FIX: 不要立即显示错误UI，而是等待一段时间看系统是否能恢复
+      // 只有在确实无法恢复时才显示错误消息
+      console.warn("[useGeneration | onPollingError] ⚠️ Polling failed, but not immediately showing error UI. System may recover.");
+      
+      // 清除之前的recovery timeout（如果存在）
+      if (recoveryTimeoutRef.current) {
+        clearTimeout(recoveryTimeoutRef.current);
+        recoveryTimeoutRef.current = null;
+      }
+      
+      // 给系统一个恢复的机会 - 如果30秒后仍然没有成功，再显示错误
+      recoveryTimeoutRef.current = setTimeout(() => {
+        // 检查系统是否已经恢复（通过检查是否有成功的job数据）
+        if (!currentJob || !currentJob.suggestions.some(s => s.status === 'succeeded' || s.status === 'generating_images')) {
+          console.error("[useGeneration | onPollingError] System failed to recover. Showing error UI.");
+          
+          // 用 replaceLastLoadingMessage 而不是 setMessages 来避免清除所有消息
+          replaceLastLoadingMessage({
+            type: "quick-reply",
+            role: "ai",
+            content: "Sorry, something went wrong with the generation. Would you like to try again?",
+            actions: [
+              {
+                id: "start-generation-btn",
+                label: "retry-generation",
+                type: "retry-start-generation",
+              },
+            ],
+          });
+          setCurrentStep("error");
+        } else {
+          console.log("[useGeneration | onPollingError] ✅ System recovered successfully. No error UI needed.");
+        }
+        recoveryTimeoutRef.current = null; // 清除引用
+      }, 30000); // 30秒恢复超时
+      
       // setJobId(null) // Clear the job ID to allow restart
     },
-    [replaceLastLoadingMessage, setCurrentStep],
+    [replaceLastLoadingMessage, setCurrentStep, currentJob],
   )
 
   const onPollingUpdate = useCallback(
     (job: Job) => {
       console.log(`[useGeneration | onPollingUpdate] 🎯 Received job update for ID: ${job.jobId}`, job);
+
+      // 🔧 FIX: 清除recovery timeout，因为我们收到了成功的数据更新，说明系统已经恢复
+      if (recoveryTimeoutRef.current) {
+        console.log("[useGeneration | onPollingUpdate] ✅ System recovered - clearing recovery timeout");
+        clearTimeout(recoveryTimeoutRef.current);
+        recoveryTimeoutRef.current = null;
+        // 重置轮询错误状态
+        setPollingError(null);
+      }
 
       // 🔍 DEBUG: 详细检查每个suggestion的中间图片状态
       console.log(`[useGeneration | DEBUG] 🕵️ Checking all suggestions for intermediate images:`);
@@ -267,13 +294,24 @@ export function useGeneration({
       replaceLastLoadingMessage,
       setCurrentStep,
       displaySuggestionSequentially,
-      addMessage
+      addMessage,
+      setPollingError // Added setPollingError to the dependency array
     ],
   )
 
   usePolling<Job>(jobId, onPollingUpdate, {
     onPollingError: onPollingError,
   });
+
+  // 🔧 FIX: 组件卸载时清理recovery timeout
+  useEffect(() => {
+    return () => {
+      if (recoveryTimeoutRef.current) {
+        clearTimeout(recoveryTimeoutRef.current);
+        recoveryTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const restartGeneration = async () => {
     if (!chatData) {
@@ -298,6 +336,12 @@ export function useGeneration({
     displayedIntermediateImages.current.clear();
     displayedFinalImages.current.clear();
     jobStartTime.current = Date.now(); // Start the timer
+    
+    // 🔧 FIX: 清除任何现有的recovery timeout
+    if (recoveryTimeoutRef.current) {
+      clearTimeout(recoveryTimeoutRef.current);
+      recoveryTimeoutRef.current = null;
+    }
 
     addMessage({
       type: "loading",
@@ -405,6 +449,12 @@ export function useGeneration({
     displayedIntermediateImages.current.clear();
     displayedFinalImages.current.clear();
     jobStartTime.current = Date.now(); // Start the timer
+
+    // 🔧 FIX: 清除任何现有的recovery timeout
+    if (recoveryTimeoutRef.current) {
+      clearTimeout(recoveryTimeoutRef.current);
+      recoveryTimeoutRef.current = null;
+    }
 
     addMessage({
       type: "loading",
