@@ -136,6 +136,13 @@ export default function OnBoardingThree({ data,
         setFullBodyPhoto(result.dataUrl);
         try {
             localStorage.setItem("styleMe_fullBodyPhoto", result.dataUrl);
+            // save to idols
+            const newPortrait = { id: `portrait-${Date.now()}`, imageSrc: result.dataUrl };
+            const MY_PHOTOS_STORAGE_KEY = "styleai_portraits";
+            const storedIdols = window.localStorage.getItem(MY_PHOTOS_STORAGE_KEY)
+            const idols = storedIdols ? JSON.parse(storedIdols) : [];
+            idols.push(newPortrait);
+            window.localStorage.setItem(MY_PHOTOS_STORAGE_KEY, JSON.stringify(idols));
         } catch (error) {
             console.warn("Failed to save full body photo to localStorage:", error);
         }
@@ -159,7 +166,7 @@ export default function OnBoardingThree({ data,
                 </p>
             </div>
             {/* Upload Mode Toggle */}
-            <Card className="p-3 bg-blue-50 border-blue-200">
+            {/* <Card className="p-3 bg-blue-50 border-blue-200">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                         <Info className="w-4 h-4 text-blue-500" />
@@ -181,7 +188,7 @@ export default function OnBoardingThree({ data,
                         ? '使用现代图像格式，更好的压缩效果和性能监控'
                         : '使用传统JPEG压缩方式'}
                 </p>
-            </Card>
+            </Card> */}
 
 
             {/* Photo Upload Card */}
