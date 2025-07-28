@@ -239,11 +239,9 @@ export function SmartImageUploader({
         <div className="flex items-start space-x-2">
           <ImageIcon className="w-4 h-4 text-blue-500 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-blue-700">Smart Compression</p>
-            <p className="text-xs text-blue-600 mt-1">
-              Auto-select optimal format ({supportedFormats.includes('image/avif') ? 'AVIF' :
-                supportedFormats.includes('image/webp') ? 'WebP' : 'JPEG'})
-              , preset: {preset.toUpperCase()}
+            {/* <p className="text-sm font-medium text-black-700">Smart Compression</p> */}
+            <p className="text-xs text-black-600 mt-1">
+            Please upload a full‑body photo of yourself standing facing the camera against a clean background
             </p>
           </div>
         </div>
