@@ -28,20 +28,71 @@ const STORAGE_KEY = "styleai_wardrobe";
 // --- Define Default Photos ---
 const DEFAULT_PHOTOS: Wardrobe = {
   tops: [
-    { id: "default-top-1", imageSrc: "/cloth/green-top.png" },
-    { id: "default-top-2", imageSrc: "/cloth/yellow-shirt.png" },
+    { id: "default-top-1", imageSrc: "cloth/Top/01_white_shirt.webp" },
+    { id: "default-top-2", imageSrc: "cloth/Top/02_stripped_tank_top.jpg" },
+    { id: "default-top-3", imageSrc: "cloth/Top/03_polo_shirt.jpg" },
+    { id: "default-top-4", imageSrc: "cloth/Top/04_stripped_button_up_shirt_2.jpg" },
+    { id: "default-top-5", imageSrc: "cloth/Top/05_stripped_knit_top.jpg" },
+    { id: "default-top-6", imageSrc: "cloth/Top/06_printed_shirt.jpg" },
+    { id: "default-top-7", imageSrc: "cloth/Top/07_green_blouse.jpg" },
+    { id: "default-top-8", imageSrc: "cloth/Top/08_stripped_button_up_shirt.png" },
+    { id: "default-top-9", imageSrc: "cloth/Top/09_white_blouse.jpg" },
+    { id: "default-top-10", imageSrc: "cloth/Top/10_yellow_sleeveless_top.jpg" },
+    { id: "default-top-11", imageSrc: "cloth/Top/11_floral_shirt.jpg" },
+    { id: "default-top-12", imageSrc: "cloth/Top/12_ivory_vest.webp" },
+    { id: "default-top-13", imageSrc: "cloth/Top/13_black_camisole.jpg" },
   ],
   bottoms: [
-    { id: "default-bottom-1", imageSrc: "/cloth/jean.png" },
-    { id: "default-bottom-2", imageSrc: "/cloth/LEIVs-jean-short.png" },
+    { id: "default-bottom-1", imageSrc: "cloth/Bottoms/01_white_shorts.jpg"},
+    { id: "default-bottom-2", imageSrc: "cloth/Bottoms/02_white_maxi_skirt.png"},
+    { id: "default-bottom-3", imageSrc: "cloth/Bottoms/03_white_wide_leg_pants.jpg"},
+    { id: "default-bottom-4", imageSrc: "cloth/Bottoms/04_denim_wide_leg_pants.jpg"},
+    { id: "default-bottom-5", imageSrc: "cloth/Bottoms/05_denim_shorts.jpg"},
+    { id: "default-bottom-6", imageSrc: "cloth/Bottoms/06_black_jeans.jpg"},
+    { id: "default-bottom-7", imageSrc: "cloth/Bottoms/07_black_satin_dress.png"},
+    { id: "default-bottom-8", imageSrc: "cloth/Bottoms/08_pencil_skirt.jpg"},
+    { id: "default-bottom-9", imageSrc: "cloth/Bottoms/09_pink_satin_skirt.jpg"},
+    { id: "default-bottom-10", imageSrc: "cloth/Bottoms/10_leopard_satin_skirt.jpg"},
+    { id: "default-bottom-11", imageSrc: "cloth/Bottoms/11_floral_maxi_skirt.jpg"},
+    { id: "default-bottom-12", imageSrc: "cloth/Bottoms/12_lemon_skirt.jpg"},
+    { id: "default-bottom-13", imageSrc: "cloth/Bottoms/13_white_plated_skirt.jpg"},
   ],
   dresses: [
-    { id: "default-dress-1", imageSrc: "/cloth/blue-dress.png" },
-    { id: "default-dress-2", imageSrc: "/cloth/yellow-dress.png" },
+    { id: "default-dress-1", imageSrc: "cloth/Dress/01_black_dress.webp"},
+    { id: "default-dress-2", imageSrc: "cloth/Dress/02_black_dress2.jpg"},
+    { id: "default-dress-3", imageSrc: "cloth/Dress/03_ivory_dress.jpg"},
+    { id: "default-dress-4", imageSrc: "cloth/Dress/04_red_dress.jpg"},
+    { id: "default-dress-5", imageSrc: "cloth/Dress/05_black_dress_with_white_silk.jpg"},
+    { id: "default-dress-6", imageSrc: "cloth/Dress/06_whide_dress2.jpg"},
+    { id: "default-dress-7", imageSrc: "cloth/Dress/07_preppy_dress.jpg"},
+    { id: "default-dress-8", imageSrc: "cloth/Dress/08_floral_dress.webp"},
+    { id: "default-dress-9", imageSrc: "cloth/Dress/09_butter_yellow_dress2.webp"},
+    { id: "default-dress-10", imageSrc: "cloth/Dress/10_green_dress.jpg"},
+    { id: "default-dress-11", imageSrc: "cloth/Dress/11_black_jumpsuit.jpg"},
+    { id: "default-dress-12", imageSrc: "cloth/Dress/12_cemaral_jumpsuit.png"},
+    { id: "default-dress-13", imageSrc: "cloth/Dress/13_white_jumpsuit.jpg"},
+    { id: "default-dress-14", imageSrc: "cloth/Dress/14_black_dress.jpg"},
   ],
   outerwear: [
-    { id: "default-outerwear-1", imageSrc: "/cloth/whiteblazer.png" },
-    { id: "default-outerwear-2", imageSrc: "/cloth/black-leather-jacket.png" },
+    { id: "default-outerwear-1", imageSrc: "cloth/Outwear/01_white_blazer.jpg"},
+    { id: "default-outerwear-2", imageSrc: "cloth/Outwear/02_beige_blazer.jpg"},
+    { id: "default-outerwear-3", imageSrc: "cloth/Outwear/03_black_leather_jacket.jpg"},
+    { id: "default-outerwear-4", imageSrc: "cloth/Outwear/04_denim_jacket.jpg"},
+    { id: "default-outerwear-5", imageSrc: "cloth/Outwear/05_white_denim_jacket.jpg"},
+    { id: "default-outerwear-6", imageSrc: "cloth/Outwear/06_cardigan_coat.webp"},
+    { id: "default-outerwear-7", imageSrc: "cloth/Outwear/07_yellow_oversize_cardigan.jpg"},
+    { id: "default-outerwear-8", imageSrc: "cloth/Outwear/08_black_short_trench_coat.jpg"},
+    { id: "default-outerwear-9", imageSrc: "cloth/Outwear/09_blue_cropped_blazer.jpg"},
+    { id: "default-outerwear-10", imageSrc: "cloth/Outwear/10_ivory_cropped_blazer.webp"},
+    { id: "default-outerwear-11", imageSrc: "cloth/Outwear/11_cropped_jacket.jpg"},
+    { id: "default-outerwear-12", imageSrc: "cloth/Outwear/12_trench_coat.webp"},
+    { id: "default-outerwear-13", imageSrc: "cloth/Outwear/13_trench_coat.jpg"},
+    { id: "default-outerwear-14", imageSrc: "cloth/Outwear/14_black_blazer.jpg"},
+    { id: "default-outerwear-15", imageSrc: "cloth/Outwear/15_pink_blazer.jpg"},
+    { id: "default-outerwear-16", imageSrc: "cloth/Outwear/16_leather_jacket2.jpg"},
+    { id: "default-outerwear-17", imageSrc: "cloth/Outwear/17_leather_jacket.jpg"},
+    { id: "default-outerwear-18", imageSrc: "cloth/Outwear/18_baseball_jeacket.jpg"},
+    { id: "default-outerwear-19", imageSrc: "cloth/Outwear/19_varsity_jacket.jpg"},
   ],
 };
 
@@ -232,41 +283,51 @@ export default function MyWardrobe({ onGarmentSelect }: MyWardrobeProps) {
             {itemsToDisplay.length}
           </span>
         </div>
-        <div className="grid grid-cols-4 gap-2">
-          {/* Add Button */}
-          <div
-            onClick={() => handleAddClick(category)}
-            className="aspect-square bg-white/30 rounded-xl shadow-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white/40 transition-colors"
-          >
-            <div className="w-8 h-8 rounded-full bg-white/50 flex items-center justify-center mb-1">
-              <span className="text-xl text-white">+</span>
-            </div>
-            <p className="text-xs text-white font-medium">Add</p>
-          </div>
-          {/* Item List */}
-          {itemsToDisplay.slice(0, 3).map((item) => (
+        
+        {/* Horizontal scrollable container */}
+        <div className="relative">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+            {/* Add Button - Always visible at the start */}
             <div
-              key={item.id}
-              onClick={() => onGarmentSelect(item.imageSrc)}
-              className="relative group aspect-square bg-white rounded-xl shadow-sm cursor-pointer overflow-hidden"
+              onClick={() => handleAddClick(category)}
+              className="flex-shrink-0 w-16 h-16 bg-white/30 rounded-xl shadow-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white/40 transition-colors"
             >
-              <img
-                src={item.imageSrc}
-                alt="wardrobe item"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-              />
-              <button
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent the main card's click event
-                  handleDeleteItem(category, item.id);
-                }}
-                className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-all z-10 hover:bg-red-500"
-                aria-label="Delete item"
-              >
-                ✕
-              </button>
+              <div className="w-6 h-6 rounded-full bg-white/50 flex items-center justify-center mb-1">
+                <span className="text-sm text-white">+</span>
+              </div>
+              <p className="text-xs text-white font-medium">Add</p>
             </div>
-          ))}
+            
+            {/* Item List - All items in horizontal scroll */}
+            {itemsToDisplay.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => onGarmentSelect(item.imageSrc)}
+                className="relative group w-16 h-16 bg-white rounded-xl shadow-sm cursor-pointer overflow-hidden flex-shrink-0"
+              >
+                <img
+                  src={item.imageSrc}
+                  alt="wardrobe item"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent the main card's click event
+                    handleDeleteItem(category, item.id);
+                  }}
+                  className="absolute top-1 right-1 w-4 h-4 bg-black/60 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-all z-10 hover:bg-red-500"
+                  aria-label="Delete item"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+          
+          {/* Gradient fade effect on the right to indicate more content */}
+          {itemsToDisplay.length > 4 && (
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/20 to-transparent pointer-events-none"></div>
+          )}
         </div>
       </div>
     );

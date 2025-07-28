@@ -138,11 +138,11 @@ const examplePersonaMap = new Map<string, object>([
 
 // Pre-defined example photos to show if the user has none.
 // These paths now match the renamed files and the keys in the persona map.
-const EXAMPLE_PHOTOS: Portrait[] = [
-  { id: "example-1", imageSrc: "/examples/example_liudazhuang_arty.jpg" },
-  { id: "example-2", imageSrc: "/examples/example_lidake_girly.jpg" },
-  { id: "example-3", imageSrc: "/examples/example_wangdake_business.jpg" },
-];
+// const EXAMPLE_PHOTOS: Portrait[] = [
+//   { id: "example-1", imageSrc: "/examples/example_liudazhuang_arty.jpg" },
+//   { id: "example-2", imageSrc: "/examples/example_lidake_girly.jpg" },
+//   { id: "example-3", imageSrc: "/examples/example_wangdake_business.jpg" },
+// ];
 
 // Using the real idol images now located in /public/idols
 const DEFAULT_IDOLS: Portrait[] = [
@@ -323,7 +323,7 @@ export default function PortraitSelectionSheet({ onPortraitSelect }: PortraitSel
             <img
               src={photo.imageSrc}
               alt="Portrait"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              className={`w-full h-full ${category === "myPhotos" ? "object-cover" : "object-contain"} group-hover:scale-105 transition-transform`}
             />
           </button>
           <button
@@ -344,13 +344,18 @@ export default function PortraitSelectionSheet({ onPortraitSelect }: PortraitSel
   // New function to render a styled category block, similar to the wardrobe
   const renderCategory = (type: "myPhotos" | "idols") => {
     const isIdol = type === "idols";
-
     const userPhotos = isIdol ? idols : myPhotos;
-    const defaultPhotos = isIdol ? DEFAULT_IDOLS : EXAMPLE_PHOTOS;
+    const defaultPhotos = isIdol ? DEFAULT_IDOLS : [];
+
+    // Fix: handle possible nulls and type issues for defaultPhotos
+    const filteredDefaultPhotos = defaultPhotos
+      .filter((ex): ex is Portrait => !!ex && typeof ex !== "string" && "imageSrc" in ex);
 
     const photosToDisplay = [
       ...userPhotos,
-      ...defaultPhotos.filter((ex) => !userPhotos.some((p) => p.imageSrc === ex.imageSrc)),
+      ...filteredDefaultPhotos.filter(
+        (ex) => !userPhotos.some((p) => p.imageSrc === ex.imageSrc)
+      ),
     ];
     const { bg, emoji, label } = PORTRAIT_CATEGORY_STYLES[type];
 
@@ -390,13 +395,12 @@ export default function PortraitSelectionSheet({ onPortraitSelect }: PortraitSel
           </div>
           <div className="text-xs space-y-1">
             <p className="font-medium text-pink-900">Photo Tips for Best Results:</p>
-            <p className="text-pink-700">✅ Full-body standing pose with clear background</p>
-            <p className="text-pink-700">✅ Good lighting, face visible, arms and legs not cropped</p>
-            <p className="text-pink-700">✅ Front-facing pose, minimal accessories</p>
-            <p className="text-red-600">❌ Avoid sitting, lying down, or heavily cropped photos</p>
+            <p className="text-pink-700">☑️ Full‑body photo of yourself standing facing the camera against a clean, uncluttered background.</p>
+            <p className="text-red-600">✖️Avoid sitting、lying down or cropped photos</p>
           </div>
         </div>
       </div>
+      
 
       {/* Container to ensure vertical stacking */}
       <div className="flex flex-col gap-y-4">
