@@ -308,11 +308,14 @@ export function useGeneration({
     try {
       const startTime = Date.now();
       console.log(`[FE_PERF_LOG | startGeneration] API call initiated. Timestamp: ${startTime}`);
+      
+      console.log(`[useGeneration | DEBUG] Preparing image files...`);
       const selfieFile = await getFileFromPreview(chatData.selfiePreview, "user_selfie.jpg")
       const clothingFile = await getFileFromPreview(chatData.clothingPreview, "user_clothing.jpg")
       if (!selfieFile || !clothingFile) {
         throw new Error("Could not prepare image files for upload.")
       }
+      console.log(`[useGeneration | DEBUG] Image files prepared: selfie=${selfieFile.size}bytes, clothing=${clothingFile.size}bytes`);
 
       const formData = new FormData()
       formData.append("human_image", selfieFile)
@@ -331,30 +334,36 @@ export function useGeneration({
       if (stylePrompts[chatData.occasion as keyof typeof stylePrompts]) {
         formData.append("style_prompt", stylePrompts[chatData.occasion as keyof typeof stylePrompts])
       }
+      
+      console.log(`[useGeneration | DEBUG] Sending request to /api/generation/start...`);
       const response = await fetch("/api/generation/start", {
         method: "POST",
         body: formData,
       });
+      
+      console.log(`[useGeneration | DEBUG] Response received: status=${response.status}, ok=${response.ok}`);
 
       if (!response.ok) {
         let errorDetails = "An unknown error occurred.";
         const clonedResponse = response.clone();
         try {
           const errorJson = await response.json();
-          errorDetails =
-            errorJson.details || errorJson.error || JSON.stringify(errorJson);
+          errorDetails = errorJson.details || errorJson.error || JSON.stringify(errorJson);
+          console.log(`[useGeneration | DEBUG] Error response JSON:`, errorJson);
         } catch (e) {
           // If the response is not JSON, use the text content from the cloned response
           errorDetails = await clonedResponse.text();
+          console.log(`[useGeneration | DEBUG] Error response text:`, errorDetails);
         }
         throw new Error(
           `Failed to start generation. Server responded with ${response.status}: ${errorDetails}`
         );
       }
 
+      console.log(`[useGeneration | DEBUG] Parsing response JSON...`);
       const result = await response.json();
       const endTime = Date.now();
-      console.log(`[FE_PERF_LOG | restartGeneration] API call successful. JobId received. Total time: ${endTime - startTime}ms.`);
+      console.log(`[FE_PERF_LOG | restartGeneration] API call successful. JobId received: ${result.jobId}. Total time: ${endTime - startTime}ms.`);
 
       console.log("[useGeneration | restartGeneration] получили jobId:", result.jobId, ". Triggering polling.");
       setJobId(result.jobId);
@@ -362,6 +371,7 @@ export function useGeneration({
       const errorMessage =
         error.message || "An unexpected error occurred while starting the generation."
       console.error("[useGeneration | startGeneration] 💥 Error during generation start:", errorMessage)
+      console.error("[useGeneration | startGeneration] 💥 Full error object:", error)
 
       replaceLastLoadingMessage({
         type: "text",
