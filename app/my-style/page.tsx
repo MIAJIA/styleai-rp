@@ -140,7 +140,7 @@ export default function MyStylePage() {
                   <img
                     src={photos.fullBodyPhoto || profileData?.fullBodyPhoto || "/placeholder.svg"}
                     alt="Profile"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-top"
                   />
                 </div>
               ) : (

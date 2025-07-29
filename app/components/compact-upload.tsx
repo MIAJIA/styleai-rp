@@ -85,7 +85,7 @@ export default function CompactUpload({
               <img
                 src={preview}
                 alt={`${label || "Upload"} preview`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-top"
               />
               <button
                 type="button"
