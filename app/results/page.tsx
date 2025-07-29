@@ -9,6 +9,7 @@ import ImageVoteButtons from "@/components/image-vote-buttons";
 import ImageVoteStatus from "@/components/image-vote-status";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import UserInfo from "../components/userInfo";
 
 interface PastLook {
   id: string;
@@ -419,20 +420,21 @@ export default function ResultsPage() {
     <div className="min-h-full pb-20">
       {/* iOS-style header with back button */}
       <div className="bg-white sticky top-0 z-10 border-b border-neutral-100 pt-safe">
-        <div className="flex items-center px-4 h-12">
+        <div className="flex items-center px-4 h-12 justify-between">
           <button
             onClick={() => router.push("/")}
             className="w-10 h-10 flex items-center justify-center -ml-2 ios-btn"
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-semibold flex-1 text-center">My Looks</h1>
-          <div className="w-10">
+          <h1 className="text-lg font-semibold flex-1 text-left">My Looks</h1>
+          <div className="w-10 flex justify-end">
             {/* 缓存状态指示器 */}
             {isCacheValid() && (
               <div className="w-2 h-2 bg-green-500 rounded-full" title="Data cached"></div>
             )}
           </div>
+          <UserInfo />
         </div>
       </div>
 

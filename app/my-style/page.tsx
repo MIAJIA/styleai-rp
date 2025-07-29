@@ -22,6 +22,7 @@ import {
 } from "@/lib/onboarding-storage";
 import { useRouter } from "next/navigation";
 import IOSTabBar from "../components/ios-tab-bar";
+import UserInfo from "../components/userInfo";
 
 interface UserProfile extends OnboardingData {
   savedAt?: string;
@@ -124,15 +125,7 @@ export default function MyStylePage() {
               <h1 className="text-xl font-bold text-gray-800">My Style Profile</h1>
               <p className="text-sm text-gray-500">Your personalized fashion journey</p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push("/onboarding")}
-              className="text-pink-600 border-pink-200 hover:bg-pink-50"
-            >
-              <Edit className="w-4 h-4 mr-1" />
-              Edit
-            </Button>
+            <UserInfo />
           </div>
         </div>
       </div>
