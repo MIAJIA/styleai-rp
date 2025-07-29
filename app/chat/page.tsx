@@ -22,6 +22,7 @@ import { useImageHandling } from "./hooks/useImageHandling"
 import { useSessionManagement } from "./hooks/useSessionManagement"
 import { useChat } from "./hooks/useChat"
 import { useGeneration } from "./hooks/useGeneration"
+import UserInfo from "../components/userInfo"
 
 export default function ChatPage() {
   const router = useRouter()
@@ -534,12 +535,13 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 pb-20">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-gray-200">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center px-4 h-12 justify-between">
           <Button variant="ghost" size="sm" onClick={() => router.back()} className="p-2">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="font-playfair text-lg font-bold text-gray-800">AI Stylist</h1>
-          <div className="w-9" />
+          <h1 className="text-lg font-semibold flex-1 text-left">AI Stylist</h1>
+          <div className="w-10 flex justify-end" />
+          <UserInfo />
         </div>
       </header>
 
