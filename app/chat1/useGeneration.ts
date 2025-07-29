@@ -18,7 +18,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
   const [isGenerate, setGenerate] = useState(false)
   const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0)
   // 处理 job 更新
-  const handleJobUpdate = async (jobData: Job) => {
+  const handleJobUpdate = (jobData: Job) => {
     const suggestions = jobData.suggestions
     const message1: Message = {
       id: 'job-start',
@@ -29,7 +29,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
 
     for (let index = 0; index < suggestions.length; index++) {
       const suggestion = suggestions[index];
-      if (suggestion.status === 'generating_images') {
+      if (suggestion.status === 'succeeded') {
         console.log(`[useGeneration | handleJobUpdate] 📡 Suggestion ${suggestion.index} succeeded`);
         addMessage(message1)
         const styleSuggestion = suggestion.styleSuggestion
@@ -101,12 +101,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         if (imageUrls && imageUrls.length > 0) {
           imageUrls = [imageUrls[0],imageUrls[0]]
         }else{
-          buttons.push({
-              id: 'btn1',
-              label: 'Generation image',
-              type: 'default',
-              action: 'Generation-image',
-            })
+          throw new Error(`imageUrls is null`)
         }
 
 
@@ -147,9 +142,9 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         addMessage(message3)
 
         
-        if (isGenerate&& !imageUrls) {
-          throw new Error(`imageUrls is null`)
-        }
+        // if (isGenerate&& !imageUrls) {
+        //   throw new Error(`imageUrls is null`)
+        // }
         stopPolling()
         return
       }
@@ -194,10 +189,11 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       // 错误处理：可以选择重试或停止轮询
       // 增加连续失败计数
       consecutiveFailsRef.current += 1;
-      if (consecutiveFailsRef.current >= 10) {
+      if (consecutiveFailsRef.current >= 20) {
         consecutiveFailsRef.current = 0;
         stopPolling()
       } else {
+        await new Promise(resolve => setTimeout(resolve, 5000));
         pollingIntervalRef.current = setTimeout(() => {
           pollJobStatus(jobId)
         }, 1000)
