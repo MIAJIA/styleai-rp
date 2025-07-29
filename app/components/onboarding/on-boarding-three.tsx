@@ -227,7 +227,7 @@ export default function OnBoardingThree({ data,
                                 <img
                                     src={fullBodyPhoto || "/placeholder.svg"}
                                     alt="Full body"
-                                    className="w-full h-48 object-cover rounded-xl"
+                                    className="w-full h-48 object-cover object-top rounded-xl"
                                 />
                                 <Button
                                     size="sm"
