@@ -9,8 +9,8 @@ import { StepProps } from "./on-boarding-step";
 
 
 const chooseTitles = [
-    "Photo Get new outfit ideas of my clothes",
-    "Body Elevate my outfits to look better",
+    "Get new outfit ideas of my clothes",
+    "Elevate my outfits to look better",
     "Develop my personal style",
     "Discover My erfect Colors & Flattering Silhouettes",
     "Create outfit for special event",
