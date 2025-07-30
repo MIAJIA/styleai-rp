@@ -274,7 +274,7 @@ export default function ChatPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 pb-20">
+        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50">
             <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-gray-200">
                 <div className="flex items-center px-4 h-12 justify-between">
                     <Button variant="ghost" size="sm" onClick={() => router.back()} className="p-2">
@@ -287,7 +287,7 @@ export default function ChatPage() {
             </header>
 
             {/* Messages Container */}
-            <div className="flex-1 px-4 py-6 space-y-4 max-w-4xl mx-auto">
+            <div className="flex-1 px-4 py-6 space-y-4 max-w-4xl mx-auto pb-32">
                 <div className="space-y-4">
                     {messages.map((message) => (
                         <div
@@ -337,7 +337,7 @@ export default function ChatPage() {
                                                                 src={imageUrl}
                                                                 alt={`Message image ${index + 1}`}
                                                                 fill
-                                                                className="object-cover"
+                                                                className="object-cover object-top"
                                                                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                                                 onError={(e) => {
                                                                     // Handle image loading errors
@@ -396,7 +396,7 @@ export default function ChatPage() {
             </div>
 
             {/* Input Area */}
-            <div className="sticky bottom-0 bg-white/80 backdrop-blur-lg border-t border-gray-200 p-4">
+            <div className="fixed bottom-14 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-gray-200 p-4 z-20">
                 <div className="max-w-4xl mx-auto">
                     <div className="flex gap-2">
                         <Textarea
