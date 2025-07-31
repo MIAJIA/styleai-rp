@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
     Send,
     Edit,
@@ -22,7 +23,8 @@ import {
     Share,
     Copy,
     Download,
-    Link
+    Link,
+    Loader2
 } from "lucide-react"
 import { ChatModeData } from "../chat/types"
 import { useRouter } from "next/navigation"
@@ -332,19 +334,29 @@ export default function ChatPage() {
                                                     }`}>
                                                     {message.imageUrls.map((imageUrl, index) => (
                                                         <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                                            <Image
-                                                                onClick={() => handleOpenModal(imageUrl)}
-                                                                src={imageUrl}
-                                                                alt={`Message image ${index + 1}`}
-                                                                fill
-                                                                className="object-cover object-top"
-                                                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                                                onError={(e) => {
-                                                                    // Handle image loading errors
-                                                                    const target = e.target as HTMLImageElement;
-                                                                    target.style.display = 'none';
-                                                                }}
-                                                            />
+                                                            {imageUrl === "wait" ? (
+                                                                // Loading state for "wait" URL
+                                                                <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-50 to-gray-100">
+                                                                    <div className="flex flex-col items-center gap-2">
+                                                                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                                                        <span className="text-xs text-gray-500">Generating image...</span>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <Image
+                                                                    onClick={() => handleOpenModal(imageUrl)}
+                                                                    src={imageUrl}
+                                                                    alt={`Message image ${index + 1}`}
+                                                                    fill
+                                                                    className="object-cover object-top"
+                                                                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                                                    onError={(e) => {
+                                                                        // Handle image loading errors
+                                                                        const target = e.target as HTMLImageElement;
+                                                                        target.style.display = 'none';
+                                                                    }}
+                                                                />
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>

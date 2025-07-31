@@ -29,7 +29,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
 
     for (let index = 0; index < suggestions.length; index++) {
       const suggestion = suggestions[index];
-      if (suggestion.status === 'succeeded') {
+      if (suggestion.status === 'succeeded' || suggestion.status === 'generating_images') {
         console.log(`[useGeneration | handleJobUpdate] 📡 Suggestion ${suggestion.index} succeeded`);
         addMessage(message1)
         const styleSuggestion = suggestion.styleSuggestion
@@ -101,9 +101,8 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         if (imageUrls && imageUrls.length > 0) {
           imageUrls = [imageUrls[0],imageUrls[0]]
         }else{
-          throw new Error(`imageUrls is null`)
+          imageUrls = ["wait","wait"]
         }
-
 
         const message2: Message = {
           id: 'job-style-suggestion',
@@ -142,9 +141,9 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         addMessage(message3)
 
         
-        // if (isGenerate&& !imageUrls) {
-        //   throw new Error(`imageUrls is null`)
-        // }
+        if (imageUrls[0] === "wait"||imageUrls[1] === "wait") {
+          throw new Error(`imageUrls is null`)
+        }
         stopPolling()
         return
       }
@@ -341,10 +340,6 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
           sender: 'ai',
           timestamp: new Date(),
-          imageUrls: [
-            '/casual-outfit.png',
-            '/elegant-outfit.png'
-          ],
           buttons: [
             {
               id: 'btn1',
