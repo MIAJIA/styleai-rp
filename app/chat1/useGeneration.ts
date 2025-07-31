@@ -19,6 +19,12 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
   const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0)
   // 处理 job 更新
   const handleJobUpdate = (jobData: Job) => {
+    console.log(`[useGeneration | handleJobUpdate] 🔄 Processing job update:`, {
+      jobId: jobData.jobId.slice(-8),
+      status: jobData.status,
+      suggestionsCount: jobData.suggestions.length
+    })
+    
     const suggestions = jobData.suggestions
     const message1: Message = {
       id: 'job-start',
@@ -27,10 +33,16 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       timestamp: new Date(),
     }
 
+    // 检查是否有任何suggestion已完成
+    let hasCompletedSuggestion = false
+    
     for (let index = 0; index < suggestions.length; index++) {
       const suggestion = suggestions[index];
+      console.log(`[useGeneration | handleJobUpdate] 📊 Suggestion ${suggestion.index} status:`, suggestion.status)
+      
       if (suggestion.status === 'succeeded') {
-        console.log(`[useGeneration | handleJobUpdate] 📡 Suggestion ${suggestion.index} succeeded`);
+        hasCompletedSuggestion = true
+        console.log(`[useGeneration | handleJobUpdate] ✅ Suggestion ${suggestion.index} succeeded`);
         addMessage(message1)
         const styleSuggestion = suggestion.styleSuggestion
         if (!styleSuggestion || !styleSuggestion.outfit_suggestion) {
@@ -118,7 +130,6 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       
 
 
-
         let buttons2: ButtonAction[] = []
         buttons2.push({
           id: 'btn3',
@@ -147,9 +158,26 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         // }
         stopPolling()
         return
+      } else if (suggestion.status === 'generating_images') {
+        console.log(`[useGeneration | handleJobUpdate] 🎨 Suggestion ${suggestion.index} is generating images...`)
+        // 继续轮询，不做任何操作
+      } else if (suggestion.status === 'pending') {
+        console.log(`[useGeneration | handleJobUpdate] ⏳ Suggestion ${suggestion.index} is pending...`)
+        // 继续轮询，不做任何操作
+      } else if (suggestion.status === 'failed') {
+        console.log(`[useGeneration | handleJobUpdate] ❌ Suggestion ${suggestion.index} failed`)
+        // 可以显示错误信息
       }
     }
-    throw new Error(`jobData error ${JSON.stringify(jobData)}`)
+    
+    // 如果没有完成的suggestion，继续轮询
+    if (!hasCompletedSuggestion) {
+      console.log(`[useGeneration | handleJobUpdate] 🔄 No completed suggestions yet, continuing polling...`)
+      return // 继续轮询，不抛出错误
+    }
+    
+    // 如果到这里，说明有未处理的情况
+    console.warn(`[useGeneration | handleJobUpdate] ⚠️ Unhandled job state:`, jobData)
   }
 
   // 轮询获取 job 状态
@@ -231,14 +259,25 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
 
   // 当 jobId 变化时开始轮询
   useEffect(() => {
+    console.log("[useGeneration | useEffect] 🔄 JobId or polling state changed:", { jobId, isPolling })
     if (jobId && isPolling) {
+      console.log("[useGeneration | useEffect] 🚀 Starting polling for jobId:", jobId)
       startPolling(jobId)
+    } else {
+      console.log("[useGeneration | useEffect] ❌ Not starting polling:", { 
+        hasJobId: !!jobId, 
+        isPolling 
+      })
     }
-  }, [jobId])
+  }, [jobId, isPolling])
 
   // 开始生成jobid  
   const startGeneration = async () => {
+    console.log("[useGeneration | startGeneration] 🚀 Starting generation process...")
+    console.log("[useGeneration | startGeneration] 📊 ChatData:", chatData)
+    
     if (!chatData) {
+      console.log("[useGeneration | startGeneration] ❌ No chatData found")
       const message: Message = {
         id: 'error',
         content: "Error: Chat data is missing. Please start over.",
@@ -249,6 +288,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       return
     }
 
+    console.log("[useGeneration | startGeneration] ✅ ChatData validation passed")
     const message: Message = {
       id: 'start-generation',
       content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
@@ -264,12 +304,23 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
     }
     addMessage(message1)
     const startTime = Date.now();
+    
+    console.log("[useGeneration | startGeneration] 🖼️ Processing images...")
+    console.log("[useGeneration | startGeneration] 📷 Selfie preview:", chatData.selfiePreview ? "exists" : "missing")
+    console.log("[useGeneration | startGeneration] 👕 Clothing preview:", chatData.clothingPreview ? "exists" : "missing")
+    
     const selfieFile = await getFileFromPreview(chatData.selfiePreview, "user_selfie.jpg")
     const clothingFile = await getFileFromPreview(chatData.clothingPreview, "user_clothing.jpg")
+    
+    console.log("[useGeneration | startGeneration] 📁 Selfie file:", selfieFile ? "created" : "failed")
+    console.log("[useGeneration | startGeneration] 📁 Clothing file:", clothingFile ? "created" : "failed")
+    
     if (!selfieFile || !clothingFile) {
+      console.log("[useGeneration | startGeneration] ❌ File creation failed")
       throw new Error("Could not prepare image files for upload.")
     }
 
+    console.log("[useGeneration | startGeneration] 🌐 Preparing API request...")
     try {
       const formData = new FormData()
       formData.append("human_image", selfieFile)
@@ -289,10 +340,31 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         formData.append("style_prompt", stylePrompts[chatData.occasion as keyof typeof stylePrompts])
       }
 
+      console.log("[useGeneration | startGeneration] 📤 Sending API request to /api/generation/start...")
+      console.log("[useGeneration | startGeneration] 📋 FormData contents:", {
+        occasion: chatData.occasion,
+        generationMode: chatData.generationMode,
+        hasOnboardingData: !!onboardingData,
+        hasCustomPrompt: !!(chatData.customPrompt && chatData.customPrompt.trim()),
+        hasStylePrompt: !!stylePrompts[chatData.occasion as keyof typeof stylePrompts]
+      })
+      
+      // Create AbortController for timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log("[useGeneration | startGeneration] ⏰ Request timeout after 3 minutes")
+        controller.abort();
+      }, 180000); // 3 minutes timeout
+      
       const response = await fetch("/api/generation/start", {
         method: "POST",
         body: formData,
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId); // Clear timeout if request completes
+      console.log("[useGeneration | startGeneration] 📥 API response received:", response.status, response.statusText)
+      
       if (!response.ok) {
         let errorDetails = "An unknown error occurred.";
         const clonedResponse = response.clone();
@@ -309,18 +381,28 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         );
       }
 
+      console.log("[useGeneration | startGeneration] 🔄 Parsing response JSON...")
       const result = await response.json();
+      console.log("[useGeneration | startGeneration] 📊 Response data:", result)
+      
       const endTime = Date.now();
       console.log(`[FE_PERF_LOG | startGeneration] API call successful. JobId received. Total time: ${endTime - startTime}ms.`);
 
-      console.log("[useGeneration | startGeneration]  получили  получили jobId:", result.jobId, ". Triggering polling.");
+      console.log("[useGeneration | startGeneration] 🎯 JobId received:", result.jobId, ". Triggering polling.");
+      console.log("[useGeneration | startGeneration] 🔄 Setting polling state...")
       setIsPolling(true)
       setJobId(result.jobId);
+      console.log("[useGeneration | startGeneration] ✅ Generation process initiated successfully!")
+      console.log("[useGeneration | startGeneration] 🔄 Polling should start now with jobId:", result.jobId)
     } catch (error: any) {
-      const errorMessage =
-        error.message || "An unexpected error occurred while starting the generation."
+      const errorMessage = error.name === 'AbortError' 
+        ? "Request timed out after 3 minutes. The generation process may still be running in the background."
+        : error.message || "An unexpected error occurred while starting the generation."
+      
       console.error("[useGeneration | startGeneration] 💥 Error during generation start:", errorMessage)
       console.error("[useGeneration | startGeneration] 💥 Full error object:", error)
+      console.error("[useGeneration | startGeneration] 💥 Error type:", error.name)
+      
       // 删除旧信息
       const message1: Message = {
         id: 'job-start',
@@ -387,19 +469,28 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
   }
 
   const handleButtonAction = (action: ButtonAction, message: Message): void => {
+    console.log("[useGeneration | handleButtonAction] 🎯 Button clicked:", action.action)
+    console.log("[useGeneration | handleButtonAction] 📝 Action details:", action)
+    console.log("[useGeneration | handleButtonAction] 💬 Message:", message.id)
+    
     switch (action.action) {
       case 'Start-Generation':
+        console.log("[useGeneration | handleButtonAction] 🚀 Calling startGeneration...")
         startGeneration()
         break
       case 'Generation-image':
+        console.log("[useGeneration | handleButtonAction] 🖼️ Calling generationImage...")
         generationImage(0)
         break
       case 'Update-Profile':
+        console.log("[useGeneration | handleButtonAction] 👤 Redirecting to profile...")
         router.push('/')
         break
       default:
+        console.log("[useGeneration | handleButtonAction] ❓ Unknown action:", action.action)
         break
     }
   }
   return { handleButtonAction }
 }
+
