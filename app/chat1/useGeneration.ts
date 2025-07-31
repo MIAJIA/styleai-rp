@@ -27,14 +27,14 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       timestamp: new Date(),
     }
 
-    for (let index = 0; index < suggestions.length; index++) {
+    for (let index = 0; index < suggestions.length - 1; index++) {
       const suggestion = suggestions[index];
       if (suggestion.status === 'succeeded' || suggestion.status === 'generating_images') {
         console.log(`[useGeneration | handleJobUpdate] 📡 Suggestion ${suggestion.index} succeeded`);
         addMessage(message1)
         const styleSuggestion = suggestion.styleSuggestion
         if (!styleSuggestion || !styleSuggestion.outfit_suggestion) {
-          const message2: Message = { 
+          const message2: Message = {
             id: 'job-error',
             content: "I couldn't come up with a specific outfit suggestion, but I'll generate an image based on the overall style idea!",
             sender: 'ai',
@@ -95,17 +95,17 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           }
         }
         const content = sections.join("\n")
-        
+
         let buttons: ButtonAction[] = []
         let imageUrls = getImageUrls(suggestion)
         if (imageUrls && imageUrls.length > 0) {
-          imageUrls = [imageUrls[0],imageUrls[0]]
-        }else{
-          imageUrls = ["wait","wait"]
+          imageUrls = [imageUrls[0], imageUrls[0]]
+        } else {
+          imageUrls = ["wait", "wait"]
         }
-
+        // 发送第一个建议
         const message2: Message = {
-          id: 'job-style-suggestion',
+          id: `job-style-suggestion-${index}`,
           content: `${outfitDescription}\n\n${content}`,
           sender: 'ai',
           timestamp: new Date(),
@@ -114,41 +114,53 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         }
         addMessage(message2)
 
-      
 
 
 
+        // 发送后续建议
         let buttons2: ButtonAction[] = []
+
+        if (index == 0 && !isGenerate) {
+          buttons2.push({
+            id: `btn-${index}-more`,
+            label: 'yes,one more outfit',
+            type: 'default',
+            action: 'Generation-image',
+          })
+        }
+
         buttons2.push({
-          id: 'btn3',
-          label: 'yes,one more outfit',
-          type: 'default',
-          action: 'Generation-image',
-        })
-        buttons2.push({
-          id: 'btn4',
+          id: `btn-${index}-update`,
           label: 'Update Profile',
           type: 'destructive',
           action: 'Update-Profile',
         })
         const message3: Message = {
-          id: `job-${jobId}`,
+          id: `job-${jobId}-${index}`,
           content: 'How do you like this outfit? Would you like to generate another one for this item?',
           sender: 'ai',
           timestamp: new Date(),
-          buttons: buttons2 ,
+          buttons: buttons2,
         }
-        addMessage(message3)
 
+        if (index == 0 && !isGenerate) {
+          addMessage(message3)
+        }
         
-        if (imageUrls[0] === "wait"||imageUrls[1] === "wait") {
+        if (index == 1 && isGenerate) {
+          addMessage(message3)
+        }
+
+
+        if (imageUrls[0] === "wait" || imageUrls[1] === "wait") {
           throw new Error(`imageUrls is null`)
         }
-        stopPolling()
-        return
       }
     }
-    throw new Error(`jobData error ${JSON.stringify(jobData)}`)
+    stopPolling()
+    return
+
+    // throw new Error(`jobData error ${JSON.stringify(jobData)}`)
   }
 
   // 轮询获取 job 状态
@@ -336,20 +348,20 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       addMessage(message1)
       addMessage(message2)
       const initialMessage: Message = {
-          id: 'start-generation',
-          content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
-          sender: 'ai',
-          timestamp: new Date(),
-          buttons: [
-            {
-              id: 'btn1',
-              label: 'Start Generation',
-              type: 'default',
-              action: 'Start-Generation',
-            }
-          ]
-        }
-        addMessage(initialMessage)
+        id: 'start-generation',
+        content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
+        sender: 'ai',
+        timestamp: new Date(),
+        buttons: [
+          {
+            id: 'btn1',
+            label: 'Start Generation',
+            type: 'default',
+            action: 'Start-Generation',
+          }
+        ]
+      }
+      addMessage(initialMessage)
     }
   }
 
@@ -370,6 +382,14 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       const data = await response.json() as Job;
       console.log("[useGeneration | generationImage] Generation image data:", data);
       if (jobId) {
+        const message: Message = {
+          id: `job-${jobId}-0`,
+          content: '',
+          sender: 'ai',
+          timestamp: new Date(),
+        }
+        addMessage(message)
+
         setIsPolling(true)
         startPolling(jobId);
         setGenerate(true)
@@ -384,10 +404,11 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
   const handleButtonAction = (action: ButtonAction, message: Message): void => {
     switch (action.action) {
       case 'Start-Generation':
+        setGenerate(false)
         startGeneration()
         break
       case 'Generation-image':
-        generationImage(0)
+        generationImage(1)
         break
       case 'Update-Profile':
         router.push('/')
