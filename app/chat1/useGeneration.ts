@@ -97,11 +97,15 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         const content = sections.join("\n")
 
         let buttons: ButtonAction[] = []
+        let images = ["wait", "wait"]
         let imageUrls = getImageUrls(suggestion)
         if (imageUrls && imageUrls.length > 0) {
-          imageUrls = [imageUrls[0], imageUrls[0]]
-        } else {
-          imageUrls = ["wait", "wait"]
+          if (imageUrls[0]) {
+            images[0] = imageUrls[0]
+          }
+          if (imageUrls[1]) {
+            images[1] = imageUrls[1]
+          }
         }
         // 发送第一个建议
         const message2: Message = {
@@ -110,7 +114,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           sender: 'ai',
           timestamp: new Date(),
           buttons: buttons,
-          imageUrls: imageUrls
+          imageUrls: images
         }
         addMessage(message2)
 
@@ -146,13 +150,13 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         if (index == 0 && !isGenerate) {
           addMessage(message3)
         }
-        
+
         if (index == 1 && isGenerate) {
           addMessage(message3)
         }
 
 
-        if (imageUrls[0] === "wait" || imageUrls[1] === "wait") {
+        if (images[0] === "wait" || images[1] === "wait") {
           throw new Error(`imageUrls is null`)
         }
       }
