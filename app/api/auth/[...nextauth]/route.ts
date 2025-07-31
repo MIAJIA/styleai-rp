@@ -24,7 +24,7 @@ export const authOptions = {
       return true;
     },
     async redirect(params: any) {
-      console.log("Redirect params:", params);
+      // console.log("Redirect params:", params);
       // 修复重定向逻辑
       if (params.url.startsWith('/')) {
         // 确保baseUrl不以斜杠结尾，url以斜杠开头
@@ -39,7 +39,7 @@ export const authOptions = {
       return params.baseUrl;
     },
     async session({ session, token, user }: any) {
-      console.log("Session callback - Input:", { session, token, user });
+      // console.log("Session callback - Input:", { session, token, user });
 
       // 保存用户信息到 session
       if (token) {
@@ -48,11 +48,11 @@ export const authOptions = {
         session.accessToken = token.accessToken;
       }
 
-      console.log("Session callback - Output:", session);
+      // console.log("Session callback - Output:", session);
       return session;
     },
     async jwt({ token, user, account, profile }: any) {
-      console.log("JWT callback - Input:", { token, user, account, profile });
+      // console.log("JWT callback - Input:", { token, user, account, profile });
 
       // 保存账户信息到 JWT
       if (account) {
@@ -63,7 +63,7 @@ export const authOptions = {
         token.id = user.id;
       }
 
-      console.log("JWT callback - Output:", token);
+      // console.log("JWT callback - Output:", token);
       return token;
     },
   },
