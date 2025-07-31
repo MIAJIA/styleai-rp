@@ -24,7 +24,8 @@ import {
     Copy,
     Download,
     Link,
-    Loader2
+    Loader2,
+    ImageIcon
 } from "lucide-react"
 import { ChatModeData } from "../chat/types"
 import { useRouter } from "next/navigation"
@@ -35,6 +36,7 @@ import UserInfo from "../components/userInfo"
 import IOSTabBar from "../components/ios-tab-bar"
 import ImageModal from "../components/image-modal"
 import { useSessionManagement } from "../chat/hooks/useSessionManagement"
+import { useChat } from "./useChat"
 
 
 
@@ -49,6 +51,11 @@ export default function ChatPage() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const sessionId = useSessionManagement()
     const [modalImage, setModalImage] = useState<string | null>(null)
+    
+    // Image upload state
+    const [stagedImage, setStagedImage] = useState<string | null>(null)
+    const [isImageProcessing, setIsImageProcessing] = useState(false)
+    const imageInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         const rawData = sessionStorage.getItem("chatModeData")
@@ -154,30 +161,26 @@ export default function ChatPage() {
         return Date.now().toString() + Math.random().toString(36).substr(2, 9)
     }
 
-    const handleSendMessage1 = (content?: string) => {
-        const messageContent = content || newMessage
-        if (!messageContent.trim()) return
-
-        const userMessage: Message = {
-            id: generateId(),
-            content: messageContent.trim(),
-            sender: 'user',
-            timestamp: new Date()
-        }
-
-        setMessages(prev => [...prev, userMessage])
-        if (!content) {
-            setNewMessage('')
-        }
-    }
-    // This orchestration layer remains in the main component
+    const { handleFreeChat } = useChat({
+        sessionId,
+        stagedImage,
+        setStagedImage,
+        addMessage
+      })
+    // 
+    // tration layer remains in the main component
     const handleSendMessage = async (message: string) => {
         if (message.trim() === "") return
+        let imageUrls: string[] = []
+        if (stagedImage) {
+            imageUrls = [stagedImage]
+        }
         const userMessage: Message = {
             id: generateId(),
             content: message,
             sender: 'user',
-            timestamp: new Date()
+            timestamp: new Date(),
+            imageUrls: imageUrls
         }
         addMessage(userMessage)
         // Check for generation-related quick replies
@@ -220,10 +223,10 @@ export default function ChatPage() {
             setNewMessage('') // Clear input after sending
             return
         }
-
-        // For regular messages, use the existing handleSendMessage1 function
-        handleSendMessage1(message)
+        // 清空用户对话框
         setNewMessage('') // Clear input after sending
+        handleFreeChat(message)
+
     }
     const addMessageWithImages = (content: string, imageUrls: string[], sender: 'user' | 'ai' = 'ai') => {
         const message: Message = {
@@ -266,6 +269,69 @@ export default function ChatPage() {
         setIsModalOpen(true)
     }
 
+    // Image upload handlers
+    const handleImageUploadClick = () => {
+        imageInputRef.current?.click()
+    }
+
+    const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (!file) return
+
+        console.log(`[ChatPage] Image selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
+
+        if (!file.type.startsWith("image/")) {
+            alert("Please select an image file")
+            return
+        }
+
+        if (file.size > 50 * 1024 * 1024) {
+            alert("Image too large (>50MB), please select a smaller image")
+            return
+        }
+
+        setIsImageProcessing(true)
+
+        try {
+            let compressionResult
+            if (file.size > 10 * 1024 * 1024) {
+                console.log("[ChatPage] Using aggressive compression for large file")
+                compressionResult = await import("@/lib/image-compression").then((m) => m.compressForChat(file))
+            } else {
+                console.log("[ChatPage] Using standard compression")
+                compressionResult = await import("@/lib/image-compression").then((m) => m.compressForChat(file))
+            }
+
+            console.log(
+                `[ChatPage] Image compression complete: ${(file.size / 1024).toFixed(1)}KB → ${(
+                    compressionResult.compressedSize / 1024
+                ).toFixed(1)}KB (reduced ${(compressionResult.compressionRatio * 100).toFixed(1)}%)`,
+            )
+
+            setStagedImage(compressionResult.dataUrl)
+        } catch (error) {
+            console.error("[ChatPage] Image compression failed:", error)
+            if (file.size < 5 * 1024 * 1024) {
+                console.log("[ChatPage] Compression failed, using original image")
+                const reader = new FileReader()
+                reader.onloadend = () => {
+                    setStagedImage(reader.result as string)
+                }
+                reader.readAsDataURL(file)
+            } else {
+                alert("Image processing failed, please try again or select a smaller image")
+            }
+        } finally {
+            setIsImageProcessing(false)
+        }
+
+        event.target.value = ""
+    }
+
+    const clearStagedImage = () => {
+        setStagedImage(null)
+    }
+
 
     const formatTime = (date: Date) => {
         return date.toLocaleTimeString('zh-CN', {
@@ -294,13 +360,13 @@ export default function ChatPage() {
                     {messages.map((message) => (
                         <div
                             key={message.id}
-                            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} max-w-[90%] `}
+                            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start' }  md-4`}
                         >
                             <Card className={`max-w-sm lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl p-4 ${message.sender === 'user'
                                 ? 'bg-blue-500 text-white'
                                 : 'bg-white border border-gray-200'
                                 }`}>
-                                <div className="flex items-start gap-3">
+                                <div className={`flex items-start gap-3 ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}>
                                     <Avatar className="w-8 h-8">
                                         {message.sender === 'user' ? (
                                             <User className="w-4 h-4" />
@@ -410,7 +476,61 @@ export default function ChatPage() {
             {/* Input Area */}
             <div className="fixed bottom-14 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-gray-200 p-4 z-20">
                 <div className="max-w-4xl mx-auto">
+                    {/* Staged image preview */}
+                    {stagedImage && (
+                        <div className="mb-2 relative w-24 h-24">
+                            <img
+                                src={stagedImage}
+                                alt="Preview"
+                                className="w-full h-full object-cover rounded-lg"
+                            />
+                            <button
+                                onClick={clearStagedImage}
+                                className="absolute -top-2 -right-2 bg-gray-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-lg"
+                                aria-label="Remove image"
+                            >
+                                X
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Image processing indicator */}
+                    {isImageProcessing && (
+                        <div className="mb-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="flex items-center gap-2">
+                                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                                <span className="text-sm text-blue-700">正在优化图片...</span>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex gap-2">
+                        {/* Hidden file input */}
+                        <input
+                            type="file"
+                            ref={imageInputRef}
+                            onChange={handleImageSelect}
+                            className="hidden"
+                            accept="image/*"
+                        />
+                        
+                        {/* Image upload button */}
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleImageUploadClick}
+                            disabled={isImageProcessing}
+                            aria-label="Upload image"
+                            className="flex-shrink-0"
+                        >
+                            {isImageProcessing ? (
+                                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                            ) : (
+                                <ImageIcon className="w-5 h-5 text-gray-500" />
+                            )}
+                        </Button>
+
                         <Textarea
                             ref={inputRef}
                             value={newMessage}
@@ -423,7 +543,7 @@ export default function ChatPage() {
                         <Button
                             onClick={() => handleSendMessage(newMessage)}
                             disabled={!newMessage.trim()}
-                            className="px-4"
+                            className="px-4 flex-shrink-0"
                         >
                             <Send className="w-4 h-4" />
                         </Button>
