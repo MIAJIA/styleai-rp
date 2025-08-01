@@ -6,6 +6,7 @@ import {
   STRICT_REALISM_PROMPT_BLOCK,
 } from "@/lib/prompts";
 import { Job, Suggestion } from "../types";
+import { kv } from "@vercel/kv";
 
 // 🛡️ NEW: Custom error for terminal task failures to distinguish from transient network errors.
 class TaskFailedError extends Error {
@@ -86,7 +87,7 @@ const buildStylizeRequestBody = (
 };
 
 // More robust, reusable polling function
-async function executeKlingTask(submitPath: string, queryPathPrefix: string, requestBody: object): Promise<string[]> {
+async function executeKlingTask(submitPath: string, queryPathPrefix: string, requestBody: object, jobId: string, suggestionIndex: number): Promise<string[]> {
   const isTryOn = submitPath === KOLORS_VIRTUAL_TRYON_SUBMIT_PATH;
 
   const accessKey = isTryOn ? KLING_ACCESS_KEY_TRYON : KLING_ACCESS_KEY;
@@ -312,7 +313,12 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
         // 🔍 NEW: 输出完整的失败响应
         console.error(`${KLING_API_PREFIX} ===== COMPLETE FAILURE RESPONSE =====`);
         console.error(`${KLING_API_PREFIX} 📥 FAILURE RESPONSE:`, JSON.stringify(statusResult, null, 2));
-
+        const job = await kv.get<Job>(jobId);
+        if (job) {
+          job.suggestions[suggestionIndex].status = 'failed';
+          job.suggestions[suggestionIndex].error = failureMsg;
+          await kv.set(jobId, job);
+        }
         // 🛡️ NEW: Handle specific "risk control" failure with a user-friendly message
         if (failureMsg.includes("Failure to pass the risk control system")) {
           // Use the custom error to signal a terminal failure
@@ -354,6 +360,8 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
  */
 export async function runStylizationMultiple(
   modelVersion: "kling-v1-5" | "kling-v2",
+  jobId: string,
+  suggestionIndex: number,
   suggestion: Suggestion,
   humanImageUrl: string,
   humanImageName: string,
@@ -431,7 +439,7 @@ export async function runStylizationMultiple(
   const humanImageBase64 = await fileToBase64(await urlToFile(humanImageUrl, humanImageName, humanImageType));
   const requestBody = buildStylizeRequestBody(modelVersion, finalPrompt, humanImageBase64);
 
-  const styledImageUrls = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, requestBody);
+  const styledImageUrls = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, requestBody, jobId, suggestionIndex);
 
   const endTime = Date.now();
   console.log(`${KLING_LOG_PREFIX} [ATOMIC_STEP] Stylization with ${modelVersion} complete. Elapsed: ${endTime - startTime}ms.`);
@@ -448,6 +456,8 @@ export async function runStylizationMultiple(
  */
 export async function runStylizationParallel(
   modelVersion: 'kling-v1-5' | 'kling-v2',
+  jobId: string,
+  suggestionIndex: number,
   prompts: string[],
   humanImageUrl: string,
   humanImageName: string,
@@ -462,7 +472,7 @@ export async function runStylizationParallel(
   const results = await Promise.all(
     prompts.map(async (prompt) => {
       const requestBody = buildStylizeRequestBody(modelVersion, prompt, humanImageBase64);
-      const imageUrls = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, requestBody);
+      const imageUrls = await executeKlingTask(KOLORS_STYLIZE_SUBMIT_PATH, KOLORS_STYLIZE_STATUS_PATH, requestBody, jobId, suggestionIndex);
       return { imageUrls, finalPrompt: prompt };
     })
   );
@@ -476,8 +486,8 @@ export async function runStylizationParallel(
   return results;
 }
 
-export async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string, job?: Job): Promise<string> {
-  const result = await runStylizationMultiple(modelVersion, { finalPrompt: prompt } as Suggestion, humanImageUrl, humanImageName, humanImageType, job);
+export async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', jobId: string, suggestionIndex: number, prompt: string, humanImageUrl: string, humanImageName: string, humanImageType: string, job?: Job): Promise<string> {
+  const result = await runStylizationMultiple(modelVersion, jobId, suggestionIndex, { finalPrompt: prompt } as Suggestion, humanImageUrl, humanImageName, humanImageType, job);
   if (!result.imageUrls[0]) {
     throw new Error("Stylization did not return an image.");
   }
@@ -487,7 +497,8 @@ export async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', pr
 /**
  * ATOMIC STEP: Performs virtual try-on, returning multiple images.
  */
-export async function runVirtualTryOnMultiple(canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string, job?: Job): Promise<string[]> {
+export async function runVirtualTryOnMultiple(jobId: string,
+  suggestionIndex: number, canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string, job?: Job): Promise<string[]> {
   const startTime = Date.now();
   console.log(`${KLING_LOG_PREFIX} [ATOMIC_STEP] Running Virtual Try-On...`);
 
@@ -546,7 +557,7 @@ export async function runVirtualTryOnMultiple(canvasImageUrl: string, garmentIma
   console.log(`${KLING_LOG_PREFIX} 🚀 Human image size: ${humanImageBase64.length} characters`);
   console.log(`${KLING_LOG_PREFIX} 🚀 Garment image size: ${garmentImageBase64.length} characters`);
 
-  const tryOnImageUrls = await executeKlingTask(KOLORS_VIRTUAL_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, requestBody);
+  const tryOnImageUrls = await executeKlingTask(KOLORS_VIRTUAL_TRYON_SUBMIT_PATH, KOLORS_VIRTUAL_TRYON_STATUS_PATH, requestBody, jobId, suggestionIndex);
 
   const endTime = Date.now();
   console.log(`${KLING_LOG_PREFIX} [ATOMIC_STEP] Virtual Try-On complete. Elapsed: ${endTime - startTime}ms.`);
@@ -557,8 +568,8 @@ export async function runVirtualTryOnMultiple(canvasImageUrl: string, garmentIma
   return tryOnImageUrls;
 }
 
-export async function runVirtualTryOn(canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string, job?: Job): Promise<string> {
-  const results = await runVirtualTryOnMultiple(canvasImageUrl, garmentImageUrl, garmentImageName, garmentImageType, job);
+export async function runVirtualTryOn(jobId: string, suggestionIndex: number, canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string, job?: Job): Promise<string> {
+  const results = await runVirtualTryOnMultiple(jobId, suggestionIndex, canvasImageUrl, garmentImageUrl, garmentImageName, garmentImageType, job);
   if (!results[0]) {
     throw new Error("Virtual Try-On did not return an image.");
   }

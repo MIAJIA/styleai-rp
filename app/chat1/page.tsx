@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -35,13 +35,13 @@ import Image from "next/image"
 import UserInfo from "../components/userInfo"
 import IOSTabBar from "../components/ios-tab-bar"
 import ImageModal from "../components/image-modal"
-import { useSessionManagement } from "../chat/hooks/useSessionManagement"
 import { useChat } from "./useChat"
-
+import useChatStorage from "./useChatStorage"
+import { getSession, useSession } from 'next-auth/react'
 
 
 export default function ChatPage() {
-    const [messages, setMessages] = useState<Message[]>([])
+    const [messages, setMessages] = useState<Message[]>([]) 
     const router = useRouter()
     const [newMessage, setNewMessage] = useState('')
     const [editContent, setEditContent] = useState('')
@@ -49,15 +49,65 @@ export default function ChatPage() {
     const inputRef = useRef<HTMLTextAreaElement>(null)
     const [chatData, setChatData] = useState<ChatModeData | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const sessionId = useSessionManagement()
     const [modalImage, setModalImage] = useState<string | null>(null)
     
     // Image upload state
     const [stagedImage, setStagedImage] = useState<string | null>(null)
     const [isImageProcessing, setIsImageProcessing] = useState(false)
     const imageInputRef = useRef<HTMLInputElement>(null)
+    const {data: session} = useSession()
+    const [sessionId, setSessionId] = useState<string>("")
 
     useEffect(() => {
+        console.log("[ChatPage] Session data:", session)
+        if (session?.user?.id) {
+            console.log("[ChatPage] Setting session ID:", session.user.id)
+            setSessionId(session.user.id)
+        } else {
+            console.log("[ChatPage] No session ID found")
+            setSessionId("")
+        }
+    }, [session])
+    const handleMessageToDB = useChatStorage(sessionId ?? "")
+
+    const addMessage = async (message: Message) => {
+        setMessages(prev => {
+            // 检查是否已存在相同 ID 的消息
+            const existingIndex = prev.findIndex(msg => msg.id === message.id)
+
+            // 检查消息内容是否为空
+            const isEmptyMessage = !message.content || message.content.trim() === ''
+
+            if (existingIndex !== -1) {
+                // 如果存在相同 ID 的消息
+                if (isEmptyMessage) {
+                    // 如果新消息为空，则删除该消息
+                    handleMessageToDB('delete', message).catch(console.error)
+                    return prev.filter((_, index) => index !== existingIndex)
+                } else {
+                    // 如果新消息不为空，则替换该消息
+                    const newMessages = [...prev]
+                    newMessages[existingIndex] = message
+                    handleMessageToDB('add', message).catch(console.error)
+                    return newMessages
+                }
+            } else {
+                // 如果不存在相同 ID 的消息
+                if (isEmptyMessage) {   
+                    // 如果新消息为空，则不添加
+                    return prev
+                } else {
+                    // 如果新消息不为空，则追加新消息
+                    handleMessageToDB('add', message).catch(console.error)
+                    return [...prev, message]
+                }
+            }
+        })
+    }
+
+    // 加载聊天模式数据
+    useEffect( () => {
+        const initializeDB = async () => {
         const rawData = sessionStorage.getItem("chatModeData")
         console.log("[ChatPage | useEffect] 🎯 Raw sessionStorage data:", rawData)
         if (rawData) {
@@ -71,64 +121,38 @@ export default function ChatPage() {
                 }
                 console.log("[ChatPage | useEffect] ✅ Parsed chatData:", dataForLog)
                 setChatData(data)
-                const initialMessage: Message = {
-                    id: 'start-generation',
-                    content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
-                    sender: 'ai',
-                    timestamp: new Date(),
-                    // imageUrls: [
-                    //   '/casual-outfit.png',
-                    //   '/elegant-outfit.png'
-                    // ],
-                    buttons: [
-                        {
-                            id: 'btn1',
-                            label: 'Start Generation',
-                            type: 'default',
-                            action: 'Start-Generation',
-                        }
-                    ]
+                
+                // 只有在没有历史消息时才显示欢迎消息
+                if (messages.length === 0) {
+                    const allmessages = await handleMessageToDB('getAll')
+                    const initialMessage: Message = {
+                        id: 'start-generation',
+                        content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
+                        sender: 'ai',
+                        timestamp: new Date(),
+                        // imageUrls: [
+                        //   '/casual-outfit.png',
+                        //   '/elegant-outfit.png'
+                        // ],
+                        buttons: [
+                            {
+                                id: 'btn1',
+                                label: 'Start Generation',
+                                type: 'default',
+                                action: 'Start-Generation',
+                            }
+                        ]
+                    }
+                    setMessages([...allmessages||[],initialMessage])
                 }
-                addMessage(initialMessage)
             } catch (error) {
                 // Handle error, maybe redirect or show a message
             }
         } else {
             router.push("/") // Redirect if no data
-        }
-    }, [router, setMessages]) // removed dependency on addMessage
-
-    const addMessage = (message: Message) => {
-        setMessages(prev => {
-            // 检查是否已存在相同 ID 的消息
-            const existingIndex = prev.findIndex(msg => msg.id === message.id)
-
-            // 检查消息内容是否为空
-            const isEmptyMessage = !message.content || message.content.trim() === ''
-
-            if (existingIndex !== -1) {
-                // 如果存在相同 ID 的消息
-                if (isEmptyMessage) {
-                    // 如果新消息为空，则删除该消息
-                    return prev.filter((_, index) => index !== existingIndex)
-                } else {
-                    // 如果新消息不为空，则替换该消息
-                    const newMessages = [...prev]
-                    newMessages[existingIndex] = message
-                    return newMessages
-                }
-            } else {
-                // 如果不存在相同 ID 的消息
-                if (isEmptyMessage) {
-                    // 如果新消息为空，则不添加
-                    return prev
-                } else {
-                    // 如果新消息不为空，则追加新消息
-                    return [...prev, message]
-                }
-            }
-        })
-    }
+        }}
+        if (sessionId) initializeDB()
+    }, [sessionId]) // added messages.length dependency
 
     // 专门用于更新消息的函数
     const updateMessage = (messageId: string, updates: Partial<Message>) => {
@@ -183,46 +207,6 @@ export default function ChatPage() {
             imageUrls: imageUrls
         }
         addMessage(userMessage)
-        // Check for generation-related quick replies
-        if (message.startsWith("Show me option")) {
-            const index = parseInt(message.split(" ")[3], 10) - 1;
-            if (!isNaN(index)) {
-                console.log(`[ChatPage] User clicked quick reply to see option ${index + 1}`);
-                // Note: selectSuggestion function is not available in this context
-                // You may need to implement this functionality or remove this check
-            }
-            setNewMessage('') // Clear input after sending
-            return;
-        }
-
-        if (message === "不喜欢这套搭配") {
-            setNewMessage('') // Clear input after sending
-            return
-        }
-
-        if (message === "继续生成最终效果") {
-            const aiMessage: Message = {
-                id: generateId(),
-                content: "OK! I'll continue to generate the final try-on effect for you, please wait...",
-                sender: 'ai',
-                timestamp: new Date()
-            }
-            addMessage(aiMessage)
-            setNewMessage('') // Clear input after sending
-            return
-        }
-
-        if (message === "重新生成场景" || message === "换个风格试试") {
-            const aiMessage: Message = {
-                id: generateId(),
-                content: "OK! I've stopped the current generation. You can return to the homepage to re-upload your photos, or tell me what style you want.",
-                sender: 'ai',
-                timestamp: new Date()
-            }
-            addMessage(aiMessage)
-            setNewMessage('') // Clear input after sending
-            return
-        }
         // 清空用户对话框
         setNewMessage('') // Clear input after sending
         handleFreeChat(message)
