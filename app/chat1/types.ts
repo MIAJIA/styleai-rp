@@ -4,6 +4,8 @@ export interface ButtonAction {
     type: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive'
     icon?: string
     action: string
+    jobId?: string
+    suggestionIndex?: number
 }
 
 export interface Message {

@@ -7,6 +7,7 @@ import { loadCompleteOnboardingData } from "@/lib/onboarding-storage"
 import { stylePrompts } from "../chat/constants"
 import { Job } from "@/lib/ai"
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime"
+import { sleep } from "@/lib/ai/utils"
 
 
 export function useGeneration(chatData: ChatModeData, addMessage: (message: Message) => void, router: string[] | AppRouterInstance) {
@@ -29,7 +30,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
 
     for (let index = 0; index < suggestions.length - 1; index++) {
       const suggestion = suggestions[index];
-      if (suggestion.status === 'succeeded' || suggestion.status === 'generating_images') {
+      if (suggestion.status === 'succeeded' || suggestion.status === 'generating_images' || suggestion.status === 'failed') {
         console.log(`[useGeneration | handleJobUpdate] 📡 Suggestion ${suggestion.index} succeeded`);
         addMessage(message1)
         const styleSuggestion = suggestion.styleSuggestion
@@ -95,22 +96,31 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           }
         }
         const content = sections.join("\n")
+        let contents = `${outfitDescription}\n\n${content}`
 
         let buttons: ButtonAction[] = []
         let images = ["wait", "wait"]
-        let imageUrls = getImageUrls(suggestion)
-        if (imageUrls && imageUrls.length > 0) {
-          if (imageUrls[0]) {
-            images[0] = imageUrls[0]
+
+        //  处理失败不显示图片
+        if (suggestion.status == 'failed') {
+          images = []
+          contents = contents + "\n\n\n\n" + "I've generated the outfit for you, but the image is not perfect. Please try again."
+        } else {
+          let imageUrls = getImageUrls(suggestion)
+          if (imageUrls && imageUrls.length > 0) {
+            if (imageUrls[0]) {
+              images[0] = imageUrls[0]
+            }
+            if (imageUrls[1]) {
+              images[1] = imageUrls[1]
+            }
           }
-          if (imageUrls[1]) {
-            images[1] = imageUrls[1]
-          }
+
         }
         // 发送第一个建议
         const message2: Message = {
-          id: `job-style-suggestion-${index}`,
-          content: `${outfitDescription}\n\n${content}`,
+          id: `job-${jobId}-style-suggestion-${index}`,
+          content: contents,
           sender: 'ai',
           timestamp: new Date(),
           buttons: buttons,
@@ -120,44 +130,50 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
 
 
 
-
+        sleep(1000)
         // 发送后续建议
         let buttons2: ButtonAction[] = []
 
-        if (index == 0 && !isGenerate) {
+        if (index == currentSuggestionIndex) {
+          if (currentSuggestionIndex == 0) {
+            buttons2.push({
+              id: `btn-${index}-more`,
+              label: 'yes,one more outfit',
+              type: 'default',
+              action: 'Generation-image',
+              jobId: jobId || "",
+              suggestionIndex: index,
+            })
+          }
           buttons2.push({
-            id: `btn-${index}-more`,
-            label: 'yes,one more outfit',
-            type: 'default',
-            action: 'Generation-image',
+            id: `btn-${index}-update`,
+            label: 'Update Profile',
+            type: 'destructive',
+            action: 'Update-Profile',
           })
-        }
-
-        buttons2.push({
-          id: `btn-${index}-update`,
-          label: 'Update Profile',
-          type: 'destructive',
-          action: 'Update-Profile',
-        })
-        const message3: Message = {
-          id: `job-${jobId}-${index}`,
-          content: 'How do you like this outfit? Would you like to generate another one for this item?',
-          sender: 'ai',
-          timestamp: new Date(),
-          buttons: buttons2,
-        }
-
-        if (index == 0 && !isGenerate) {
+          const message3: Message = {
+            id: `job-${jobId}-more`,
+            content: 'How do you like this outfit? Would you like to generate another one for this item?',
+            sender: 'ai',
+            timestamp: new Date(),
+            buttons: buttons2,
+          }
+          addMessage(message3)
+        }else{
+          const message3: Message = {
+            id: `job-${jobId}-more`,
+            content: '',
+            sender: 'ai',
+            timestamp: new Date(),
+            buttons: buttons2,
+          }
           addMessage(message3)
         }
-
-        if (index == 1 && isGenerate) {
-          addMessage(message3)
-        }
-
-
-        if (images[0] === "wait" || images[1] === "wait") {
-          throw new Error(`imageUrls is null`)
+        // 修正: 正确判断 jobData.status 是否为 "failed"
+        if (suggestion.status !== 'failed' && index == currentSuggestionIndex) {
+          if (images[0] === "wait" || images[1] === "wait") {
+            throw new Error(`imageUrls is null`)
+          }
         }
       }
     }
@@ -176,7 +192,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         controller.abort();
       }, 10000 * 10); // 增加到10秒超时，避免过早中断
 
-      const response = await fetch(`/api/generation/status?jobId=${jobId}`, {
+      const response = await fetch(`/api/generation/status?jobId=${jobId}&suggestionIndex=${currentSuggestionIndex}`, {
         signal: controller.signal
       });
 
@@ -249,7 +265,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
     if (jobId && isPolling) {
       startPolling(jobId)
     }
-  }, [jobId])
+  }, [jobId, currentSuggestionIndex])
 
   // 开始生成jobid  
   const startGeneration = async () => {
@@ -393,9 +409,9 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           timestamp: new Date(),
         }
         addMessage(message)
-
+        // handleJobUpdate
         setIsPolling(true)
-        startPolling(jobId);
+        // startPolling(jobId);
         setGenerate(true)
       } else {
         console.error("[useGeneration | generationImage] Error: jobId is null");
@@ -423,3 +439,4 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
   }
   return { handleButtonAction }
 }
+

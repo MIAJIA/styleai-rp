@@ -29,6 +29,8 @@ export async function executeSimpleScenePipelineV2(
 
   const stylizationResult = await runStylizationMultiple(
     'kling-v1-5',
+    job.jobId,
+    job.suggestionIndex,
     job.suggestion,
     job.humanImage.url,
     job.humanImage.name,
@@ -66,6 +68,8 @@ export async function executeSimpleScenePipelineV2(
   const allTryOnPromises = stylizedImageUrls.map((styledImage, index) => {
     console.log(`[PIPELINE] Processing virtual try-on for styled image ${index + 1}/${stylizedImageUrls.length}`);
     return runVirtualTryOnMultiple(
+      job.jobId,
+      job.suggestionIndex,
       styledImage,
       job.garmentImage.url,
       job.garmentImage.name,
