@@ -41,6 +41,7 @@ export async function executeSimpleScenePipelineV2(
   const finalPrompt = stylizationResult.finalPrompt;
 
   // --- NEW: Save stylized images to our own blob storage ---
+   const finalImages: string[] = [];
   const stylizedImageUrls: string[] = [];
   for (let i = 0; i < tempStyledImageUrls.length; i++) {
     const finalUrl = await saveFinalImageToBlob(
@@ -48,6 +49,7 @@ export async function executeSimpleScenePipelineV2(
       `${job.jobId}-${job.suggestionIndex}-stylized-${i + 1}` // Unique name
     );
     stylizedImageUrls.push(finalUrl);
+    finalImages.push(finalUrl);
   }
   // --- END NEW ---
 
@@ -80,7 +82,7 @@ export async function executeSimpleScenePipelineV2(
   const allTryOnGroups = await Promise.all(allTryOnPromises);
   const allTryOnImages = allTryOnGroups.flat();
 
-  const finalImages: string[] = [];
+ 
   for (let i = 0; i < allTryOnImages.length; i++) {
     const finalUrl = await saveFinalImageToBlob(
       allTryOnImages[i],

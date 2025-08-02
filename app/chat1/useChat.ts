@@ -21,10 +21,11 @@ export function useChat({ sessionId, stagedImage, setStagedImage, addMessage }: 
       content: "sending...",
       sender: 'ai',
       timestamp: new Date(),
+      isSaveDB:true
     }
     addMessage(aiMessage);
 
-    const requestBody = { message, sessionId, imageUrl:stagedImage }
+  const requestBody = { message, sessionId, imageUrl:stagedImage }
     setStagedImage(null)
     try {
       const response = await fetch("/api/chat/simple", {
@@ -50,6 +51,7 @@ export function useChat({ sessionId, stagedImage, setStagedImage, addMessage }: 
             link: item.link || "#",
             imageUrl: item.imageUrl || "/placeholder-product.jpg",
             source: item.source,
+
           })) || []
       }
 
@@ -61,6 +63,7 @@ export function useChat({ sessionId, stagedImage, setStagedImage, addMessage }: 
           sender: 'ai',
           content:      products.join("\n"),
           timestamp: new Date(),
+          isSaveDB:true
         })
       } else {
         addMessage({
@@ -68,6 +71,7 @@ export function useChat({ sessionId, stagedImage, setStagedImage, addMessage }: 
           sender: 'ai',
           content: responseText,
           timestamp: new Date(),
+          isSaveDB:true
         })
       }
     } catch (error: any) {

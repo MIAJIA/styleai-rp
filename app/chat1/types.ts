@@ -15,6 +15,7 @@ export interface Message {
     timestamp: Date
     isEditing?: boolean
     buttons?: ButtonAction[]
+    isSaveDB?: boolean
     metadata?: {
         likes?: number
         dislikes?: number
