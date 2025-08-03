@@ -136,7 +136,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         let buttons2: ButtonAction[] = []
 
         if (index == currentSuggestionIndex) {
-          if (currentSuggestionIndex == 0) {
+          if (currentSuggestionIndex == 0 && suggestion.status == 'succeeded' ) {
             buttons2.push({
               id: `btn-${index}-more`,
               label: 'yes,one more outfit',
@@ -392,7 +392,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
 
   const generationImage = async (index: number) => {
     console.log("[useGeneration | generationImage] Generation image")
-    setCurrentSuggestionIndex(index);
+
     try {
       const response = await fetch('/api/generation/start-image-task', {
         method: 'POST',
@@ -416,7 +416,8 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         addMessage(message)
         // handleJobUpdate
         setIsPolling(true)
-        startPolling(jobId);
+        setCurrentSuggestionIndex(index);
+        // startPolling(jobId);
         setGenerate(true)
       } else {
         console.error("[useGeneration | generationImage] Error: jobId is null");

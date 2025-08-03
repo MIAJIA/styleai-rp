@@ -330,8 +330,8 @@ export default function HomePage() {
     sessionStorage.setItem('chatModeData', JSON.stringify(chatData));
 
     // Navigate to Chat page
-    console.log('[MAIN DEBUG] Navigating to /chat');
-    router.push('/chat');
+    console.log('[MAIN DEBUG] Navigating to /chat1');
+    router.push('/chat1');
   };
 
   // Handle onboarding prompt actions
@@ -404,7 +404,7 @@ export default function HomePage() {
             {/* Occasion Selector */}
             <div className="space-y-3">
               <h3 className="text-base font-semibold tracking-tight text-center">
-                <span className="text-primary font-bold">Step 3:</span> Choose Your Scene
+                <span className="text-primary font-bold">Step 3:</span>Choose Your Scene
               </h3>
               <div className="grid grid-cols-3 gap-2 md:grid-cols-3">
                 {styles.map((style) => {
