@@ -27,10 +27,10 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       sender: 'ai',
       timestamp: new Date(),
     }
-
+     
     for (let index = 0; index < suggestions.length - 1; index++) {
       const suggestion = suggestions[index];
-      if (suggestion.status === 'succeeded' || suggestion.status === 'generating_images' || suggestion.status === 'failed') {
+      if (suggestion.status !== 'pending' ) {
         console.log(`[useGeneration | handleJobUpdate] 📡 Suggestion ${suggestion.index} succeeded`);
         addMessage(message1)
         const styleSuggestion = suggestion.styleSuggestion
@@ -61,15 +61,15 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           }
           return 'Unknown item'
         }
-        // Helper function to safely get style details
-        const getImageUrls = (item: any): string[] => {
-          if (Array.isArray(item)) {
-            return item.map(i => i.intermediateImageUrls)
-          } else if (item && typeof item === 'object') {
-            return item.intermediateImageUrls
-          }
-          return []
-        }
+        // // Helper function to safely get style details
+        // const getImageUrls = (item: any): string[] => {
+        //   if (Array.isArray(item)) {
+        //     return item.map(i => i.imageUrls)
+        //   } else if (item && typeof item === 'object') {
+        //     return item.intermediateImageUrls
+        //   }
+        //   return []
+        // }
 
         if (item.tops) {
           const topsDetails = getStyleDetails(item.tops)
@@ -105,8 +105,8 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         if (suggestion.status == 'failed') {
           images = []
           contents = contents + "\n\n\n\n" + "I've generated the outfit for you, but the image is not perfect. Please try again."
-        } else {
-          let imageUrls = getImageUrls(suggestion)
+        } else if(suggestion.imageUrls){
+          let imageUrls = suggestion.imageUrls
           if (imageUrls && imageUrls.length > 0) {
             if (imageUrls[0]) {
               images[0] = imageUrls[0]
@@ -124,7 +124,8 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           sender: 'ai',
           timestamp: new Date(),
           buttons: buttons,
-          imageUrls: images
+          imageUrls: images,
+          isSaveDB:true
         }
         addMessage(message2)
 
@@ -135,7 +136,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         let buttons2: ButtonAction[] = []
 
         if (index == currentSuggestionIndex) {
-          if (currentSuggestionIndex == 0) {
+          if (currentSuggestionIndex == 0 && suggestion.status == 'succeeded' ) {
             buttons2.push({
               id: `btn-${index}-more`,
               label: 'yes,one more outfit',
@@ -172,13 +173,12 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         // 修正: 正确判断 jobData.status 是否为 "failed"
         if (suggestion.status !== 'failed' && index == currentSuggestionIndex) {
           if (images[0] === "wait" || images[1] === "wait") {
-            throw new Error(`imageUrls is null`)
+            return false
           }
         }
       }
     }
-    stopPolling()
-    return
+    return true
 
     // throw new Error(`jobData error ${JSON.stringify(jobData)}`)
   }
@@ -190,7 +190,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         controller.abort();
-      }, 10000 * 10); // 增加到10秒超时，避免过早中断
+      }, 10000 * 10 * 3); // 增加到10秒超时，避免过早中断
 
       const response = await fetch(`/api/generation/status?jobId=${jobId}&suggestionIndex=${currentSuggestionIndex}`, {
         signal: controller.signal
@@ -211,11 +211,16 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       if (dataString !== lastDataString) {
         console.log(`[usePolling] 📡 Data changed, triggering update for job ${jobId?.slice(-8)}`);
         lastDataRef.current = data;
-        handleJobUpdate(data);
+        const isSucceed = handleJobUpdate(data);
+        if(isSucceed){
+          stopPolling()
+        }else{
+          throw new Error(`Get Job result is Failed`)
+        }
       }
 
     } catch (error) {
-      console.error("[useGeneration | pollJobStatus] Error:", error)
+      // console.error("[useGeneration | pollJobStatus] Error:", error)
       lastDataRef.current = null;
       // 错误处理：可以选择重试或停止轮询
       // 增加连续失败计数
@@ -248,8 +253,8 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
     if (pollingIntervalRef.current) {
       clearTimeout(pollingIntervalRef.current)
       pollingIntervalRef.current = null
-      setIsPolling(false)
     }
+    setIsPolling(false)
     console.log("[useGeneration | stopPolling] Polling stopped")
   }
 
@@ -387,7 +392,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
 
   const generationImage = async (index: number) => {
     console.log("[useGeneration | generationImage] Generation image")
-    setCurrentSuggestionIndex(index);
+
     try {
       const response = await fetch('/api/generation/start-image-task', {
         method: 'POST',
@@ -411,6 +416,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         addMessage(message)
         // handleJobUpdate
         setIsPolling(true)
+        setCurrentSuggestionIndex(index);
         // startPolling(jobId);
         setGenerate(true)
       } else {

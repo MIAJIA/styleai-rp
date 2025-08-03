@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", label: "StyleMe", icon: Home },
   { href: "/results", label: "My Looks", icon: GalleryVerticalEnd },
-  { href: "/chat", label: "AI Stylist", icon: MessageCircle },
+  { href: "/chat1", label: "AI Stylist", icon: MessageCircle },
   { href: "/my-style", label: "My Style", icon: User },
 ];
 

@@ -11,7 +11,7 @@ class ChatDB {
 
     async init(): Promise<void> {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.dbName, this.dbVersion);
+            const request = window.indexedDB.open(this.dbName, this.dbVersion);
 
             request.onerror = () => {
                 console.error('Failed to open database');
@@ -174,11 +174,10 @@ export default function useChatStorage(sessionId: string) {
     }, [sessionId]);
 
     const addMessageToDB = useCallback(async (message: Message) => {
-        if(message.id === "start-generation") {
-           return;
-        }
-        if (chatDB) {
-            await chatDB.addMessage(message);
+        if(message.isSaveDB) {
+           if (chatDB) {
+               await chatDB.addMessage(message);
+           }
         }
     }, [chatDB]);
 

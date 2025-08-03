@@ -204,7 +204,8 @@ export default function ChatPage() {
             content: message,
             sender: 'user',
             timestamp: new Date(),
-            imageUrls: imageUrls
+            imageUrls: imageUrls,
+            isSaveDB:true
         }
         addMessage(userMessage)
         // 清空用户对话框
