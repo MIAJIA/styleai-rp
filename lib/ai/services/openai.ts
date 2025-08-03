@@ -11,7 +11,7 @@ import zodToJsonSchema from "zod-to-json-schema";
 
 // Initialize the OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY,
 });
 
 // 🔍 统一日志前缀
@@ -184,10 +184,14 @@ ${stylePreferenceSection}${userRequirementSection}
 **Styling Instructions:**
 - Generate ${count} different and distinct styling suggestions. Each suggestion should feature a distinct style and color strategy that suits the user and complements the key piece for the occasion.
 `;
-
+    const systemPromptV5 = systemPrompt.replace("#{userprofile_bodytype}",userProfile?.bodyType)
+    .replace("#{userprofile_bodysize}",userProfile?.bodyStructure)
+    .replace("#{userprofile_skintone}",userProfile?.skinTone)
+    .replace("#{userprofile_faceshape}",userProfile?.faceShape)
+    .replace("#{style_preference_details}",String(userProfile?.selectedStyles))
     // 🔍 LOG: Final token estimation including text
     const textTokenEstimate = Math.ceil(userMessageText.length / 4); // Rough estimate: 4 chars per token
-    const systemPromptTokens = Math.ceil(systemPrompt.length / 4);
+    const systemPromptTokens = Math.ceil(systemPromptV5.length / 4);
     const totalRequestTokens = textTokenEstimate + systemPromptTokens; // No image tokens to add here
 
     console.log(`${TOKEN_LOG_PREFIX} === FINAL REQUEST ANALYSIS ===`);
@@ -197,7 +201,7 @@ ${stylePreferenceSection}${userRequirementSection}
 
     // 🔍 NEW: 输出完整的 System Prompt 和 User Message
     console.log(`${OPENAI_LOG_PREFIX} ===== COMPLETE SYSTEM PROMPT =====`);
-    console.log(`${OPENAI_LOG_PREFIX} 📝 SYSTEM PROMPT:`, systemPrompt);
+    console.log(`${OPENAI_LOG_PREFIX} 📝 SYSTEM PROMPT:`, systemPromptV5);
     console.log(`${OPENAI_LOG_PREFIX} ===== COMPLETE USER MESSAGE =====`);
     console.log(`${OPENAI_LOG_PREFIX} 📝 USER MESSAGE:`, userMessageText);
 
@@ -214,7 +218,7 @@ ${stylePreferenceSection}${userRequirementSection}
       messages: [
         {
           role: "system" as const,
-          content: systemPrompt,
+          content: systemPromptV5,
         },
         {
           role: "user" as const,
