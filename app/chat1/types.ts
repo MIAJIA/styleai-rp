@@ -23,4 +23,11 @@ export interface Message {
         isDisliked?: boolean
     },
     imageUrls?: string[]
+    // Progress bar related fields
+    progress?: {
+        current: number
+        total: number
+        status: 'pending' | 'processing' | 'completed' | 'error'
+        message?: string
+    }
 }

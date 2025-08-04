@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Progress } from "@/components/ui/progress"
 import {
     Send,
     Edit,
@@ -327,7 +328,7 @@ export default function ChatPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50">
+        <div className="min-h-screen bg-gradient-to-br from-white-50 via-rose-50 to-orange-50">
             <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-gray-200">
                 <div className="flex items-center px-4 h-12 justify-between">
                     <Button variant="ghost" size="sm" onClick={() => router.back()} className="p-2">
@@ -375,6 +376,44 @@ export default function ChatPage() {
                                             }`} style={{ whiteSpace: 'pre-wrap' }}>
                                             {message.content}
                                         </p>
+
+                                        {/* Progress bar */}
+                                        {message.progress && (
+                                            <div className="mt-3">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className={`text-xs ${message.sender === 'user' ? 'text-blue-100' : 'text-gray-600'}`}>
+                                                        {message.progress.message || 'Processing...'}
+                                                    </span>
+                                                    <span className={`text-xs ${message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
+                                                        {message.progress.current}/{message.progress.total}
+                                                    </span>
+                                                </div>
+                                                <Progress 
+                                                    value={(message.progress.current / message.progress.total) * 100} 
+                                                    className={`h-2 ${message.sender === 'user' ? 'bg-blue-200' : 'bg-gray-200'}`}
+                                                />
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    {message.progress.status === 'pending' && (
+                                                        <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
+                                                    )}
+                                                    {message.progress.status === 'processing' && (
+                                                        <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                                                    )}
+                                                    {message.progress.status === 'completed' && (
+                                                        <div className="w-3 h-3 rounded-full bg-green-500" />
+                                                    )}
+                                                    {message.progress.status === 'error' && (
+                                                        <div className="w-3 h-3 rounded-full bg-red-500" />
+                                                    )}
+                                                    <span className={`text-sm font-medium ${message.sender === 'user' ? 'text-blue-700' : 'text-gray-600'}`}>
+                                                        {message.progress.status === 'pending' && 'Pending'}
+                                                        {message.progress.status === 'processing' && 'Processing'}
+                                                        {message.progress.status === 'completed' && 'Completed'}
+                                                        {message.progress.status === 'error' && 'Error'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {/* Message images */}
                                         {message.imageUrls && message.imageUrls.length > 0 && (

@@ -9,6 +9,14 @@ import { Job } from "@/lib/ai"
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime"
 import { sleep } from "@/lib/ai/utils"
 
+const steps = [
+  { current: 0, total: 5, status: 'pending' as const, message: 'Initializing...' },
+  { current: 1, total: 5, status: 'processing' as const, message: 'Analyzing image...' },
+  { current: 2, total: 5, status: 'processing' as const, message: 'Generating style...' },
+  { current: 3, total: 5, status: 'processing' as const, message: 'Creating outfit...' },
+  { current: 4, total: 5, status: 'processing' as const, message: 'Finalizing...' },
+  { current: 5, total: 5, status: 'completed' as const, message: 'Complete!' }
+]
 
 export function useGeneration(chatData: ChatModeData, addMessage: (message: Message) => void, router: string[] | AppRouterInstance) {
   const [jobId, setJobId] = useState<string | null>(null)
@@ -18,6 +26,21 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
   const [isPolling, setIsPolling] = useState(false)
   const [isGenerate, setGenerate] = useState(false)
   const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0)
+
+  const updateMessageProgress = (progress: { current: number; total: number; status: 'pending' | 'processing' | 'completed' | 'error'; message?: string }) => {
+    addMessage({
+      id: 'job-processing',
+      content: "",
+      sender: 'ai',
+      timestamp: new Date()
+    })
+    addMessage({
+      id: 'job-processing',
+      content: "AI is processing your request... !!!   ",
+      sender: 'ai',
+      progress, timestamp: new Date()
+    })
+  }
   // 处理 job 更新
   const handleJobUpdate = (jobData: Job) => {
     const suggestions = jobData.suggestions
@@ -27,10 +50,10 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       sender: 'ai',
       timestamp: new Date(),
     }
-     
+
     for (let index = 0; index < suggestions.length - 1; index++) {
       const suggestion = suggestions[index];
-      if (suggestion.status !== 'pending' ) {
+      if (suggestion.status !== 'pending') {
         console.log(`[useGeneration | handleJobUpdate] 📡 Suggestion ${suggestion.index} succeeded`);
         addMessage(message1)
         const styleSuggestion = suggestion.styleSuggestion
@@ -105,7 +128,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         if (suggestion.status == 'failed') {
           images = []
           contents = contents + "\n\n\n\n" + "I've generated the outfit for you, but the image is not perfect. Please try again."
-        } else if(suggestion.imageUrls){
+        } else if (suggestion.imageUrls) {
           let imageUrls = suggestion.imageUrls
           if (imageUrls && imageUrls.length > 0) {
             if (imageUrls[0]) {
@@ -125,7 +148,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           timestamp: new Date(),
           buttons: buttons,
           imageUrls: images,
-          isSaveDB:true
+          isSaveDB: true
         }
         addMessage(message2)
 
@@ -136,7 +159,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         let buttons2: ButtonAction[] = []
 
         if (index == currentSuggestionIndex) {
-          if (currentSuggestionIndex == 0 && suggestion.status == 'succeeded' ) {
+          if (currentSuggestionIndex == 0 && suggestion.status == 'succeeded') {
             buttons2.push({
               id: `btn-${index}-more`,
               label: 'yes,one more outfit',
@@ -160,7 +183,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
             buttons: buttons2,
           }
           addMessage(message3)
-        }else{
+        } else {
           const message3: Message = {
             id: `job-${jobId}-more`,
             content: '',
@@ -173,11 +196,14 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         // 修正: 正确判断 jobData.status 是否为 "failed"
         if (suggestion.status !== 'failed' && index == currentSuggestionIndex) {
           if (images[0] === "wait" || images[1] === "wait") {
+            updateMessageProgress(steps[3])
             return false
           }
         }
       }
     }
+    updateMessageProgress(steps[5])
+
     return true
 
     // throw new Error(`jobData error ${JSON.stringify(jobData)}`)
@@ -212,9 +238,9 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         console.log(`[usePolling] 📡 Data changed, triggering update for job ${jobId?.slice(-8)}`);
         lastDataRef.current = data;
         const isSucceed = handleJobUpdate(data);
-        if(isSucceed){
+        if (isSucceed) {
           stopPolling()
-        }else{
+        } else {
           throw new Error(`Get Job result is Failed`)
         }
       }
@@ -299,6 +325,8 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       timestamp: new Date(),
     }
     addMessage(message1)
+
+    updateMessageProgress(steps[0])
     const startTime = Date.now();
     const selfieFile = await getFileFromPreview(chatData.selfiePreview, "user_selfie.jpg")
     const clothingFile = await getFileFromPreview(chatData.clothingPreview, "user_clothing.jpg")
@@ -352,6 +380,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       console.log("[useGeneration | startGeneration]  получили  получили jobId:", result.jobId, ". Triggering polling.");
       setIsPolling(true)
       setJobId(result.jobId);
+      updateMessageProgress(steps[2])
     } catch (error: any) {
       const errorMessage =
         error.message || "An unexpected error occurred while starting the generation."
