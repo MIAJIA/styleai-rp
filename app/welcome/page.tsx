@@ -28,7 +28,7 @@ export default function WelcomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 flex items-center justify-center px-6 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-white-50 via-rose-50 to-orange-50 flex items-center justify-center px-6 relative overflow-hidden">
       {/* Decorative background elements */}
       <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-pink-200 to-rose-300 rounded-full opacity-20 blur-3xl -translate-y-1/2 translate-x-1/2"></div>
       <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-orange-200 to-pink-300 rounded-full opacity-20 blur-3xl translate-y-1/2 -translate-x-1/2"></div>
@@ -60,7 +60,7 @@ export default function WelcomePage() {
         >
           <h1 className="text-4xl font-bold text-gray-800 leading-tight">
             Welcome to{" "}
-            <span className="bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-white-50 via-rose-500 to-pink-600 bg-clip-text text-transparent">
               StyleMe
             </span>
           </h1>
@@ -101,7 +101,7 @@ export default function WelcomePage() {
         >
           <Button
             onClick={handleGetStarted}
-            className="w-full h-14 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:via-rose-600 hover:to-pink-700 text-white rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full h-14 bg-gradient-to-r from-white-50 via-rose-500 to-pink-600 hover:from-pink-600 hover:via-rose-600 hover:to-pink-700 text-white rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
           >
             <span className="flex items-center justify-center space-x-2">
               <span>✨</span>

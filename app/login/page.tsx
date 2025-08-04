@@ -24,7 +24,7 @@ export default function LoginPage() {
   // 如果正在加载，显示加载状态
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-white-50 via-purple-50 to-blue-50 flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
@@ -33,7 +33,7 @@ export default function LoginPage() {
   // 如果已经登录，不显示登录页面
   if (status === "authenticated") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-white-50 via-purple-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">正在跳转...</p>
@@ -87,7 +87,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-white-50 via-purple-50 to-blue-50 flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-3xl shadow-xl p-8 text-center">
           {/* Logo/Title */}

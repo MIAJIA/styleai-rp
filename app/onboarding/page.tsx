@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
+import { Chrome, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -213,11 +214,54 @@ export default function OnboardingPage() {
   };
 
   const progress = ((currentStep + 1) / TOTAL_STEPS) * 100;
+  const handleGoogleLogin = async () => {
+    console.log("Google login button clicked");
+    try {
+      const result = await signIn("google", {
+        callbackUrl: "/",
+        redirect: false,
+      });
+      console.log("Sign in result:", result);
+
+      if (result?.error) {
+        console.error("Sign in error:", result.error);
+        alert(`Google 登录失败: ${result.error}`);
+      } else if (result?.url) {
+        console.log("Redirecting to:", result.url);
+        window.location.href = result.url;
+      }
+    } catch (error) {
+      console.error("Sign in error:", error);
+      alert("Google 登录失败，请检查网络连接或联系管理员。");
+    }
+  };
+
+  const handleGitHubLogin = async () => {
+    console.log("GitHub login button clicked");
+    try {
+      const result = await signIn("github", {
+        callbackUrl: "/",
+        redirect: false,
+      });
+      console.log("Sign in result:", result);
+
+      if (result?.error) {
+        console.error("Sign in error:", result.error);
+        alert(`GitHub 登录失败: ${result.error}`);
+      } else if (result?.url) {
+        console.log("Redirecting to:", result.url);
+        window.location.href = result.url;
+      }
+    } catch (error) {
+      console.error("Sign in error:", error);
+      alert("GitHub 登录失败，请检查网络连接或联系管理员。");
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 relative pb-32">
+    <div className="min-h-screen bg-gradient-to-br from-white-50 via-rose-50 to-orange-50 relative pb-32">
       {/* New Simplified Header with Pagination Dots */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-pink-100">
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-white-100">
         <div className="px-6 h-16 flex items-center justify-between">
           {/* Back Button */}
           <Button
@@ -235,7 +279,7 @@ export default function OnboardingPage() {
             {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
               <div
                 key={index}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${currentStep === index ? "bg-pink-500 w-4" : "bg-gray-300"
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${currentStep === index ? "bg-white-500 w-4" : "bg-gray-300"
                   }`}
               />
             ))}
@@ -254,12 +298,13 @@ export default function OnboardingPage() {
       </div>
 
       {/* Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-pink-100 p-6">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-white-100 p-6">
         <div className="max-w-md mx-auto">
+          {session?.user && (session.user as { id?: string }).id ? (
           <Button
             onClick={handleNext}
             disabled={!isStepValid || isSaving}
-            className="w-full h-12 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50"
+            className="w-full h-12 bg-gradient-to-r from-white-500 to-rose-500 hover:from-white-600 hover:to-rose-600 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50"
           >
             <span className="flex items-center justify-center space-x-2">
               {isSaving ? (
@@ -275,6 +320,25 @@ export default function OnboardingPage() {
               )}
             </span>
           </Button>
+          ) : (
+            <>
+            <Button
+                onClick={handleGoogleLogin}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-3"
+                size="lg"
+              >
+                <Chrome className="w-5 h-5" />
+                使用 Google 登录
+              </Button>
+              <Button
+                onClick={handleGitHubLogin}
+                className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-3 mt-4"
+                size="lg"
+              >
+                <Github className="w-5 h-5" />
+                  使用 GitHub 登录
+              </Button></>
+          )}
         </div>
       </div>
     </div>

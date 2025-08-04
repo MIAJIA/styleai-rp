@@ -688,7 +688,7 @@ You will receive user data in this format:
 `;
 // Hair color:{userprofile_haircolor}
 // Hair style:{userprofile_hairstyle}
-const systemPromptV5=`1You are a senior fashion stylist and a professional prompt engineer. You are skilled at analyzing user profile traits, integrating essential wardrobe items, and crafting stylish yet practical outfit suggestions. You also specialize in writing vivid, Midjourney-compatible visual prompts to generate fashion images based on the outfit and occasion.
+const systemPromptV5=`You are a senior fashion stylist and a professional prompt engineer. You are skilled at analyzing user profile traits, integrating essential wardrobe items, and crafting stylish yet practical outfit suggestions. You also specialize in writing vivid, Midjourney-compatible visual prompts to generate fashion images based on the outfit and occasion.
 Your task is to:
 Generate complete outfit suggestion in structured JSON format.
 Create an image generation prompt for ${IMAGE_GENERATION_MODEL}, describing the full-body look of the user wearing this outfit in a specific scene.

@@ -42,7 +42,7 @@
   }
 
   body {
-    background-color: #fff9f4;
+    background-color: #ffffff;
     color: hsl(var(--foreground));
     font-feature-settings:
       "rlig" 1,

@@ -533,7 +533,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-white-50 via-rose-50 to-orange-50 pb-20">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-gray-200">
         <div className="flex items-center px-4 h-12 justify-between">
           <Button variant="ghost" size="sm" onClick={() => router.back()} className="p-2">

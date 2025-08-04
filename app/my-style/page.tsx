@@ -82,7 +82,7 @@ export default function MyStylePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-white-50 via-purple-50 to-blue-50 flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
@@ -90,9 +90,9 @@ export default function MyStylePage() {
 
   if (!hasCompletedOnboarding) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center p-4 pb-20">
+      <div className="min-h-screen bg-gradient-to-br from-white-50 via-purple-50 to-blue-50 flex items-center justify-center p-4 pb-20">
         <div className="w-full max-w-md text-center bg-white rounded-3xl shadow-xl p-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 bg-gradient-to-br from-white-50 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <User className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-2xl font-bold mb-4 text-gray-800">Complete Your Style Profile</h2>
@@ -101,7 +101,7 @@ export default function MyStylePage() {
           </p>
           <Button
             onClick={() => router.push("/onboarding")}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full font-bold py-4 text-lg shadow-lg"
+            className="w-full bg-gradient-to-r from-white-50 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full font-bold py-4 text-lg shadow-lg"
           >
             <Camera className="w-5 h-5 mr-2" />
             Start Style Assessment
@@ -113,7 +113,7 @@ export default function MyStylePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-white-50 via-purple-50 to-blue-50 pb-20">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-40 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-4">
@@ -337,9 +337,9 @@ export default function MyStylePage() {
 
         {/* Style Profile Summary */}
         {profileData?.styleProfile && (
-          <Card className="p-6 bg-gradient-to-r from-pink-50 via-rose-50 to-orange-50 border-pink-200">
+          <Card className="p-6 bg-gradient-to-r from-white-50 via-rose-50 to-orange-50 border-pink-200">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-orange-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-white-50 to-orange-500 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-4 h-4 text-white" />
               </div>
               <h3 className="text-lg font-semibold text-gray-800">AI Style Profile</h3>
@@ -384,7 +384,7 @@ export default function MyStylePage() {
         <div className="space-y-3">
           <Button
             onClick={() => router.push("/")}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full py-3 font-semibold"
+            className="w-full bg-gradient-to-r from-white-50 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full py-3 font-semibold"
           >
             Start Styling Session
           </Button>
