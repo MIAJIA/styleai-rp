@@ -9,6 +9,10 @@ const JOB_LIMIT_KEY = 'job_limit_key';
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
+    let maxJobs = MAX_USER_JOBS;
+    if (session?.user?.isGuest) {
+      maxJobs = MAX_USER_JOBS/2;
+    }
     
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -22,13 +26,13 @@ export async function GET(request: Request) {
 
     // 获取用户当前活跃job数量
     const currentJobCount = await kv.get<number>(jobLimitKey) || 0;
-    const remainingJobs = Math.max(0, MAX_USER_JOBS - currentJobCount);
+    const remainingJobs = Math.max(0, maxJobs - currentJobCount);
 
     return NextResponse.json({
       success: true,
       data: {
         currentJobCount,
-        maxJobs: MAX_USER_JOBS,
+        maxJobs: maxJobs,
         remainingJobs,
         canStartNewJob: remainingJobs > 0
       }

@@ -37,7 +37,16 @@ async function createJobWithAtomicCheck(userId: string, jobId: string, newJob: J
   try {
     // 1. 获取用户当前活跃job数量（只计算非完成状态的job）
     const userActiveJobCount = await getUserActiveJobCount(jobLimitKey);
-
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string })?.id || 'default';
+    console.log(`[GENERATION_START] User ID for job ${jobId.slice(-8)}: ${userId}`);
+    if (session?.user?.isGuest) {
+      if (userActiveJobCount >= (MAX_USER_JOBS)/2) {
+        console.log(`[ATOMIC_CHECK] User ${userId} has ${userActiveJobCount} active jobs, limit exceeded`);
+        return false;
+      }
+    }
+    
     // 2. 如果超过限制，直接返回false
     if (userActiveJobCount >= MAX_USER_JOBS) {
       console.log(`[ATOMIC_CHECK] User ${userId} has ${userActiveJobCount} active jobs, limit exceeded`);

@@ -8,8 +8,10 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogOut } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { User, LogOut, Settings } from "lucide-react"
 import { useRouter } from 'next/navigation'
+import { generateDefaultAvatarUrl } from "@/lib/avatar-generator"
 
 export default function UserInfo() {
     const { data: session } = useSession()
@@ -29,11 +31,15 @@ export default function UserInfo() {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <div className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-lg p-2 transition-colors">
-                    <img
-                        className="w-8 h-8 rounded-full"
-                        src={session.user?.image || '/default-avatar.png'}
-                        alt="Avatar"
-                    />
+                    <Avatar className="w-8 h-8">
+                        <AvatarImage 
+                            src={session.user?.image || generateDefaultAvatarUrl()} 
+                            alt="Avatar"
+                        />
+                        <AvatarFallback>
+                            <User className="h-4 w-4" />
+                        </AvatarFallback>
+                    </Avatar>
                     <span className="text-sm text-gray-700 font-medium">
                         {session.user?.name}
                     </span>
@@ -49,6 +55,10 @@ export default function UserInfo() {
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push('/profile/avatar')} className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>头像设置</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>退出登录</span>

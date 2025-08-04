@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
-import { Chrome, Github } from "lucide-react";
+import { Chrome, CigaretteOff, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -257,7 +257,24 @@ export default function OnboardingPage() {
       alert("GitHub 登录失败，请检查网络连接或联系管理员。");
     }
   };
-
+  const handleGuestLogin = async () => {
+    try {
+      const result = await signIn('credentials', {
+        guest: 'guest',
+        redirect: false,
+      })
+      
+      if (result?.ok) {
+        // router.push('/onboarding')
+        // setCurrentStep(0)
+        handleNext();
+      } else {
+        console.error('Guest login failed:', result?.error)
+      }
+    } catch (error) {
+      console.error('Guest login error:', error)
+    } 
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-white-50 via-rose-50 to-orange-50 relative pb-32">
       {/* New Simplified Header with Pagination Dots */}
@@ -328,7 +345,7 @@ export default function OnboardingPage() {
                 size="lg"
               >
                 <Chrome className="w-5 h-5" />
-                使用 Google 登录
+                Log in with google
               </Button>
               <Button
                 onClick={handleGitHubLogin}
@@ -336,7 +353,15 @@ export default function OnboardingPage() {
                 size="lg"
               >
                 <Github className="w-5 h-5" />
-                  使用 GitHub 登录
+                Log in with GitHub
+              </Button>
+              <Button
+                onClick={handleGuestLogin}
+                className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-3 mt-4"
+                size="lg"
+              >
+                <CigaretteOff className="w-5 h-5" />
+                Log in as guest
               </Button></>
           )}
         </div>
