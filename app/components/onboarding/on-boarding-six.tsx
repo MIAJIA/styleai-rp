@@ -68,17 +68,20 @@ export default function OnBoardingSix({ data, onUpdate, onValidationChange }: St
                             key={style.id}
                             onClick={() => toggleStyle(style.id)}
                             className={cn(
-                                "flex flex-col items-center justify-center p-1 rounded-xl transition-all duration-200 aspect-square relative border border-transparent"
+                                "flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 aspect-square relative border border-transparent hover:border-gray-300",
+                                isSelected && "border-primary bg-primary/5"
                             )}
                         >
                             {/* Selection indicator */}
                             {isSelected && (
-                                <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                                <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center z-10">
                                     <Check className="w-4 h-4 text-white" />
                                 </div>
                             )}
 
-                            <img src={Icon} alt={style.name} className="mb-2 w-17 h-17 object-cover rounded-lg border-2 border-gray-200" />
+                            <div className="w-full h-5/6 mb-2 relative">
+                                <img src={Icon} alt={style.name} className="w-full h-full object-cover object-top  rounded-lg border-2 border-gray-200" />
+                            </div>
                             <span className="text-xs font-medium text-center leading-tight text-gray-500/70">
                                 {style.name}
                             </span>

@@ -171,7 +171,7 @@ export default function MyStylePage() {
         </Card>
 
         {/* AI Analysis Results */}
-        {profileData?.aiAnalysis && (
+        {profileData && (
           <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
@@ -180,28 +180,28 @@ export default function MyStylePage() {
               <h3 className="text-lg font-semibold text-gray-800">AI Analysis Results</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {profileData.aiAnalysis.bodyType && (
+              {profileData.skinTone && (
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Skin Tone</p>
+                  <p className="text-gray-800">{profileData.skinTone}</p>
+                </div>
+              )}
+              {profileData.bodyType && (
                 <div>
                   <p className="text-sm font-medium text-gray-600">Body Type</p>
-                  <p className="text-gray-800">{profileData.aiAnalysis.bodyType}</p>
+                  <p className="text-gray-800">{profileData.bodyType}</p>
                 </div>
               )}
-              {profileData.aiAnalysis.faceShape && (
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Face Shape</p>
-                  <p className="text-gray-800">{profileData.aiAnalysis.faceShape}</p>
-                </div>
-              )}
-              {profileData.aiAnalysis.boneStructure && (
+              {profileData.bodyStructure && (
                 <div>
                   <p className="text-sm font-medium text-gray-600">Bone Structure</p>
-                  <p className="text-gray-800">{profileData.aiAnalysis.boneStructure}</p>
+                  <p className="text-gray-800">{profileData.bodyStructure}</p>
                 </div>
               )}
-              {profileData.aiAnalysis.styleInitialSense && (
+              {profileData.selectedStyles && (
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Style Sense</p>
-                  <p className="text-gray-800">{profileData.aiAnalysis.styleInitialSense}</p>
+                  <p className="text-sm font-medium text-gray-600">Selected Styles</p>
+                  <p className="text-gray-800">{profileData.selectedStyles}</p>
                 </div>
               )}
             </div>
@@ -298,7 +298,7 @@ export default function MyStylePage() {
         </Card>
 
         {/* Personalization Settings */}
-        <Card className="p-6">
+        {/* <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Settings className="w-5 h-5 text-gray-600" />
             <h3 className="text-lg font-semibold text-gray-800">Personal Preferences</h3>
@@ -333,7 +333,7 @@ export default function MyStylePage() {
               </div>
             </div>
           </div>
-        </Card>
+        </Card> */}
 
         {/* Style Profile Summary */}
         {profileData?.styleProfile && (
