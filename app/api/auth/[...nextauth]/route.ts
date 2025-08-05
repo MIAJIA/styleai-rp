@@ -47,11 +47,11 @@ export const authOptions = {
   ],
   callbacks: {
     async signIn(params: any) {
-      console.log("Sign in attempt:", params);
-      console.log("Google Client ID:", process.env.GOOGLE_CLIENT_ID ? "Set" : "Not Set");
-      console.log("Google Client Secret:", process.env.GOOGLE_CLIENT_SECRET ? "Set" : "Not Set");
-      console.log("GitHub ID:", process.env.GITHUB_ID ? "Set" : "Not Set");
-      console.log("GitHub Secret:", process.env.GITHUB_SECRET ? "Set" : "Not Set");
+      // console.log("Sign in attempt:", params);
+      // console.log("Google Client ID:", process.env.GOOGLE_CLIENT_ID ? "Set" : "Not Set");
+      // console.log("Google Client Secret:", process.env.GOOGLE_CLIENT_SECRET ? "Set" : "Not Set");
+      // console.log("GitHub ID:", process.env.GITHUB_ID ? "Set" : "Not Set");
+      // console.log("GitHub Secret:", process.env.GITHUB_SECRET ? "Set" : "Not Set");
 
       return true;
     },

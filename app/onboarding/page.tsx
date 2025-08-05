@@ -218,7 +218,6 @@ export default function OnboardingPage() {
     console.log("Google login button clicked");
     try {
       const result = await signIn("google", {
-        callbackUrl: "/",
         redirect: false,
       });
       console.log("Sign in result:", result);
@@ -228,7 +227,7 @@ export default function OnboardingPage() {
         alert(`Google 登录失败: ${result.error}`);
       } else if (result?.url) {
         console.log("Redirecting to:", result.url);
-        window.location.href = result.url;
+        // window.location.href = result.url;
       }
     } catch (error) {
       console.error("Sign in error:", error);
@@ -240,17 +239,15 @@ export default function OnboardingPage() {
     console.log("GitHub login button clicked");
     try {
       const result = await signIn("github", {
-        callbackUrl: "/",
         redirect: false,
       });
       console.log("Sign in result:", result);
-
       if (result?.error) {
         console.error("Sign in error:", result.error);
         alert(`GitHub 登录失败: ${result.error}`);
       } else if (result?.url) {
         console.log("Redirecting to:", result.url);
-        window.location.href = result.url;
+        // window.location.href = result.url;
       }
     } catch (error) {
       console.error("Sign in error:", error);
