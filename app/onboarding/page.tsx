@@ -344,14 +344,14 @@ export default function OnboardingPage() {
                 <Chrome className="w-5 h-5" />
                 Log in with google
               </Button>
-              <Button
+              {/* <Button
                 onClick={handleGitHubLogin}
                 className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-3 mt-4"
                 size="lg"
               >
                 <Github className="w-5 h-5" />
                 Log in with GitHub
-              </Button>
+              </Button> */}
               <Button
                 onClick={handleGuestLogin}
                 className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-3 mt-4"
