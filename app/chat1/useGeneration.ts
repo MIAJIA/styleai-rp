@@ -158,6 +158,15 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         // 发送后续建议
         let buttons2: ButtonAction[] = []
 
+        // 修正: 正确判断 jobData.status 是否为 "failed"
+        if (suggestion.status !== 'failed' && index == currentSuggestionIndex) {
+          if (images[0] === "wait" || images[1] === "wait") {
+            updateMessageProgress(steps[3])
+            return false
+          }
+        }
+        updateMessageProgress(steps[5])
+
         if (index == currentSuggestionIndex) {
           if (currentSuggestionIndex == 0 && suggestion.status == 'succeeded') {
             buttons2.push({
@@ -193,16 +202,9 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           }
           addMessage(message3)
         }
-        // 修正: 正确判断 jobData.status 是否为 "failed"
-        if (suggestion.status !== 'failed' && index == currentSuggestionIndex) {
-          if (images[0] === "wait" || images[1] === "wait") {
-            updateMessageProgress(steps[3])
-            return false
-          }
-        }
       }
     }
-    updateMessageProgress(steps[5])
+
 
     return true
 
