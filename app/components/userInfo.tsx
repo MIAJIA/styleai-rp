@@ -55,10 +55,10 @@ export default function UserInfo() {
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/profile/avatar')} className="cursor-pointer">
+                {/* <DropdownMenuItem onClick={() => router.push('/profile/avatar')} className="cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>头像设置</span>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>退出登录</span>
