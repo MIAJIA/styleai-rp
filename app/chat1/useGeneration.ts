@@ -181,7 +181,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
             buttons2.push({
               id: `btn-${index}-more`,
               label: 'Yes,one more outfit',
-              type: 'black',
+              type: 'default',
               action: 'Generation-image',
               jobId: jobId || "",
               suggestionIndex: index,

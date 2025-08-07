@@ -485,7 +485,7 @@ export default function ChatPage() {
                             key={message.id}
                             className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start' }  md-4`}
                         >
-                            <Card className={`max-w-sm lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl p-4 ${message.sender === 'user'
+                            <Card className={`max-w-sm lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl p-4 chat-card ${message.sender === 'user'
                                 ? 'bg-blue-500 text-white'
                                 : 'bg-white border border-gray-200'
                                 }`}>
@@ -555,13 +555,13 @@ export default function ChatPage() {
                                         {/* Message images */}
                                         {message.imageUrls && message.imageUrls.length > 0 && (
                                             <div className="mt-3">
-                                                <div className={`grid gap-2 ${message.imageUrls.length === 1
+                                                <div className={`grid gap-3 ${message.imageUrls.length === 1
                                                     ? 'grid-cols-1'
                                                     : 'grid-cols-2'
                                                     }`}>
                                                     {message.imageUrls.map((imageUrl, index) => (
                                                         <div key={index} className="relative">
-                                                            <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                                            <div className="relative aspect-[9/16] rounded-lg overflow-hidden bg-gray-100 w-full max-w-sm mx-auto">
                                                                 {imageUrl === "wait" ? (
                                                                     // Loading state for "wait" URL
                                                                     <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-50 to-gray-100">
@@ -577,7 +577,7 @@ export default function ChatPage() {
                                                                         src={imageUrl}
                                                                         alt={`Message image ${index + 1}`}
                                                                         fill
-                                                                        className="object-cover object-top"
+                                                                        className="object-cover object-top chat-image"
                                                                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                                                         onError={(e) => {
                                                                             // Handle image loading errors
@@ -590,7 +590,7 @@ export default function ChatPage() {
                                                                 )}
                                                             </div>
                                                             {/* 图片索引显示 */}
-                                                            <div className="mt-1 text-center">
+                                                            <div className="mt-2 text-center">
                                                                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                                                                      {index + 1==1?"Try-on":"Style Inspiration"}
                                                                 </span>
@@ -609,7 +609,7 @@ export default function ChatPage() {
                                                         key={button.id}
                                                         variant={button.type}
                                                         size="sm"
-                                                        className="text-xs"
+                                                        className="text-xs chat-button"
                                                         onClick={() => handleButtonAction(button, message)}
                                                     >
                                                         {getButtonIcon(button.icon)}
