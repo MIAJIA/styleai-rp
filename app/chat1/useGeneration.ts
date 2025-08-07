@@ -28,18 +28,15 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
   const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0)
 
   const updateMessageProgress = (progress: { current: number; total: number; status: 'pending' | 'processing' | 'completed' | 'error'; message?: string }) => {
+
+
     addMessage({
       id: 'job-processing',
-      content: "",
-      sender: 'ai',
-      timestamp: new Date()
-    })
-    addMessage({
-      id: 'job-processing',
-      content: "AI is processing your request... !!!   ",
+      content: "Just 1-2 mins to style magic ... !!!   ",
       sender: 'ai',
       progress, timestamp: new Date()
     })
+
   }
   // 处理 job 更新
   const handleJobUpdate = (jobData: Job) => {
@@ -140,7 +137,34 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           }
 
         }
-        // 发送第一个建议
+
+
+
+        // 发送后续建议
+        let buttons2: ButtonAction[] = []
+
+        // 修正: 正确判断 jobData.status 是否为 "failed"
+        if (suggestion.status !== 'failed' && index == currentSuggestionIndex) {
+          if (images[0] === "wait" || images[1] === "wait") {
+            updateMessageProgress(steps[3])
+            sleep(1000)
+            // 发送第一个建议
+            const message2: Message = {
+              id: `job-${jobId}-style-suggestion-${index}`,
+              content: contents,
+              sender: 'ai',
+              timestamp: new Date(),
+              buttons: buttons,
+              imageUrls: images,
+              isSaveDB: true
+            }
+
+            addMessage(message2)
+            return false
+          }
+        }
+        updateMessageProgress(steps[5])
+        sleep(1000)
         const message2: Message = {
           id: `job-${jobId}-style-suggestion-${index}`,
           content: contents,
@@ -152,27 +176,12 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         }
         addMessage(message2)
 
-
-
-        sleep(1000)
-        // 发送后续建议
-        let buttons2: ButtonAction[] = []
-
-        // 修正: 正确判断 jobData.status 是否为 "failed"
-        if (suggestion.status !== 'failed' && index == currentSuggestionIndex) {
-          if (images[0] === "wait" || images[1] === "wait") {
-            updateMessageProgress(steps[3])
-            return false
-          }
-        }
-        updateMessageProgress(steps[5])
-
         if (index == currentSuggestionIndex) {
           if (currentSuggestionIndex == 0 && suggestion.status == 'succeeded') {
             buttons2.push({
               id: `btn-${index}-more`,
-              label: 'yes,one more outfit',
-              type: 'default',
+              label: 'Yes,one more outfit',
+              type: 'black',
               action: 'Generation-image',
               jobId: jobId || "",
               suggestionIndex: index,
@@ -180,8 +189,8 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           }
           buttons2.push({
             id: `btn-${index}-update`,
-            label: 'Update Profile',
-            type: 'destructive',
+            label: 'Try others',
+            type: 'white',
             action: 'Update-Profile',
           })
           const message3: Message = {
@@ -438,6 +447,12 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       const data = await response.json() as Job;
       console.log("[useGeneration | generationImage] Generation image data:", data);
       if (jobId) {
+          addMessage({
+          id: 'job-processing',
+          content: "",
+          sender: 'ai',
+          timestamp: new Date()
+        })
         const message: Message = {
           id: `job-${jobId}-0`,
           content: '',

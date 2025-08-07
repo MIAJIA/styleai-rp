@@ -1,232 +1,201 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Message } from "./types";
 
+class ChatKVStorage {
+    private sessionId: string;
 
-class ChatDB {
-    private dbName = 'StyleAiChat';
-    private dbVersion = 1;
-    public storeName = 'chat';
-    private db: IDBDatabase | null = null;
-    public sessionId: string = "";
-
-    async init(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const request = window.indexedDB.open(this.dbName, this.dbVersion);
-
-            request.onerror = () => {
-                console.error('Failed to open database');
-                reject(new Error('Failed to open database'));
-            };
-
-            request.onsuccess = (event) => {
-                this.db = (event.target as IDBOpenDBRequest).result;
-                console.log('[ChatDB] Database initialized successfully');
-                resolve();
-            };
-
-            request.onupgradeneeded = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
-
-                // 创建消息存储
-                if (!db.objectStoreNames.contains(this.storeName)) {
-                    const store = db.createObjectStore(this.storeName, { keyPath: 'id' });
-                    store.createIndex('timestamp', 'timestamp', { unique: false });
-                    console.log('[ChatDB] Object store created:', this.storeName);
-                }
-            };
-        });
+    constructor(sessionId: string) {
+        this.sessionId = sessionId;
     }
 
     async addMessage(message: Message): Promise<void> {
-        if (!this.db) {
-            await this.init();
+        try {
+            const response = await fetch('/api/chat/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sessionId: this.sessionId,
+                    message
+                })
+            });
+
+            if (!response.ok) {
+                // throw new Error(`Failed to add message: ${response.statusText}`);
+            }
+
+            console.log('[ChatKVStorage] Message added successfully:', message.id);
+        } catch (error) {
+            console.error('[ChatKVStorage] Failed to add message:', error);
+            throw error;
         }
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readwrite');
-            const store = transaction.objectStore(this.storeName);
-
-            const request = store.put(message);
-
-            request.onsuccess = () => {
-                console.log('[ChatDB] Message added successfully');
-                resolve();
-            };
-            request.onerror = () => {
-                console.error('[ChatDB] Failed to add message');
-                reject(new Error('Failed to add message'));
-            };
-        });
     }
 
     async getAllMessages(): Promise<Message[]> {
-        if (!this.db) {
-            await this.init();
+        try {
+            const response = await fetch(`/api/chat/messages?sessionId=${this.sessionId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to get messages: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const messages = data.messages || [];
+
+            // 将JSON中的时间字符串转换为Date对象
+            const processedMessages = messages.map((message: any) => ({
+                ...message,
+                timestamp: message.timestamp ? new Date(message.timestamp) : new Date()
+            }));
+
+            console.log('[ChatKVStorage] Retrieved messages:', processedMessages.length);
+            return processedMessages;
+        } catch (error) {
+            console.error('[ChatKVStorage] Failed to get messages:', error);
+            throw error;
         }
+    }
 
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readonly');
-            const store = transaction.objectStore(this.storeName);
-            const request = store.getAll();
+    async deleteMessage(messageId: string): Promise<void> {
+        try {
+            const response = await fetch(`/api/chat/messages?sessionId=${this.sessionId}&messageId=${messageId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
 
-            request.onsuccess = () => {
-                const messages = request.result as Message[];
-                // 将时间戳字符串转换回Date对象
-                const messagesWithDates = messages.map(msg => ({
-                    ...msg,
-                    timestamp: new Date(msg.timestamp)
-                }));
-                
-                // 按时间戳排序：最早的消息在前面（正常时间顺序）
-                const sortedMessages = messagesWithDates.sort((a, b) => {
-                    return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-                });
-                
-                console.log('[ChatDB] Retrieved messages:', sortedMessages.length);
-                resolve(sortedMessages);
-            };
+            if (!response.ok) {
+                throw new Error(`Failed to delete message: ${response.statusText}`);
+            }
 
-            request.onerror = () => {
-                console.error('[ChatDB] Failed to get messages');
-                reject(new Error('Failed to get messages'));
-            };
-        });
+            console.log('[ChatKVStorage] Message deleted:', messageId);
+        } catch (error) {
+            console.error('[ChatKVStorage] Failed to delete message:', error);
+            throw error;
+        }
     }
 
     async clearAllMessages(): Promise<void> {
-        if (!this.db) {
-            await this.init();
+        try {
+            const response = await fetch('/api/chat/messages', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sessionId: this.sessionId,
+                    action: 'clear'
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to clear messages: ${response.statusText}`);
+            }
+
+            console.log('[ChatKVStorage] All messages cleared');
+        } catch (error) {
+            console.error('[ChatKVStorage] Failed to clear messages:', error);
+            throw error;
         }
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readwrite');
-            const store = transaction.objectStore(this.storeName);
-            const request = store.clear();
-
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(new Error('Failed to clear messages'));
-        });
-    }
-
-    async deleteMessage(id: string): Promise<void> {
-        if (!this.db) {
-            await this.init();
-        }
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readwrite');
-            const store = transaction.objectStore(this.storeName);
-            const request = store.delete(id);
-
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(new Error('Failed to delete message'));
-        });
     }
 
     async getMessageCount(): Promise<number> {
-        if (!this.db) {
-            await this.init();
+        try {
+            const messages = await this.getAllMessages();
+            return messages.length;
+        } catch (error) {
+            console.error('[ChatKVStorage] Failed to get message count:', error);
+            return 0;
         }
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readonly');
-            const store = transaction.objectStore(this.storeName);
-            const request = store.count();
-
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(new Error('Failed to get message count'));
-        });
     }
 }
 
-
 export default function useChatStorage(sessionId: string) {
-    const [chatDB, setChatDB] = useState<ChatDB>();
-    const db = useMemo(() => {
-        const db = new ChatDB();
-        
-        // 等待数据库初始化完成
-        db.init();
-        return db;
-    }, [sessionId]);
-    // 初始化数据库
+    const [chatStorage, setChatStorage] = useState<ChatKVStorage>();
+
+    // 初始化KV存储
     useEffect(() => {
-        const initDatabase = async () => {
-            try {
-                console.log('[useChatStorage] Initializing database for sessionId:', sessionId);
-                // 确保数据库已打开
-                const db = new ChatDB();
-                // db.sessionId = sessionId;
-                // db.storeName = sessionId + "-chat";
-                
-                // 等待数据库初始化完成
-                await db.init();
-                console.log('[useChatStorage] Database initialized, setting chatDB state');
-                setChatDB(db);
-            } catch (err) {
-                console.error('数据库初始化失败:', err);
-            }
-        };
-        
         if (sessionId) {
-            initDatabase();
+            console.log('[useChatStorage] Initializing KV storage for sessionId:', sessionId);
+            const storage = new ChatKVStorage(sessionId);
+            setChatStorage(storage);
         }
     }, [sessionId]);
 
-    const addMessageToDB = useCallback(async (message: Message) => {
-        if(message.isSaveDB) {
-           if (chatDB) {
-               await chatDB.addMessage(message);
-           }
-        }
-    }, [chatDB]);
-
-    const getAllMessagesFromDB = useCallback(async () => {
-        if (db) {
+    const addMessageToKV = useCallback(async (message: Message) => {
+        if (message.isSaveDB && chatStorage) {
             try {
-                const messages = await db.getAllMessages();
-                console.log('[useChatStorage] Retrieved messages from DB:', messages.length);
+                await chatStorage.addMessage(message);
+            } catch (error) {
+                console.error('[useChatStorage] Failed to add message to KV:', error);
+                // 可以在这里添加降级到localStorage的逻辑
+            }
+        }
+    }, [chatStorage]);
+
+    const getAllMessagesFromKV = useCallback(async () => {
+        if (chatStorage) {
+            try {
+                const messages = await chatStorage.getAllMessages();
+                console.log('[useChatStorage] Retrieved messages from KV:', messages.length);
                 return messages;
             } catch (error) {
-                console.error('[useChatStorage] Failed to get messages:', error);
+                console.error('[useChatStorage] Failed to get messages from KV:', error);
                 return [];
             }
         }
         return [];
-    }, [chatDB]);
+    }, [chatStorage]);
 
-    const deleteMessageFromDB = useCallback(async (id: string) => {
-        if (chatDB) {
+    const deleteMessageFromKV = useCallback(async (id: string) => {
+        if (chatStorage) {
             try {
-                await chatDB.deleteMessage(id);
-                console.log('[useChatStorage] Message deleted:', id);
+                await chatStorage.deleteMessage(id);
+                console.log('[useChatStorage] Message deleted from KV:', id);
             } catch (error) {
-                console.error('[useChatStorage] Failed to delete message:', error);
+                console.error('[useChatStorage] Failed to delete message from KV:', error);
             }
         }
-    }, [chatDB]);
+    }, [chatStorage]);
 
-    const handleMessageToDB = useCallback(async (action: string, message?: Message): Promise<any> => {
-        console.log('[useChatStorage] Action:', action, 'Message:', message?.id, 'chatDB exists:', !!chatDB);
+    const handleMessageToKV = useCallback(async (action: string, message?: Message): Promise<any> => {
+        console.log('[useChatStorage] Action:', action, 'Message:', message?.id, 'chatStorage exists:', !!chatStorage);
         
         switch (action) {
             case 'add':
-                if (message) {
-                    await addMessageToDB(message);
+                if (message && message.isSaveDB) {
+                    await addMessageToKV(message);
                 }
                 break;
             case 'delete':
-                if (message) {
-                    await deleteMessageFromDB(message.id);
+                if (message && message.isSaveDB) {
+                    await deleteMessageFromKV(message.id);
                 }
                 break;
             case 'getAll':
-                return await getAllMessagesFromDB();
+                return await getAllMessagesFromKV();
+            case 'clear':
+                if (chatStorage) {
+                    await chatStorage.clearAllMessages();
+                }
+                break;
+            case 'count':
+                if (chatStorage) {
+                    return await chatStorage.getMessageCount();
+                }
+                return 0;
             default:
                 break;
         }
-    }, [addMessageToDB, deleteMessageFromDB, getAllMessagesFromDB, chatDB]);
+    }, [addMessageToKV, deleteMessageFromKV, getAllMessagesFromKV, chatStorage]);
 
-    return handleMessageToDB;
+    return handleMessageToKV;
 }
 
