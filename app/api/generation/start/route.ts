@@ -54,7 +54,7 @@ async function createJobWithAtomicCheck(userId: string, jobId: string, newJob: J
     }
 
     // 3. 保存新job
-    await kv.incr(jobLimitKey);
+    // await kv.incr(jobLimitKey);
 
     console.log(`[ATOMIC_CHECK] Successfully created job ${jobId} for user ${userId}. User now has ${userActiveJobCount + 1} active jobs`);
     return true;

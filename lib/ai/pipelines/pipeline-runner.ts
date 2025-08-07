@@ -4,6 +4,10 @@ import { type Job } from '../types';
 import { executeAdvancedScenePipeline } from './advanced-scene';
 import { executeSimpleScenePipelineV2 } from './simple-scene';
 import { executeTryOnOnlyPipeline } from './try-on-only';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+
+const JOB_LIMIT_KEY = 'job_limit_key';
 /**
  * This is the single, shared background pipeline runner for all image generation tasks.
  * It is called via "fire-and-forget" from the API routes.
@@ -120,6 +124,10 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
     }
     const pipelineEndTime = Date.now();
     console.log(`[PERF_LOG | pipeline-runner] Pipeline execution finished. Elapsed: ${pipelineEndTime - pipelineStartTime}ms.`);
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string })?.id || 'default';
+    const jobLimitKey = `${JOB_LIMIT_KEY}_${userId}`;
+    await kv.incr(jobLimitKey)
 
     // 🔍 NEW: Pipeline result logging
     console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🎉 Pipeline completed successfully!`);
