@@ -7,7 +7,7 @@ import { StepProps } from "./on-boarding-step";
 
 
 const STYLE_OPTIONS = [
-    { id: "Casual", name: "Casual", icon: "/onboarding/Style/casual.png", },
+    { id: "Casual", name: "Casual", icon: "/onboarding/Style/Casual.png", },
     { id: "Classy", name: "Classy", icon: "/onboarding/Style/Classy.jpg", },
     { id: "Old Money", name: "Old Money", icon: "/onboarding/Style/OldMoney.png", },
     { id: "Preppy", name: "Preppy", icon: "/onboarding/Style/Preppy.png", },
