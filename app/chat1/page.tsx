@@ -592,7 +592,7 @@ export default function ChatPage() {
                                                             {/* 图片索引显示 */}
                                                             <div className="mt-2 text-center">
                                                                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                                                     {index + 1==1?"Try-on":"Style Inspiration"}
+                                                                     {index + 1==1?"Style Inspiration":"Try-on"}
                                                                 </span>
                                                             </div>
                                                         </div>

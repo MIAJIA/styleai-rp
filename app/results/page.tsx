@@ -742,7 +742,7 @@ export default function ResultsPage() {
                 </div>
 
                 {/* Final Prompt Section */}
-                {selectedLook.processImages?.finalPrompt && (
+                {/* {selectedLook.processImages?.finalPrompt && (
                   <div className="p-4 bg-gray-50 rounded-xl">
                     <h4 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
                       🎨 AI Generation Prompt
@@ -751,7 +751,7 @@ export default function ResultsPage() {
                       {selectedLook.processImages.finalPrompt}
                     </p>
                   </div>
-                )}
+                )} */}
 
                 {/* Outfit Details Section */}
                 {selectedLook.processImages?.styleSuggestion?.outfit_suggestion && (
