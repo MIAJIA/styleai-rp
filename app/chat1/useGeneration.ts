@@ -124,7 +124,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
         //  处理失败不显示图片
         if (suggestion.status == 'failed') {
           images = []
-          contents = contents + "\n\n\n\n" + "I've generated the outfit for you, but the image is not perfect. Please try again."
+          contents = contents + "\n\n\n\n" + suggestion.error
         } else if (suggestion.imageUrls) {
           let imageUrls = suggestion.imageUrls
           if (imageUrls && imageUrls.length > 0) {
