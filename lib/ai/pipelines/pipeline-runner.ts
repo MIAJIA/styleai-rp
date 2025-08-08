@@ -211,7 +211,7 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
             humanImage: job.input.humanImage.url,
             garmentImage: job.input.garmentImage.url,
             finalImage: pipelineResult.imageUrls[0],
-            stylizedImageUrl: pipelineResult.stylizedImageUrls?.[0],
+            stylizedImageUrl: pipelineResult.imageUrls[1],
             styleSuggestion: job.suggestions[suggestionIndex]?.styleSuggestion,
             finalPrompt: pipelineResult.finalPrompt,
           },
