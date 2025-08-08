@@ -428,7 +428,7 @@ export default function HomePage() {
             </div>
 
             {/* Generation Mode Selection */}
-            <div className="space-y-3">
+            {/* <div className="space-y-3">
               <h3 className="text-base font-semibold tracking-tight text-center">
                 <span className="text-primary font-bold">Step 4:</span> Choose Generation Mode
               </h3>
@@ -455,12 +455,12 @@ export default function HomePage() {
                   onClick={() => handleGenerationModeSelect('advanced-scene')}
                 />
               </div>
-            </div>
+            </div> */}
 
             {/* Add Step 5 for custom prompt input */}
             <div className="space-y-3">
               <h3 className="text-base font-semibold tracking-tight text-center">
-                <span className="text-primary font-bold">Step 5 (Optional):</span> Describe any specific add-ons or styling ideas
+                <span className="text-primary font-bold">Step 4 (Optional):</span> Describe any specific add-ons or styling ideas
               </h3>
               <textarea
                 value={customPrompt}
