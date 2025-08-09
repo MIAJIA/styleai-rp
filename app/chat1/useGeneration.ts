@@ -227,7 +227,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         controller.abort();
-      }, 10000 * 10 * 3); // 增加到10秒超时，避免过早中断
+      }, 1000 * 13 * 2); // 增加到10秒超时，避免过早中断
 
       const response = await fetch(`/api/generation/status?jobId=${jobId}&suggestionIndex=${currentSuggestionIndex}`, {
         signal: controller.signal
