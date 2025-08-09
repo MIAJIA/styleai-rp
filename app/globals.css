@@ -30,7 +30,7 @@
 
     --border: 0 0% 90%;
     --input: 0 0% 90%;
-    --ring: 346 77% 49%;
+    --ring: 0 0% 0% / 0%;
 
     --radius: 1rem;
   }
@@ -177,6 +177,22 @@ textarea,
 select {
   -webkit-appearance: none;
   appearance: none;
+}
+
+/* Remove focus rings from images and interactive elements */
+img:focus,
+button:focus,
+div[onClick]:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove focus rings from chat interface elements */
+.chat-image:focus,
+.chat-button:focus,
+.chat-card:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Disable pull-to-refresh */

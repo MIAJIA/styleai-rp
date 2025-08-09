@@ -1,11 +1,14 @@
 // Image generation model configuration
 export const IMAGE_GENERATION_MODEL = "Kling AI";
 
-export const STRICT_REALISM_PROMPT_BLOCK = `
-Maintain realistic body proportions for the character, do not over-glamorize.`;
+// export const STRICT_REALISM_PROMPT_BLOCK = `
+// Maintain realistic body proportions for the character, do not over-glamorize.`;
+// export const IMAGE_FORMAT_DESCRIPTION = `
+// 9:16 vertical full-body portrait, unposed candid shot, ultra-realistic, natural lighting. `;
 
-export const IMAGE_FORMAT_DESCRIPTION = `
-9:16 vertical full-body portrait, unposed candid shot, ultra-realistic, natural lighting. `;
+export const IMAGE_FORMAT_DESCRIPTION = `画面为 9:16 竖向全身镜头，随性抓拍，模特微笑自信，超写实自然光，人物比例真实不过度美化。`;
+export const STRICT_REALISM_PROMPT_BLOCK = `时尚和优雅，超写实的街头风格摄影，超清晰的画质，背景中没有人物，时尚街拍风格。`;
+
 
 const systemPromptV1 = `
 You are a senior fashion stylist and a professional prompt engineer. You are skilled at analyzing user profile traits, integrating essential wardrobe items, and crafting stylish yet practical outfit suggestions. You also specialize in writing vivid, Midjourney-compatible visual prompts to generate fashion images based on the outfit and occasion.

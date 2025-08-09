@@ -1,7 +1,7 @@
 export interface ButtonAction {
     id: string
     label: string
-    type: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive'
+    type: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'white' | 'black'
     icon?: string
     action: string
     jobId?: string

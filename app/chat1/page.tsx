@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -55,15 +55,18 @@ export default function ChatPage() {
     // Image upload state
     const [stagedImage, setStagedImage] = useState<string | null>(null)
     const [isImageProcessing, setIsImageProcessing] = useState(false)
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+    const [showClearConfirm, setShowClearConfirm] = useState(false)
+    const [isClearing, setIsClearing] = useState(false)
     const imageInputRef = useRef<HTMLInputElement>(null)
     const {data: session} = useSession()
     const [sessionId, setSessionId] = useState<string>("")
 
     useEffect(() => {
         console.log("[ChatPage] Session data:", session)
-        if (session?.user?.id) {
+        if (session?.user && 'id' in session.user && session.user.id) {
             console.log("[ChatPage] Setting session ID:", session.user.id)
-            setSessionId(session.user.id)
+            setSessionId(session.user.id as string)
         } else {
             console.log("[ChatPage] No session ID found")
             setSessionId("")
@@ -86,10 +89,14 @@ export default function ChatPage() {
                     handleMessageToDB('delete', message).catch(console.error)
                     return prev.filter((_, index) => index !== existingIndex)
                 } else {
-                    // 如果新消息不为空，则替换该消息
+                    // 如果新消息不为空，则替换该消息（不重复调用API）
                     const newMessages = [...prev]
                     newMessages[existingIndex] = message
-                    handleMessageToDB('add', message).catch(console.error)
+                    // 只有在消息内容真正改变时才调用API
+                    const oldMessage = prev[existingIndex]
+                    if (oldMessage.content !== message.content || oldMessage.imageUrls !== message.imageUrls) {
+                        handleMessageToDB('add', message).catch(console.error)
+                    }
                     return newMessages
                 }
             } else {
@@ -106,54 +113,80 @@ export default function ChatPage() {
         })
     }
 
-    // 加载聊天模式数据
-    useEffect( () => {
-        const initializeDB = async () => {
-        const rawData = sessionStorage.getItem("chatModeData")
-        console.log("[ChatPage | useEffect] 🎯 Raw sessionStorage data:", rawData)
-        if (rawData) {
+    // 加载聊天记录
+    useEffect(() => {
+        const loadChatHistory = async () => {
+            if (!sessionId) return;
+            
+            setIsLoadingHistory(true);
+            console.log("[ChatPage] Loading chat history for session:", sessionId);
             try {
-                const data = JSON.parse(rawData)
-
-                // create dataForLog. do not show selfiePreview in the console log, replace it with "***"
-                const dataForLog = { ...data }
-                if (dataForLog.selfiePreview) {
-                    dataForLog.selfiePreview = "***"
-                }
-                console.log("[ChatPage | useEffect] ✅ Parsed chatData:", dataForLog)
-                setChatData(data)
+                const savedMessages = await handleMessageToDB('getAll');
+                console.log("[ChatPage] Loaded messages from KV:", savedMessages?.length || 0);
                 
-                // 只有在没有历史消息时才显示欢迎消息
-                if (messages.length === 0) {
-                    const allmessages = await handleMessageToDB('getAll')
-                    const initialMessage: Message = {
-                        id: 'start-generation',
-                        content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
-                        sender: 'ai',
-                        timestamp: new Date(),
-                        // imageUrls: [
-                        //   '/casual-outfit.png',
-                        //   '/elegant-outfit.png'
-                        // ],
-                        buttons: [
-                            {
-                                id: 'btn1',
-                                label: 'Start Generation',
-                                type: 'default',
-                                action: 'Start-Generation',
-                            }
-                        ]
-                    }
-                    setMessages([...allmessages||[],initialMessage])
+                if (savedMessages && savedMessages.length > 0) {
+                    setMessages(savedMessages);
+                    console.log("[ChatPage] ✅ Chat history loaded successfully");
+                } else {
+                    console.log("[ChatPage] No saved messages found");
                 }
             } catch (error) {
-                // Handle error, maybe redirect or show a message
+                console.error("[ChatPage] Failed to load chat history:", error);
+            } finally {
+                setIsLoadingHistory(false);
             }
-        } else {
-            router.push("/") // Redirect if no data
-        }}
+        };
+
+        loadChatHistory();
+    }, [sessionId, handleMessageToDB]);
+
+    // 加载聊天模式数据
+    useEffect(() => {
+        const initializeDB = async () => {
+            const rawData = sessionStorage.getItem("chatModeData")
+            console.log("[ChatPage | useEffect] 🎯 Raw sessionStorage data:", rawData)
+            if (rawData) {
+                try {
+                    const data = JSON.parse(rawData)
+
+                    // create dataForLog. do not show selfiePreview in the console log, replace it with "***"
+                    const dataForLog = { ...data }
+                    if (dataForLog.selfiePreview) {
+                        dataForLog.selfiePreview = "***"
+                    }
+                    console.log("[ChatPage | useEffect] ✅ Parsed chatData:", dataForLog)
+                    setChatData(data)
+                    
+                    // 只有在没有历史消息时才显示欢迎消息
+                    const savedMessages = await handleMessageToDB('getAll')
+                    // if (!savedMessages || savedMessages.length === 0) {
+                        const initialMessage: Message = {
+                            id: 'start-generation',
+                            content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
+                            sender: 'ai',
+                            timestamp: new Date(),
+                            isSaveDB: true,
+                            buttons: [
+                                {
+                                    id: 'btn1',
+                                    label: 'Start Generation',
+                                    type: 'default',
+                                    action: 'Start-Generation',
+                                }
+                            ]
+                        }
+                        setMessages([...savedMessages, initialMessage])
+                    // }
+                } catch (error) {
+                    console.error("[ChatPage] Error parsing chat data:", error);
+                    // Handle error, maybe redirect or show a message
+                }
+            } else {
+                router.push("/") // Redirect if no data
+            }
+        }
         if (sessionId) initializeDB()
-    }, [sessionId]) // added messages.length dependency
+    }, [sessionId, handleMessageToDB])
 
     // 专门用于更新消息的函数
     const updateMessage = (messageId: string, updates: Partial<Message>) => {
@@ -314,16 +347,91 @@ export default function ChatPage() {
         event.target.value = ""
     }
 
+    // Test function to demonstrate new button styles
+    const addTestButtonsMessage = () => {
+        const testMessage: Message = {
+            id: generateId(),
+            content: "Here are the new button styles available:",
+            sender: 'ai',
+            timestamp: new Date(),
+            buttons: [
+                {
+                    id: 'test-white',
+                    label: 'White Background',
+                    type: 'white',
+                    action: 'test-white',
+                },
+                {
+                    id: 'test-black',
+                    label: 'Black Background',
+                    type: 'black',
+                    action: 'test-black',
+                },
+                {
+                    id: 'test-default',
+                    label: 'Default Style',
+                    type: 'default',
+                    action: 'test-default',
+                }
+            ]
+        }
+        addMessage(testMessage)
+    }
+
     const clearStagedImage = () => {
         setStagedImage(null)
     }
 
+    const handleClearChatHistory = async () => {
+        setIsClearing(true);
+        try {
+            await handleMessageToDB('clear');
+            const initialMessage: Message = {
+                id: 'start-generation',
+                content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style? Here are the new button styles:",
+                sender: 'ai',
+                timestamp: new Date(),
+                isSaveDB: true,
+                buttons: [
+                    {
+                        id: 'btn1',
+                        label: 'Start Generation',
+                        type: 'default',
+                        action: 'Start-Generation',
+                    },
+                    {
+                        id: 'btn2',
+                        label: 'White Button',
+                        type: 'white',
+                        action: 'test-white',
+                    },
+                    {
+                        id: 'btn3',
+                        label: 'Black Button',
+                        type: 'black',
+                        action: 'test-black',
+                    }
+                ]
+            }
+            setMessages([initialMessage])
+            console.log('[ChatPage] Chat history cleared successfully');
+            setShowClearConfirm(false);
+        } catch (error) {
+            console.error('[ChatPage] Failed to clear chat history:', error);
+            alert('删除聊天记录失败，请重试');
+        } finally {
+            setIsClearing(false);
+        }
+    };
+
 
     const formatTime = (date: Date) => {
-        return date.toLocaleTimeString('zh-CN', {
+        return date.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false
         })
     }
 
@@ -335,20 +443,49 @@ export default function ChatPage() {
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <h1 className="text-lg font-semibold flex-1 text-left">AI Stylist</h1>
-                    <div className="w-10 flex justify-end" />
-                    <UserInfo />
+                    <div className="flex items-center gap-2">
+                        {/* <Button
+                            variant="white"
+                            size="sm"
+                            onClick={addTestButtonsMessage}
+                            className="text-xs"
+                        >
+                            Test Buttons
+                        </Button> */}
+                        {/* <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowClearConfirm(true)}
+                            disabled={isClearing}
+                            className="text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                        >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            {isClearing ? '删除中...' : '清空记录'}
+                        </Button> */}
+                        <UserInfo />
+                    </div>
                 </div>
             </header>
 
             {/* Messages Container */}
             <div className="flex-1 px-4 py-6 space-y-4 max-w-4xl mx-auto pb-32">
+                {/* Loading indicator */}
+                {isLoadingHistory && (
+                    <div className="flex items-center justify-center py-8">
+                        <div className="flex items-center gap-3">
+                            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                            <span className="text-gray-600">Loading chat history...</span>
+                        </div>
+                    </div>
+                )}
+                
                 <div className="space-y-4">
                     {messages.map((message) => (
                         <div
                             key={message.id}
                             className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start' }  md-4`}
                         >
-                            <Card className={`max-w-sm lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl p-4 ${message.sender === 'user'
+                            <Card className={`max-w-sm lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl p-4 chat-card ${message.sender === 'user'
                                 ? 'bg-blue-500 text-white'
                                 : 'bg-white border border-gray-200'
                                 }`}>
@@ -418,35 +555,46 @@ export default function ChatPage() {
                                         {/* Message images */}
                                         {message.imageUrls && message.imageUrls.length > 0 && (
                                             <div className="mt-3">
-                                                <div className={`grid gap-2 ${message.imageUrls.length === 1
+                                                <div className={`grid gap-3 ${message.imageUrls.length === 1
                                                     ? 'grid-cols-1'
                                                     : 'grid-cols-2'
                                                     }`}>
                                                     {message.imageUrls.map((imageUrl, index) => (
-                                                        <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                                            {imageUrl === "wait" ? (
-                                                                // Loading state for "wait" URL
-                                                                <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-50 to-gray-100">
-                                                                    <div className="flex flex-col items-center gap-2">
-                                                                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                                                                        <span className="text-xs text-gray-500">Generating image...</span>
+                                                        <div key={index} className="relative">
+                                                            <div className="relative aspect-[9/16] rounded-lg overflow-hidden bg-gray-100 w-full max-w-sm mx-auto">
+                                                                {imageUrl === "wait" ? (
+                                                                    // Loading state for "wait" URL
+                                                                    <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-50 to-gray-100">
+                                                                        <div className="flex flex-col items-center gap-2">
+                                                                            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                                                            <span className="text-xs text-gray-500">Generating image...</span>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            ) : (
-                                                                <Image
-                                                                    onClick={() => handleOpenModal(imageUrl)}
-                                                                    src={imageUrl}
-                                                                    alt={`Message image ${index + 1}`}
-                                                                    fill
-                                                                    className="object-cover object-top"
-                                                                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                                                    onError={(e) => {
-                                                                        // Handle image loading errors
-                                                                        const target = e.target as HTMLImageElement;
-                                                                        target.style.display = 'none';
-                                                                    }}
-                                                                />
-                                                            )}
+                                                                ) : (
+                                                                    <>
+                                                                    <Image
+                                                                        onClick={() => handleOpenModal(imageUrl)}
+                                                                        src={imageUrl}
+                                                                        alt={`Message image ${index + 1}`}
+                                                                        fill
+                                                                        className="object-cover object-top chat-image"
+                                                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                                                        onError={(e) => {
+                                                                            // Handle image loading errors
+                                                                            const target = e.target as HTMLImageElement;
+                                                                            target.style.display = 'none';
+                                                                        }}
+                                                                    />
+                                 
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                            {/* 图片索引显示 */}
+                                                            <div className="mt-2 text-center">
+                                                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                                                     {index + 1==1?"Style Inspiration":"Try-on"}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -461,7 +609,7 @@ export default function ChatPage() {
                                                         key={button.id}
                                                         variant={button.type}
                                                         size="sm"
-                                                        className="text-xs"
+                                                        className="text-xs chat-button"
                                                         onClick={() => handleButtonAction(button, message)}
                                                     >
                                                         {getButtonIcon(button.icon)}
@@ -583,6 +731,44 @@ export default function ChatPage() {
             />
 
             <IOSTabBar />
+
+            {/* Clear Chat History Confirmation Dialog */}
+            <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Trash2 className="w-5 h-5 text-red-500" />
+                            确认删除聊天记录
+                        </DialogTitle>
+                        <DialogDescription>
+                            此操作将永久删除所有聊天记录，包括消息、图片和对话历史。此操作不可撤销。
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowClearConfirm(false)}
+                            disabled={isClearing}
+                        >
+                            取消
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleClearChatHistory}
+                            disabled={isClearing}
+                        >
+                            {isClearing ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    删除中...
+                                </>
+                            ) : (
+                                '确认删除'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
