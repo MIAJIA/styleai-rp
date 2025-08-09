@@ -15,6 +15,12 @@ class TaskFailedError extends Error {
     this.name = 'TaskFailedError';
   }
 }
+export class PolicyRiskError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PolicyRiskError';
+  }
+}
 
 // --- Kling AI ---
 const KLING_ACCESS_KEY = process.env.KLING_AI_ACCESS_KEY;
@@ -322,7 +328,7 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
         // 🛡️ NEW: Handle specific "risk control" failure with a user-friendly message
         if (failureMsg.includes("Failure to pass the risk control system")) {
           // Use the custom error to signal a terminal failure
-          throw new TaskFailedError(`Your request could not be processed due to our content policy. Please try a different image or prompt.`);
+          throw new PolicyRiskError(`Your request could not be processed due to our content policy. Please try a different image or prompt.`);
         }
 
         // Use the custom error for any terminal failure
@@ -498,7 +504,7 @@ export async function runStylization(modelVersion: 'kling-v1-5' | 'kling-v2', jo
  * ATOMIC STEP: Performs virtual try-on, returning multiple images.
  */
 export async function runVirtualTryOnMultiple(jobId: string,
-  suggestionIndex: number, canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string, job?: Job): Promise<string[]> {
+  suggestionIndex: number, canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string): Promise<string[]> {
   const startTime = Date.now();
   console.log(`${KLING_LOG_PREFIX} [ATOMIC_STEP] Running Virtual Try-On...`);
 
@@ -568,8 +574,8 @@ export async function runVirtualTryOnMultiple(jobId: string,
   return tryOnImageUrls;
 }
 
-export async function runVirtualTryOn(jobId: string, suggestionIndex: number, canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string, job?: Job): Promise<string> {
-  const results = await runVirtualTryOnMultiple(jobId, suggestionIndex, canvasImageUrl, garmentImageUrl, garmentImageName, garmentImageType, job);
+export async function runVirtualTryOn(jobId: string, suggestionIndex: number, canvasImageUrl: string, garmentImageUrl: string, garmentImageName: string, garmentImageType: string): Promise<string> {
+  const results = await runVirtualTryOnMultiple(jobId, suggestionIndex, canvasImageUrl, garmentImageUrl, garmentImageName, garmentImageType);
   if (!results[0]) {
     throw new Error("Virtual Try-On did not return an image.");
   }

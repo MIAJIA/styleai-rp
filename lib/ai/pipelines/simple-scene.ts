@@ -1,6 +1,6 @@
 import { kv } from "@vercel/kv";
 import { Job, Suggestion } from "../types";
-import { runStylizationMultiple, runVirtualTryOnMultiple } from "../services/kling";
+import { runStylizationMultiple, runVirtualTryOnMultiple, PolicyRiskError, runVirtualTryOn } from "../services/kling";
 import { saveFinalImageToBlob } from "../services/blob";
 
 /**
@@ -26,22 +26,35 @@ export async function executeSimpleScenePipelineV2(
   // 从 OpenAI 返回的 suggestion 对象中有 image_prompt 字段，这已经足够了
   console.log(`[PIPELINE_DEBUG] Suggestion object keys:`, Object.keys(job.suggestion || {}));
   console.log(`[PIPELINE_DEBUG] StyleSuggestion keys:`, Object.keys(job.suggestion?.styleSuggestion || {}));
+  let stylizationResult: { imageUrls: string[], finalPrompt: string } = { imageUrls: [], finalPrompt: '' };
+  try {
+    stylizationResult = await runStylizationMultiple(
+      'kling-v1-5',
+      job.jobId,
+      job.suggestionIndex,
+      job.suggestion,
+      job.humanImage.url,
+      job.humanImage.name,
+      job.humanImage.type
+    );
+  } catch (error) {
+    if (error instanceof PolicyRiskError) {
+      const imageUrls = await runVirtualTryOn(job.jobId, job.suggestionIndex, job.humanImage.url, job.garmentImage.url, job.garmentImage.name, job.garmentImage.type);
+      const stylizedImageUrl = await saveFinalImageToBlob(
+        imageUrls,
+        `${job.jobId}-${job.suggestionIndex}-stylized-1` // Unique name
+      );
 
-  const stylizationResult = await runStylizationMultiple(
-    'kling-v1-5',
-    job.jobId,
-    job.suggestionIndex,
-    job.suggestion,
-    job.humanImage.url,
-    job.humanImage.name,
-    job.humanImage.type
-  );
+      return { imageUrls: [stylizedImageUrl], finalPrompt: job.suggestion.styleSuggestion.image_prompt, stylizedImageUrls: [stylizedImageUrl] }
+    }
+    throw error;
+  }
 
   const tempStyledImageUrls = stylizationResult.imageUrls;
   const finalPrompt = stylizationResult.finalPrompt;
 
   // --- NEW: Save stylized images to our own blob storage ---
-   const finalImages: string[] = [];
+  const finalImages: string[] = [];
   const stylizedImageUrls: string[] = [];
   for (let i = 0; i < tempStyledImageUrls.length; i++) {
     const finalUrl = await saveFinalImageToBlob(
@@ -82,7 +95,7 @@ export async function executeSimpleScenePipelineV2(
   const allTryOnGroups = await Promise.all(allTryOnPromises);
   const allTryOnImages = allTryOnGroups.flat();
 
- 
+
   for (let i = 0; i < allTryOnImages.length; i++) {
     const finalUrl = await saveFinalImageToBlob(
       allTryOnImages[i],

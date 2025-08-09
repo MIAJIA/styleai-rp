@@ -145,7 +145,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
 
         // 修正: 正确判断 jobData.status 是否为 "failed"
         if (suggestion.status !== 'failed' && index == currentSuggestionIndex) {
-          if (images[0] === "wait" || images[1] === "wait") {
+          if (images[0] === "wait" ) {
             updateMessageProgress(steps[3])
             sleep(1000)
             // 发送第一个建议
