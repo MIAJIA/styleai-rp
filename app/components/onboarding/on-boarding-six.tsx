@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, Heart, Briefcase, Sparkles, Wine, Plane, Crown, Palette, Star, Zap } from "lucide-react";
+import { Check, Heart, Briefcase, Sparkles, Plane, Palette, Star, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StepProps } from "./on-boarding-step";
 

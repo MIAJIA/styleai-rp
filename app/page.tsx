@@ -23,9 +23,7 @@ import {
   Shirt,
   Layers,
   Briefcase,
-  Wine,
   Plane,
-  Crown,
   User,
   Camera,
   X,
@@ -39,18 +37,14 @@ const styles = [
   { id: "work", name: "Work", icon: Briefcase, color: "bg-slate-100 text-slate-900" },
   { id: "casual-chic", name: "Casual Chic", icon: Sparkles, color: "bg-violet-100 text-violet-900" },
   { id: "date-night", name: "Date Night", icon: Heart, color: "bg-rose-100 text-rose-900" },
-  { id: "cocktail", name: "Cocktail", icon: Wine, color: "bg-purple-100 text-purple-900" },
   { id: "vacation", name: "Vacation", icon: Plane, color: "bg-sky-100 text-sky-900" },
-  { id: "formal", name: "Formal", icon: Crown, color: "bg-amber-100 text-amber-900" },
 ];
 
 const stylePrompts = {
   "work": "office outfit, professional and polished, comfortable and well-fitted, with flexible piece combinations that are appropriate for both office work and everyday client meetings. The scene is a bright and open-plan office with glass partitions",
   "casual-chic": "casual outfit, relaxed and comfortable, effortlessly stylish, easy to move in, ideal for weekend downtime, coffee and shopping. The scene is a urban street lined with outdoor café tables and chairs",
   "date-night": "date night outfit, alluring and confidently charming, creating a soft, romantic atmosphere that showcases personal style without revealing too much. The scene is an intimate candlelit bistro terrace",
-  "cocktail": "cocktail attire, fashionable and elegant, semi-formal with the right balance of sophistication and personality, thoughtfully chosen colors without appearing overly grand. The scene is an upscale lounge bar with sleek marble counters, ambient pendant lighting",
   "vacation": "vacation outfit, fresh and comfortable with a clear vacation vibe, perfectly suited for beach days, resort lounging, or city sightseeing. The scene is a pristine beachfront resort featuring turquoise waves and palm trees",
-  "formal": " formal attire, elegant and dignified with a strong sense of luxury, strictly adheres to formal-event dress codes. The scene is an opulent ballroom with crystal chandeliers",
 };
 
 function dataURLtoFile(dataurl: string, filename: string): File | null {
@@ -406,7 +400,7 @@ export default function HomePage() {
               <h3 className="text-base font-semibold tracking-tight text-center">
                 <span className="text-primary font-bold">Step 3:</span>Choose Your Scene
               </h3>
-              <div className="grid grid-cols-3 gap-2 md:grid-cols-3">
+              <div className="grid grid-cols-4 gap-2 md:grid-cols-4">
                 {styles.map((style) => {
                   const Icon = style.icon;
                   return (
