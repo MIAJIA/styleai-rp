@@ -73,8 +73,8 @@ const buildStylizeRequestBody = (
       return {
         ...baseBody,
         image_reference: "subject",// "face" or "subject"?
-        human_fidelity: 0.6,
-        image_fidelity: 0.4,
+        human_fidelity: 0.65,
+        image_fidelity: 0.25,
         n: 1,// number of images to generate
         model_name: "kling-v1-5",
       };

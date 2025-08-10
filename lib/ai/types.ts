@@ -34,7 +34,7 @@ export const outfitSuggestionSchema = z.object({
 export const styleSuggestionsSchema = z.object({
   outfit_suggestion: outfitSuggestionSchema.describe("A single complete outfit suggestion."),
   image_prompt: z.string().optional().describe(
-    "A vivid, English-only visual prompt for an AI image generator. It should describe the user wearing the outfit in the intended scene, including outfit details, setting, atmosphere, and overall mood. This prompt will be passed to Midjourney or similar models to produce a full-body fashion image. This field is REQUIRED and extremely important.")
+    "A vivid, Chinese-only visual prompt for an AI image generator. It should describe the user wearing the outfit in the intended scene, including outfit details, setting, atmosphere, and overall mood. This prompt will be passed to Midjourney or similar models to produce a full-body fashion image. This field is REQUIRED and extremely important.")
 });
 
 // Convert Zod schema to JSON schema for the tool
