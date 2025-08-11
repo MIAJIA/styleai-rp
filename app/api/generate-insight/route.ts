@@ -50,8 +50,7 @@ Goals for the output:
 {
   "summary": "[1-sentence Style DNA summary]",
   "style_guide": "[Clear explanation of flattering styles, fits, and colors]",
-  "future_strategies": "[Actionable wardrobe-building strategies]",
-  "practical_tips": "[Immediately usable outfit tips and combinations]"
+  
 }
 `
 
@@ -70,16 +69,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ aiAnalysis });
         case 7:
             response = await openai.chat.completions.create({
-                model: "gpt-4o-mini",
+                model: "gpt-4o",
                 messages: [{ role: "system", content: systemPromptStep7 }, { role: "user", content: `Goal: ${goal}, Skin Tone: ${skin_tone}, Body Type: ${body_type}, Style Preferences: ${style_preferences}, Observation: ${Observation}, Gender: ${gender}` }],
             });
             const styleSummary = JSON.parse(response.choices[0].message.content || "{}");
             return NextResponse.json({ 
                 styleSummary: {
                     summary: styleSummary.summary,
-                    style_guide: styleSummary.style_guide,
-                    future_strategies: styleSummary.future_strategies,
-                    practical_tips: styleSummary.practical_tips
+                    style_guide: styleSummary.style_guide
                 }
             });
     }

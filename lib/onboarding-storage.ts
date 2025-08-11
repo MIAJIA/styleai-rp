@@ -58,8 +58,6 @@ export interface OnboardingData {
   styleSummary?: {
     summary?: string;
     style_guide?: string;
-    future_strategies?: string;
-    practical_tips?: string;
   };
 }
 

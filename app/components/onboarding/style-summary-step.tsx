@@ -194,32 +194,6 @@ export default function StyleSummaryStep({
                 <p className="text-gray-800 text-sm leading-relaxed">{data.styleSummary.style_guide}</p>
               </Card>
             )}
-            
-            {/* Future Strategies */}
-            {data.styleSummary.future_strategies && (
-              <Card className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200 shadow-lg">
-                <div className="flex items-center justify-start gap-2 mb-4">
-                  <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Future Strategies</h3>
-                </div>
-                <p className="text-gray-800 text-sm leading-relaxed">{data.styleSummary.future_strategies}</p>
-              </Card>
-            )}
-            
-            {/* Practical Tips */}
-            {data.styleSummary.practical_tips && (
-              <Card className="p-6 bg-gradient-to-r from-orange-50 to-yellow-50 border-orange-200 shadow-lg">
-                <div className="flex items-center justify-start gap-2 mb-4">
-                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Practical Tips</h3>
-                </div>
-                <p className="text-gray-800 text-sm leading-relaxed">{data.styleSummary.practical_tips}</p>
-              </Card>
-            )}
           </div>
         </>
         ) : <div className="text-center space-y-4 p-6 bg-white/50 rounded-lg">
