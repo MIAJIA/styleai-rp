@@ -171,27 +171,47 @@ export default function StyleSummaryStep({
           <div className="space-y-4">
             {/* Style DNA Summary */}
             {data.styleSummary.summary && (
-              <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 shadow-lg">
-                <div className="flex items-center justify-start gap-2 mb-4">
+              <Card className="p-6 bg-white border-2 border-blue-200 shadow-lg rounded-2xl">
+                <div className="flex items-center gap-3 mb-4">
                   <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                     <CheckCircle className="w-4 h-4 text-white" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Style DNA Summary</h3>
+                  <h3 className="text-lg font-bold text-gray-900">Style DNA Summary</h3>
                 </div>
-                <p className="text-gray-800 text-sm leading-relaxed">{data.styleSummary.summary}</p>
+                <div className="bg-blue-50 rounded-xl p-4 border-l-4 border-blue-500">
+                  <p className="text-gray-900 text-sm leading-6 font-medium text-center">{data.styleSummary.summary}</p>
+                </div>
               </Card>
             )}
             
             {/* Style Guide */}
             {data.styleSummary.style_guide && (
-              <Card className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 shadow-lg">
-                <div className="flex items-center justify-start gap-2 mb-4">
+              <Card className="p-6 bg-white border-2 border-green-200 shadow-lg rounded-2xl">
+                <div className="flex items-center gap-3 mb-4">
                   <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
                     <CheckCircle className="w-4 h-4 text-white" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Style Guide & Guidelines</h3>
+                  <h3 className="text-lg font-bold text-gray-900">Style Guide & Guidelines</h3>
                 </div>
-                <p className="text-gray-800 text-sm leading-relaxed">{data.styleSummary.style_guide}</p>
+                <div className="bg-green-50 rounded-xl p-4 border-l-4 border-green-500">
+                  {String(data.styleSummary.style_guide)
+                    .split('\n')
+                    .map((line) => line.trim())
+                    .filter((line) => line.length > 0)
+                    .length > 1 ? (
+                    <ul className="list-disc pl-5 space-y-1 text-gray-900 text-sm leading-6">
+                      {String(data.styleSummary.style_guide)
+                        .split('\n')
+                        .map((line) => line.trim())
+                        .filter((line) => line.length > 0)
+                        .map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-900 text-sm leading-6">{data.styleSummary.style_guide}</p>
+                  )}
+                </div>
               </Card>
             )}
           </div>

@@ -5,6 +5,24 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Robust JSON parsing helper to tolerate code fences/backticks and extra text
+function parseJsonSafe(text: string): any {
+  if (!text) return {};
+  let cleaned = text.trim();
+  // Remove Markdown code fences if present
+  cleaned = cleaned.replace(/^```(?:json)?/i, "").replace(/```$/i, "");
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Fallback: extract first JSON object
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch { /* ignore */ }
+    }
+    return {};
+  }
+}
+
 const systemPromptStep4 = `
 You are an AI personal stylist.  
 Your task is to generate an initial style insight based only on:
@@ -27,32 +45,35 @@ Goals for the output:
   "detail_hair_color": "[Detailed hair color, e.g., 'dark brown', 'light blonde']",  
   "hair_length": "[Hair length, e.g., 'short', 'medium', 'long']"
 }
-`
+`;
 
 const systemPromptStep7 = `
-You are an AI personal stylist.  
-Your task is to generate a personalized style profile based on:
-1. The user's style goal
-2. Their skin tone
-3. Their body type
-4. Their chosen style preferences
-5. Observation from Screen 4 (their vibe/potential)
-6. Gender from Screen 4
+You are an AI personal stylist.
+Your task is to generate a personalized Style DNA Summary and Style Guidebased on:
+1) user's style goal,
+2) skin tone,
+3) body type,
+4) chosen style preferences,
+5) observation (vibe) from screen 4,
+6) gender from screen 4.
+
+Personalization rules (MANDATORY):
+- Explicitly reference the provided attributes by name inside the guidance: mention the exact body type (e.g., "pear-shaped") and skin tone, and tie at least one tip to the user's selected style_preferences.
+- Do not give generic filler. Give concrete, useful guidance the user can act on immediately.
+- Keep the output concise and scannable.
 
 Goals for the output:
-1. Provide a **Style DNA Summary** — a concise, inspiring one-sentence description of the user’s unique style identity and vibe.
-2. Offer a **Style Guide & Guidelines** — clear, non-technical explanations of what works for them and why (fit, proportions, colors).
-3. Suggest **Actionable Future Strategies** — practical tips for building and evolving their wardrobe, aligned with their goals and lifestyle.
-4. Include **Practical Styling Tips** — outfit formulas, color pairings, or silhouette ideas they can immediately apply.
-5. Ensure tone is **warm, aspirational, and confidence-boosting**, without technical jargon, and relevant for a Western audience.
+1) Provide a Style DNA Summary — one inspiring sentence tailored to the user's vibe and goal.
+2) Offer a Style Guide & Guidelines — 2–3 very short bullet points (MAX 50 English words TOTAL) focused on: flattering fits/silhouettes for the body type, color families for the skin tone, and 1 signature piece aligned with style_preferences.
 
-**Output format (JSON):**
+Tone: warm, aspirational, confidence-boosting. No disclaimers, no overlong explanations.
+
+Output format (JSON):
 {
-  "summary": "[1-sentence Style DNA summary]",
-  "style_guide": "[Clear explanation of flattering styles, fits, and colors]",
-  
+  "summary": "[one tailored sentence]",
+  "style_guide": "[use line breaks to separate 2–3 bullets, total ≤ 50 words]"
 }
-`
+`;
 
 export async function POST(request: Request) {
     const body = await request.json();
@@ -63,16 +84,18 @@ export async function POST(request: Request) {
         case 4:
             response = await openai.chat.completions.create({
                 model: "gpt-4o-mini",
+                response_format: { type: "json_object" },
                 messages: [{ role: "system", content: systemPromptStep4 }, { role: "user", content: `Goal: ${goal}, Confidence: ${confidence_level}, Photo: ${photo_url}` }],
             });
-            const aiAnalysis = JSON.parse(response.choices[0].message.content || "{}");
+            const aiAnalysis = parseJsonSafe(response.choices[0].message.content || "{}");
             return NextResponse.json({ aiAnalysis });
         case 7:
             response = await openai.chat.completions.create({
                 model: "gpt-4o",
+                response_format: { type: "json_object" },
                 messages: [{ role: "system", content: systemPromptStep7 }, { role: "user", content: `Goal: ${goal}, Skin Tone: ${skin_tone}, Body Type: ${body_type}, Style Preferences: ${style_preferences}, Observation: ${Observation}, Gender: ${gender}` }],
             });
-            const styleSummary = JSON.parse(response.choices[0].message.content || "{}");
+            const styleSummary = parseJsonSafe(response.choices[0].message.content || "{}");
             return NextResponse.json({ 
                 styleSummary: {
                     summary: styleSummary.summary,
