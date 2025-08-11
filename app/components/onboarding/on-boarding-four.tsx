@@ -42,7 +42,7 @@ export default function OnBoardingFour({ data,
     onUpdate,
     onValidationChange,
 }: StepProps) {
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const isAnalyzing = useRef(false);
     const [analysisComplete, setAnalysisComplete] = useState(false);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
 
@@ -110,27 +110,42 @@ export default function OnBoardingFour({ data,
     //     runAIAnalysis,
     // ]);
     const generateInsight = useCallback(async () => {
-        if (!data.fullBodyPhoto && !isAnalyzing) return;
-        setIsAnalyzing(true);
-        const response = await fetch("/api/generate-insight", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ step: 4, goal: "Develop my personal style", confidence_level: "Not totally", photo_url: data.fullBodyPhoto }),
-        });
-
-        const result = await response.json();
-        onUpdate({
-            aiAnalysis: result.aiAnalysis,
-        });
-        setAnalysisComplete(true);
-        console.log(result.aiAnalysis);
-    }, [onUpdate, isAnalyzing, analysisComplete]);
+        if (!data.fullBodyPhoto) return;
+        try {
+            const response = await fetch("/api/generate-insight", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ step: 4, goal: "Develop my personal style", confidence_level: "Not totally", photo_url: data.fullBodyPhoto }),
+            });
+            if (!response.ok) {
+                setAnalysisError("Failed to get analysis from server.");
+                throw new Error("Failed to get analysis from server.");
+            }
+            const result = await response.json();
+            onUpdate({
+                aiAnalysis: result.aiAnalysis,
+            });
+            setAnalysisComplete(true);
+            console.log(result.aiAnalysis);
+        } catch (error) {
+            console.error("Error in generateInsight:", error);
+        } finally {
+            isAnalyzing.current = false;
+            onValidationChange(true)
+        }
+    }, [onUpdate]);
 
     useEffect(() => {
         if (data.aiAnalysis) {
             setAnalysisComplete(true);
+        } else {
+            if (!isAnalyzing.current) {
+                isAnalyzing.current = true;
+                onValidationChange(false);
+                generateInsight()
+            }
         }
     }, [data.fullBodyPhoto, data.aiAnalysis]);
 
@@ -145,7 +160,7 @@ export default function OnBoardingFour({ data,
                 </p>
 
                 {/* 显示圆圈循环动画 */}
-                <CircleLoadingAnimation isVisible={isAnalyzing || (!analysisComplete && Boolean(data.fullBodyPhoto))} />
+                <CircleLoadingAnimation isVisible={isAnalyzing.current || (!analysisComplete && Boolean(data.fullBodyPhoto))} />
 
                 {/* 错误信息显示 */}
                 {analysisError && (
@@ -155,7 +170,7 @@ export default function OnBoardingFour({ data,
                 )}
 
                 {/* 分析完成状态 */}
-                {analysisComplete && !isAnalyzing && (
+                {analysisComplete && !isAnalyzing.current && (
                     <>
                         <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                             <p className="text-green-600 text-sm">✓ Style analysis completed successfully!</p>
