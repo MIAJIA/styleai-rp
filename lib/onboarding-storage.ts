@@ -11,6 +11,11 @@ export interface OnboardingData {
     bodyAdvantages?: string[];
     boneStructure?: string;
     facialFeatures?: string;
+    statement?: string;
+    Observation?: string;
+    gender?: string;
+    detail_hair_color?: string;
+    hair_length?: string;
   };
 
   // Step 1: Body Analysis
@@ -48,6 +53,14 @@ export interface OnboardingData {
     styleFocus?:string[];
   }
   selectedStyles?: string[];
+  
+  // AI Generated Style Summary
+  styleSummary?: {
+    summary?: string;
+    style_guide?: string;
+    future_strategies?: string;
+    practical_tips?: string;
+  };
 }
 
 export const safeSetLocalStorage = (key: string, value: string): boolean => {

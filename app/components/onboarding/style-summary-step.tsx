@@ -57,7 +57,7 @@ export default function StyleSummaryStep({
       console.log("generateInsight result:", result);
 
       onUpdate({
-        styleSummary: result.styleSummary.summary,
+        styleSummary: result.styleSummary,
       });
     } catch (error) {
       console.error("Error in generateInsight:", error);
@@ -163,27 +163,64 @@ export default function StyleSummaryStep({
               <p className="text-sm text-pink-600">AI is integrating all your information</p>
             </div>
           </div>
-        ) : (data.styleSummary && data.styleSummary.length > 0) ? (<>
+        ) : (data.styleSummary && data.styleSummary.summary) ? (<>
           <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="text-6xl animate-bounce">🎉</div>
             <h2 className="text-2xl font-bold text-gray-800">Style profile generated!</h2>
           </div>
-          <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 shadow-lg">
-            <div className="flex items-center justify-start gap-2 mb-4">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-4 h-4 text-white" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-800">AI Analysis Results</h3>
-            </div>
-            <div className="space-y-3 text-left">
-              {data.styleSummary && (
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">StyleSummary:</p>
-                  <p className="text-gray-800 text-sm leading-relaxed">{data.styleSummary}</p>
+          <div className="space-y-4">
+            {/* Style DNA Summary */}
+            {data.styleSummary.summary && (
+              <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 shadow-lg">
+                <div className="flex items-center justify-start gap-2 mb-4">
+                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Style DNA Summary</h3>
                 </div>
-              )}
-            </div>
-          </Card>
+                <p className="text-gray-800 text-sm leading-relaxed">{data.styleSummary.summary}</p>
+              </Card>
+            )}
+            
+            {/* Style Guide */}
+            {data.styleSummary.style_guide && (
+              <Card className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 shadow-lg">
+                <div className="flex items-center justify-start gap-2 mb-4">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Style Guide & Guidelines</h3>
+                </div>
+                <p className="text-gray-800 text-sm leading-relaxed">{data.styleSummary.style_guide}</p>
+              </Card>
+            )}
+            
+            {/* Future Strategies */}
+            {data.styleSummary.future_strategies && (
+              <Card className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200 shadow-lg">
+                <div className="flex items-center justify-start gap-2 mb-4">
+                  <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Future Strategies</h3>
+                </div>
+                <p className="text-gray-800 text-sm leading-relaxed">{data.styleSummary.future_strategies}</p>
+              </Card>
+            )}
+            
+            {/* Practical Tips */}
+            {data.styleSummary.practical_tips && (
+              <Card className="p-6 bg-gradient-to-r from-orange-50 to-yellow-50 border-orange-200 shadow-lg">
+                <div className="flex items-center justify-start gap-2 mb-4">
+                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Practical Tips</h3>
+                </div>
+                <p className="text-gray-800 text-sm leading-relaxed">{data.styleSummary.practical_tips}</p>
+              </Card>
+            )}
+          </div>
         </>
         ) : <div className="text-center space-y-4 p-6 bg-white/50 rounded-lg">
           <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto"></div>

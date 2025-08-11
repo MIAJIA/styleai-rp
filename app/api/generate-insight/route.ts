@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
-    baseURL: "http://192.168.1.3:5000/v1",
-      apiKey: process.env.OPENAI_API_KEY,
-  });
+    apiKey: process.env.OPENAI_API_KEY,
+});
 
 const systemPromptStep4 = `
 You are an AI personal stylist.  
@@ -32,7 +31,7 @@ Goals for the output:
 
 const systemPromptStep7 = `
 You are an AI personal stylist.  
-Your task is to generate a concise style DNA summary based on:
+Your task is to generate a personalized style profile based on:
 1. The user's style goal
 2. Their skin tone
 3. Their body type
@@ -41,14 +40,18 @@ Your task is to generate a concise style DNA summary based on:
 6. Gender from Screen 4
 
 Goals for the output:
-- Combine all inputs into one concise, inspiring style DNA summary.
-- Keep it warm, aspirational, and confidence-boosting.
-- Limit to ONE sentence only, no extra details.
-- Do not include technical fashion jargon.
+1. Provide a **Style DNA Summary** — a concise, inspiring one-sentence description of the user’s unique style identity and vibe.
+2. Offer a **Style Guide & Guidelines** — clear, non-technical explanations of what works for them and why (fit, proportions, colors).
+3. Suggest **Actionable Future Strategies** — practical tips for building and evolving their wardrobe, aligned with their goals and lifestyle.
+4. Include **Practical Styling Tips** — outfit formulas, color pairings, or silhouette ideas they can immediately apply.
+5. Ensure tone is **warm, aspirational, and confidence-boosting**, without technical jargon, and relevant for a Western audience.
 
 **Output format (JSON):**
 {
-  "summary": "[1-sentence style DNA summary]"
+  "summary": "[1-sentence Style DNA summary]",
+  "style_guide": "[Clear explanation of flattering styles, fits, and colors]",
+  "future_strategies": "[Actionable wardrobe-building strategies]",
+  "practical_tips": "[Immediately usable outfit tips and combinations]"
 }
 `
 
@@ -71,7 +74,14 @@ export async function POST(request: Request) {
                 messages: [{ role: "system", content: systemPromptStep7 }, { role: "user", content: `Goal: ${goal}, Skin Tone: ${skin_tone}, Body Type: ${body_type}, Style Preferences: ${style_preferences}, Observation: ${Observation}, Gender: ${gender}` }],
             });
             const styleSummary = JSON.parse(response.choices[0].message.content || "{}");
-            return NextResponse.json({ styleSummary });
+            return NextResponse.json({ 
+                styleSummary: {
+                    summary: styleSummary.summary,
+                    style_guide: styleSummary.style_guide,
+                    future_strategies: styleSummary.future_strategies,
+                    practical_tips: styleSummary.practical_tips
+                }
+            });
     }
     } catch (error) {
         console.error(error);
