@@ -16,6 +16,7 @@ export interface Message {
     isEditing?: boolean
     buttons?: ButtonAction[]
     isSaveDB?: boolean
+    mustSaveDB?: boolean
     metadata?: {
         likes?: number
         dislikes?: number
