@@ -9,12 +9,12 @@ import { StepProps } from "./on-boarding-step";
 
 
 const chooseTitles = [
-    "Get new outfit ideas of my clothes",
-    "Elevate my outfits to look better",
-    "Develop my personal style",
-    "Discover My erfect Colors & Flattering Silhouettes",
-    "Create outfit for special event",
-    "Buy less and shop smarter"
+  "Get new outfit ideas for my clothes",
+  "Elevate my outfits to look better",
+  "Develop my personal style",
+  "Discover my perfect colors & flattering silhouettes",
+  "Create an outfit for a special event",
+  "Buy less and shop smarter",
 ];
 
 export default function OnBoardingTwo({
@@ -52,7 +52,7 @@ export default function OnBoardingTwo({
         <div className="space-y-6">
             <div className="text-center space-y-2">
                 <h2 className="text-2xl font-bold text-gray-800">
-                    What’d you like Styli to focus on?
+                    What’d you like StyleMe to focus on?
                 </h2>
 
             </div>
