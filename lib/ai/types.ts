@@ -66,6 +66,8 @@ export interface Suggestion {
   personaProfile?: any;
   finalPrompt: string;
 
+  stylizedImageUrls?: string;
+  tryOnImageUrls?: string;
   // Visuals
   imageUrls?: string[];
   intermediateImageUrls?: string[]; // For stylization previews

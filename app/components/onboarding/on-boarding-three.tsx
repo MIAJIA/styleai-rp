@@ -149,6 +149,9 @@ export default function OnBoardingThree({ data,
     };
 
     const removePhoto = () => {
+        onUpdate({
+            aiAnalysis: undefined,
+        });
         setFullBodyPhoto("");
         localStorage.removeItem("styleMe_fullBodyPhoto");
         // Reset the analysis state

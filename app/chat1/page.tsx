@@ -31,7 +31,7 @@ import {
 import { ChatModeData } from "../chat/types"
 import { useRouter } from "next/navigation"
 import { ButtonAction, Message } from "./types"
-import { useGeneration } from "./useGeneration"
+import { useGeneration } from "./useGeneration-new"
 import Image from "next/image"
 import UserInfo from "../components/userInfo"
 import IOSTabBar from "../components/ios-tab-bar"
@@ -91,12 +91,16 @@ export default function ChatPage() {
                 } else {
                     // 如果新消息不为空，则替换该消息（不重复调用API）
                     const newMessages = [...prev]
-                    newMessages[existingIndex] = message
+                    
                     // 只有在消息内容真正改变时才调用API
                     const oldMessage = prev[existingIndex]
                     if (oldMessage.content !== message.content || oldMessage.imageUrls !== message.imageUrls) {
                         handleMessageToDB('add', message).catch(console.error)
+                    }else if(message.mustSaveDB){
+                        delete message.mustSaveDB
+                        handleMessageToDB('add', message).catch(console.error)
                     }
+                    newMessages[existingIndex] = message
                     return newMessages
                 }
             } else {
@@ -555,10 +559,7 @@ export default function ChatPage() {
                                         {/* Message images */}
                                         {message.imageUrls && message.imageUrls.length > 0 && (
                                             <div className="mt-3">
-                                                <div className={`grid gap-3 ${message.imageUrls.length === 1
-                                                    ? 'grid-cols-1'
-                                                    : 'grid-cols-2'
-                                                    }`}>
+                                                <div className={`grid gap-3 grid-cols-2`}>
                                                     {message.imageUrls.map((imageUrl, index) => (
                                                         <div key={index} className="relative">
                                                             <div className="relative aspect-[9/16] rounded-lg overflow-hidden bg-gray-100 w-full max-w-sm mx-auto">
