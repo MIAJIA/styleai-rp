@@ -215,6 +215,7 @@ export default function MyStylePage() {
             <h3 className="text-lg font-semibold text-gray-800">Body Analysis</h3>
           </div>
 
+          {/* 
           {profileData?.bodyAdvantages && profileData.bodyAdvantages.length > 0 && (
             <div className="mb-4">
               <p className="text-sm font-medium text-gray-600 mb-2">Strengths to Highlight</p>
@@ -239,21 +240,84 @@ export default function MyStylePage() {
                 ))}
               </div>
             </div>
-          )}
+          )} */}
 
-          {profileData?.customAdvantages && (
-            <div className="mb-4">
-              <p className="text-sm font-medium text-gray-600 mb-2">Custom Strengths</p>
-              <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">{profileData.customAdvantages}</p>
-            </div>
-          )}
+                     <div className="space-y-4">
+             {/* 小字段并排显示 */}
+             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+               {(() => {
+                 const smallFields = [
+                   { key: "gender", label: "Gender", icon: "👤", color: "blue" },
+                   { key: "hair_length", label: "Hair Length", icon: "✂️", color: "purple" },
+                   { key: "detail_hair_color", label: "Hair Color", icon: "💇‍♀️", color: "pink" },
+                 ];
 
-          {profileData?.customChallenges && (
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-2">Custom Challenges</p>
-              <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">{profileData.customChallenges}</p>
-            </div>
-          )}
+                 return smallFields.map((field) => {
+                   const value = profileData?.aiAnalysis?.[field.key as keyof typeof profileData.aiAnalysis];
+                   if (!value) return null;
+
+                   const colorClasses = {
+                     blue: "bg-blue-50 border-blue-200 text-blue-800",
+                     purple: "bg-purple-50 border-purple-200 text-purple-800",
+                     pink: "bg-pink-50 border-pink-200 text-pink-800",
+                   };
+
+                   return (
+                     <div key={field.key} className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
+                       <div className="flex items-center gap-2 mb-2">
+                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${colorClasses[field.color as keyof typeof colorClasses]}`}>
+                           {field.icon}
+                         </div>
+                         <p className="text-xs font-semibold text-gray-700 truncate">{field.label}</p>
+                       </div>
+                       <p className="text-gray-700 text-xs leading-relaxed line-clamp-2">
+                         {value}
+                       </p>
+                     </div>
+                   );
+                 });
+               })()}
+             </div>
+
+             {/* 大字段单独显示 */}
+             <div className="space-y-3">
+               {(() => {
+                 const largeFields = [
+                   { key: "statement", label: "Style Statement", icon: "💭", color: "green" },
+                   { key: "Observation", label: "Key Observations", icon: "🔍", color: "orange" },
+                 ];
+
+                 return largeFields.map((field) => {
+                   const value = profileData?.aiAnalysis?.[field.key as keyof typeof profileData.aiAnalysis];
+                   if (!value) return null;
+
+                   const colorClasses = {
+                     green: "bg-green-50 border-green-200 text-green-800",
+                     orange: "bg-orange-50 border-orange-200 text-orange-800"
+                   };
+
+                   return (
+                     <div key={field.key} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
+                       <div className="flex items-center gap-3 mb-3">
+                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${colorClasses[field.color as keyof typeof colorClasses]}`}>
+                           {field.icon}
+                         </div>
+                         <p className="text-sm font-semibold text-gray-700">{field.label}</p>
+                       </div>
+                       <div className="bg-gray-50 rounded-lg p-3">
+                         <p className="text-gray-700 text-sm leading-relaxed">
+                           {value}
+                         </p>
+                       </div>
+                     </div>
+                   );
+                 });
+               })()}
+             </div>
+           </div>
+
+
+
         </Card>
 
         {/* Style Preferences */}
@@ -263,38 +327,55 @@ export default function MyStylePage() {
             <h3 className="text-lg font-semibold text-gray-800">Style Preferences</h3>
           </div>
 
-          {profileData?.stylePreferences && profileData.stylePreferences.length > 0 && (
-            <div className="mb-4">
-              <p className="text-sm font-medium text-gray-600 mb-2">Preferred Styles</p>
-              <div className="flex flex-wrap gap-2">
-                {profileData.stylePreferences.map((style, index) => (
-                  <Badge key={index} className="bg-purple-100 text-purple-800 border-purple-200">
-                    {style}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
+                     {profileData?.stylePreferences && profileData.stylePreferences.length > 0 && (
+             <div className="mb-6">
+               <div className="flex items-center gap-2 mb-3">
+                 <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
+                   <Palette className="w-3 h-3 text-purple-600" />
+                 </div>
+                 <p className="text-sm font-semibold text-gray-700">Preferred Styles</p>
+               </div>
+               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                 {profileData.stylePreferences.map((style, index) => (
+                   <Badge key={index} className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border-purple-200 px-3 py-1 rounded-full font-medium hover:from-purple-200 hover:to-pink-200 transition-all duration-200 text-center">
+                     {style}
+                   </Badge>
+                 ))}
+               </div>
+             </div>
+           )}
 
           {profileData?.customStyle && (
-            <div className="mb-4">
-              <p className="text-sm font-medium text-gray-600 mb-2">Custom Style Description</p>
-              <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">{profileData.customStyle}</p>
-            </div>
-          )}
-
-          {profileData?.specificStyles && profileData.specificStyles.length > 0 && (
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-2">Specific Style Interests</p>
-              <div className="flex flex-wrap gap-2">
-                {profileData.specificStyles.map((style, index) => (
-                  <Badge key={index} variant="outline" className="border-purple-300 text-purple-700">
-                    {style}
-                  </Badge>
-                ))}
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Edit className="w-3 h-3 text-blue-600" />
+                </div>
+                <p className="text-sm font-semibold text-gray-700">Custom Style Description</p>
+              </div>
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4">
+                <p className="text-gray-700 text-sm leading-relaxed">{profileData.customStyle}</p>
               </div>
             </div>
           )}
+
+                     {profileData?.specificStyles && profileData.specificStyles.length > 0 && (
+             <div>
+               <div className="flex items-center gap-2 mb-3">
+                 <div className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center">
+                   <Heart className="w-3 h-3 text-pink-600" />
+                 </div>
+                 <p className="text-sm font-semibold text-gray-700">Specific Style Interests</p>
+               </div>
+               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                 {profileData.specificStyles.map((style, index) => (
+                   <Badge key={index} variant="outline" className="border-pink-300 text-pink-700 bg-pink-50 px-3 py-1 rounded-full font-medium hover:bg-pink-100 transition-all duration-200 text-center">
+                     {style}
+                   </Badge>
+                 ))}
+               </div>
+             </div>
+           )}
         </Card>
 
         {/* Personalization Settings */}
@@ -352,31 +433,41 @@ export default function MyStylePage() {
               </div>
             )}
 
-            {profileData.styleProfile.styleLabels && profileData.styleProfile.styleLabels.length > 0 && (
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-600 mb-2">Your Style Labels</p>
-                <div className="flex flex-wrap gap-2">
-                  {profileData.styleProfile.styleLabels.map((label, index) => (
-                    <Badge key={index} className="bg-pink-100 text-pink-800 border-pink-200">
-                      {label}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
+                         {profileData.styleProfile.styleLabels && profileData.styleProfile.styleLabels.length > 0 && (
+               <div className="mb-6">
+                 <div className="flex items-center gap-2 mb-3">
+                   <div className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center">
+                     <Palette className="w-3 h-3 text-pink-600" />
+                   </div>
+                   <p className="text-sm font-semibold text-gray-700">Your Style Labels</p>
+                 </div>
+                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                   {profileData.styleProfile.styleLabels.map((label, index) => (
+                     <Badge key={index} className="bg-gradient-to-r from-pink-100 to-rose-100 text-pink-800 border-pink-200 px-3 py-1 rounded-full font-medium hover:from-pink-200 hover:to-rose-200 transition-all duration-200 text-center">
+                       {label}
+                     </Badge>
+                   ))}
+                 </div>
+               </div>
+             )}
 
-            {profileData.styleProfile.recommendedKeywords && profileData.styleProfile.recommendedKeywords.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Recommended Style Keywords</p>
-                <div className="flex flex-wrap gap-2">
-                  {profileData.styleProfile.recommendedKeywords.map((keyword, index) => (
-                    <Badge key={index} variant="outline" className="border-orange-300 text-orange-700">
-                      {keyword}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
+                         {profileData.styleProfile.recommendedKeywords && profileData.styleProfile.recommendedKeywords.length > 0 && (
+               <div>
+                 <div className="flex items-center gap-2 mb-3">
+                   <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center">
+                     <CheckCircle className="w-3 h-3 text-orange-600" />
+                   </div>
+                   <p className="text-sm font-semibold text-gray-700">Recommended Style Keywords</p>
+                 </div>
+                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                   {profileData.styleProfile.recommendedKeywords.map((keyword, index) => (
+                     <Badge key={index} variant="outline" className="border-orange-300 text-orange-700 bg-orange-50 px-3 py-1 rounded-full font-medium hover:bg-orange-100 transition-all duration-200 text-center">
+                       {keyword}
+                     </Badge>
+                   ))}
+                 </div>
+               </div>
+             )}
           </Card>
         )}
 
