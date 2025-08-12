@@ -12,7 +12,7 @@ const chooseTitles = [
     "Get new outfit ideas of my clothes",
     "Elevate my outfits to look better",
     "Develop my personal style",
-    "Discover My erfect Colors & Flattering Silhouettes",
+    "Discover my perfect colors & flattering silhouettes",
     "Create outfit for special event",
     "Buy less and shop smarter"
 ];
@@ -23,7 +23,7 @@ export default function OnBoardingTwo({
     onValidationChange }: StepProps) {
     const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
     const [isInitialized, setIsInitialized] = useState(false);
-    
+
     // Initialize selectedOptions from data
     useEffect(() => {
         if (data.stylePreferences && data.stylePreferences.length > 0) {
@@ -31,7 +31,7 @@ export default function OnBoardingTwo({
         }
         setIsInitialized(true);
     }, [data.stylePreferences]);
-    
+
     // Update validation when selection changes
     useEffect(() => {
         if (isInitialized) {
@@ -52,7 +52,7 @@ export default function OnBoardingTwo({
         <div className="space-y-6">
             <div className="text-center space-y-2">
                 <h2 className="text-2xl font-bold text-gray-800">
-                    What’d you like Styli to focus on?
+                    What’d you like Styleme to focus on?
                 </h2>
 
             </div>
