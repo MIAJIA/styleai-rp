@@ -173,17 +173,18 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
                       content: handleSuggestion(data.message),
                       sender: 'ai',
                       timestamp: new Date(),
-                      isSaveDB: true
+                      isSaveDB: true,
+                      imageUrls: ["wait", "wait"]
                     }
                     addMessage(message)
                     updateMessageProgress(steps[2])
                   } else if (data.type === 'api_stylization_success') {
-                    message.imageUrls = [data.message]
+                    message.imageUrls = [data.message, "wait"]
                     message.timestamp = new Date()
                     addMessage(message)
                     updateMessageProgress(steps[3])
                   } else if (data.type === 'api_tryon_success') {
-                    message.imageUrls?.push(data.message)
+                    message.imageUrls = [message.imageUrls?.[0] || "wait", data.message]
                     if (suggestionIndexRef.current == 0) {
                       message.buttons = [
                         {

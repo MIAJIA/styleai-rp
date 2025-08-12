@@ -28,7 +28,7 @@ export default function OnBoardingZero({ onValidationChange }: ZeroStepProps) {
     const [messages, setMessages] = useState<Message[]>([
         {
             id: 1,
-            text: "Style three wide-leg pants for me.",
+            text: "Style threse wide-leg pants for me.",
             isUser: true,
         },
         {
