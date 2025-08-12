@@ -174,7 +174,7 @@ const PORTRAIT_CATEGORY_STYLES = {
   idols: {
     bg: "bg-[#00C2FF]", // Re-using another theme color
     emoji: "⭐",
-    label: "Models",
+    label: "AI Models",
   },
 };
 
@@ -400,7 +400,7 @@ export default function PortraitSelectionSheet({ onPortraitSelect }: PortraitSel
           </div>
         </div>
       </div>
-      
+
 
       {/* Container to ensure vertical stacking */}
       <div className="flex flex-col gap-y-4">

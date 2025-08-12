@@ -181,7 +181,7 @@ export default function OnBoardingFour({ data,
                                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                                     <CheckCircle className="w-4 h-4 text-white" />
                                 </div>
-                                <h3 className="text-lg font-semibold text-gray-800">AI Analysis Results</h3>
+                                <h3 className="text-lg font-semibold text-gray-800">Analysis Results</h3>
                             </div>
                             <div className="space-y-3 text-left">
                                 {data.aiAnalysis?.statement && (

@@ -202,7 +202,7 @@ export default function MyStylePage() {
           </CardHeader>
         </Card>
 
-        {/* AI Analysis Results */}
+        {/* Analysis Results */}
         <Card className="w-full shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center gap-3 mb-4">

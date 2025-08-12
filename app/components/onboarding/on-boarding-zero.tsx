@@ -24,11 +24,11 @@ export default function OnBoardingZero({ onValidationChange }: ZeroStepProps) {
     if (session) {
         onValidationChange(true);
     }
-    
+
     const [messages, setMessages] = useState<Message[]>([
         {
             id: 1,
-            text: "Style threse wide-leg pants for me.",
+            text: "Style these wide-leg pants for me.",
             isUser: true,
         },
         {
@@ -55,7 +55,7 @@ export default function OnBoardingZero({ onValidationChange }: ZeroStepProps) {
             <div className="text-center space-y-2 mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">
                     Unlock fresh outfits from your current wardrobe
-                </h2> 
+                </h2>
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-4 mb-4">
