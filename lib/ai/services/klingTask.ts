@@ -249,6 +249,19 @@ export function getAllErrorCodes() {
     return ERROR_CODES;
 }
 
+// 🔍 PERF_LOG: 添加性能日志工具函数
+function logKlingPerfStep(step: string, jobId: string, suggestionIndex: number, startTime?: number): number {
+    const now = Date.now();
+    const jobPrefix = `Job ${jobId.slice(-8)}-${suggestionIndex}`;
+    if (startTime) {
+        const elapsed = now - startTime;
+        console.log(`[KLING_PERF_LOG | ${jobPrefix}] ✅ ${step} COMPLETED - Elapsed: ${elapsed}ms`);
+    } else {
+        console.log(`[KLING_PERF_LOG | ${jobPrefix}] 🚀 ${step} STARTED - Timestamp: ${now}`);
+    }
+    return now;
+}
+
 
 export class KlingTaskHandler {
     job: Job;
@@ -344,17 +357,33 @@ export class KlingTaskHandler {
 
 
     async executeKlingTask(requestBody: KlingRequestBody): Promise<string[]> {
+        // 🔍 PERF_LOG: Kling 任务提交
+        const submitStartTime = logKlingPerfStep("Kling API task submission", this.job.jobId, this.suggestionIndex, undefined);
         const submitResponse = await this.caretTask(requestBody);
         const submitResult = await submitResponse.json();
         const taskId = submitResult.data.task_id;
-        console.log(`Using Kling AI submit success: ${taskId}`);
+        logKlingPerfStep("Kling API task submission", this.job.jobId, this.suggestionIndex, submitStartTime);
+        console.log(`[KLING_PERF_LOG | Job ${this.job.jobId.slice(-8)}-${this.suggestionIndex}] 📋 Task ID: ${taskId}`);
+        
+        // 🔍 PERF_LOG: 等待延迟
+        const sleepStartTime = logKlingPerfStep("Initial wait before polling", this.job.jobId, this.suggestionIndex, undefined);
         await sleep(2000);
+        logKlingPerfStep("Initial wait before polling", this.job.jobId, this.suggestionIndex, sleepStartTime);
+        
+        // 🔍 PERF_LOG: 任务轮询 (通常是最耗时的部分)
+        const pollingStartTime = logKlingPerfStep("Kling API task polling", this.job.jobId, this.suggestionIndex, undefined);
         const imagesResult = await this.getTask(taskId, requestBody);
+        logKlingPerfStep("Kling API task polling", this.job.jobId, this.suggestionIndex, pollingStartTime);
+        
         return imagesResult
     }
 
 
     async runStylizationMultiple(modelVersion: "kling-v1-5" | "kling-v2"): Promise<string> {
+        const overallStartTime = logKlingPerfStep("Stylization overall process", this.job.jobId, this.suggestionIndex, undefined);
+        
+        // 🔍 PERF_LOG: Prompt 构建
+        const promptStartTime = logKlingPerfStep("Stylization prompt building", this.job.jobId, this.suggestionIndex, undefined);
         let finalPrompt: string;
         // 1️⃣ 最高优先级：AI 生成的 image_prompt
         if (this.job.suggestions[this.suggestionIndex]?.styleSuggestion?.image_prompt) {
@@ -374,9 +403,25 @@ export class KlingTaskHandler {
         if (finalPrompt.length > 2500) {
             finalPrompt = finalPrompt.substring(0, 2500);
         }
+        logKlingPerfStep("Stylization prompt building", this.job.jobId, this.suggestionIndex, promptStartTime);
+        
+        // 🔍 PERF_LOG: Human image 转换为 Base64
+        const imageConversionStartTime = logKlingPerfStep("Human image URL to Base64 conversion", this.job.jobId, this.suggestionIndex, undefined);
         const humanImageBase64 = await fileToBase64(await urlToFile(this.job.input.humanImage.url, this.job.input.humanImage.name, this.job.input.humanImage.type));
+        logKlingPerfStep("Human image URL to Base64 conversion", this.job.jobId, this.suggestionIndex, imageConversionStartTime);
+        
+        // 🔍 PERF_LOG: 构建请求体
+        const requestBodyStartTime = logKlingPerfStep("Stylization request body building", this.job.jobId, this.suggestionIndex, undefined);
         const requestBody = buildStylizeRequestBody(modelVersion, finalPrompt, humanImageBase64);
+        logKlingPerfStep("Stylization request body building", this.job.jobId, this.suggestionIndex, requestBodyStartTime);
+        
+        // 🔍 PERF_LOG: 执行 Kling 任务 (最耗时的部分)
+        const klingTaskStartTime = logKlingPerfStep("Kling stylization API task execution", this.job.jobId, this.suggestionIndex, undefined);
         const styledImageUrls = await this.executeKlingTask(requestBody);
+        logKlingPerfStep("Kling stylization API task execution", this.job.jobId, this.suggestionIndex, klingTaskStartTime);
+        
+        // 🔍 PERF_LOG: 图片保存到 Blob
+        const blobSaveStartTime = logKlingPerfStep("Stylized images save to blob", this.job.jobId, this.suggestionIndex, undefined);
         const stylizedImageUrls: string[] = [];
         for (let i = 0; i < styledImageUrls.length; i++) {
             const finalUrl = await saveFinalImageToBlob(
@@ -385,28 +430,50 @@ export class KlingTaskHandler {
             );
             stylizedImageUrls.push(finalUrl);
         }
+        logKlingPerfStep("Stylized images save to blob", this.job.jobId, this.suggestionIndex, blobSaveStartTime);
+        
+        // 🔍 PERF_LOG: Job 状态更新
+        const jobUpdateStartTime = logKlingPerfStep("Stylization job state update", this.job.jobId, this.suggestionIndex, undefined);
         this.job.suggestions[this.suggestionIndex].stylizedImageUrls = stylizedImageUrls[0];
         this.job.suggestions[this.suggestionIndex].finalPrompt = finalPrompt;
         this.job.updatedAt = Date.now();
         await kv.set(this.job.jobId, this.job);
+        logKlingPerfStep("Stylization job state update", this.job.jobId, this.suggestionIndex, jobUpdateStartTime);
+        
+        logKlingPerfStep("Stylization overall process", this.job.jobId, this.suggestionIndex, overallStartTime);
         return stylizedImageUrls[0];
     }
 
     async runVirtualTryOnMultiple(): Promise<string> {
+        const overallStartTime = logKlingPerfStep("Virtual try-on overall process", this.job.jobId, this.suggestionIndex, undefined);
+        
         let styledImageUrls: string = this.job.suggestions[this.suggestionIndex].stylizedImageUrls || "";
 
+        // 🔍 PERF_LOG: 图片转换为 Base64
+        const imageConversionStartTime = logKlingPerfStep("Try-on images URL to Base64 conversion", this.job.jobId, this.suggestionIndex, undefined);
         const [humanImageBase64, garmentImageBase64] = await Promise.all([
             urlToFile(styledImageUrls, "canvas.jpg", "image/jpeg").then(fileToBase64),
             urlToFile(this.job.input.garmentImage.url, this.job.input.garmentImage.name, this.job.input.garmentImage.type).then(fileToBase64)
         ]);
+        logKlingPerfStep("Try-on images URL to Base64 conversion", this.job.jobId, this.suggestionIndex, imageConversionStartTime);
 
+        // 🔍 PERF_LOG: 构建请求体
+        const requestBodyStartTime = logKlingPerfStep("Try-on request body building", this.job.jobId, this.suggestionIndex, undefined);
         const requestBody = {
             model_name: "kolors-virtual-try-on-v1-5",
             human_image: humanImageBase64,
             cloth_image: garmentImageBase64,
             n: 1,
         };
+        logKlingPerfStep("Try-on request body building", this.job.jobId, this.suggestionIndex, requestBodyStartTime);
+        
+        // 🔍 PERF_LOG: 执行 Kling 任务 (最耗时的部分)
+        const klingTaskStartTime = logKlingPerfStep("Kling virtual try-on API task execution", this.job.jobId, this.suggestionIndex, undefined);
         const tryOnImageUrls = await this.executeKlingTask(requestBody);
+        logKlingPerfStep("Kling virtual try-on API task execution", this.job.jobId, this.suggestionIndex, klingTaskStartTime);
+        
+        // 🔍 PERF_LOG: 图片保存到 Blob
+        const blobSaveStartTime = logKlingPerfStep("Try-on images save to blob", this.job.jobId, this.suggestionIndex, undefined);
         const tryOnImageUrlsResult: string[] = [];
         for (let i = 0; i < tryOnImageUrls.length; i++) {
             const finalUrl = await saveFinalImageToBlob(
@@ -415,11 +482,17 @@ export class KlingTaskHandler {
             );
             tryOnImageUrlsResult.push(finalUrl);
         }
+        logKlingPerfStep("Try-on images save to blob", this.job.jobId, this.suggestionIndex, blobSaveStartTime);
 
+        // 🔍 PERF_LOG: Job 状态更新
+        const jobUpdateStartTime = logKlingPerfStep("Try-on job state update", this.job.jobId, this.suggestionIndex, undefined);
         this.job.suggestions[this.suggestionIndex].tryOnImageUrls = tryOnImageUrlsResult[0];
         this.job.suggestions[this.suggestionIndex].status = 'succeeded';
         this.job.updatedAt = Date.now();
         await kv.set(this.job.jobId, this.job);
+        logKlingPerfStep("Try-on job state update", this.job.jobId, this.suggestionIndex, jobUpdateStartTime);
+        
+        logKlingPerfStep("Virtual try-on overall process", this.job.jobId, this.suggestionIndex, overallStartTime);
         return tryOnImageUrls[0];
     }
 
