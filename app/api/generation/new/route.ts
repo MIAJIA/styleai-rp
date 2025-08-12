@@ -29,28 +29,28 @@ export async function POST(request: NextRequest) {
     // 🔍 PERF_LOG: 记录请求开始时间
     const requestStartTime = Date.now();
     console.log(`[PERF_LOG | REQUEST] 📥 POST /api/generation/new - Request received at: ${requestStartTime}`);
-    
+
     // Get user session to store userId in job
     const session = await getServerSession(authOptions);
     const userId = (session?.user as { id?: string })?.id || 'default';
     const jobLimitKey = `${JOB_LIMIT_KEY}_${userId}`;
     let jobId: string, suggestionIndex: number, newJob: Job;
-    
+
     try {
         // 🔍 PERF_LOG: FormData 解析开始
         const formDataStartTime = logPerfStep("FormData parsing", "TEMP", undefined);
         const formData = await request.formData();
         logPerfStep("FormData parsing", "TEMP", formDataStartTime);
-        
+
         jobId = formData.get('job_id') as string ||'';
         suggestionIndex = formData.get('suggestion_index') as unknown as number || 0;
-        
+
         if (jobId && suggestionIndex) {
             // 🔍 PERF_LOG: 现有Job获取
             const jobFetchStartTime = logPerfStep("Existing job fetch", jobId, undefined);
             const job = await kv.get<Job>(jobId);
             logPerfStep("Existing job fetch", jobId, jobFetchStartTime);
-            
+
             if (job) {
                 newJob = job;
             } else {
@@ -76,11 +76,11 @@ export async function POST(request: NextRequest) {
             if (!humanImageFile || !garmentImageFile || !occasion || !generationMode) {
                 return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
             }
-            
+
             // 🔍 PERF_LOG: 生成 jobId
             jobId = randomUUID();
             console.log(`[PERF_LOG | Job ${jobId.slice(-8)}] 🆔 JobId generated: ${jobId}`);
-            
+
             // 🔍 PERF_LOG: Human image 上传开始
             const humanUploadStartTime = logPerfStep("Human image upload to Vercel Blob", jobId, undefined);
             const humanImageBlob = await put(humanImageFile.name, humanImageFile, { access: 'public', addRandomSuffix: true });
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
             const atomicCheckStartTime = logPerfStep("Atomic job creation check", jobId, undefined);
             const jobCreated = await createJobWithAtomicCheck(userId, jobId, newJob);
             logPerfStep("Atomic job creation check", jobId, atomicCheckStartTime);
-            
+
             if (!jobCreated) {
                 console.log(`[USER_JOB_LIMIT] Atomic check failed for user ${userId}. Request blocked.`);
                 return NextResponse.json({
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
                 }, { status: 429 });
             }
         }
-        
+
         // 🔍 PERF_LOG: Pipeline lock 检查开始
         const pipelineLockStartTime = logPerfStep("Pipeline lock check", jobId, undefined);
         const pipelineLockKey = `pipeline_lock:${jobId}`;
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
 
         // 🔍 PERF_LOG: SSE Stream 创建开始
         const sseStreamStartTime = logPerfStep("SSE Stream creation", jobId, undefined);
-        
+
         // 创建SSE响应
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
                 // 🔍 PERF_LOG: SSE连接建立
                 logPerfStep("SSE Stream creation", jobId, sseStreamStartTime);
                 const connectionEstablishedTime = logPerfStep("SSE connection establishment", jobId, undefined);
-                
+
                 // 发送连接建立消息
                 controller.enqueue(encoder.encode('data: {"type": "connected", "message": "SSE connection established"}\n\n'));
                 logPerfStep("SSE connection establishment", jobId, connectionEstablishedTime);
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
                     const jobSaveStartTime = logPerfStep("Job save to KV", jobId, undefined);
                     kv.set(jobId, newJob);
                     logPerfStep("Job save to KV", jobId, jobSaveStartTime);
-                    
+
                     const progressData1 = {
                         type: 'create_job_success',
                         message: jobId,
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
                     const klingTaskHandler = new KlingTaskHandler(newJob, suggestionIndex);
                     const stylizedImageUrl = await klingTaskHandler.runStylizationMultiple("kling-v1-5");
                     logPerfStep("Kling stylization task", jobId, stylizationStartTime);
-                    
+
                     const progressData3 = {
                         type: 'api_stylization_success',
                         message: stylizedImageUrl,
@@ -219,14 +219,14 @@ export async function POST(request: NextRequest) {
                     const tryOnStartTime = logPerfStep("Kling virtual try-on task", jobId, undefined);
                     const tryOnImageUrls = await klingTaskHandler.runVirtualTryOnMultiple();
                     logPerfStep("Kling virtual try-on task", jobId, tryOnStartTime);
-                    
+
                     const progressData4 = {
                         type: 'api_tryon_success',
                         message: tryOnImageUrls,
                         timestamp: new Date().toISOString()
                     };
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify(progressData4)}\n\n`));
-                    
+
                     // 🔍 PERF_LOG: Job limit 更新
                     const jobLimitUpdateStartTime = logPerfStep("Job limit counter update", jobId, undefined);
                     await kv.incr(jobLimitKey);
@@ -236,23 +236,23 @@ export async function POST(request: NextRequest) {
                     const saveLookStartTime = logPerfStep("Save look to database", jobId, undefined);
                     await saveLook(newJob, suggestionIndex);
                     logPerfStep("Save look to database", jobId, saveLookStartTime);
-                    
+
                     // 🔍 PERF_LOG: 清理资源
                     const cleanupStartTime = logPerfStep("Pipeline cleanup", jobId, undefined);
                     kv.del(pipelineLockKey);
                     logPerfStep("Pipeline cleanup", jobId, cleanupStartTime);
-                    
+
                     // 🔍 PERF_LOG: 整个请求完成
                     const totalElapsed = Date.now() - requestStartTime;
                     console.log(`[PERF_LOG | Job ${jobId.slice(-8)}] 🎉 ENTIRE PIPELINE COMPLETED - Total elapsed: ${totalElapsed}ms`);
                     console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ✅ Generation completed successfully`);
                 } catch (error) {
                     console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ❌ Error during generation:`, error);
-                    
+
                     // 🔍 PERF_LOG: 错误处理
                     const errorElapsed = Date.now() - requestStartTime;
                     console.log(`[PERF_LOG | Job ${jobId.slice(-8)}] ❌ PIPELINE FAILED - Total elapsed before error: ${errorElapsed}ms`);
-                    
+
                     // 发送错误消息
                     const errorData = {
                         type: 'generation_error',
@@ -371,7 +371,7 @@ async function getApiStyleSuggestion(job: Job, session: Session) {
             stylePrompt: job.input.stylePrompt, //  新增：传递 stylePrompt
             customPrompt: job.input.customPrompt, // 🔍 新增：传递 customPrompt
         },
-        { count: 3 }
+        { count: 2 }
     );
     logPerfStep("AI style suggestion generation", job.jobId, aiSuggestionStartTime);
 

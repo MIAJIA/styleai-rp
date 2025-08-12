@@ -13,7 +13,7 @@ import { getOnboardingDataFromDB } from '@/lib/database';
 export async function GET(request: NextRequest) {
   const jobId = request.nextUrl.searchParams.get('jobId');
   const suggestionIndex = parseInt(request.nextUrl.searchParams.get('suggestionIndex') || '0');
-  
+
   if (!jobId) {
     return NextResponse.json({ error: 'Missing jobId parameter' }, { status: 400 });
   }
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
           stylePrompt: job.input.stylePrompt, // �� 新增：传递 stylePrompt
           customPrompt: job.input.customPrompt, // 🔍 新增：传递 customPrompt
         },
-        { count: 3 }
+        { count: 2 }
       );
       console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🔄 Received ${aiSuggestions.length} suggestions.`);
 
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
       if (job.suggestions[0]) {
         // console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🚀 Auto-triggering first suggestion after AI suggestions generated.`);
         job.suggestions[0].status = 'generating_images';
-        
+
         // 保存jsob最新状态，去报建议入库
         await kv.set(job.jobId, job);
         // 立即启动pipeline
