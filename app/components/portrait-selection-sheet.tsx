@@ -174,7 +174,7 @@ const PORTRAIT_CATEGORY_STYLES = {
   idols: {
     bg: "bg-[#00C2FF]", // Re-using another theme color
     emoji: "⭐",
-    label: "Idols",
+    label: "Models",
   },
 };
 

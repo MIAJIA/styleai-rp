@@ -18,37 +18,37 @@ const SKIN_TONE_OPTIONS = [
     {
         id: "fair",
         label: "Fair",
-        color: "#FFDBB4",
+        color: "#FFEADF",
         description: "Fair skin tone"
     },
     {
         id: "light",
         label: "Light",
-        color: "#EDB98A",
+        color: "#F1D1AC",
         description: "Light skin tone"
     },
     {
         id: "medium",
         label: "Medium",
-        color: "#AE5D29",
+        color: "#D9AC7E",
         description: "Medium skin tone"
     },
     {
         id: "tan",
         label: "Tan",
-        color: "#8D4A43",
+        color: "#AE725B",
         description: "Tan skin tone"
     },
     {
         id: "dark",
         label: "Dark",
-        color: "#5C3836",
+        color: "#6B3C2C",
         description: "Dark skin tone"
     },
     {
         id: "deep-dark",
         label: "Deep Dark",
-        color: "#2C1810",
+        color: "#3F2414",
         description: "Deep dark skin tone"
     }
 ];

@@ -476,7 +476,7 @@ export default function HomePage() {
                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         <span className="text-sm font-medium text-blue-900">
                           {jobCount.remainingJobs > 0 
-                            ? `${jobCount.remainingJobs} generation attempts remaining`
+                            ? `${jobCount.remainingJobs} Credits Available`
                             : "Daily generation limit reached"
                           }
                         </span>

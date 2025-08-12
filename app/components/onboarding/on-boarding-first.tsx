@@ -60,7 +60,7 @@ export default function OnBoardingFirst({ data, onUpdate, onValidationChange }: 
                     </div>
                     <div className="flex items-center space-x-2">
                         <RadioGroupItem value="not-totally" id="not-totally" />
-                        <Label htmlFor="not-totally" className="text-lg">Not totally</Label>
+                        <Label htmlFor="not-totally" className="text-lg">Not Really</Label>
                     </div>
                 </RadioGroup>
             </div>
