@@ -830,22 +830,7 @@ export default function ResultsPage() {
                         </div>
                       )}
 
-                      {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.accessories &&
-                        selectedLook.processImages.styleSuggestion.outfit_suggestion.items.accessories.length > 0 && (
-                          <div className="p-3 bg-white rounded-lg">
-                            <h5 className="font-medium text-blue-900 mb-2">Accessories</h5>
-                            <div className="space-y-2">
-                              {selectedLook.processImages.styleSuggestion.outfit_suggestion.items.accessories.map((accessory: any, index: number) => (
-                                <div key={index} className="border-l-2 border-blue-200 pl-3">
-                                  <p className="text-sm text-gray-700 font-medium">{accessory.item_name}</p>
-                                  {accessory.style_details && (
-                                    <p className="text-xs text-gray-600">Style: {accessory.style_details}</p>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+
 
                       {selectedLook.processImages.styleSuggestion.outfit_suggestion.items?.hairstyle && (
                         <div className="p-3 bg-white rounded-lg">

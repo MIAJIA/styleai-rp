@@ -68,7 +68,7 @@ const searchTool = {
   function: {
     name: "search_fashion_items",
     // Original Chinese: "在内部商品库或时尚数据库中搜索相关的服装、配饰或潮流信息。当用户想寻找特定物品、类似款式或查询最新潮流时使用。"
-    description: "Search for clothing, accessories, or fashion trend information in our internal product database. Use when users want to find specific items, similar styles, or query latest trends.",
+    description: "Search for clothing or fashion trend information in our internal product database. Use when users want to find specific items, similar styles, or query latest trends.",
     parameters: {
       type: "object",
       properties: {
@@ -164,7 +164,7 @@ Key Behaviors:
 
 Tool Usage:
 • When users upload images, use the \`analyze_outfit_image\` tool to assist your analysis, then provide professional advice focusing on color matching and skin tone compatibility.
-• When users ask for color-specific items or want to find products in certain shades (e.g., "find me a coral blouse", "show me burgundy accessories"), use the \`search_fashion_items\` tool to find matching products, then provide color advice based on the results.
+• When users ask for color-specific items or want to find products in certain shades (e.g., "find me a coral blouse"), use the \`search_fashion_items\` tool to find matching products, then provide color advice based on the results.
 
 ➤ Always prioritize actionable takeaways in a friendly tone. This is a conversation—not a report. Keep it focused and approachable, and expand only if the user asks.`,
     // Original Chinese keywords: ['颜色', '色彩', '配色', '肤色', '色调', '色系']

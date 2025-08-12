@@ -151,17 +151,7 @@ export default function ChatPage() {
           sections.push(`**Bag:**\n- *${items.bag.item_name}:* ${details}`)
         }
 
-        if (items.accessories && items.accessories.length > 0) {
-          const accessoryItems = items.accessories
-            .map((item: any) => {
-              const details = [item.style_details, item.wearing_details, item.effect_description]
-                .filter(Boolean)
-                .join("，")
-              return `- *${item.item_name}:* ${details}`
-            })
-            .join("\n")
-          sections.push(`**Accessories:**\n${accessoryItems}`)
-        }
+
 
         if (items.hairstyle) {
           sections.push(`**Hairstyle:**\n- *${items.hairstyle.style_name}:* ${items.hairstyle.description}`)

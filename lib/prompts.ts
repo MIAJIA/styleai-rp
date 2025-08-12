@@ -722,13 +722,11 @@ Tops
 Bottoms
 Shoes
 Bag
-Accessories
 Hairstyle
 For each item, use this descriptive structure: \{Color + Material + Silhouette + Category} + Style Features + Wearing Instructions\
 Write clearly:
 Outfit can include multiple top layers. If a top stands well on its own, or its fabric or pattern is too complex for layering, or it's hot summer, then don't layer it. If there are multiple tops, please describe the specific layering and styling method.
 When selecting tops and bottoms, pay attention to choosing designs, cuts, and materials that suit the user's body shape and occasion.
-Complete the outfit with 3-5 pieces accessories, including necklaces, belts, earrings, hats, bracelets, silk scarves etc. Accessories should subtly enhance the outfit by harmonizing with the overall look's balance, occasion, and style, while thoughtfully incorporating color, texture, and personal preference to serve as impactful focal points.
 Describe each item's color, material, and silhouette in style_details.
 Briefly explain how each style choice enhances the user's overall look
 The suggested hairstyle should elevate the overall look and suit the user’s current hair length.

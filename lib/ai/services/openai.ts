@@ -43,10 +43,6 @@ function generateFallbackImagePrompt(outfitSuggestion: any): string {
     outfitParts.push(items.bag.item_name);
   }
 
-  if (items.accessories && items.accessories.length > 0) {
-    const accessoryNames = items.accessories.map((acc: any) => acc.item_name).join(', ');
-    outfitParts.push(accessoryNames);
-  }
 
   const outfitDescription = outfitParts.join(', ');
 

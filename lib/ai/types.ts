@@ -20,7 +20,7 @@ export const outfitItemsSchema = z.object({
   bottoms: itemDetailSchema.describe("The bottom item."),
   shoes: itemDetailSchema.describe("The shoes."),
   bag: itemDetailSchema.describe("The bag or purse."),
-  accessories: z.array(itemDetailSchema).describe("An array of accessories like jewelry, hats, etc."),
+  // accessories: z.array(itemDetailSchema).describe("An array of accessories like jewelry, hats, etc."),
   layering_description: z.string().optional().describe("A description of layering relationships, including the order of wearing, the details of exposure, and the role of layers in style, atmosphere, or structural shaping."),
   hairstyle: hairstyleSchema.describe("The suggested hairstyle."),
 });
