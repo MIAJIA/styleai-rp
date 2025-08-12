@@ -201,9 +201,11 @@ ${stylePreferenceSection}${userRequirementSection}
     console.log(`${OPENAI_LOG_PREFIX} ===== COMPLETE USER MESSAGE =====`);
     console.log(`${OPENAI_LOG_PREFIX} 📝 USER MESSAGE:`, userMessageText);
 
-    // --- NEW: Dynamically create the schema based on the count ---
+    // --- NEW: Dynamically create the schema based on the count (with safe cap) ---
+    // Cap suggestions to at most 5 to control cost/UX, but allow fewer based on `count`
+    const maxAllowedSuggestions = Math.min(Math.max(count, 1), 5);
     const multiSuggestionSchema = z.object({
-      suggestions: z.array(styleSuggestionsSchema).min(1).max(5),
+      suggestions: z.array(styleSuggestionsSchema).min(1).max(maxAllowedSuggestions),
     });
     const multiSuggestionJsonSchema = zodToJsonSchema(multiSuggestionSchema);
     // --- END NEW ---
@@ -246,7 +248,7 @@ ${stylePreferenceSection}${userRequirementSection}
           type: "function" as const,
           function: {
             name: "get_multiple_style_suggestions",
-            description: `Get ${count} complete and distinct outfit suggestions in a structured JSON format. The image_prompt field is highly recommended for best results.`,
+            description: `Return exactly ${count} complete and distinct outfit suggestions in a structured JSON format (do NOT return more than ${count}). The image_prompt field is highly recommended for best results.`,
             parameters: multiSuggestionJsonSchema,
           },
         },
@@ -319,6 +321,20 @@ ${stylePreferenceSection}${userRequirementSection}
     // --- FIX: Use Zod to parse and validate the AI's output ---
     const unsafeResult = JSON.parse(toolCall.function.arguments);
     console.log(`${OPENAI_LOG_PREFIX} 🔍 RAW AI RESPONSE:`, JSON.stringify(unsafeResult, null, 2));
+
+    // ✅ Normalize & hard-limit suggestions BEFORE validation to avoid Zod "too_big" errors
+    if (unsafeResult && typeof unsafeResult === 'object') {
+      const arr = Array.isArray(unsafeResult.suggestions)
+        ? unsafeResult.suggestions
+        : (unsafeResult.suggestions ? [unsafeResult.suggestions] : []);
+
+      // If the model returned more than allowed, truncate deterministically
+      if (arr.length > maxAllowedSuggestions) {
+        console.warn(`${OPENAI_LOG_PREFIX} [DATA_FIX] Truncating suggestions from ${arr.length} to ${maxAllowedSuggestions}`);
+      }
+
+      unsafeResult.suggestions = arr.slice(0, maxAllowedSuggestions);
+    }
 
     // 🔧 RESTRUCTURE: Move image_prompt from outfit_suggestion to top level if needed
     if (unsafeResult.suggestions) {
