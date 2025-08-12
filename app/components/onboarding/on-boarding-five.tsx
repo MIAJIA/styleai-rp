@@ -266,11 +266,11 @@ export default function OnBoardingFive({ data, onUpdate, onValidationChange }: S
                             />
                             <label
                                 htmlFor={option.id}
-                                className="flex flex-col items-center p-1 rounded-lg border-2 border-gray-100 cursor-pointer transition-all duration-100 hover:border-primary/50 hover:shadow-md peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:shadow-md peer-data-[state=checked]:opacity-100 peer-data-[state=checked]:scale-105 peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-primary/20 opacity-60 hover:opacity-80 hover:scale-102"
+                                className="flex flex-col items-center p-1 rounded-lg border-2 border-gray-100 cursor-pointer transition-all duration-100 hover:border-primary/50 hover:shadow-md peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:shadow-md peer-data-[state=checked]:scale-105 peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-primary/20 hover:scale-102"
                             >
                                 {/* 圆形肤色按钮 */}
-                                <div 
-                                    className="w-8 h-8 rounded-full border-2 border-gray-300 shadow-sm transition-all duration-200 peer-data-[state=checked]:border-primary peer-data-[state=checked]:shadow-lg peer-data-[state=checked]:opacity-100 peer-data-[state=checked]:scale-110 peer-data-[state=checked]:ring-4 peer-data-[state=checked]:ring-primary/20 opacity-50 hover:opacity-75 hover:scale-105"
+                                <div
+                                    className="w-8 h-8 rounded-full border-2 border-gray-300 shadow-sm transition-all duration-200 peer-data-[state=checked]:border-primary peer-data-[state=checked]:shadow-lg peer-data-[state=checked]:scale-110 peer-data-[state=checked]:ring-4 peer-data-[state=checked]:ring-primary/20 hover:scale-105"
                                     style={{ backgroundColor: option.color }}
                                 >
                                 </div>

@@ -29,7 +29,7 @@ import {
     ImageIcon
 } from "lucide-react"
 import { ChatModeData } from "../chat/types"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ButtonAction, Message } from "./types"
 import { useGeneration } from "./useGeneration-new"
 import Image from "next/image"
@@ -51,7 +51,7 @@ export default function ChatPage() {
     const [chatData, setChatData] = useState<ChatModeData | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [modalImage, setModalImage] = useState<string | null>(null)
-    
+
     // Image upload state
     const [stagedImage, setStagedImage] = useState<string | null>(null)
     const [isImageProcessing, setIsImageProcessing] = useState(false)
@@ -59,7 +59,7 @@ export default function ChatPage() {
     const [showClearConfirm, setShowClearConfirm] = useState(false)
     const [isClearing, setIsClearing] = useState(false)
     const imageInputRef = useRef<HTMLInputElement>(null)
-    const {data: session} = useSession()
+    const { data: session } = useSession()
     const [sessionId, setSessionId] = useState<string>("")
 
     useEffect(() => {
@@ -96,7 +96,7 @@ export default function ChatPage() {
                     const oldMessage = prev[existingIndex]
                     if (oldMessage.content !== message.content || oldMessage.imageUrls !== message.imageUrls) {
                         handleMessageToDB('add', message).catch(console.error)
-                    }else if(message.mustSaveDB){
+                    } else if (message.mustSaveDB) {
                         delete message.mustSaveDB
                         handleMessageToDB('add', message).catch(console.error)
                     }
@@ -117,32 +117,32 @@ export default function ChatPage() {
         })
     }
 
-    // 加载聊天记录
-    useEffect(() => {
-        const loadChatHistory = async () => {
-            if (!sessionId) return;
+    // // 加载聊天记录
+    // useEffect(() => {
+    //     const loadChatHistory = async () => {
+    //         if (!sessionId) return;
             
-            setIsLoadingHistory(true);
-            console.log("[ChatPage] Loading chat history for session:", sessionId);
-            try {
-                const savedMessages = await handleMessageToDB('getAll');
-                console.log("[ChatPage] Loaded messages from KV:", savedMessages?.length || 0);
+    //         setIsLoadingHistory(true);
+    //         console.log("[ChatPage] Loading chat history for session:", sessionId);
+    //         try {
+    //             const savedMessages = await handleMessageToDB('getAll');
+    //             console.log("[ChatPage] Loaded messages from KV:", savedMessages?.length || 0);
                 
-                if (savedMessages && savedMessages.length > 0) {
-                    setMessages(savedMessages);
-                    console.log("[ChatPage] ✅ Chat history loaded successfully");
-                } else {
-                    console.log("[ChatPage] No saved messages found");
-                }
-            } catch (error) {
-                console.error("[ChatPage] Failed to load chat history:", error);
-            } finally {
-                setIsLoadingHistory(false);
-            }
-        };
+    //             if (savedMessages && savedMessages.length > 0) {
+    //                 setMessages(savedMessages);
+    //                 console.log("[ChatPage] ✅ Chat history loaded successfully");
+    //             } else {
+    //                 console.log("[ChatPage] No saved messages found");
+    //             }
+    //         } catch (error) {
+    //             console.error("[ChatPage] Failed to load chat history:", error);
+    //         } finally {
+    //             setIsLoadingHistory(false);
+    //         }
+    //     };
 
-        loadChatHistory();
-    }, [sessionId, handleMessageToDB]);
+    //     loadChatHistory();
+    // }, [sessionId, handleMessageToDB]);
 
     // 加载聊天模式数据
     useEffect(() => {
@@ -243,7 +243,7 @@ export default function ChatPage() {
             sender: 'user',
             timestamp: new Date(),
             imageUrls: imageUrls,
-            isSaveDB:true
+            isSaveDB: true
         }
         addMessage(userMessage)
         // 清空用户对话框
@@ -487,7 +487,7 @@ export default function ChatPage() {
                     {messages.map((message) => (
                         <div
                             key={message.id}
-                            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start' }  md-4`}
+                            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}  md-4`}
                         >
                             <Card className={`max-w-sm lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl p-4 chat-card ${message.sender === 'user'
                                 ? 'bg-blue-500 text-white'
@@ -529,8 +529,8 @@ export default function ChatPage() {
                                                         {message.progress.current}/{message.progress.total}
                                                     </span>
                                                 </div>
-                                                <Progress 
-                                                    value={(message.progress.current / message.progress.total) * 100} 
+                                                <Progress
+                                                    value={(message.progress.current / message.progress.total) * 100}
                                                     className={`h-2 ${message.sender === 'user' ? 'bg-blue-200' : 'bg-gray-200'}`}
                                                 />
                                                 <div className="flex items-center gap-2 mt-1">
@@ -573,27 +573,27 @@ export default function ChatPage() {
                                                                     </div>
                                                                 ) : (
                                                                     <>
-                                                                    <Image
-                                                                        onClick={() => handleOpenModal(imageUrl)}
-                                                                        src={imageUrl}
-                                                                        alt={`Message image ${index + 1}`}
-                                                                        fill
-                                                                        className="object-cover object-top chat-image"
-                                                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                                                        onError={(e) => {
-                                                                            // Handle image loading errors
-                                                                            const target = e.target as HTMLImageElement;
-                                                                            target.style.display = 'none';
-                                                                        }}
-                                                                    />
-                                 
+                                                                        <Image
+                                                                            onClick={() => handleOpenModal(imageUrl)}
+                                                                            src={imageUrl}
+                                                                            alt={`Message image ${index + 1}`}
+                                                                            fill
+                                                                            className="object-cover object-top chat-image"
+                                                                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                                                            onError={(e) => {
+                                                                                // Handle image loading errors
+                                                                                const target = e.target as HTMLImageElement;
+                                                                                target.style.display = 'none';
+                                                                            }}
+                                                                        />
+
                                                                     </>
                                                                 )}
                                                             </div>
                                                             {/* 图片索引显示 */}
                                                             <div className="mt-2 text-center">
                                                                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                                                     {index + 1==1?"Style Inspiration":"Try-on"}
+                                                                    {index + 1 == 1 ? "Style Inspiration" : "Try-on"}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -709,7 +709,7 @@ export default function ChatPage() {
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             onKeyPress={handleKeyPress}
-                            placeholder="e.g. analyze my outfit, plan trip outfit, etc."
+                            placeholder="Talk to your personal stylist..."
                             className="flex-1 min-h-[44px] max-h-32 resize-none"
                             rows={1}
                         />

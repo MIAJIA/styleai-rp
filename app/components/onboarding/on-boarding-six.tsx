@@ -25,6 +25,11 @@ const STYLE_OPTIONS = [
 export default function OnBoardingSix({ data, onUpdate, onValidationChange }: StepProps) {
     const [selectedStyles, setSelectedStyles] = useState<string[]>(data?.selectedStyles || []);
 
+    // Scroll to top when component mounts
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     // Check validation whenever selectedStyles changes
     useEffect(() => {
         const isValid = selectedStyles.length > 0;

@@ -51,6 +51,13 @@ export default function OnBoardingZero({ onValidationChange }: ZeroStepProps) {
 
     return (
         <div className="max-w-2xl mx-auto p-4 h-screen flex flex-col">
+
+            <div className="text-center space-y-2 mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">
+                    Unlock fresh outfits from your current wardrobe
+                </h2> 
+            </div>
+
             <div className="flex-1 overflow-y-auto space-y-4 mb-4">
                 {messages.map((message) => (
                     <div
@@ -101,11 +108,6 @@ export default function OnBoardingZero({ onValidationChange }: ZeroStepProps) {
                         </div>
                     </div>
                 ))}
-                <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-bold text-gray-800">
-                        Unlock fresh outfits from your current wardrobe
-                    </h2>
-                </div>
             </div>
         </div>
     );

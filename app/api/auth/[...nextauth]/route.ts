@@ -133,7 +133,8 @@ function generateEnglishName() {
   const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
   const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
   
-  return `${firstName} ${lastName}`;
+  // return `${firstName} ${lastName}`;
+  return  `User_${Math.floor(Math.random() * 100)}`;
 }
 
 // 使用示例

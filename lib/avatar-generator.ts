@@ -80,7 +80,7 @@ export const AVATAR_STYLES = {
  */
 export function generateDefaultAvatarUrl(): string {
   return generateAvatarUrl({
-    style: 'avataaars',
+    style: 'bottts',
     backgroundColor: 'f0f0f0',
     size: 128
   });
@@ -93,7 +93,7 @@ export function generateDefaultAvatarUrl(): string {
  */
 export function generateGuestAvatarUrl(guestId: string): string {
   return generateAvatarFromName(guestId, {
-    style: 'avataaars',
+    style: 'bottts',
     backgroundColor: 'e8f4fd',
     size: 128
   });

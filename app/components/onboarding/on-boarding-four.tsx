@@ -143,8 +143,8 @@ export default function OnBoardingFour({ data,
         } else {
             if (!isAnalyzing.current) {
                 isAnalyzing.current = true;
-                onValidationChange(false);
-                generateInsight()
+                // onValidationChange(false);
+                // generateInsight()
             }
         }
     }, [data.fullBodyPhoto, data.aiAnalysis]);
