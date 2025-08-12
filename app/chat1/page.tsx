@@ -709,7 +709,7 @@ export default function ChatPage() {
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             onKeyPress={handleKeyPress}
-                            placeholder="Talk to your personal stylist..."
+                            placeholder="Ask anything about style..."
                             className="flex-1 min-h-[44px] max-h-32 resize-none"
                             rows={1}
                         />

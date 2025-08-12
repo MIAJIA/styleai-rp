@@ -66,7 +66,7 @@ export default function OnboardingPage() {
 
   const handleNext = async () => {
     if (currentStep < TOTAL_STEPS - 1) {
-      setCurrentStep((prev) => prev + 1);
+      setCurrentStep((prev) => prev === 3 ? 5 : prev + 1);
     } else {
       // Complete onboarding with improved error handling
       try {
@@ -118,7 +118,7 @@ export default function OnboardingPage() {
 
   const handlePrevious = () => {
     if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1);
+      setCurrentStep((prev) => prev === 5 ? 3 : prev - 1);
     }else{
       router.push("/my-style");
     }

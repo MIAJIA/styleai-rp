@@ -7,11 +7,17 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { StepProps } from "./on-boarding-step";
 
-// 肤色选项数据
+// 肤色选项数据- Fair
+// - Fair
+// - Light
+// - Medium
+// - Tan
+// - Dark
+// - Deep Dark
 const SKIN_TONE_OPTIONS = [
     {
-        id: "very-light",
-        label: "Very Light",
+        id: "fair",
+        label: "Fair",
         color: "#FFDBB4",
         description: "Fair skin tone"
     },
@@ -22,22 +28,16 @@ const SKIN_TONE_OPTIONS = [
         description: "Light skin tone"
     },
     {
-        id: "medium-light",
-        label: "Medium Light",
-        color: "#D08B5B",
-        description: "Medium light skin tone"
-    },
-    {
         id: "medium",
         label: "Medium",
         color: "#AE5D29",
         description: "Medium skin tone"
     },
     {
-        id: "medium-dark",
-        label: "Medium Dark",
+        id: "tan",
+        label: "Tan",
         color: "#8D4A43",
-        description: "Medium dark skin tone"
+        description: "Tan skin tone"
     },
     {
         id: "dark",
@@ -46,10 +46,10 @@ const SKIN_TONE_OPTIONS = [
         description: "Dark skin tone"
     },
     {
-        id: "very-dark",
-        label: "Very Dark",
+        id: "deep-dark",
+        label: "Deep Dark",
         color: "#2C1810",
-        description: "Very dark skin tone"
+        description: "Deep dark skin tone"
     }
 ];
 
