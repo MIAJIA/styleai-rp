@@ -289,7 +289,7 @@ export default function HomePage() {
     // Check job count limit
     if (jobCount && !jobCount.canStartNewJob) {
       console.log('Job count limit reached, preventing generation');
-      alert("您今日的生成次数已用完，请明天再来！");
+      alert("You have used up all your generation attempts for today. Please come back tomorrow!");
       return;
     }
 
@@ -476,8 +476,8 @@ export default function HomePage() {
                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         <span className="text-sm font-medium text-blue-900">
                           {jobCount.remainingJobs > 0 
-                            ? `剩余 ${jobCount.remainingJobs} 次生成机会`
-                            : "今日生成次数已用完"
+                            ? `${jobCount.remainingJobs} generation attempts remaining`
+                            : "Daily generation limit reached"
                           }
                         </span>
                       </div>
@@ -487,7 +487,7 @@ export default function HomePage() {
                     </div>
                     {jobCount.remainingJobs === 0 && (
                       <p className="text-xs text-blue-600 mt-1">
-                        请明天再来或联系客服增加次数
+                        Please come back tomorrow or contact customer service to increase your limit
                       </p>
                     )}
                   </div>
@@ -498,7 +498,7 @@ export default function HomePage() {
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-gray-600">加载中...</span>
+                      <span className="text-sm text-gray-600">Loading...</span>
                     </div>
                   </div>
                 )}
@@ -526,7 +526,7 @@ export default function HomePage() {
                     <span>
                       {session 
                         ? (jobCount && !jobCount.canStartNewJob 
-                            ? "今日次数已用完" 
+                            ? "Daily Limit Reached" 
                             : "Start Generation")
                         : "Login to Start Generation"
                       }
@@ -536,7 +536,7 @@ export default function HomePage() {
                 <p className="text-xs text-gray-500 text-center">
                   {session
                     ? (jobCount && !jobCount.canStartNewJob
-                        ? "您今日的生成次数已用完，请明天再来！"
+                        ? "You have used up all your generation attempts for today. Please come back tomorrow!"
                         : "This will take you to the chat where your styling magic happens!")
                     : "Please log in to access the AI stylist and start generating your looks!"
                   }
