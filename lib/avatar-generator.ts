@@ -79,11 +79,12 @@ export const AVATAR_STYLES = {
  * @returns 默认头像URL
  */
 export function generateDefaultAvatarUrl(): string {
-  return generateAvatarUrl({
-    style: 'bottts',
-    backgroundColor: 'f0f0f0',
-    size: 128
-  });
+  // return generateAvatarUrl({
+  //   style: 'bottts',
+  //   backgroundColor: 'f0f0f0',
+  //   size: 128
+  // });
+  return 'thumbnail_image.png';
 }
 
 /**
@@ -92,9 +93,10 @@ export function generateDefaultAvatarUrl(): string {
  * @returns 游客头像URL
  */
 export function generateGuestAvatarUrl(guestId: string): string {
-  return generateAvatarFromName(guestId, {
-    style: 'bottts',
-    backgroundColor: 'e8f4fd',
-    size: 128
-  });
+  // return generateAvatarFromName(guestId, {
+  //   style: 'bottts',
+  //   backgroundColor: 'e8f4fd',
+  //   size: 128
+  // });
+  return 'thumbnail_image.png';
 } 
