@@ -18,7 +18,7 @@ const steps = [
   { current: 5, total: 5, status: 'completed' as const, message: 'Complete!' }
 ]
 
-export function useGeneration(chatData: ChatModeData, addMessage: (message: Message) => void, router: string[] | AppRouterInstance) {
+export function useGeneration(chatData: ChatModeData, addMessage: (message: Message) => void, router: string[] | AppRouterInstance,userId:string) {
   const [jobId, setJobId] = useState<string | null>(null)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const lastDataRef = useRef<Job | null>(null);
@@ -48,168 +48,165 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       timestamp: new Date(),
     }
 
-    for (let index = 0; index < suggestions.length; index++) {
-      const suggestion = suggestions[index];
-      if (suggestion.status !== 'pending') {
-        console.log(`[useGeneration | handleJobUpdate] 📡 Suggestion ${suggestion.index} succeeded`);
-        addMessage(message1)
-        const styleSuggestion = suggestion.styleSuggestion
-        if (!styleSuggestion || !styleSuggestion.outfit_suggestion) {
-          const message2: Message = {
-            id: 'job-error',
-            content: "I couldn't come up with a specific outfit suggestion, but I'll generate an image based on the overall style idea!",
-            sender: 'ai',
-            timestamp: new Date(),
-          }
-          addMessage(message1)
-          addMessage(message2)
-          break
-        }
-
-        const outfit = styleSuggestion.outfit_suggestion
-        const outfitDescription = outfit.explanation || outfit.style_summary || "A stylish outfit designed for you."
-
-        const sections: string[] = []
-        const item = outfit.items
-
-        // Helper function to safely get style details
-        const getStyleDetails = (item: any): string => {
-          if (Array.isArray(item)) {
-            return item.map(i => i.item_name || i.name || 'Unknown item').join(', ')
-          } else if (item && typeof item === 'object') {
-            return item.item_name || item.name || 'Unknown item'
-          }
-          return 'Unknown item'
-        }
-        // // Helper function to safely get style details
-        // const getImageUrls = (item: any): string[] => {
-        //   if (Array.isArray(item)) {
-        //     return item.map(i => i.imageUrls)
-        //   } else if (item && typeof item === 'object') {
-        //     return item.intermediateImageUrls
-        //   }
-        //   return []
-        // }
-
-        if (item.tops) {
-          const topsDetails = getStyleDetails(item.tops)
-          if (topsDetails) {
-            sections.push(`Tops: ${topsDetails}`)
-          }
-        }
-        if (item.bottoms) {
-          const bottomsDetails = getStyleDetails(item.bottoms)
-          if (bottomsDetails) {
-            sections.push(`Bottoms: ${bottomsDetails}`)
-          }
-        }
-        if (item.shoes) {
-          const shoesDetails = getStyleDetails(item.shoes)
-          if (shoesDetails) {
-            sections.push(`Shoes: ${shoesDetails}`)
-          }
-        }
-
-        const content = sections.join("\n")
-        let contents = `${outfitDescription}\n\n${content}`
-
-        let buttons: ButtonAction[] = []
-        let images = ["wait", "wait"]
-
-        //  处理失败不显示图片
-        if (suggestion.status == 'failed') {
-          images = []
-          contents = contents + "\n\n\n\n" + suggestion.error
-        } else if (suggestion.imageUrls) {
-          let imageUrls = suggestion.imageUrls
-          if (imageUrls && imageUrls.length > 0) {
-            if (imageUrls[0]) {
-              images[0] = imageUrls[0]
-            }
-            if (imageUrls[1]) {
-              images[1] = imageUrls[1]
-            }
-          }
-
-        }
-
-
-
-        // 发送后续建议
-        let buttons2: ButtonAction[] = []
-
-        // 修正: 正确判断 jobData.status 是否为 "failed"
-        if (suggestion.status !== 'failed' && index == currentSuggestionIndex) {
-          if (images[0] === "wait" ) {
-            updateMessageProgress(steps[3])
-            sleep(1000)
-            // 发送第一个建议
-            const message2: Message = {
-              id: `job-${jobId}-style-suggestion-${index}`,
-              content: contents,
-              sender: 'ai',
-              timestamp: new Date(),
-              buttons: buttons,
-              imageUrls: images,
-              isSaveDB: true
-            }
-
-            addMessage(message2)
-            return false
-          }
-        }
-        updateMessageProgress(steps[5])
-        sleep(1000)
+    // for (let index = 0; index < suggestions.length; index++) {
+    const index = currentSuggestionIndex;
+    const suggestion = suggestions[index];
+    if (suggestion.status !== 'pending') {
+      console.log(`[useGeneration | handleJobUpdate] 📡 Suggestion ${suggestion.index} succeeded`);
+      addMessage(message1)
+      const styleSuggestion = suggestion.styleSuggestion
+      if (!styleSuggestion || !styleSuggestion.outfit_suggestion) {
         const message2: Message = {
-          id: `job-${jobId}-style-suggestion-${index}`,
-          content: contents,
+          id: 'job-error',
+          content: "I couldn't come up with a specific outfit suggestion, but I'll generate an image based on the overall style idea!",
           sender: 'ai',
           timestamp: new Date(),
-          buttons: buttons,
-          imageUrls: images,
-          isSaveDB: true,
-          mustSaveDB: true
         }
+        addMessage(message1)
         addMessage(message2)
+        return true
+      }
 
-        if (index == currentSuggestionIndex) {
-          if (currentSuggestionIndex == 0 && suggestion.status == 'succeeded') {
-            buttons2.push({
-              id: `btn-${index}-more`,
-              label: 'Yes,one more outfit',
-              type: 'default',
-              action: 'Generation-image',
-              jobId: jobId || "",
-              suggestionIndex: index,
-            })
-          }
-          buttons2.push({
-            id: `btn-${index}-update`,
-            label: 'Try others',
-            type: 'white',
-            action: 'Update-Profile',
-          })
-          const message3: Message = {
-            id: `job-${jobId}-more`,
-            content: 'How do you like this outfit? Would you like to generate another one for this item?',
-            sender: 'ai',
-            timestamp: new Date(),
-            buttons: buttons2,
-          }
-          addMessage(message3)
-        } else {
-          const message3: Message = {
-            id: `job-${jobId}-more`,
-            content: '',
-            sender: 'ai',
-            timestamp: new Date(),
-            buttons: buttons2,
-          }
-          addMessage(message3)
+      const outfit = styleSuggestion.outfit_suggestion
+      const outfitDescription = outfit.explanation || outfit.style_summary || "A stylish outfit designed for you."
+
+      const sections: string[] = []
+      const item = outfit.items
+
+      // Helper function to safely get style details
+      const getStyleDetails = (item: any): string => {
+        if (Array.isArray(item)) {
+          return item.map(i => i.item_name || i.name || 'Unknown item').join(', ')
+        } else if (item && typeof item === 'object') {
+          return item.item_name || item.name || 'Unknown item'
+        }
+        return 'Unknown item'
+      }
+      // // Helper function to safely get style details
+      // const getImageUrls = (item: any): string[] => {
+      //   if (Array.isArray(item)) {
+      //     return item.map(i => i.imageUrls)
+      //   } else if (item && typeof item === 'object') {
+      //     return item.intermediateImageUrls
+      //   }
+      //   return []
+      // }
+
+      if (item.tops) {
+        const topsDetails = getStyleDetails(item.tops)
+        if (topsDetails) {
+          sections.push(`Tops: ${topsDetails}`)
         }
       }
-    }
+      if (item.bottoms) {
+        const bottomsDetails = getStyleDetails(item.bottoms)
+        if (bottomsDetails) {
+          sections.push(`Bottoms: ${bottomsDetails}`)
+        }
+      }
+      if (item.shoes) {
+        const shoesDetails = getStyleDetails(item.shoes)
+        if (shoesDetails) {
+          sections.push(`Shoes: ${shoesDetails}`)
+        }
+      }
 
+      const content = sections.join("\n")
+      let contents = `${outfitDescription}\n\n${content}`
+
+      let buttons: ButtonAction[] = []
+      let images = ["wait", "wait"]
+
+      //  处理失败不显示图片
+      if (suggestion.status == 'failed') {
+        images = []
+        contents = contents + "\n\n\n\n" + suggestion.error
+      } else if (suggestion.imageUrls) {
+        let imageUrls = suggestion.imageUrls
+        if (imageUrls && imageUrls.length > 0) {
+          if (imageUrls[0]) {
+            images[0] = imageUrls[0]
+          }
+          if (imageUrls[1]) {
+            images[1] = imageUrls[1]
+          }
+        }
+      }
+
+      // 发送后续建议
+      let buttons2: ButtonAction[] = []
+
+      // 修正: 正确判断 jobData.status 是否为 "failed"
+      if (suggestion.status !== 'failed') {
+        if (images[0] === "wait") {
+          updateMessageProgress(steps[3])
+          sleep(1000)
+          // 发送第一个建议
+          const message2: Message = {
+            id: `job-${jobId}-style-suggestion-${index}`,
+            content: contents,
+            sender: 'ai',
+            timestamp: new Date(),
+            buttons: buttons,
+            imageUrls: images,
+            isSaveDB: true
+          }
+
+          addMessage(message2)
+          return false
+        }
+      }
+      updateMessageProgress(steps[5])
+      sleep(1000)
+      const message2: Message = {
+        id: `job-${jobId}-style-suggestion-${index}`,
+        content: contents,
+        sender: 'ai',
+        timestamp: new Date(),
+        buttons: buttons,
+        imageUrls: images,
+        isSaveDB: true,
+        mustSaveDB: true
+      }
+      addMessage(message2)
+
+      if (index == currentSuggestionIndex) {
+        if (currentSuggestionIndex == 0 && suggestion.status == 'succeeded') {
+          buttons2.push({
+            id: `btn-${index}-more`,
+            label: 'Yes,one more outfit',
+            type: 'default',
+            action: 'Generation-image',
+            jobId: jobId || "",
+            suggestionIndex: index,
+          })
+        }
+        buttons2.push({
+          id: `btn-${index}-update`,
+          label: 'Try others',
+          type: 'white',
+          action: 'Update-Profile',
+        })
+        const message3: Message = {
+          id: `job-${jobId}-more`,
+          content: 'How do you like this outfit? Would you like to generate another one for this item?',
+          sender: 'ai',
+          timestamp: new Date(),
+          buttons: buttons2,
+        }
+        addMessage(message3)
+        // } else {
+        //   const message3: Message = {
+        //     id: `job-${jobId}-more`,
+        //     content: '',
+        //     sender: 'ai',
+        //     timestamp: new Date(),
+        //     buttons: buttons2,
+        //   }
+        //   addMessage(message3)
+      }
+    }
+    // }
 
     return true
 
@@ -443,7 +440,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       const data = await response.json() as Job;
       console.log("[useGeneration | generationImage] Generation image data:", data);
       if (jobId) {
-          addMessage({
+        addMessage({
           id: 'job-processing',
           content: "",
           sender: 'ai',

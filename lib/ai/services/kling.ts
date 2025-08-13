@@ -319,25 +319,25 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
         // 🔍 NEW: 输出完整的失败响应
         console.error(`${KLING_API_PREFIX} ===== COMPLETE FAILURE RESPONSE =====`);
         console.error(`${KLING_API_PREFIX} 📥 FAILURE RESPONSE:`, JSON.stringify(statusResult, null, 2));
-        const job = await kv.get<Job>(jobId);
-        if (job) {
-          job.suggestions[suggestionIndex].status = 'failed';
-          job.suggestions[suggestionIndex].error = failureMsg;
-          await kv.set(jobId, job);
-        }
         // 🛡️ NEW: Handle specific "risk control" failure with a user-friendly message
         if (failureMsg.includes("Failure to pass the risk control system")) {
           // Use the custom error to signal a terminal failure
           throw new PolicyRiskError(`Your request could not be processed due to our content policy. Please try a different image or prompt.`);
         }
 
+        const job = await kv.get<Job>(jobId);
+        if (job) {
+          job.suggestions[suggestionIndex].status = 'failed';
+          job.suggestions[suggestionIndex].error = failureMsg;
+          await kv.set(jobId, job);
+        }
         // Use the custom error for any terminal failure
         throw new TaskFailedError(`Kling task failed. Reason: ${failureMsg}`);
       }
     } catch (pollError) {
       // 🛡️ NEW: Differentiated error handling
       // If it's a terminal task failure, stop polling immediately by re-throwing.
-      if (pollError instanceof TaskFailedError) {
+      if (pollError instanceof TaskFailedError || pollError instanceof PolicyRiskError) {
         throw pollError;
       }
 

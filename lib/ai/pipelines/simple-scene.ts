@@ -45,7 +45,7 @@ export async function executeSimpleScenePipelineV2(
         `${job.jobId}-${job.suggestionIndex}-stylized-1` // Unique name
       );
 
-      return { imageUrls: [stylizedImageUrl], finalPrompt: job.suggestion.styleSuggestion.image_prompt, stylizedImageUrls: [stylizedImageUrl] }
+      return { imageUrls: ["error",stylizedImageUrl], finalPrompt: job.suggestion.styleSuggestion.image_prompt, stylizedImageUrls: [stylizedImageUrl] }
     }
     throw error;
   }
