@@ -48,7 +48,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       timestamp: new Date(),
     }
 
-    for (let index = 0; index < suggestions.length - 1; index++) {
+    for (let index = 0; index < suggestions.length; index++) {
       const suggestion = suggestions[index];
       if (suggestion.status !== 'pending') {
         console.log(`[useGeneration | handleJobUpdate] 📡 Suggestion ${suggestion.index} succeeded`);
@@ -167,7 +167,8 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           timestamp: new Date(),
           buttons: buttons,
           imageUrls: images,
-          isSaveDB: true
+          isSaveDB: true,
+          mustSaveDB: true
         }
         addMessage(message2)
 
