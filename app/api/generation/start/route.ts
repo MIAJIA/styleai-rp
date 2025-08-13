@@ -70,8 +70,11 @@ export async function POST(request: Request) {
   console.log(`XXX 111 - since start ${Date.now() - startTime}ms, since last step=${Date.now() - lastStepTime}ms`);
   console.log(`[PERF_LOG | start] Request received. Timestamp: ${startTime}`);
   try {
+    lastStepTime = Date.now();
+    console.log(`XXX 122 - since start ${Date.now() - startTime}ms, since last step=${Date.now() - lastStepTime}ms`);
     const formData = await request.formData();
-
+    lastStepTime = Date.now();
+    console.log(`XXX 133 - since start ${Date.now() - startTime}ms, since last step=${Date.now() - lastStepTime}ms`);
     lastStepTime = Date.now();
     console.log(`XXX 222 - since start ${Date.now() - startTime}ms, since last step=${Date.now() - lastStepTime}ms`);
     const formDataParseTime = Date.now();
