@@ -31,7 +31,7 @@ import {
 import { ChatModeData } from "../chat/types"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ButtonAction, Message } from "./types"
-import { useGeneration } from "./useGeneration-new"
+import { useGeneration } from "./useGeneration"
 import Image from "next/image"
 import UserInfo from "../components/userInfo"
 import IOSTabBar from "../components/ios-tab-bar"
