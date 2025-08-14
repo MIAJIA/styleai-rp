@@ -42,7 +42,7 @@ import { getSession, useSession } from 'next-auth/react'
 
 
 export default function ChatPage() {
-    const [messages, setMessages] = useState<Message[]>([]) 
+    const [messages, setMessages] = useState<Message[]>([])
     const router = useRouter()
     const [newMessage, setNewMessage] = useState('')
     const [editContent, setEditContent] = useState('')
@@ -91,7 +91,7 @@ export default function ChatPage() {
                 } else {
                     // 如果新消息不为空，则替换该消息（不重复调用API）
                     const newMessages = [...prev]
-                    
+
                     // 只有在消息内容真正改变时才调用API
                     const oldMessage = prev[existingIndex]
                     if (oldMessage.content !== message.content || oldMessage.imageUrls !== message.imageUrls) {
@@ -105,7 +105,7 @@ export default function ChatPage() {
                 }
             } else {
                 // 如果不存在相同 ID 的消息
-                if (isEmptyMessage) {   
+                if (isEmptyMessage) {
                     // 如果新消息为空，则不添加
                     return prev
                 } else {
@@ -121,13 +121,13 @@ export default function ChatPage() {
     // useEffect(() => {
     //     const loadChatHistory = async () => {
     //         if (!sessionId) return;
-            
+
     //         setIsLoadingHistory(true);
     //         console.log("[ChatPage] Loading chat history for session:", sessionId);
     //         try {
     //             const savedMessages = await handleMessageToDB('getAll');
     //             console.log("[ChatPage] Loaded messages from KV:", savedMessages?.length || 0);
-                
+
     //             if (savedMessages && savedMessages.length > 0) {
     //                 setMessages(savedMessages);
     //                 console.log("[ChatPage] ✅ Chat history loaded successfully");
@@ -160,26 +160,26 @@ export default function ChatPage() {
                     }
                     console.log("[ChatPage | useEffect] ✅ Parsed chatData:", dataForLog)
                     setChatData(data)
-                    
+
                     // 只有在没有历史消息时才显示欢迎消息
                     const savedMessages = await handleMessageToDB('getAll')
                     // if (!savedMessages || savedMessages.length === 0) {
-                        const initialMessage: Message = {
-                            id: 'start-generation',
-                            content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
-                            sender: 'ai',
-                            timestamp: new Date(),
-                            isSaveDB: true,
-                            buttons: [
-                                {
-                                    id: 'btn1',
-                                    label: 'Start Generation',
-                                    type: 'default',
-                                    action: 'Start-Generation',
-                                }
-                            ]
-                        }
-                        setMessages([...savedMessages, initialMessage])
+                    const initialMessage: Message = {
+                        id: 'start-generation',
+                        content: "Welcome! I see you've provided your images and occasion. Ready to see your personalized style?",
+                        sender: 'ai',
+                        timestamp: new Date(),
+                        isSaveDB: true,
+                        buttons: [
+                            {
+                                id: 'btn1',
+                                label: 'Start Generation',
+                                type: 'default',
+                                action: 'Start-Generation',
+                            }
+                        ]
+                    }
+                    setMessages([...savedMessages, initialMessage])
                     // }
                 } catch (error) {
                     console.error("[ChatPage] Error parsing chat data:", error);
@@ -206,7 +206,8 @@ export default function ChatPage() {
     const { handleButtonAction } = useGeneration(
         chatData as ChatModeData, // Type assertion to satisfy type checker; make sure chatData is not null before this is called in useGeneration
         addMessage,
-        router
+        router,
+        sessionId
     );
 
     // Auto scroll to bottom when new messages are added
@@ -228,7 +229,7 @@ export default function ChatPage() {
         stagedImage,
         setStagedImage,
         addMessage
-      })
+    })
     // 
     // tration layer remains in the main component
     const handleSendMessage = async (message: string) => {
@@ -482,7 +483,7 @@ export default function ChatPage() {
                         </div>
                     </div>
                 )}
-                
+
                 <div className="space-y-4">
                     {messages.map((message) => (
                         <div
@@ -561,42 +562,44 @@ export default function ChatPage() {
                                             <div className="mt-3">
                                                 <div className={`grid gap-3 grid-cols-2`}>
                                                     {message.imageUrls.map((imageUrl, index) => (
-                                                        <div key={index} className="relative">
-                                                            <div className="relative aspect-[9/16] rounded-lg overflow-hidden bg-gray-100 w-full max-w-sm mx-auto">
-                                                                {imageUrl === "wait" ? (
-                                                                    // Loading state for "wait" URL
-                                                                    <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-50 to-gray-100">
-                                                                        <div className="flex flex-col items-center gap-2">
-                                                                            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                                                                            <span className="text-xs text-gray-500">Generating image...</span>
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <>
-                                                                        <Image
-                                                                            onClick={() => handleOpenModal(imageUrl)}
-                                                                            src={imageUrl}
-                                                                            alt={`Message image ${index + 1}`}
-                                                                            fill
-                                                                            className="object-cover object-top chat-image"
-                                                                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                                                            onError={(e) => {
-                                                                                // Handle image loading errors
-                                                                                const target = e.target as HTMLImageElement;
-                                                                                target.style.display = 'none';
-                                                                            }}
-                                                                        />
+                                                        imageUrl === "error" ? (null) :
+                                                            (
+                                                                <div key={index} className="relative">
+                                                                    <div className="relative aspect-[9/16] rounded-lg overflow-hidden bg-gray-100 w-full max-w-sm mx-auto">
+                                                                        {imageUrl === "wait" ? (
+                                                                            // Loading state for "wait" URL
+                                                                            <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-50 to-gray-100">
+                                                                                <div className="flex flex-col items-center gap-2">
+                                                                                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                                                                    <span className="text-xs text-gray-500">Generating image...</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Image
+                                                                                    onClick={() => handleOpenModal(imageUrl)}
+                                                                                    src={imageUrl}
+                                                                                    alt={`Message image ${index + 1}`}
+                                                                                    fill
+                                                                                    className="object-cover object-top chat-image"
+                                                                                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                                                                    onError={(e) => {
+                                                                                        // Handle image loading errors
+                                                                                        const target = e.target as HTMLImageElement;
+                                                                                        target.style.display = 'none';
+                                                                                    }}
+                                                                                />
 
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                            {/* 图片索引显示 */}
-                                                            <div className="mt-2 text-center">
-                                                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                                                    {index + 1 == 1 ? "Style Inspiration" : "Try-on"}
-                                                                </span>
-                                                            </div>
-                                                        </div>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                    {/* 图片索引显示 */}
+                                                                    <div className="mt-2 text-center">
+                                                                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                                                            {index + 1 == 1 ? "Style Inspiration" : "Try-on"}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>)
                                                     ))}
                                                 </div>
                                             </div>
@@ -686,7 +689,7 @@ export default function ChatPage() {
                             className="hidden"
                             accept="image/*"
                         />
-                        
+
                         {/* Image upload button */}
                         <Button
                             type="button"
