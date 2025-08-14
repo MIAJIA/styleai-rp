@@ -13,5 +13,6 @@
     "app/api/generate-style/route.ts": {
       "maxDuration": 300
     }
-  }
+  },
+  "_comment": "注意：Heroku 部署时有 30 秒硬性超时限制，maxDuration 配置在 Heroku 上不生效。建议在代码中添加适当的超时处理机制。"
 }

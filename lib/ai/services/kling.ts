@@ -332,7 +332,7 @@ async function executeKlingTask(submitPath: string, queryPathPrefix: string, req
           await kv.set(jobId, job);
         }
         // Use the custom error for any terminal failure
-        throw new TaskFailedError(`Kling task failed. Reason: ${failureMsg}`);
+        throw new TaskFailedError(`Image generation model task failed. Reason: ${failureMsg}`);
       }
     } catch (pollError) {
       // 🛡️ NEW: Differentiated error handling
