@@ -8,6 +8,7 @@ import { stylePrompts } from "../chat/constants"
 import { Job } from "@/lib/ai"
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime"
 import { sleep } from "@/lib/ai/utils"
+import { upload } from '@vercel/blob/client';
 
 const steps = [
   { current: 0, total: 5, status: 'pending' as const, message: 'Initializing...' },
@@ -332,34 +333,50 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
 
     updateMessageProgress(steps[0])
     const startTime = Date.now();
-    const selfieFile = await getFileFromPreview(chatData.selfiePreview, "user_selfie.jpg")
-    const clothingFile = await getFileFromPreview(chatData.clothingPreview, "user_clothing.jpg")
+    const selfieFile = await getFileFromPreview(chatData.selfiePreview, `${userId}_user_selfie.jpg`)
+    const clothingFile = await getFileFromPreview(chatData.clothingPreview, `${userId}_user_clothing.jpg`)
     if (!selfieFile || !clothingFile) {
       throw new Error("Could not prepare image files for upload.")
     }
 
     try {
-      const formData = new FormData()
-      formData.append("human_image", selfieFile)
-      formData.append("garment_image", clothingFile)
-      formData.append("occasion", chatData.occasion)
-      formData.append("generation_mode", chatData.generationMode)
+      // Upload files using Vercel Blob client
+      const [selfieBlob, clothingBlob] = await Promise.all([
+        upload(selfieFile.name, selfieFile, {
+          access: 'public',
+          handleUploadUrl: '/api/blob/upload',
+        }),
+        upload(clothingFile.name, clothingFile, {
+          access: 'public',
+          handleUploadUrl: '/api/blob/upload',
+        })
+      ]);
 
-      const onboardingData = loadCompleteOnboardingData()
-      if (onboardingData) {
-        formData.append("user_profile", JSON.stringify(onboardingData))
-      }
-
-      if (chatData.customPrompt && chatData.customPrompt.trim()) {
-        formData.append("custom_prompt", chatData.customPrompt.trim())
-      }
-      if (stylePrompts[chatData.occasion as keyof typeof stylePrompts]) {
-        formData.append("style_prompt", stylePrompts[chatData.occasion as keyof typeof stylePrompts])
-      }
+      // Prepare request data
+      const requestData = {
+        human_image: {
+          url: selfieBlob.url,
+          type: selfieFile.type,
+          name: selfieFile.name
+        },
+        garment_image: {
+          url: clothingBlob.url,
+          type: clothingFile.type,
+          name: clothingFile.name
+        },
+        occasion: chatData.occasion,
+        generation_mode: chatData.generationMode,
+        user_profile: loadCompleteOnboardingData(),
+        custom_prompt: chatData.customPrompt?.trim() || undefined,
+        style_prompt: stylePrompts[chatData.occasion as keyof typeof stylePrompts] || undefined,
+      };
 
       const response = await fetch("/api/generation/start", {
         method: "POST",
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
       });
       if (!response.ok) {
         let errorDetails = "An unknown error occurred.";
