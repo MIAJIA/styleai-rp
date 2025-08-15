@@ -131,7 +131,7 @@ export default function PhotoUploadStep({
   const compressImageToDataUrl = async (
     file: File,
     maxWidth = 1000,
-    quality = 0.75,
+    quality = 60,
   ): Promise<string> => {
     // Only run on client side
     if (typeof window === 'undefined') {
