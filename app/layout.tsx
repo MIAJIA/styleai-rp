@@ -19,8 +19,8 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "StyleMe - Virtual Try-On",
-  description: "Create your perfect look with our AI-powered virtual try-on",
+  title: "StyleMe - AI Fashion Stylist",
+  description: "Create your perfect look with our AI Fashion Stylist and Peronal Shopper",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
