@@ -111,6 +111,12 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           sections.push(`Shoes: ${shoesDetails}`)
         }
       }
+      if (item.bag) {
+        const bagDetails = getStyleDetails(item.bag)
+        if (bagDetails) {
+          sections.push(`Bag: ${bagDetails}`)
+        }
+      }
 
       const content = sections.join("\n")
       let contents = `${outfitDescription}\n\n${content}`
