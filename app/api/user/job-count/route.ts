@@ -13,6 +13,9 @@ export async function GET(request: Request) {
     if (session?.user?.isGuest) {
       maxJobs = MAX_USER_JOBS/2;
     }
+    if (session?.user?.email === 'jessiechen0701@gmail.com') {
+      maxJobs = 1000;
+    }
     
     if (!session?.user?.id) {
       return NextResponse.json(

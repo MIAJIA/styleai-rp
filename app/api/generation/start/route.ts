@@ -9,7 +9,7 @@ import {
   type GenerationMode,
 } from '@/lib/ai';
 import { type OnboardingData } from '@/lib/onboarding-storage';
-import { getServerSession } from 'next-auth';
+import { getServerSession, Session } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 // 用户job数量限制
@@ -261,8 +261,13 @@ async function getUserActiveJobCount(jobLimitKey: string): Promise<number> {
 }
 
 // 使用Redis事务确保原子性操作
-async function createJobWithAtomicCheck(userId: string, jobId: string, newJob: Job): Promise<boolean> {
+async function createJobWithAtomicCheck(session: Session, jobId: string, newJob: Job): Promise<boolean> {
+  const userId = (session?.user as { id?: string })?.id || 'default';
   const jobLimitKey = `${JOB_LIMIT_KEY}_${userId}`;
+  let maxJobs = MAX_USER_JOBS;
+  if (session?.user?.email === 'jessiechen0701@gmail.com') {
+    maxJobs = 1000;
+  }
   try {
     // 1. 获取用户当前活跃job数量（只计算非完成状态的job）
     const userActiveJobCount = await getUserActiveJobCount(jobLimitKey);
@@ -270,14 +275,14 @@ async function createJobWithAtomicCheck(userId: string, jobId: string, newJob: J
     const userId = (session?.user as { id?: string })?.id || 'default';
     console.log(`[GENERATION_START] User ID for job ${jobId.slice(-8)}: ${userId}`);
     if (session?.user?.isGuest) {
-      if (userActiveJobCount >= (MAX_USER_JOBS)/2) {
+      if (userActiveJobCount >= (maxJobs)/2) {
         console.log(`[ATOMIC_CHECK] User ${userId} has ${userActiveJobCount} active jobs, limit exceeded`);
         return false;
       }
     }
     
     // 2. 如果超过限制，直接返回false
-    if (userActiveJobCount >= MAX_USER_JOBS) {
+    if (userActiveJobCount >= maxJobs) {
       console.log(`[ATOMIC_CHECK] User ${userId} has ${userActiveJobCount} active jobs, limit exceeded`);
       return false;
     }
@@ -513,7 +518,7 @@ async function processGenerationRequest(request: Request, startTime: number, las
   const kvSetStartTime = Date.now();
 
   // 使用原子操作创建job
-  const jobCreated = await createJobWithAtomicCheck(userId, jobId, newJob);
+  const jobCreated = await createJobWithAtomicCheck(session, jobId, newJob);
   lastStepTime = Date.now();
   console.log(`XXX 1000 - since start ${Date.now() - startTime}ms, since last step=${Date.now() - lastStepTime}ms`);
   if (!jobCreated) {
@@ -631,7 +636,7 @@ export async function POST(request: Request) {
     const kvSetStartTime = Date.now();
 
     // 使用原子操作创建job
-    const jobCreated = await createJobWithAtomicCheck(userId, jobId, newJob);
+    const jobCreated = await createJobWithAtomicCheck(session, jobId, newJob);
     if (!jobCreated) {
       console.log(`[USER_JOB_LIMIT] Atomic check failed for user ${userId}. Request blocked.`);
       return NextResponse.json({
