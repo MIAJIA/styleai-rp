@@ -8,7 +8,7 @@ export default function FashionHeader() {
       <div className="relative z-10">
         <h1 className="font-playfair text-4xl font-bold text-neutral-900 mb-1">StyleMe</h1>
         <p className="font-inter text-sm text-neutral-600">
-          Create your perfect look with our virtual try-on
+          Create your perfect look with our AI Fashion Stylist and Peronal Shopper
         </p>
       </div>
       <UserInfo />
