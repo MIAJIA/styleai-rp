@@ -671,7 +671,7 @@ export default function ResultsPage() {
                 </div>
 
                 {/* "How to wear it!" 图像 */}
-                <div className="relative">
+                {/* <div className="relative">
                   {selectedLook.processImages?.stylizedImageUrl ? (
                     <>
                       <img
@@ -694,7 +694,7 @@ export default function ResultsPage() {
                       </div>
                     </div>
                   )}
-                </div>
+                </div> */}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

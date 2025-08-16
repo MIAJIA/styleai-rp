@@ -10,7 +10,7 @@ export default function LoginPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // 如果用户已经登录，重定向到主页
+  // Redirect to home page if user is already logged in
   useEffect(() => {
     console.log("Login page - Status:", status);
     console.log("Login page - Session:", session);
@@ -21,7 +21,7 @@ export default function LoginPage() {
     }
   }, [session, status, router]);
 
-  // 如果正在加载，显示加载状态
+  // Show loading state if loading
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-white-50 via-purple-50 to-blue-50 flex items-center justify-center">
@@ -30,13 +30,13 @@ export default function LoginPage() {
     );
   }
 
-  // 如果已经登录，不显示登录页面
+  // Don't show login page if already authenticated
   if (status === "authenticated") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-white-50 via-purple-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">正在跳转...</p>
+          <p className="text-gray-600">Redirecting...</p>
         </div>
       </div>
     );
@@ -53,14 +53,14 @@ export default function LoginPage() {
 
       if (result?.error) {
         console.error("Sign in error:", result.error);
-        alert(`Google 登录失败: ${result.error}`);
+        alert(`Google login failed: ${result.error}`);
       } else if (result?.url) {
         console.log("Redirecting to:", result.url);
         window.location.href = result.url;
       }
     } catch (error) {
       console.error("Sign in error:", error);
-      alert("Google 登录失败，请检查网络连接或联系管理员。");
+      alert("Google login failed. Please check your network connection or contact administrator.");
     }
   };
 
@@ -75,14 +75,14 @@ export default function LoginPage() {
 
       if (result?.error) {
         console.error("Sign in error:", result.error);
-        alert(`GitHub 登录失败: ${result.error}`);
+        alert(`GitHub login failed: ${result.error}`);
       } else if (result?.url) {
         console.log("Redirecting to:", result.url);
         window.location.href = result.url;
       }
     } catch (error) {
       console.error("Sign in error:", error);
-      alert("GitHub 登录失败，请检查网络连接或联系管理员。");
+      alert("GitHub login failed. Please check your network connection or contact administrator.");
     }
   };
 
@@ -96,7 +96,7 @@ export default function LoginPage() {
               StyleMe
             </h1>
             <p className="text-gray-600">
-              登录以访问您的个性化时尚助手
+              Sign in to access your personalized fashion assistant
             </p>
           </div>
 
@@ -109,7 +109,7 @@ export default function LoginPage() {
               size="lg"
             >
               <Chrome className="w-5 h-5" />
-              使用 Google 登录
+              Sign in with Google
             </Button>
 
             {/* GitHub Login Button */}
@@ -119,11 +119,11 @@ export default function LoginPage() {
               size="lg"
             >
               <Github className="w-5 h-5" />
-              使用 GitHub 登录
+              Sign in with GitHub
             </Button>
 
             <div className="text-xs text-gray-500">
-              登录后即可访问所有功能，包括AI造型师、个人风格档案等
+              After signing in, you can access all features including AI stylist, personal style profile, and more
             </div>
 
           </div>
@@ -131,24 +131,24 @@ export default function LoginPage() {
           {/* Features */}
           <div className="mt-8 pt-6 border-t border-gray-100">
             <h3 className="text-sm font-semibold text-gray-700 mb-4">
-              登录后您可以：
+              After signing in, you can:
             </h3>
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-pink-400 rounded-full"></div>
-                <span>与AI造型师对话</span>
+                <span>Chat with AI stylist</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                <span>查看个人风格档案</span>
+                <span>View personal style profile</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                <span>保存和管理您的造型</span>
+                <span>Save and manage your looks</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                <span>访问账户设置和余额</span>
+                <span>Access account settings and balance</span>
               </div>
             </div>
           </div>
