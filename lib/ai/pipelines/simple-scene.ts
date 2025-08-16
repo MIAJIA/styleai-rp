@@ -40,12 +40,12 @@ export async function executeSimpleScenePipelineV2(
   } catch (error) {
     if (error instanceof PolicyRiskError) {
       const imageUrls = await runVirtualTryOn(job.jobId, job.suggestionIndex, job.humanImage.url, job.garmentImage.url, job.garmentImage.name, job.garmentImage.type);
-      const stylizedImageUrl = await saveFinalImageToBlob(
+      const finalImageUrl = await saveFinalImageToBlob(
         imageUrls,
         `${job.jobId}-${job.suggestionIndex}-stylized-1` // Unique name
       );
 
-      return { imageUrls: ["error",stylizedImageUrl], finalPrompt: job.suggestion.styleSuggestion.image_prompt, stylizedImageUrls: [stylizedImageUrl] }
+      return { imageUrls: [finalImageUrl], finalPrompt: job.suggestion.styleSuggestion.image_prompt, stylizedImageUrls: ["error"] }
     }
     throw error;
   }
@@ -62,7 +62,6 @@ export async function executeSimpleScenePipelineV2(
       `${job.jobId}-${job.suggestionIndex}-stylized-${i + 1}` // Unique name
     );
     stylizedImageUrls.push(finalUrl);
-    finalImages.push(finalUrl);
   }
   // --- END NEW ---
 

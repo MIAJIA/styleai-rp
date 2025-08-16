@@ -122,21 +122,19 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       let contents = `${outfitDescription}\n\n${content}`
 
       let buttons: ButtonAction[] = []
-      let images = ["wait", "wait"]
+      let images = ["wait"]
 
       //  处理失败不显示图片
       if (suggestion.status == 'failed') {
         images = []
         contents = contents + "\n\n\n\n" + suggestion.error
-      } else if (suggestion.imageUrls) {
-        let imageUrls = suggestion.imageUrls
-        if (imageUrls && imageUrls.length > 0) {
-          if (imageUrls[0]) {
-            images[0] = imageUrls[0]
-          }
-          if (imageUrls[1]) {
-            images[1] = imageUrls[1]
-          }
+      } else if (suggestion.tryOnImageUrls||suggestion.stylizedImageUrls) {
+        if (suggestion.stylizedImageUrls && suggestion.stylizedImageUrls.length > 0) {
+            // images[0] = suggestion.stylizedImageUrls
+            // images[0]="error"
+        }
+        if (suggestion.tryOnImageUrls && suggestion.tryOnImageUrls.length > 0) {
+            images[0] = suggestion.tryOnImageUrls
         }
       }
 

@@ -148,6 +148,8 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
         status: 'succeeded',
         imageUrls: pipelineResult.imageUrls,
         finalPrompt: pipelineResult.finalPrompt,
+        stylizedImageUrls: pipelineResult.stylizedImageUrls?.[0]|| "error",
+        tryOnImageUrls: pipelineResult.imageUrls?.[0]|| "error",
       };
 
       // 检查是否所有suggestions都完成了
@@ -182,6 +184,8 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
         status: 'succeeded',
         imageUrls: pipelineResult.imageUrls,
         finalPrompt: pipelineResult.finalPrompt,
+        stylizedImageUrls: pipelineResult.stylizedImageUrls?.[0]|| "error",
+        tryOnImageUrls: pipelineResult.imageUrls?.[0]|| "error",
       };
 
       const allCompleted = job.suggestions.every(s => s.status === 'succeeded' || s.status === 'failed');
@@ -211,7 +215,7 @@ export async function runImageGenerationPipeline(jobId: string, suggestionIndex:
             humanImage: job.input.humanImage.url,
             garmentImage: job.input.garmentImage.url,
             finalImage: pipelineResult.imageUrls[0],
-            stylizedImageUrl: pipelineResult.imageUrls[1],
+            stylizedImageUrl: pipelineResult.stylizedImageUrls?.[0],
             styleSuggestion: job.suggestions[suggestionIndex]?.styleSuggestion,
             finalPrompt: pipelineResult.finalPrompt,
           },
