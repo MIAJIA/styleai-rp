@@ -25,6 +25,10 @@ export default function OnBoardingZero({ onValidationChange }: ZeroStepProps) {
         onValidationChange(true);
     }
 
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     const [messages, setMessages] = useState<Message[]>([
         {
             id: 1,
