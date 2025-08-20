@@ -46,6 +46,10 @@ export default function OnBoardingFour({ data,
     const [analysisComplete, setAnalysisComplete] = useState(false);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
 
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+    
     // useEffect(() => {
     //     if (data.aiAnalysis) {
     //         setAnalysisComplete(true);

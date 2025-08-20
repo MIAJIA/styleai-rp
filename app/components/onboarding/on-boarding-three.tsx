@@ -32,7 +32,10 @@ export default function OnBoardingThree({ data,
     const fullBodyInputRef = useRef<HTMLInputElement>(null);
     const [fullBodyPhoto, setFullBodyPhoto] = useState<string>("");
 
-
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+    
     useEffect(() => {
         // Try to load from data first
         if (data.fullBodyPhoto) {

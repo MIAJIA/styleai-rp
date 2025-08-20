@@ -9,6 +9,10 @@ import { StepProps } from "./on-boarding-step";
 
 export default function OnBoardingFirst({ data, onUpdate, onValidationChange }: StepProps) {
     const [selectedOption, setSelectedOption] = useState<string>("");
+    
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
 
     useEffect(() => {
         if (data.userGoal) {

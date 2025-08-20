@@ -209,6 +209,10 @@ export default function OnBoardingFive({ data, onUpdate, onValidationChange }: S
     const [selectedBodyStructure, setSelectedBodyStructure] = useState<string>(data.bodyStructure || "");
     const [selectedFaceShape, setSelectedFaceShape] = useState<string>(data.faceShape || "");
 
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+    
     // 当data更新时，同步状态
     useEffect(() => {
         setSelectedSkinTone(data.skinTone || "");

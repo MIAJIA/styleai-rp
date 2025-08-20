@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="h-full overflow-x-hidden" suppressHydrationWarning data-atm-ext-installed="1.29.10">
       <SessionProviderWrapper>
-        <main className="h-full pb-safe">{children}</main>
+        <main className="h-full pb-safe max-w-4xl mx-auto">{children}</main>
       </SessionProviderWrapper>
       </body>
     </html>

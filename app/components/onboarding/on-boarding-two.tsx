@@ -24,6 +24,10 @@ export default function OnBoardingTwo({
     const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
     const [isInitialized, setIsInitialized] = useState(false);
 
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     // Initialize selectedOptions from data
     useEffect(() => {
         if (data.stylePreferences && data.stylePreferences.length > 0) {
