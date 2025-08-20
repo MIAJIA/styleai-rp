@@ -72,9 +72,79 @@ export default function OnboardingPage() {
   }, []);
 
   const handleNext = async () => {
-    if (currentStep < TOTAL_STEPS - 1) {
+    if (currentStep < TOTAL_STEPS - 2) {
       setCurrentStep((prev) => prev === 3 ? 5 : prev + 1);
     } else {
+
+      const generateStructureCombination = () => {
+        // Generate structure combination based on body analysis and preferences
+        if (onboardingData.bodyAdvantages?.length) {
+          return `Highlighting ${onboardingData.bodyAdvantages[0].toLowerCase()}`;
+        }
+        return "Balanced proportions";
+      };
+    
+      const generateStyleLabels = () => {
+        const labels = [];
+    
+        // Based on style preferences
+        if (onboardingData.stylePreferences?.includes("elegant")) {
+          labels.push("Elegant and intellectual");
+        }
+        if (onboardingData.stylePreferences?.includes("cool")) {
+          labels.push("Cool and fashionable");
+        }
+        if (onboardingData.stylePreferences?.includes("fresh")) {
+          labels.push("Fresh and vibrant");
+        }
+        if (onboardingData.stylePreferences?.includes("minimalist")) {
+          labels.push("Clean and minimal");
+        }
+    
+        return labels.length > 0 ? labels : ["Unique personality", "Diverse style"];
+      };
+    
+      const generateRecommendedKeywords = () => {
+        const keywords = [];
+    
+        // Based on body advantages
+        if (onboardingData.bodyAdvantages?.includes("Slim waist")) {
+          keywords.push("High waistline");
+        }
+        if (onboardingData.bodyAdvantages?.includes("Long legs")) {
+          keywords.push("Crop top");
+        }
+        if (onboardingData.bodyAdvantages?.includes("Broad shoulders")) {
+          keywords.push("V-neck", "Statement sleeves");
+        }
+    
+        // Based on style preferences
+        if (onboardingData.stylePreferences?.includes("minimalist")) {
+          keywords.push("Simple lines", "Neutral tones");
+        }
+        if (onboardingData.stylePreferences?.includes("elegant")) {
+          keywords.push("Exquisite details", "Elegant tailoring");
+        }
+        if (onboardingData.stylePreferences?.includes("fresh")) {
+          keywords.push("Bright colors", "Lightweight fabrics");
+        }
+        if (onboardingData.stylePreferences?.includes("edgy")) {
+          keywords.push("Bold patterns", "Statement pieces");
+        }
+    
+        return keywords.length > 0 ? keywords : ["Individual expression", "Comfortable and at ease", "Fashion-forward"];
+      };
+    
+
+
+      const profile = {
+        structureCombination: generateStructureCombination(),
+        styleLabels: generateStyleLabels(),
+        recommendedKeywords: generateRecommendedKeywords(),
+      };
+
+      updateOnboardingData({ styleProfile: profile });
+
       // Complete onboarding with improved error handling
       try {
         setIsSaving(true);
