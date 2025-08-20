@@ -45,6 +45,13 @@ export default function OnboardingPage() {
   useEffect(() => {
     const completeData = loadCompleteOnboardingData();
     setOnboardingData(completeData);
+
+    if (session?.user && (session.user as { id?: string }).id) {
+      console.log("User is authenticated, redirecting to my-style");
+    }else{
+      console.log("User is not authenticated, staying on onboarding page");
+      setCurrentStep(0)
+    }
   }, []);
 
   // Save data whenever it changes with error handling
