@@ -4,21 +4,23 @@ import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { OnboardingData } from "@/lib/onboarding-storage";
+import { useRouter } from "next/router";
 
 interface StyleSummaryStepProps {
   data: OnboardingData;
   onUpdate: (data: Partial<OnboardingData>) => void;
   onValidationChange: (isValid: boolean) => void;
+  router: any;
 }
 
 export default function StyleSummaryStep({
   data,
   onUpdate,
   onValidationChange,
+  router
 }: StyleSummaryStepProps) {
   const [styleProfile, setStyleProfile] = useState(data.styleProfile || null);
   const [isGenerating, setIsGenerating] = useState(false);
-
   // Generate style profile based on collected data
   const generateStyleProfile = useCallback(() => {
     if (styleProfile || isGenerating) return;
@@ -36,6 +38,7 @@ export default function StyleSummaryStep({
       setStyleProfile(profile);
       onUpdate({ styleProfile: profile });
       setIsGenerating(false);
+      router.push("/");
     }, 2000);
   }, [styleProfile, isGenerating, onUpdate]);
 
