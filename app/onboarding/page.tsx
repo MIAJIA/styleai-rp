@@ -198,6 +198,7 @@ export default function OnboardingPage() {
             data={onboardingData}
             onUpdate={updateOnboardingData}
             onValidationChange={handleValidationChange}
+            router={router}
           />
         );
       default:
