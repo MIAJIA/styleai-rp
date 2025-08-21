@@ -48,7 +48,7 @@ export default function OnboardingPage() {
 
     if (session?.user && (session.user as { id?: string }).id) {
       console.log("User is authenticated, redirecting to my-style");
-    }else{
+    } else {
       console.log("User is not authenticated, staying on onboarding page");
       setCurrentStep(0)
     }
@@ -72,6 +72,14 @@ export default function OnboardingPage() {
   }, []);
 
   const handleNext = async () => {
+    if (session?.user && (session.user as { id?: string }).id) {
+      console.log("User is authenticated, redirecting to my-style");
+    } else {
+      console.log("User is not authenticated, staying on onboarding page");
+      setCurrentStep(0)
+      return
+    }
+
     if (currentStep < TOTAL_STEPS - 2) {
       setCurrentStep((prev) => prev === 3 ? 5 : prev + 1);
     } else {
@@ -83,10 +91,10 @@ export default function OnboardingPage() {
         }
         return "Balanced proportions";
       };
-    
+
       const generateStyleLabels = () => {
         const labels = [];
-    
+
         // Based on style preferences
         if (onboardingData.stylePreferences?.includes("elegant")) {
           labels.push("Elegant and intellectual");
@@ -100,13 +108,13 @@ export default function OnboardingPage() {
         if (onboardingData.stylePreferences?.includes("minimalist")) {
           labels.push("Clean and minimal");
         }
-    
+
         return labels.length > 0 ? labels : ["Unique personality", "Diverse style"];
       };
-    
+
       const generateRecommendedKeywords = () => {
         const keywords = [];
-    
+
         // Based on body advantages
         if (onboardingData.bodyAdvantages?.includes("Slim waist")) {
           keywords.push("High waistline");
@@ -117,7 +125,7 @@ export default function OnboardingPage() {
         if (onboardingData.bodyAdvantages?.includes("Broad shoulders")) {
           keywords.push("V-neck", "Statement sleeves");
         }
-    
+
         // Based on style preferences
         if (onboardingData.stylePreferences?.includes("minimalist")) {
           keywords.push("Simple lines", "Neutral tones");
@@ -131,10 +139,10 @@ export default function OnboardingPage() {
         if (onboardingData.stylePreferences?.includes("edgy")) {
           keywords.push("Bold patterns", "Statement pieces");
         }
-    
+
         return keywords.length > 0 ? keywords : ["Individual expression", "Comfortable and at ease", "Fashion-forward"];
       };
-    
+
 
 
       const profile = {
@@ -183,7 +191,7 @@ export default function OnboardingPage() {
         }
 
         router.push("/");
-      } catch (error) { 
+      } catch (error) {
         console.error("Error completing onboarding:", error);
         // Still try to navigate even if storage fails
         router.push("/");
@@ -196,7 +204,7 @@ export default function OnboardingPage() {
   const handlePrevious = () => {
     if (currentStep > 0) {
       setCurrentStep((prev) => prev === 5 ? 3 : prev - 1);
-    }else{
+    } else {
       router.push("/my-style");
     }
   };
@@ -338,7 +346,7 @@ export default function OnboardingPage() {
         guest: 'guest',
         redirect: false,
       })
-      
+
       if (result?.ok) {
         // router.push('/onboarding')
         // setCurrentStep(0)
@@ -348,7 +356,7 @@ export default function OnboardingPage() {
       }
     } catch (error) {
       console.error('Guest login error:', error)
-    } 
+    }
   }
   return (
     <div className="min-h-screen bg-gradient-to-br from-white-50 via-rose-50 to-orange-50 relative pb-32">
@@ -393,28 +401,28 @@ export default function OnboardingPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-white-100 p-6">
         <div className="max-w-md mx-auto">
           {session?.user && (session.user as { id?: string }).id ? (
-          <Button
-            onClick={handleNext}
-            disabled={!isStepValid || isSaving}
-            className="w-full h-12 bg-gradient-to-r from-white-500 to-rose-500 hover:from-white-600 hover:to-rose-600 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50"
-          >
-            <span className="flex items-center justify-center space-x-2">
-              {isSaving ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <span>{currentStep === TOTAL_STEPS - 1 ? "Complete Setup" : "Continue"}</span>
-                  {currentStep < TOTAL_STEPS - 1 && <ChevronRight className="w-4 h-4" />}
-                </>
-              )}
-            </span>
-          </Button>
+            <Button
+              onClick={handleNext}
+              disabled={!isStepValid || isSaving}
+              className="w-full h-12 bg-gradient-to-r from-white-500 to-rose-500 hover:from-white-600 hover:to-rose-600 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50"
+            >
+              <span className="flex items-center justify-center space-x-2">
+                {isSaving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{currentStep === TOTAL_STEPS - 1 ? "Complete Setup" : "Continue"}</span>
+                    {currentStep < TOTAL_STEPS - 1 && <ChevronRight className="w-4 h-4" />}
+                  </>
+                )}
+              </span>
+            </Button>
           ) : (
             <>
-            <Button
+              <Button
                 onClick={handleGoogleLogin}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-3"
                 size="lg"
