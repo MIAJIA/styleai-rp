@@ -46,13 +46,16 @@ export default function OnboardingPage() {
     const completeData = loadCompleteOnboardingData();
     setOnboardingData(completeData);
 
+  }, []);
+
+  useEffect(() => {
     if (session?.user && (session.user as { id?: string }).id) {
       console.log("User is authenticated, redirecting to my-style");
     } else {
       console.log("User is not authenticated, staying on onboarding page");
       setCurrentStep(0)
     }
-  }, []);
+  });
 
   // Save data whenever it changes with error handling
   useEffect(() => {
@@ -72,13 +75,6 @@ export default function OnboardingPage() {
   }, []);
 
   const handleNext = async () => {
-    if (session?.user && (session.user as { id?: string }).id) {
-      console.log("User is authenticated, redirecting to my-style");
-    } else {
-      console.log("User is not authenticated, staying on onboarding page");
-      setCurrentStep(0)
-      return
-    }
 
     if (currentStep < TOTAL_STEPS - 2) {
       setCurrentStep((prev) => prev === 3 ? 5 : prev + 1);
