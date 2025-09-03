@@ -8,7 +8,8 @@ import { OnboardingData } from '@/lib/onboarding-storage';
 import { kv } from '@vercel/kv';
 import { getOnboardingDataFromDB, PastLook, saveLookToDB } from '@/lib/database';
 import { getStyleSuggestionFromAI } from '@/lib/ai';
-import { KlingTaskHandler } from '@/lib/ai/services/klingTask';
+import { getProvider } from '@/lib/ai/providers';
+import { ProviderId } from '@/lib/ai/providers/types';
 
 const MAX_USER_JOBS = process.env.MAX_USER_JOBS ? parseInt(process.env.MAX_USER_JOBS) : 10;
 const JOB_LIMIT_KEY = 'job_limit_key';
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
 
         jobId = formData.get('job_id') as string ||'';
         suggestionIndex = formData.get('suggestion_index') as unknown as number || 0;
+        const providerFromForm = formData.get('generation_provider') as ProviderId | null;
 
         if (jobId && suggestionIndex) {
             // 🔍 PERF_LOG: 现有Job获取
@@ -202,30 +204,28 @@ export async function POST(request: NextRequest) {
 
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify(progressData2)}\n\n`));
 
-                    // 🔍 PERF_LOG: 3. 生成风格建议图片
-                    const stylizationStartTime = logPerfStep("Kling stylization task", jobId, undefined);
-                    const klingTaskHandler = new KlingTaskHandler(newJob, suggestionIndex);
-                    const stylizedImageUrl = await klingTaskHandler.runStylizationMultiple("kling-v1-5");
-                    logPerfStep("Kling stylization task", jobId, stylizationStartTime);
+                    // 🔀 通过 Provider 执行（第一阶段仍为 KlingProvider）
+                    const providerId: ProviderId = providerFromForm || (process.env.IMAGE_PROVIDER as ProviderId) || 'kling';
+                    const provider = getProvider(providerId);
 
-                    const progressData3 = {
-                        type: 'api_stylization_success',
-                        message: stylizedImageUrl,
-                        timestamp: new Date().toISOString()
+                    const emitSse = (evt: any) => {
+                        // 兼容现有事件命名
+                        if (evt.step === 'stylize_done') {
+                            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'api_stylization_success', message: evt.message, timestamp: new Date().toISOString() })}\n\n`));
+                        } else if (evt.step === 'tryon_done') {
+                            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'api_tryon_success', message: evt.message, timestamp: new Date().toISOString() })}\n\n`));
+                        }
                     };
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(progressData3)}\n\n`));
 
-                    // 🔍 PERF_LOG: 4. 生成虚拟穿搭图片
-                    const tryOnStartTime = logPerfStep("Kling virtual try-on task", jobId, undefined);
-                    const tryOnImageUrls = await klingTaskHandler.runVirtualTryOnMultiple();
-                    logPerfStep("Kling virtual try-on task", jobId, tryOnStartTime);
-
-                    const progressData4 = {
-                        type: 'api_tryon_success',
-                        message: tryOnImageUrls,
-                        timestamp: new Date().toISOString()
-                    };
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(progressData4)}\n\n`));
+                    const result = await provider.generateFinalImages({
+                        jobId,
+                        suggestionIndex,
+                        humanImage: newJob.input.humanImage,
+                        garmentImage: newJob.input.garmentImage,
+                        suggestion: newJob.suggestions[suggestionIndex],
+                        userId,
+                        job: newJob,
+                    }, emitSse);
 
                     // 🔍 PERF_LOG: Job limit 更新
                     const jobLimitUpdateStartTime = logPerfStep("Job limit counter update", jobId, undefined);
@@ -351,7 +351,6 @@ async function getUserActiveJobCount(jobLimitKey: string): Promise<number> {
         return 0;
     }
 }
-
 
 async function getApiStyleSuggestion(job: Job, session: Session) {
     // 🔍 PERF_LOG: 获取用户资料
