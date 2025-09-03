@@ -209,11 +209,18 @@ export async function POST(request: NextRequest) {
                     const provider = getProvider(providerId);
 
                     const emitSse = (evt: any) => {
-                        // 兼容现有事件命名
+                        // 兼容现有事件命名（KlingProvider）
                         if (evt.step === 'stylize_done') {
                             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'api_stylization_success', message: evt.message, timestamp: new Date().toISOString() })}\n\n`));
-                        } else if (evt.step === 'tryon_done') {
+                            return;
+                        }
+                        if (evt.step === 'tryon_done') {
                             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'api_tryon_success', message: evt.message, timestamp: new Date().toISOString() })}\n\n`));
+                            return;
+                        }
+                        // 通用事件回退（GeminiProvider 主要触发）
+                        if (evt.step === 'submit' || evt.step === 'poll' || evt.step === 'save' || evt.step === 'done' || evt.step === 'init') {
+                            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'provider_progress', message: evt.step, timestamp: new Date().toISOString() })}\n\n`));
                         }
                     };
 
