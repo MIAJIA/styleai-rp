@@ -20,6 +20,11 @@ const publicRoutes = [
   "/favicon.ico",
 ];
 
+// 特别指定的公开API路由（确保不需要鉴权）
+const publicApiRoutes = [
+  "/api/apple",
+];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
@@ -28,8 +33,13 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
   
-  // 如果是公开路由，直接通过
-  if (isPublicRoute) {
+  // 检查是否是特别指定的公开API路由
+  const isPublicApiRoute = publicApiRoutes.some(route => 
+    pathname.startsWith(route)
+  );
+  
+  // 如果是公开路由或特别指定的公开API路由，直接通过
+  if (isPublicRoute || isPublicApiRoute) {
     return NextResponse.next();
   }
   
