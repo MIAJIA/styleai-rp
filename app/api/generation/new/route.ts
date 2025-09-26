@@ -107,6 +107,8 @@ export async function POST(request: NextRequest) {
                     generationMode,
                     occasion,
                     userProfile,
+                    // 持久化前端选择的 provider，供后续 status 守卫判断
+                    provider: (providerFromForm || (process.env.IMAGE_PROVIDER as ProviderId) || 'kling') as any,
                     customPrompt: customPrompt?.trim() || undefined,
                     stylePrompt: stylePrompt?.trim() || undefined, // 🔍 新增：存储 style_prompt
                 },
@@ -141,151 +143,62 @@ export async function POST(request: NextRequest) {
         logPerfStep("Pipeline lock check", jobId, pipelineLockStartTime);
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔒 Pipeline lock set for suggestion ${suggestionIndex}`);
 
-        // 🔍 PERF_LOG: SSE Stream 创建开始
-        const sseStreamStartTime = logPerfStep("SSE Stream creation", jobId, undefined);
+        // 直接执行 Provider，并以 JSON 返回（不使用 SSE）
+        // 🔍 PERF_LOG: 1. 任务创建成功
+        const jobSaveStartTime = logPerfStep("Job save to KV", jobId, undefined);
+        await kv.set(jobId, newJob);
+        logPerfStep("Job save to KV", jobId, jobSaveStartTime);
 
-        // 创建SSE响应
-        const encoder = new TextEncoder();
-        const stream = new ReadableStream({
-            async start(controller) {
-                // 🔍 PERF_LOG: SSE连接建立
-                logPerfStep("SSE Stream creation", jobId, sseStreamStartTime);
-                const connectionEstablishedTime = logPerfStep("SSE connection establishment", jobId, undefined);
+        if (suggestionIndex == 0) {
+            // 🔍 PERF_LOG: 2. 获取AI风格建议
+            const styleSuggestionStartTime = logPerfStep("AI style suggestion generation", jobId, undefined);
+            await getApiStyleSuggestion(newJob, session);
+            logPerfStep("AI style suggestion generation", jobId, styleSuggestionStartTime);
+        }
 
-                // 发送连接建立消息
-                controller.enqueue(encoder.encode('data: {"type": "connected", "message": "SSE connection established"}\n\n'));
-                logPerfStep("SSE connection establishment", jobId, connectionEstablishedTime);
+        // 🔀 通过 Provider 执行
+        const providerId: ProviderId = providerFromForm || (process.env.IMAGE_PROVIDER as ProviderId) || 'kling';
+        console.log(`[PROVIDER_SELECTION] Using provider: ${providerId}`);
+        const provider = getProvider(providerId);
 
-                // 监听连接关闭事件
-                const handleConnectionClose = () => {
-                    console.log(`[SSE_CONNECTION] Client disconnected for job ${jobId.slice(-8)}`);
-                    kv.del(pipelineLockKey);
-                    console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔒 Pipeline lock deleted due to connection close`);
-                    controller.close();
-                };
+        const emitProgress = (evt: any) => {
+            console.log(`[PROVIDER_PROGRESS] ${evt.step}: ${evt.message || ''}`);
+        };
 
-                // 监听请求中断信号
-                request.signal.addEventListener('abort', () => {
-                    console.log(`[SSE_CONNECTION] Request aborted for job ${jobId.slice(-8)}`);
-                    handleConnectionClose();
-                });
+        const result = await provider.generateFinalImages({
+            jobId,
+            suggestionIndex,
+            humanImage: newJob.input.humanImage,
+            garmentImage: newJob.input.garmentImage,
+            suggestion: newJob.suggestions[suggestionIndex],
+            userId,
+            job: newJob,
+        }, emitProgress);
 
-                // 监听客户端断开连接
-                request.signal.addEventListener('close', () => {
-                    console.log(`[SSE_CONNECTION] Request closed for job ${jobId.slice(-8)}`);
-                    handleConnectionClose();
-                });
+        // 🔍 PERF_LOG: Job limit 更新
+        const jobLimitUpdateStartTime = logPerfStep("Job limit counter update", jobId, undefined);
+        await kv.incr(jobLimitKey);
+        logPerfStep("Job limit counter update", jobId, jobLimitUpdateStartTime);
 
-                try {
-                    // 🔍 PERF_LOG: 1. 任务创建成功
-                    const jobSaveStartTime = logPerfStep("Job save to KV", jobId, undefined);
-                    kv.set(jobId, newJob);
-                    logPerfStep("Job save to KV", jobId, jobSaveStartTime);
+        // 🔍 PERF_LOG: 保存 Look 到数据库
+        const saveLookStartTime = logPerfStep("Save look to database", jobId, undefined);
+        await saveLook(newJob, suggestionIndex);
+        logPerfStep("Save look to database", jobId, saveLookStartTime);
 
-                    const progressData1 = {
-                        type: 'create_job_success',
-                        message: jobId,
-                        timestamp: new Date().toISOString()
-                    };
+        // 🔍 PERF_LOG: 清理资源
+        const cleanupStartTime = logPerfStep("Pipeline cleanup", jobId, undefined);
+        await kv.del(pipelineLockKey);
+        logPerfStep("Pipeline cleanup", jobId, cleanupStartTime);
 
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(progressData1)}\n\n`));
+        // 🔍 PERF_LOG: 整个请求完成
+        const totalElapsed = Date.now() - requestStartTime;
+        console.log(`[PERF_LOG | Job ${jobId.slice(-8)}] 🎉 ENTIRE PIPELINE COMPLETED - Total elapsed: ${totalElapsed}ms`);
+        console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ✅ Generation completed successfully`);
 
-                    if (suggestionIndex == 0) {
-                        // 🔍 PERF_LOG: 2. 获取AI风格建议
-                        const styleSuggestionStartTime = logPerfStep("AI style suggestion generation", jobId, undefined);
-                        await getApiStyleSuggestion(newJob, session);
-                        logPerfStep("AI style suggestion generation", jobId, styleSuggestionStartTime);
-                    }
-                    const progressData2 = {
-                        type: 'api_style_suggestion_success',
-                        message: newJob.suggestions[suggestionIndex].styleSuggestion,
-                        timestamp: new Date().toISOString()
-                    };
-
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(progressData2)}\n\n`));
-
-                    // 🔀 通过 Provider 执行（第一阶段仍为 KlingProvider）
-                    const providerId: ProviderId = providerFromForm || (process.env.IMAGE_PROVIDER as ProviderId) || 'kling';
-                    const provider = getProvider(providerId);
-
-                    const emitSse = (evt: any) => {
-                        // 兼容现有事件命名（KlingProvider）
-                        if (evt.step === 'stylize_done') {
-                            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'api_stylization_success', message: evt.message, timestamp: new Date().toISOString() })}\n\n`));
-                            return;
-                        }
-                        if (evt.step === 'tryon_done') {
-                            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'api_tryon_success', message: evt.message, timestamp: new Date().toISOString() })}\n\n`));
-                            return;
-                        }
-                        // 通用事件回退（GeminiProvider 主要触发）
-                        if (evt.step === 'submit' || evt.step === 'poll' || evt.step === 'save' || evt.step === 'done' || evt.step === 'init') {
-                            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'provider_progress', message: evt.step, timestamp: new Date().toISOString() })}\n\n`));
-                        }
-                    };
-
-                    const result = await provider.generateFinalImages({
-                        jobId,
-                        suggestionIndex,
-                        humanImage: newJob.input.humanImage,
-                        garmentImage: newJob.input.garmentImage,
-                        suggestion: newJob.suggestions[suggestionIndex],
-                        userId,
-                        job: newJob,
-                    }, emitSse);
-
-                    // 🔍 PERF_LOG: Job limit 更新
-                    const jobLimitUpdateStartTime = logPerfStep("Job limit counter update", jobId, undefined);
-                    await kv.incr(jobLimitKey);
-                    logPerfStep("Job limit counter update", jobId, jobLimitUpdateStartTime);
-
-                    // 🔍 PERF_LOG: 保存 Look 到数据库
-                    const saveLookStartTime = logPerfStep("Save look to database", jobId, undefined);
-                    await saveLook(newJob, suggestionIndex);
-                    logPerfStep("Save look to database", jobId, saveLookStartTime);
-
-                    // 🔍 PERF_LOG: 清理资源
-                    const cleanupStartTime = logPerfStep("Pipeline cleanup", jobId, undefined);
-                    kv.del(pipelineLockKey);
-                    logPerfStep("Pipeline cleanup", jobId, cleanupStartTime);
-
-                    // 🔍 PERF_LOG: 整个请求完成
-                    const totalElapsed = Date.now() - requestStartTime;
-                    console.log(`[PERF_LOG | Job ${jobId.slice(-8)}] 🎉 ENTIRE PIPELINE COMPLETED - Total elapsed: ${totalElapsed}ms`);
-                    console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ✅ Generation completed successfully`);
-                } catch (error) {
-                    console.error(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] ❌ Error during generation:`, error);
-
-                    // 🔍 PERF_LOG: 错误处理
-                    const errorElapsed = Date.now() - requestStartTime;
-                    console.log(`[PERF_LOG | Job ${jobId.slice(-8)}] ❌ PIPELINE FAILED - Total elapsed before error: ${errorElapsed}ms`);
-
-                    // 发送错误消息
-                    const errorData = {
-                        type: 'generation_error',
-                        message: error instanceof Error ? error.message : 'Unknown error occurred',
-                        timestamp: new Date().toISOString()
-                    };
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorData)}\n\n`));
-
-                    // 清理资源
-                    kv.del(pipelineLockKey);
-                } finally {
-                    // 确保连接关闭
-                    controller.close();
-                }
-            }
-        });
-
-        return new NextResponse(stream, {
-            headers: {
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type',
-            },
+        return NextResponse.json({
+            jobId,
+            status: 'success',
+            message: 'Generation completed successfully'
         });
 
     } catch (error) {

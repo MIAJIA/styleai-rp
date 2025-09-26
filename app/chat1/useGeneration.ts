@@ -344,43 +344,30 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
     }
 
     try {
-      // Upload files using Vercel Blob client
-      const [selfieBlob, clothingBlob] = await Promise.all([
-        upload(selfieFile.name, selfieFile, {
-          access: 'public',
-          handleUploadUrl: '/api/blob/upload',
-        }),
-        upload(clothingFile.name, clothingFile, {
-          access: 'public',
-          handleUploadUrl: '/api/blob/upload',
-        })
-      ]);
+      // 使用 FormData 直接上传原始文件，由后端负责存储
+      const formData = new FormData();
+      formData.append("human_image", selfieFile);
+      formData.append("garment_image", clothingFile);
+      formData.append("occasion", chatData.occasion);
+      formData.append("generation_mode", chatData.generationMode);
 
-      // Prepare request data
-      const requestData = {
-        human_image: {
-          url: selfieBlob.url,
-          type: selfieFile.type,
-          name: selfieFile.name
-        },
-        garment_image: {
-          url: clothingBlob.url,
-          type: clothingFile.type,
-          name: clothingFile.name
-        },
-        occasion: chatData.occasion,
-        generation_mode: chatData.generationMode,
-        user_profile: loadCompleteOnboardingData(),
-        custom_prompt: chatData.customPrompt?.trim() || undefined,
-        style_prompt: stylePrompts[chatData.occasion as keyof typeof stylePrompts] || undefined,
-      };
+      const onboardingData = loadCompleteOnboardingData();
+      if (onboardingData) {
+        formData.append("user_profile", JSON.stringify(onboardingData));
+      }
+      if (chatData.customPrompt && chatData.customPrompt.trim()) {
+        formData.append("custom_prompt", chatData.customPrompt.trim());
+      }
+      if (stylePrompts[chatData.occasion as keyof typeof stylePrompts]) {
+        formData.append("style_prompt", stylePrompts[chatData.occasion as keyof typeof stylePrompts]);
+      }
 
-      const response = await fetch("/api/generation/start", {
+      // 指定使用 Gemini provider
+      formData.append("generation_provider", "gemini");
+
+      const response = await fetch("/api/generation/new", {
         method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
+        body: formData,
       });
       if (!response.ok) {
         let errorDetails = "An unknown error occurred.";
@@ -393,19 +380,17 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
           // If the response is not JSON, use the text content from the cloned response
           errorDetails = await clonedResponse.text();
         }
-        throw new Error(
-          `Failed to start generation. Server responded with ${response.status}: ${errorDetails}`
-        );
+        throw new Error(`Failed to start generation. Server responded with ${response.status}: ${errorDetails}`);
       }
 
       const result = await response.json();
       const endTime = Date.now();
       console.log(`[FE_PERF_LOG | startGeneration] API call successful. JobId received. Total time: ${endTime - startTime}ms.`);
 
-      console.log("[useGeneration | startGeneration]  получили  получили jobId:", result.jobId, ". Triggering polling.");
-      setIsPolling(true)
+      console.log(`[FE_PERF_LOG | startGeneration] Job ID received: ${result.jobId}`);
       setJobId(result.jobId);
-      updateMessageProgress(steps[2])
+      setCurrentSuggestionIndex(0);
+      setIsPolling(true);
     } catch (error: any) {
       const errorMessage =
         error.message || "An unexpected error occurred while starting the generation."

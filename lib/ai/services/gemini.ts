@@ -1,65 +1,128 @@
 import { fetchWithTimeout, urlToFile, fileToBase64 } from "../utils";
 
-const GEMINI_API_URL = process.env.GEMINI_API_URL || "";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image-preview';
 
 export interface GeminiGenerateParams {
   prompt: string;
   humanImageUrl: string;
+  humanImageName: string;
+  humanImageType: string;
   garmentImageUrl?: string;
   garmentImageName?: string;
   garmentImageType?: string;
 }
 
 export async function generateFinalImagesWithGemini(params: GeminiGenerateParams): Promise<string[]> {
-  if (process.env.MOCK_GEMINI === 'true' || !GEMINI_API_URL || !GEMINI_API_KEY) {
+  console.log('🤖 [GEMINI_SERVICE] ===== GEMINI API CALL STARTED =====');
+  console.log('🤖 [GEMINI_SERVICE] 🔧 Environment check:');
+  console.log('🤖 [GEMINI_SERVICE] 🔧 - MOCK_GEMINI:', process.env.MOCK_GEMINI);
+  console.log('🤖 [GEMINI_SERVICE] 🔧 - GEMINI_API_KEY:', GEMINI_API_KEY ? 'SET' : 'MISSING');
+  console.log('🤖 [GEMINI_SERVICE] 🔧 - GEMINI_IMAGE_MODEL:', GEMINI_IMAGE_MODEL);
+  
+  console.log('🤖 [GEMINI_SERVICE] 📝 Input parameters:');
+  console.log('🤖 [GEMINI_SERVICE] 📝 - Prompt length:', params.prompt?.length || 0);
+  console.log('🤖 [GEMINI_SERVICE] 📝 - Human image URL:', params.humanImageUrl?.substring(0, 100) + '...');
+  console.log('🤖 [GEMINI_SERVICE] 📝 - Garment image URL:', params.garmentImageUrl?.substring(0, 100) + '...' || 'N/A');
+  
+  console.log('🤖 [GEMINI_SERVICE] ===== COMPLETE PROMPT =====');
+  console.log('🤖 [GEMINI_SERVICE] 📄 PROMPT:', params.prompt);
+  console.log('🤖 [GEMINI_SERVICE] ===== END PROMPT =====');
+
+  if (process.env.MOCK_GEMINI === 'true' || !GEMINI_API_KEY) {
+    console.log('🤖 [GEMINI_SERVICE] 🎭 Using MOCK mode - returning placeholder image');
     // Minimal mock data URI to avoid network
     return [
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU77hQAAAABJRU5ErkJggg=="
     ];
   }
 
-  // Prepare optional garment image as base64 if provided
+  // Prepare images as base64 inline_data
+  console.log('🤖 [GEMINI_SERVICE] 🔄 Converting images to base64...');
+  const humanImageBase64 = await urlToFile(params.humanImageUrl, params.humanImageName, params.humanImageType).then(fileToBase64);
+  console.log('🤖 [GEMINI_SERVICE] 🔄 Human image converted, size:', humanImageBase64.length, 'chars');
+  
   let garmentImageBase64: string | undefined = undefined;
   if (params.garmentImageUrl && params.garmentImageName && params.garmentImageType) {
     garmentImageBase64 = await urlToFile(params.garmentImageUrl, params.garmentImageName, params.garmentImageType).then(fileToBase64);
+    console.log('🤖 [GEMINI_SERVICE] 🔄 Garment image converted, size:', garmentImageBase64?.length || 0, 'chars');
   }
 
-  const body: Record<string, unknown> = {
-    prompt: params.prompt,
-    human_image_url: params.humanImageUrl,
-  };
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  console.log('🤖 [GEMINI_SERVICE] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
+
+  const parts: any[] = [
+    { text: params.prompt },
+    { inline_data: { mime_type: params.humanImageType, data: humanImageBase64 } },
+  ];
   if (garmentImageBase64) {
-    body["garment_image_base64"] = garmentImageBase64;
+    parts.push({ inline_data: { mime_type: params.garmentImageType, data: garmentImageBase64 } });
   }
 
-  const resp = await fetchWithTimeout(GEMINI_API_URL, {
+  const body = {
+    contents: [ { parts } ],
+    generationConfig: { responseModalities: ["IMAGE"] }
+  };
+  
+  console.log('🤖 [GEMINI_SERVICE] 📦 Request body structure:');
+  console.log('🤖 [GEMINI_SERVICE] 📦 - Contents count:', body.contents.length);
+  console.log('🤖 [GEMINI_SERVICE] 📦 - Parts count:', parts.length);
+  console.log('🤖 [GEMINI_SERVICE] 📦 - Response modalities:', body.generationConfig.responseModalities);
+  console.log('🤖 [GEMINI_SERVICE] 📦 - Parts types:', parts.map(p => Object.keys(p)).join(', '));
+
+  console.log('🤖 [GEMINI_SERVICE] 🚀 Sending request to Gemini API...');
+  const resp = await fetchWithTimeout(endpoint, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${GEMINI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-    timeout: 120000,
+    timeout: 180000,
   });
+
+  console.log('🤖 [GEMINI_SERVICE] 📡 Response received:');
+  console.log('🤖 [GEMINI_SERVICE] 📡 - Status:', resp.status);
+  console.log('🤖 [GEMINI_SERVICE] 📡 - Status text:', resp.statusText);
+  console.log('🤖 [GEMINI_SERVICE] 📡 - OK:', resp.ok);
 
   if (!resp.ok) {
     const text = await resp.text();
+    console.log('🤖 [GEMINI_SERVICE] ❌ Error response body:', text);
     throw new Error(`Gemini API error: ${resp.status} ${text}`);
   }
 
   const data = await resp.json();
-  // Expecting { images: [{ url: string }, ...] } or { url: string }
-  let urls: string[] = [];
-  if (Array.isArray(data?.images)) {
-    urls = data.images.map((x: any) => x.url).filter(Boolean);
-  } else if (data?.url) {
-    urls = [data.url];
+  console.log('🤖 [GEMINI_SERVICE] 📥 Success response received');
+  console.log('🤖 [GEMINI_SERVICE] 📥 Response keys:', Object.keys(data));
+  // Extract inline image data from candidates[0].content.parts[*].inlineData/inline_data
+  console.log('🤖 [GEMINI_SERVICE] 🔍 Parsing response for images...');
+  const candidates = data?.candidates || [];
+  console.log('🤖 [GEMINI_SERVICE] 🔍 Candidates count:', candidates.length);
+  
+  const images: string[] = [];
+  for (const c of candidates) {
+    const parts = c?.content?.parts || [];
+    console.log('🤖 [GEMINI_SERVICE] 🔍 Parts in candidate:', parts.length);
+    
+    for (const p of parts) {
+      const inline = p.inlineData || p.inline_data;
+      if (inline?.data) {
+        const mime = inline.mimeType || inline.mime_type || 'image/png';
+        images.push(`data:${mime};base64,${inline.data}`);
+        console.log('🤖 [GEMINI_SERVICE] 🔍 Found image, mime type:', mime);
+        console.log('🤖 [GEMINI_SERVICE] 🔍 Image data length:', inline.data.length, 'chars');
+      }
+    }
   }
-  if (!urls.length) {
-    throw new Error("Gemini API returned no images");
+  
+  console.log('🤖 [GEMINI_SERVICE] ✅ Total images extracted:', images.length);
+  
+  if (!images.length) {
+    console.log('🤖 [GEMINI_SERVICE] ❌ No images found in response');
+    console.log('🤖 [GEMINI_SERVICE] ❌ Full response data:', JSON.stringify(data, null, 2));
+    throw new Error("Gemini API returned no inline images");
   }
-  return urls;
+  
+  console.log('🤖 [GEMINI_SERVICE] ===== GEMINI API CALL COMPLETED =====');
+  return images;
 }
 
 

@@ -119,8 +119,11 @@ export async function GET(request: NextRequest) {
         await kv.set(job.jobId, job);
         lastStepTime = Date.now();
         console.log(`XXX 244 - since start ${Date.now() - startTime}ms, since last step=${Date.now() - lastStepTime}ms`);
-        // 立即启动pipeline
+        // 立即启动pipeline（仅在选择 Kling 时）
+        const selectedProvider = (job as any)?.input?.provider || (process.env.IMAGE_PROVIDER || 'kling');
+        if (selectedProvider === 'kling') {
         runImageGenerationPipeline(job.jobId, 0);
+        }
         // console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🚀 Pipeline started in background for suggestion 0.`);
         lastStepTime = Date.now();
         console.log(`XXX 255 - since start ${Date.now() - startTime}ms, since last step=${Date.now() - lastStepTime}ms`);
@@ -151,8 +154,11 @@ export async function GET(request: NextRequest) {
       // 🔍 NEW: Pipeline trigger logging
       // console.log(`[API_STATUS | Job ${job.jobId.slice(-8)}] 🚀 About to start pipeline in background...`);
 
-      // Start the pipeline in the background.
+      // Start the pipeline in the background（仅在选择 Kling 时）。
+      const selectedProvider = (job as any)?.input?.provider || (process.env.IMAGE_PROVIDER || 'kling');
+      if (selectedProvider === 'kling') {
       runImageGenerationPipeline(job.jobId, suggestionIndex);
+      }
       lastStepTime = Date.now();
       console.log(`XXX 288 - since start ${Date.now() - startTime}ms, since last step=${Date.now() - lastStepTime}ms`);
 
