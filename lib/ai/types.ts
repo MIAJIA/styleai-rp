@@ -1,6 +1,7 @@
 import { z } from "zod";
 import zodToJsonSchema from "zod-to-json-schema";
 import { type OnboardingData } from "@/lib/onboarding-storage";
+import { ProviderId } from "./providers/types";
 
 // Zod schema for structured output, matching the format in lib/prompts.ts
 export const itemDetailSchema = z.object({
@@ -96,6 +97,7 @@ export interface Job {
     generationMode: GenerationMode;
     occasion: string;
     userProfile?: any;
+    provider?: ProviderId;
     customPrompt?: string;
     stylePrompt?: string; // 🔍 新增：场景风格提示
   };

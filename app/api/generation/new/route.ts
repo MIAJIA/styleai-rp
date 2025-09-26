@@ -107,6 +107,8 @@ export async function POST(request: NextRequest) {
                     generationMode,
                     occasion,
                     userProfile,
+                    // 持久化前端选择的 provider，供后续 status 守卫判断
+                    provider: (providerFromForm || (process.env.IMAGE_PROVIDER as ProviderId) || 'kling') as any,
                     customPrompt: customPrompt?.trim() || undefined,
                     stylePrompt: stylePrompt?.trim() || undefined, // 🔍 新增：存储 style_prompt
                 },
@@ -141,6 +143,7 @@ export async function POST(request: NextRequest) {
         logPerfStep("Pipeline lock check", jobId, pipelineLockStartTime);
         console.log(`[PIPELINE_RUNNER | Job ${jobId.slice(-8)}] 🔒 Pipeline lock set for suggestion ${suggestionIndex}`);
 
+        // 直接执行 Provider，并以 JSON 返回（不使用 SSE）
         // 🔍 PERF_LOG: 1. 任务创建成功
         const jobSaveStartTime = logPerfStep("Job save to KV", jobId, undefined);
         await kv.set(jobId, newJob);

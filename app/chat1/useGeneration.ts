@@ -344,28 +344,25 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
     }
 
     try {
-      // 直接使用 FormData，新接口会处理上传
+      // 使用 FormData 直接上传原始文件，由后端负责存储
       const formData = new FormData();
       formData.append("human_image", selfieFile);
       formData.append("garment_image", clothingFile);
       formData.append("occasion", chatData.occasion);
       formData.append("generation_mode", chatData.generationMode);
-      
+
       const onboardingData = loadCompleteOnboardingData();
       if (onboardingData) {
         formData.append("user_profile", JSON.stringify(onboardingData));
       }
-      
       if (chatData.customPrompt && chatData.customPrompt.trim()) {
         formData.append("custom_prompt", chatData.customPrompt.trim());
       }
       if (stylePrompts[chatData.occasion as keyof typeof stylePrompts]) {
         formData.append("style_prompt", stylePrompts[chatData.occasion as keyof typeof stylePrompts]);
       }
-      
-      // 添加 provider 参数支持 Gemini
+      // 指定使用 Gemini provider
       formData.append("generation_provider", "gemini");
-
       const response = await fetch("/api/generation/new", {
         method: "POST",
         body: formData,
@@ -386,7 +383,8 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       const endTime = Date.now();
       console.log(`[FE_PERF_LOG | startGeneration] API call successful. Elapsed: ${endTime - startTime}ms.`);
       console.log(`[FE_PERF_LOG | startGeneration] Job ID received: ${result.jobId}`);
-
+      
+      console.log(`[FE_PERF_LOG | startGeneration] Job ID received: ${result.jobId}`);
       setJobId(result.jobId);
       setCurrentSuggestionIndex(0);
       setIsPolling(true);
