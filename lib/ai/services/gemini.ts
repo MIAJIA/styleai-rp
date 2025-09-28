@@ -1,4 +1,5 @@
 import { fetchWithTimeout, urlToFile, fileToBase64 } from "../utils";
+import { put } from '@vercel/blob';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image-preview';
@@ -11,6 +12,7 @@ export interface GeminiGenerateParams {
   garmentImageUrl?: string;
   garmentImageName?: string;
   garmentImageType?: string;
+  userId?: string;
 }
 
 export async function generateFinalImagesWithGemini(params: GeminiGenerateParams): Promise<string[]> {
@@ -121,8 +123,36 @@ export async function generateFinalImagesWithGemini(params: GeminiGenerateParams
     throw new Error("Gemini API returned no inline images");
   }
   
+  // Save images to Vercel Blob storage
+  console.log('🤖 [GEMINI_SERVICE] 💾 Saving images to Vercel Blob storage...');
+  const userId = params.userId || 'anonymous';
+  const savedUrls: string[] = [];
+  const savedPaths: string[] = [];
+  
+  for (let i = 0; i < images.length; i++) {
+    const imageData = images[i];
+    const base64Data = imageData.split(',')[1]; // Remove data:image/...;base64, prefix
+    const buffer = Buffer.from(base64Data, 'base64');
+    const fileName = `gemini_${Date.now()}_${i}.png`;
+    
+    try {
+      const blob = await put(`app/users/${userId}/gemini_${fileName}`, buffer, { 
+        access: 'public', 
+        addRandomSuffix: false 
+      });
+      
+      savedUrls.push(blob.url);
+      savedPaths.push(`/api/apple/upload?key=gemini_${fileName}`);
+      
+      console.log('🤖 [GEMINI_SERVICE] 💾 Image saved:', blob.url);
+    } catch (error) {
+      console.error('🤖 [GEMINI_SERVICE] ❌ Failed to save image:', error);
+      throw new Error(`Failed to save image ${i + 1} to Vercel Blob: ${error}`);
+    }
+  }
+  
   console.log('🤖 [GEMINI_SERVICE] ===== GEMINI API CALL COMPLETED =====');
-  return images;
+  return savedUrls;
 }
 
 
