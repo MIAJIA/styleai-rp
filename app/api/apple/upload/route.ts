@@ -1,4 +1,4 @@
-import { put } from '@vercel/blob';
+import { put, del } from '@vercel/blob';
 
 export async function POST(request: Request) {
 
@@ -11,6 +11,7 @@ export async function POST(request: Request) {
     try {
         const contentType = request.headers.get('content-type') || '';
         const fileName = request.headers.get('file-name') || '';
+        const userId = request.headers.get('user-id') || '';
         console.log('Content-Type:', contentType);
         console.log('File name from header:', fileName);
 
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
         // }
         console.log("Uploading image to Vercal Blob ============================================================================= ");
         // 上传到Vercal Blob
-        const blob = await put("apple_" + finalFileName, buffer, { access: 'public', addRandomSuffix: false, allowOverwrite: true });
+        const blob = await put("app/users/" + userId + "/apple_" + finalFileName, buffer, { access: 'public', addRandomSuffix: false, allowOverwrite: true });
 
         console.log('Blob URL:', blob.url);
         console.log('Blob Download URL:', blob.downloadUrl);
@@ -136,6 +137,58 @@ export async function POST(request: Request) {
         return new Response(JSON.stringify({
             success: false,
             message: 'Upload failed',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }), {
+            status: 500,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    }
+}
+
+// DELETE - Delete image from Vercel Blob storage
+export async function DELETE(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const body = await request.json();
+        const { blobUrl, userId } = body;
+
+        console.log(`[Delete API] Deleting image: ${blobUrl}`);
+        console.log(`[Delete API] User ID: ${userId}`);
+
+        if (!blobUrl) {
+            return new Response(JSON.stringify({
+                success: false,
+                message: 'Image URL is required'
+            }), {
+                status: 400,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
+
+        // Delete the blob from Vercel Blob storage
+        await del(blobUrl);
+
+        console.log(`[Delete API] Image deleted successfully: ${blobUrl}`);
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Image deleted successfully',
+            deletedUrl: blobUrl
+        }), {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+    } catch (error) {
+        console.error('[Delete API] Error deleting image:', error);
+        return new Response(JSON.stringify({
+            success: false,
+            message: 'Failed to delete image',
             error: error instanceof Error ? error.message : 'Unknown error'
         }), {
             status: 500,
