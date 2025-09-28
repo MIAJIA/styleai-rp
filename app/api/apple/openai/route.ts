@@ -6,24 +6,25 @@ import { randomUUID } from "crypto";
 
 
 const stylePrompts = {
-    "work": "office outfit, professional and polished, comfortable and well-fitted, with flexible piece combinations that are appropriate for both office work and everyday client meetings. The scene is a bright and open-plan office with glass partitions",
-    "casual-chic": "casual outfit, relaxed and comfortable, effortlessly stylish, easy to move in, ideal for weekend downtime, coffee and shopping. The scene is a urban street lined with outdoor café tables and chairs",
-    "date-night": "date night outfit, alluring and confidently charming, creating a soft, romantic atmosphere that showcases personal style without revealing too much. The scene is an intimate candlelit bistro terrace",
-    "vacation": "vacation outfit, fresh and comfortable with a clear vacation vibe, perfectly suited for beach days, resort lounging, or city sightseeing. The scene is a pristine beachfront resort featuring turquoise waves and palm trees",
+    "Work": "office outfit, professional and polished, comfortable and well-fitted, with flexible piece combinations that are appropriate for both office work and everyday client meetings. The scene is a bright and open-plan office with glass partitions",
+    "Cocktail": "casual outfit, relaxed and comfortable, effortlessly stylish, easy to move in, ideal for weekend downtime, coffee and shopping. The scene is a urban street lined with outdoor café tables and chairs",
+    "Date": "date night outfit, alluring and confidently charming, creating a soft, romantic atmosphere that showcases personal style without revealing too much. The scene is an intimate candlelit bistro terrace",
+    "Casual": "casual outfit, relaxed and comfortable, effortlessly stylish, easy to move in, ideal for weekend downtime, coffee and shopping. The scene is a urban street lined with outdoor café tables and chairs",
+    "Vacation": "vacation outfit, fresh and comfortable with a clear vacation vibe, perfectly suited for beach days, resort lounging, or city sightseeing. The scene is a pristine beachfront resort featuring turquoise waves and palm trees",
 };
 
 
 
 export async function POST(request: Request) {
     const req = await request.json();
-    const { onboardingData: userProfile, garmentImage } = req.body;
+    const { onboardingData: userProfile, garmentImage,occasion } = req.body;
 
     console.log({
         humanImageUrl: userProfile.fullBodyPhoto,
         garmentImageUrl: garmentImage,
-        occasion: "work",
+        occasion: occasion,
         userProfile: userProfile,
-        stylePrompt: stylePrompts["work"],
+        stylePrompt: stylePrompts[occasion as keyof typeof stylePrompts],
     });
 
     // const jobId = "123"
@@ -33,7 +34,6 @@ export async function POST(request: Request) {
     const humanImageBlob = { url: userProfile.fullBodyPhoto, type: "image/jpeg", name: "fullBodyPhoto.jpg" };
     const garmentImageBlob = { url: garmentImage, type: "image/jpeg", name: "garmentImage.jpg" };
     const generationMode: GenerationMode = "simple-scene";
-    const occasion = "work";
 
     const newJob: Job = {
         jobId,
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
             occasion,
             userProfile,
             customPrompt: "",
-            stylePrompt: stylePrompts["work"],
+            stylePrompt: stylePrompts[occasion as keyof typeof stylePrompts],
         },
         createdAt: now,
         updatedAt: now,
@@ -58,9 +58,9 @@ export async function POST(request: Request) {
     const aiSuggestions = await getStyleSuggestionFromAI({
         humanImageUrl: userProfile.fullBodyPhoto,
         garmentImageUrl: garmentImage,
-        occasion: "work",
+        occasion: occasion,
         userProfile: userProfile,
-        stylePrompt: stylePrompts["work"],
+        stylePrompt: stylePrompts[occasion as keyof typeof stylePrompts],
     })
 
 
