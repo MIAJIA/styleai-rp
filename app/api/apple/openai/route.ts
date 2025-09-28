@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         occasion: occasion,
         userProfile: userProfile,
         stylePrompt: stylePrompts[occasion as keyof typeof stylePrompts],
-    })
+    },{ count: 2 })
 
 
 
