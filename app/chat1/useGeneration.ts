@@ -8,7 +8,7 @@ import { stylePrompts } from "../chat/constants"
 import { Job } from "@/lib/ai"
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime"
 import { sleep } from "@/lib/ai/utils"
-import { upload } from '@vercel/blob/client';
+ 
 
 const steps = [
   { current: 0, total: 5, status: 'pending' as const, message: 'Initializing...' },
@@ -344,7 +344,7 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
     }
 
     try {
-      // 使用 FormData 直接上传原始文件，由后端负责存储
+      // Use FormData to send raw files; server will handle storage
       const formData = new FormData();
       formData.append("human_image", selfieFile);
       formData.append("garment_image", clothingFile);
@@ -361,8 +361,9 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
       if (stylePrompts[chatData.occasion as keyof typeof stylePrompts]) {
         formData.append("style_prompt", stylePrompts[chatData.occasion as keyof typeof stylePrompts]);
       }
-      // 指定使用 Gemini provider
+      // Force using Gemini on server
       formData.append("generation_provider", "gemini");
+
       const response = await fetch("/api/generation/new", {
         method: "POST",
         body: formData,
@@ -381,10 +382,10 @@ export function useGeneration(chatData: ChatModeData, addMessage: (message: Mess
 
       const result = await response.json();
       const endTime = Date.now();
-      console.log(`[FE_PERF_LOG | startGeneration] API call successful. Elapsed: ${endTime - startTime}ms.`);
-      console.log(`[FE_PERF_LOG | startGeneration] Job ID received: ${result.jobId}`);
-      
-      console.log(`[FE_PERF_LOG | startGeneration] Job ID received: ${result.jobId}`);
+      console.log(`[FE_PERF_LOG | startGeneration] API call successful. JobId received. Total time: ${endTime - startTime}ms.`);
+
+      console.log("[useGeneration | startGeneration]  получили  получили jobId:", result.jobId, ". Triggering polling.");
+      setIsPolling(true)
       setJobId(result.jobId);
       setCurrentSuggestionIndex(0);
       setIsPolling(true);
