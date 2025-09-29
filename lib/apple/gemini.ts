@@ -1,4 +1,5 @@
-import { fetchWithTimeout, urlToFile, fileToBase64 } from "./utils";
+import { fetchWithTimeout, urlToFile, fileToBase64 } from "../utils";
+import { GeminiAnalysisResult, geminiTask } from "./geminTask";
 
 const GEMINI_API_URL = process.env.GEMINI_API_URL || "";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
@@ -24,6 +25,16 @@ export interface GeminiChatParams {
   temperature?: number;
 }
 
+export interface GeminiChatResult {
+  text: string;
+  images?: string[];
+  metadata?: {
+    finishReason?: string;
+    tokenCount?: number;
+    modelVersion?: string;
+  };
+}
+
 export interface GeminiImageAnalysisParams {
   imageUrl: string;
   prompt?: string;
@@ -41,13 +52,13 @@ export interface GeminiImageGenerationParams {
 }
 
 
-export async function generateChatCompletionWithGemini(params: GeminiChatParams): Promise<string> {
+export async function generateChatCompletionWithGemini(params: GeminiChatParams): Promise<GeminiChatResult> {
   console.log('🤖 [GEMINI_CHAT] ===== GEMINI CHAT API CALL STARTED =====');
   console.log('🤖 [GEMINI_CHAT] 🔧 Environment check:');
   console.log('🤖 [GEMINI_CHAT] 🔧 - MOCK_GEMINI:', process.env.MOCK_GEMINI);
   console.log('🤖 [GEMINI_CHAT] 🔧 - GEMINI_API_KEY:', GEMINI_API_KEY ? 'SET' : 'MISSING');
   console.log('🤖 [GEMINI_CHAT] 🔧 - GEMINI_IMAGE_MODEL:', GEMINI_IMAGE_MODEL);
-  
+
   console.log('🤖 [GEMINI_CHAT] 📝 Input parameters:');
   console.log('🤖 [GEMINI_CHAT] 📝 - Messages count:', params.messages.length);
   console.log('🤖 [GEMINI_CHAT] 📝 - Max output tokens:', params.maxOutputTokens || 1000);
@@ -55,7 +66,15 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
 
   if (process.env.MOCK_GEMINI === 'true' || !GEMINI_API_KEY) {
     console.log('🤖 [GEMINI_CHAT] 🎭 Using MOCK mode - returning mock response');
-    return "I'm a mock Gemini response. This is a test response for the fashion consultant AI assistant.";
+    return {
+      text: "I'm a mock Gemini response. This is a test response for the fashion consultant AI assistant.",
+      images: [],
+      metadata: {
+        finishReason: "MOCK",
+        tokenCount: 0,
+        modelVersion: "mock"
+      }
+    };
   }
 
   const endpoint = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
@@ -67,7 +86,7 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
       parts: msg.parts
     })),
     generationConfig: {
-      maxOutputTokens: params.maxOutputTokens || 1000,
+      maxOutputTokens: params.maxOutputTokens || 2000, // 增加token限制
       temperature: params.temperature || 0.7,
     }
   };
@@ -114,30 +133,63 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
     console.log('🤖 [GEMINI_CHAT] (summary failed)', e);
   }
 
-  const firstText = data?.candidates?.[0]?.content?.parts?.find((p: any) => typeof p?.text === 'string')?.text;
-  const allTexts: string[] = [];
-  try {
-    for (const c of (data?.candidates || [])) {
-      for (const p of (c?.content?.parts || [])) {
-        if (typeof p?.text === 'string') allTexts.push(p.text);
+  // 解析文本和图片响应
+  const candidates = data?.candidates || [];
+  let responseText = '';
+  const responseImages: string[] = [];
+
+  // 提取文本内容
+  for (const candidate of candidates) {
+    const parts = candidate?.content?.parts || [];
+    for (const part of parts) {
+      if (typeof part?.text === 'string') {
+        responseText += part.text + '\n';
+      }
+      // 提取图片内容
+      const inlineData = part?.inlineData || part?.inline_data;
+      if (inlineData?.data) {
+        const mimeType = inlineData.mimeType || inlineData.mime_type || 'image/jpeg';
+        const imageData = `data:${mimeType};base64,${inlineData.data}`;
+        responseImages.push(imageData);
+        console.log('🤖 [GEMINI_CHAT] 🖼️ Found image in response');
       }
     }
-  } catch {}
-
-  const responseText = firstText || (allTexts.length ? allTexts.join('\n') : undefined);
-  if (!responseText) {
-    console.error('🤖 [GEMINI_CHAT] ❌ No response text found in API response.');
-    throw new Error("Gemini Chat API returned no response text");
   }
 
+  // 如果没有文本响应，提供默认消息
+  if (!responseText.trim()) {
+    if (responseImages.length > 0) {
+      responseText = "I've generated some visual content for you. Here are the results:";
+    } else {
+      responseText = "I'm having trouble generating a response right now. Please try again.";
+    }
+  }
+
+  // 提取元数据
+  const metadata = {
+    finishReason: candidates[0]?.finishReason || 'UNKNOWN',
+    tokenCount: data?.usageMetadata?.totalTokenCount || 0,
+    modelVersion: data?.modelVersion || 'unknown'
+  };
+
   console.log('🤖 [GEMINI_CHAT] ✅ Successfully generated chat completion');
-  return responseText;
+  console.log('🤖 [GEMINI_CHAT] 📊 Results:', {
+    textLength: responseText.length,
+    imageCount: responseImages.length,
+    finishReason: metadata.finishReason
+  });
+
+  return {
+    text: responseText.trim(),
+    images: responseImages,
+    metadata
+  };
 }
 
 export async function listAvailableModels(): Promise<any> {
   const endpoint = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models?key=${GEMINI_API_KEY}`;
   console.log('🤖 [GEMINI_MODELS] 🌐 Listing available models...');
-  
+
   try {
     const resp = await fetchWithTimeout(endpoint, {
       method: 'GET',
@@ -146,13 +198,13 @@ export async function listAvailableModels(): Promise<any> {
       },
       timeout: 10000,
     });
-    
+
     if (!resp.ok) {
       const text = await resp.text();
       console.error('🤖 [GEMINI_MODELS] ❌ Error listing models:', resp.status, text);
       return null;
     }
-    
+
     const data = await resp.json();
     console.log('🤖 [GEMINI_MODELS] 📋 Available models:', data);
     return data;
@@ -162,22 +214,18 @@ export async function listAvailableModels(): Promise<any> {
   }
 }
 
-export async function analyzeImageWithGemini(params: GeminiImageAnalysisParams): Promise<string> {
+
+// Outfit Check 对上传的图片进行分析
+export async function analyzeImageWithGemini(userId: string, analysisPrompt: string, imageBase64: string, imageMimeType: string): Promise<GeminiAnalysisResult> {
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ===== GEMINI IMAGE ANALYSIS STARTED =====');
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔧 Environment check:');
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔧 - MOCK_GEMINI:', process.env.MOCK_GEMINI);
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔧 - GEMINI_API_KEY:', GEMINI_API_KEY ? 'SET' : 'MISSING');
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔧 - GEMINI_IMAGE_MODEL:', GEMINI_IMAGE_MODEL);
-  
-  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 📝 Input parameters:');
-  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 📝 - Image URL:', params.imageUrl?.substring(0, 100) + '...');
-  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 📝 - Custom prompt:', params.prompt || 'Using default fashion analysis prompt');
-  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 📝 - Max output tokens:', params.maxOutputTokens || 1000);
-  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 📝 - Temperature:', params.temperature || 0.7);
 
   if (process.env.MOCK_GEMINI === 'true' || !GEMINI_API_KEY) {
     console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🎭 Using MOCK mode - returning mock analysis');
-    return "This is a fashion outfit image. I can see the user is wearing elegant clothing with coordinated styling and harmonious color combinations. I suggest trying different accessories to enhance the overall look's layering effect.";
+    throw new Error('🤖 [GEMINI_IMAGE_ANALYSIS] 🎭 Using MOCK mode - returning mock analysis');
   }
 
   // List available models for debugging
@@ -193,86 +241,18 @@ export async function analyzeImageWithGemini(params: GeminiImageAnalysisParams):
 5. Suitable occasions
 Please respond in English with a professional and friendly tone.`;
 
-  const analysisPrompt = params.prompt || defaultPrompt;
+  const prompt = analysisPrompt || defaultPrompt;
 
-  // 将图片URL转换为base64
-  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔄 Converting image to base64...');
-  const imageBase64 = await urlToFile(params.imageUrl, 'image.jpg', 'image/jpeg').then(fileToBase64);
+  // // 将图片URL转换为base64
+  // console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔄 Converting image to base64...');
+  // const imageBase64 = await urlToFile(imageUrl, 'image.jpg', 'image/jpeg').then(fileToBase64);
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔄 Image converted, size:', imageBase64.length, 'chars');
 
-  const endpoint = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
 
-  const body = {
-    contents: [{
-      parts: [
-        { text: analysisPrompt },
-        { 
-          inline_data: { 
-            mime_type: "image/jpeg", 
-            data: imageBase64 
-          } 
-        }
-      ]
-    }],
-    generationConfig: {
-      maxOutputTokens: params.maxOutputTokens || 1000,
-      temperature: params.temperature || 0.7,
-    }
-  };
-
-  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 📤 Sending request to Gemini API...');
-
-  const resp = await fetchWithTimeout(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-    timeout: 30000,
-  });
-
-  if (!resp.ok) {
-    const text = await resp.text();
-    console.error('🤖 [GEMINI_IMAGE_ANALYSIS] ❌ API Error:', resp.status, text);
-    throw new Error(`Gemini Image Analysis API error: ${resp.status} ${text}`);
-  }
-
-  const data = await resp.json();
-  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 📥 Received response from Gemini API');
-
-  // Debug: summarize response structure
-  try {
-    const candidates = Array.isArray(data?.candidates) ? data.candidates : [];
-    let textCount = 0;
-    let imageCount = 0;
-    const mimes = new Set<string>();
-    for (const c of candidates) {
-      const parts = c?.content?.parts || [];
-      for (const p of parts) {
-        if (typeof p?.text === 'string') textCount++;
-        const inline = p?.inlineData || p?.inline_data;
-        if (inline?.data) {
-          imageCount++;
-          if (inline?.mimeType || inline?.mime_type) mimes.add(inline.mimeType || inline.mime_type);
-        }
-      }
-    }
-    console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔎 Response summary:', { candidates: candidates.length, textParts: textCount, imageParts: imageCount, imageMimes: Array.from(mimes) });
-  } catch (e) {
-    console.log('🤖 [GEMINI_IMAGE_ANALYSIS] (summary failed)', e);
-  }
-
-  // Prefer text part; fall back to first inline image presence info for diagnostics
-  const responseText = data?.candidates?.[0]?.content?.parts?.find((p: any) => typeof p?.text === 'string')?.text;
-  if (!responseText) {
-    console.error('🤖 [GEMINI_IMAGE_ANALYSIS] ❌ No response text found in API response. If only images were returned, ensure generationConfig.responseModalities includes "TEXT" for analysis requests.');
-    throw new Error("Gemini Image Analysis API returned no response text");
-  }
-
-  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ✅ Successfully generated image analysis');
-  return responseText;
+  const result = await geminiTask(userId, prompt, imageBase64, imageMimeType);
+  return result;
 }
+
 
 export async function generateStyledImagesWithGemini(params: GeminiImageGenerationParams): Promise<string[]> {
   console.log('🤖 [GEMINI_IMAGE_GENERATION] ===== GEMINI IMAGE GENERATION STARTED =====');
@@ -280,7 +260,7 @@ export async function generateStyledImagesWithGemini(params: GeminiImageGenerati
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔧 - MOCK_GEMINI:', process.env.MOCK_GEMINI);
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_API_KEY:', GEMINI_API_KEY ? 'SET' : 'MISSING');
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_IMAGE_MODEL:', GEMINI_IMAGE_MODEL);
-  
+
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 Input parameters:');
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 - Image URL:', params.imageUrl?.substring(0, 100) + '...');
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 - Style options:', params.styleOptions);
@@ -320,11 +300,11 @@ Make each image unique, fashionable, and true to the selected style aesthetic.`;
     contents: [{
       parts: [
         { text: generationPrompt },
-        { 
-          inline_data: { 
-            mime_type: "image/jpeg", 
-            data: imageBase64 
-          } 
+        {
+          inline_data: {
+            mime_type: "image/jpeg",
+            data: imageBase64
+          }
         }
       ]
     }],
@@ -379,9 +359,9 @@ Make each image unique, fashionable, and true to the selected style aesthetic.`;
   // For now, return mock images since Gemini doesn't directly generate images
   // In a real implementation, you would need to use a different service for image generation
   console.log('🤖 [GEMINI_IMAGE_GENERATION] ⚠️ Note: Gemini API does not directly generate images, returning mock data');
-  
+
   const mockImages = Array(params.numImages || 3).fill("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU77hQAAAABJRU5ErkJggg==");
-  
+
   console.log('🤖 [GEMINI_IMAGE_GENERATION] ✅ Successfully generated styled images');
   return mockImages;
 }

@@ -1,32 +1,25 @@
-import { analyzeImageWithGemini } from "@/lib/gemini";
+import { analyzeImageWithGemini } from "@/lib/apple/gemini";
 import { NextRequest, NextResponse } from 'next/server';
 
-interface ImageAnalysisRequest {
-    imageUrl: string;
-    prompt?: string;
-    analysisType?: 'fashion' | 'general' | 'detailed';
-    maxTokens?: number;
-    temperature?: number;
-}
+
 
 // 对用户上传的图片进行分析
 export async function POST(request: NextRequest) {
     try {
-        const body: ImageAnalysisRequest = await request.json();
-        const { imageUrl, prompt, analysisType = 'fashion', maxTokens = 1000, temperature = 0.7 } = body;
+
+
+        const contentType = request.headers.get('content-type') || '';
+        const fileName = request.headers.get('file-name') || '';
+        const userId = request.headers.get('user-id') || '';
+        const analysisType = request.headers.get('analysisType') || '';
+        console.log('Content-Type:', contentType);
+        console.log('File name from header:', fileName);
+
 
         console.log(`[Gemini API] Processing image analysis request`);
-        console.log(`[Gemini API] Image URL: ${imageUrl?.substring(0, 100)}...`);
-        console.log(`[Gemini API] Analysis type: ${analysisType}`);
-
-        if (!imageUrl) {
-            return NextResponse.json({ 
-                error: 'imageUrl is required' 
-            }, { status: 400 });
-        }
 
         // Set different prompts based on analysis type
-        let analysisPrompt = prompt;
+        let analysisPrompt = '';
         if (!analysisPrompt) {
             switch (analysisType) {
                 case 'fashion':
@@ -57,24 +50,31 @@ Please respond in English with professional and practical advice.`;
             }
         }
 
+        const arrayBuffer = await request.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        console.log('JPEG image data received, size:', buffer.length);
+
+        // 将buffer转换为base64字符串
+        const imageBase64 = buffer.toString('base64');
+        console.log('Image converted to base64, length:', imageBase64.length);
+
+        // 验证图片数据
+        if (!imageBase64 || imageBase64.length < 100) {
+            return NextResponse.json({ 
+                error: 'Invalid image data - too small or empty' 
+            }, { status: 400 });
+        }
+
         // 调用Gemini进行图片分析
-        const analysisResult = await analyzeImageWithGemini({
-            imageUrl,
-            prompt: analysisPrompt,
-            maxOutputTokens: maxTokens,
-            temperature: temperature,
-        });
+        const analysisResult = await analyzeImageWithGemini(userId, analysisPrompt, imageBase64, 'image/jpeg');
 
         console.log(`[Gemini API] Analysis completed successfully`);
 
         return NextResponse.json({
             success: true,
-            message: "Image analysis completed",
-            data: {
-                analysis: analysisResult,
-                analysisType: analysisType,
-                timestamp: new Date().toISOString()
-            }
+            message: analysisResult.texts[0],
+            image: analysisResult.images[0]
         });
 
     } catch (error) {

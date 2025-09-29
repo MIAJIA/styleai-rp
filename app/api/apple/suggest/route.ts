@@ -1,4 +1,4 @@
-import { getStyleSuggestionFromAI } from "@/lib/openAi";
+import { getStyleSuggestionFromAI } from "@/lib/apple/openAi";
 import { GenerationMode, Job, Suggestion } from "@/lib/types";
 import { kv } from "@vercel/kv";
 

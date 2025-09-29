@@ -1,4 +1,4 @@
-import { generateStyledImagesWithGemini } from "@/lib/gemini";
+import { generateStyledImagesWithGemini } from "@/lib/apple/gemini";
 import { NextRequest, NextResponse } from 'next/server';
 
 interface ImageGenerationRequest {

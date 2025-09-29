@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { Job } from '@/lib/types';
-import { generateChatCompletionWithGemini, GeminiChatMessage } from '@/lib/gemini';
+import { generateChatCompletionWithGemini, GeminiChatMessage } from '@/lib/apple/gemini';
 
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';

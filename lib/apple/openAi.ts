@@ -3,8 +3,8 @@ import { systemPrompt, IMAGE_GENERATION_MODEL, IMAGE_FORMAT_DESCRIPTION, STRICT_
 import {
     type StyleSuggestionInput,
     styleSuggestionsSchema,
-} from "./types";
-import { type OnboardingData } from "./types";
+} from "../types";
+import { type OnboardingData } from "../types";
 import { z } from 'zod';
 import zodToJsonSchema from "zod-to-json-schema";
 
