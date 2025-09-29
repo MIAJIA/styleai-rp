@@ -2,7 +2,7 @@ import { fetchWithTimeout, urlToFile, fileToBase64 } from "./utils";
 
 const GEMINI_API_URL = process.env.GEMINI_API_URL || "";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-1.5-flash";
+const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-1.5-flash-001";
 
 export interface GeminiGenerateParams {
   prompt: string;
