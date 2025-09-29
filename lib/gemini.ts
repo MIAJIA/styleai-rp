@@ -2,7 +2,7 @@ import { fetchWithTimeout, urlToFile, fileToBase64 } from "./utils";
 
 const GEMINI_API_URL = process.env.GEMINI_API_URL || "";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-1.5-pro";
+const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-2.5-flash";
 
 export interface GeminiGenerateParams {
   prompt: string;
@@ -39,60 +39,6 @@ export interface GeminiImageGenerationParams {
   temperature?: number;
 }
 
-export async function generateFinalImagesWithGemini(params: GeminiGenerateParams): Promise<string[]> {
-  if (process.env.MOCK_GEMINI === 'true' || !GEMINI_API_URL || !GEMINI_API_KEY) {
-    // Minimal mock data URI to avoid network
-    // return [
-    //   "https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/apple-final-look-123-0-stylized-1-3gfkqkvTLSZD8rlj6MSjYUAQeI1r7i.png",
-    //   "https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/apple-final-look-123-0-stylized-1-3gfkqkvTLSZD8rlj6MSjYUAQeI1r7i.png"
-    // ];
-    return ["error"];
-  }
-
-  // Prepare optional garment image as base64 if provided
-  let garmentImageBase64: string | undefined = undefined;
-  if (params.garmentImageUrl && params.garmentImageName && params.garmentImageType) {
-    garmentImageBase64 = await urlToFile(params.garmentImageUrl, params.garmentImageName, params.garmentImageType).then(fileToBase64);
-  }
-
-  const body: Record<string, unknown> = {
-    // prompt: params.prompt,
-    prompt: "Create a stylish outfit for a professional meeting，更换衣服为白色衬衫，裤子为黑色裤子，鞋子为黑色鞋子，包包为黑色包包，发型为黑色长发，妆容为黑色妆容",
-    human_image_url: params.humanImageUrl,
-    garment_image_url: params.garmentImageUrl,
-  };
-  if (garmentImageBase64) {
-    body["garment_image_base64"] = garmentImageBase64;
-  }
-
-  const resp = await fetchWithTimeout(GEMINI_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${GEMINI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-    timeout: 120000,
-  });
-
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Gemini API error: ${resp.status} ${text}`);
-  }
-
-  const data = await resp.json();
-  // Expecting { images: [{ url: string }, ...] } or { url: string }
-  let urls: string[] = [];
-  if (Array.isArray(data?.images)) {
-    urls = data.images.map((x: any) => x.url).filter(Boolean);
-  } else if (data?.url) {
-    urls = [data.url];
-  }
-  if (!urls.length) {
-    throw new Error("Gemini API returned no images");
-  }
-  return urls;
-}
 
 export async function generateChatCompletionWithGemini(params: GeminiChatParams): Promise<string> {
   console.log('🤖 [GEMINI_CHAT] ===== GEMINI CHAT API CALL STARTED =====');
