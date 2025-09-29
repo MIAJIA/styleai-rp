@@ -2,7 +2,7 @@ import { fetchWithTimeout, urlToFile, fileToBase64 } from "./utils";
 
 const GEMINI_API_URL = process.env.GEMINI_API_URL || "";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-1.5-flash-001";
+const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-1.5-flash-latest";
 
 export interface GeminiGenerateParams {
   prompt: string;
@@ -111,7 +111,7 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
     return "I'm a mock Gemini response. This is a test response for the fashion consultant AI assistant.";
   }
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   console.log('🤖 [GEMINI_CHAT] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
 
   const body = {
@@ -189,7 +189,7 @@ Please respond in English with a professional and friendly tone.`;
   const imageBase64 = await urlToFile(params.imageUrl, 'image.jpg', 'image/jpeg').then(fileToBase64);
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔄 Image converted, size:', imageBase64.length, 'chars');
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
 
   const body = {
@@ -279,7 +279,7 @@ Make each image unique, fashionable, and true to the selected style aesthetic.`;
   const imageBase64 = await urlToFile(params.imageUrl, 'image.jpg', 'image/jpeg').then(fileToBase64);
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔄 Image converted, size:', imageBase64.length, 'chars');
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
 
   const body = {
