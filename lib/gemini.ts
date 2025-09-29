@@ -92,9 +92,41 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
   const data = await resp.json();
   console.log('🤖 [GEMINI_CHAT] 📥 Received response from Gemini API');
 
-  const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  // Debug: summarize response structure
+  try {
+    const candidates = Array.isArray(data?.candidates) ? data.candidates : [];
+    let textCount = 0;
+    let imageCount = 0;
+    const mimes = new Set<string>();
+    for (const c of candidates) {
+      const parts = c?.content?.parts || [];
+      for (const p of parts) {
+        if (typeof p?.text === 'string') textCount++;
+        const inline = p?.inlineData || p?.inline_data;
+        if (inline?.data) {
+          imageCount++;
+          if (inline?.mimeType || inline?.mime_type) mimes.add(inline.mimeType || inline.mime_type);
+        }
+      }
+    }
+    console.log('🤖 [GEMINI_CHAT] 🔎 Response summary:', { candidates: candidates.length, textParts: textCount, imageParts: imageCount, imageMimes: Array.from(mimes) });
+  } catch (e) {
+    console.log('🤖 [GEMINI_CHAT] (summary failed)', e);
+  }
+
+  const firstText = data?.candidates?.[0]?.content?.parts?.find((p: any) => typeof p?.text === 'string')?.text;
+  const allTexts: string[] = [];
+  try {
+    for (const c of (data?.candidates || [])) {
+      for (const p of (c?.content?.parts || [])) {
+        if (typeof p?.text === 'string') allTexts.push(p.text);
+      }
+    }
+  } catch {}
+
+  const responseText = firstText || (allTexts.length ? allTexts.join('\n') : undefined);
   if (!responseText) {
-    console.error('🤖 [GEMINI_CHAT] ❌ No response text found in API response:', data);
+    console.error('🤖 [GEMINI_CHAT] ❌ No response text found in API response.');
     throw new Error("Gemini Chat API returned no response text");
   }
 
@@ -209,9 +241,32 @@ Please respond in English with a professional and friendly tone.`;
   const data = await resp.json();
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 📥 Received response from Gemini API');
 
-  const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  // Debug: summarize response structure
+  try {
+    const candidates = Array.isArray(data?.candidates) ? data.candidates : [];
+    let textCount = 0;
+    let imageCount = 0;
+    const mimes = new Set<string>();
+    for (const c of candidates) {
+      const parts = c?.content?.parts || [];
+      for (const p of parts) {
+        if (typeof p?.text === 'string') textCount++;
+        const inline = p?.inlineData || p?.inline_data;
+        if (inline?.data) {
+          imageCount++;
+          if (inline?.mimeType || inline?.mime_type) mimes.add(inline.mimeType || inline.mime_type);
+        }
+      }
+    }
+    console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔎 Response summary:', { candidates: candidates.length, textParts: textCount, imageParts: imageCount, imageMimes: Array.from(mimes) });
+  } catch (e) {
+    console.log('🤖 [GEMINI_IMAGE_ANALYSIS] (summary failed)', e);
+  }
+
+  // Prefer text part; fall back to first inline image presence info for diagnostics
+  const responseText = data?.candidates?.[0]?.content?.parts?.find((p: any) => typeof p?.text === 'string')?.text;
   if (!responseText) {
-    console.error('🤖 [GEMINI_IMAGE_ANALYSIS] ❌ No response text found in API response:', data);
+    console.error('🤖 [GEMINI_IMAGE_ANALYSIS] ❌ No response text found in API response. If only images were returned, ensure generationConfig.responseModalities includes "TEXT" for analysis requests.');
     throw new Error("Gemini Image Analysis API returned no response text");
   }
 
@@ -298,6 +353,28 @@ Make each image unique, fashionable, and true to the selected style aesthetic.`;
 
   const data = await resp.json();
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📥 Received response from Gemini API');
+
+  // Debug: summarize response structure
+  try {
+    const candidates = Array.isArray(data?.candidates) ? data.candidates : [];
+    let textCount = 0;
+    let imageCount = 0;
+    const mimes = new Set<string>();
+    for (const c of candidates) {
+      const parts = c?.content?.parts || [];
+      for (const p of parts) {
+        if (typeof p?.text === 'string') textCount++;
+        const inline = p?.inlineData || p?.inline_data;
+        if (inline?.data) {
+          imageCount++;
+          if (inline?.mimeType || inline?.mime_type) mimes.add(inline.mimeType || inline.mime_type);
+        }
+      }
+    }
+    console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔎 Response summary:', { candidates: candidates.length, textParts: textCount, imageParts: imageCount, imageMimes: Array.from(mimes) });
+  } catch (e) {
+    console.log('🤖 [GEMINI_IMAGE_GENERATION] (summary failed)', e);
+  }
 
   // For now, return mock images since Gemini doesn't directly generate images
   // In a real implementation, you would need to use a different service for image generation

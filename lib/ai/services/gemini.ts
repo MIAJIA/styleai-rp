@@ -64,7 +64,8 @@ export async function generateFinalImagesWithGemini(params: GeminiGenerateParams
 
   const body = {
     contents: [ { parts } ],
-    generationConfig: { responseModalities: ["IMAGE"] }
+    // Request both to ensure we can parse either; server may still return subset
+    generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
   };
   
   console.log('🤖 [GEMINI_SERVICE] 📦 Request body structure:');
@@ -95,17 +96,21 @@ export async function generateFinalImagesWithGemini(params: GeminiGenerateParams
   const data = await resp.json();
   console.log('🤖 [GEMINI_SERVICE] 📥 Success response received');
   console.log('🤖 [GEMINI_SERVICE] 📥 Response keys:', Object.keys(data));
-  // Extract inline image data from candidates[0].content.parts[*].inlineData/inline_data
-  console.log('🤖 [GEMINI_SERVICE] 🔍 Parsing response for images...');
+  // Extract inline image data and optional text
+  console.log('🤖 [GEMINI_SERVICE] 🔍 Parsing response for images and text...');
   const candidates = data?.candidates || [];
   console.log('🤖 [GEMINI_SERVICE] 🔍 Candidates count:', candidates.length);
-  
+
   const images: string[] = [];
+  const texts: string[] = [];
   for (const c of candidates) {
     const parts = c?.content?.parts || [];
     console.log('🤖 [GEMINI_SERVICE] 🔍 Parts in candidate:', parts.length);
-    
+
     for (const p of parts) {
+      if (typeof p?.text === 'string') {
+        texts.push(p.text);
+      }
       const inline = p.inlineData || p.inline_data;
       if (inline?.data) {
         const mime = inline.mimeType || inline.mime_type || 'image/png';
@@ -115,11 +120,15 @@ export async function generateFinalImagesWithGemini(params: GeminiGenerateParams
       }
     }
   }
+  if (texts.length) {
+    console.log('🤖 [GEMINI_SERVICE] 📝 Collected text parts length:', texts.map(t => t.length));
+  }
   
   console.log('🤖 [GEMINI_SERVICE] ✅ Total images extracted:', images.length);
   
   if (!images.length) {
     console.log('🤖 [GEMINI_SERVICE] ❌ No images found in response');
+    console.log('🤖 [GEMINI_SERVICE] ❌ Text parts summary:', texts.length ? texts.slice(0,1)[0].substring(0, 200) + '...' : 'NONE');
     console.log('🤖 [GEMINI_SERVICE] ❌ Full response data:', JSON.stringify(data, null, 2));
     throw new Error("Gemini API returned no inline images");
   }
