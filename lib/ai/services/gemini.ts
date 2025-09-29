@@ -2,6 +2,7 @@ import { fetchWithTimeout, urlToFile, fileToBase64 } from "../utils";
 import { put } from '@vercel/blob';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_API_VERSION = process.env.GEMINI_API_VERSION || 'v1beta';
 const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image-preview';
 
 export interface GeminiGenerateParams {
@@ -50,7 +51,7 @@ export async function generateFinalImagesWithGemini(params: GeminiGenerateParams
     console.log('🤖 [GEMINI_SERVICE] 🔄 Garment image converted, size:', garmentImageBase64?.length || 0, 'chars');
   }
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const endpoint = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   console.log('🤖 [GEMINI_SERVICE] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
 
   const parts: any[] = [

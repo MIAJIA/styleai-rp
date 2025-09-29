@@ -2,7 +2,8 @@ import { fetchWithTimeout, urlToFile, fileToBase64 } from "./utils";
 
 const GEMINI_API_URL = process.env.GEMINI_API_URL || "";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-2.5-flash";
+const GEMINI_API_VERSION = process.env.GEMINI_API_VERSION || 'v1beta';
+const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL;
 
 export interface GeminiGenerateParams {
   prompt: string;
@@ -45,7 +46,7 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
   console.log('🤖 [GEMINI_CHAT] 🔧 Environment check:');
   console.log('🤖 [GEMINI_CHAT] 🔧 - MOCK_GEMINI:', process.env.MOCK_GEMINI);
   console.log('🤖 [GEMINI_CHAT] 🔧 - GEMINI_API_KEY:', GEMINI_API_KEY ? 'SET' : 'MISSING');
-  console.log('🤖 [GEMINI_CHAT] 🔧 - GEMINI_CHAT_MODEL:', GEMINI_CHAT_MODEL);
+  console.log('🤖 [GEMINI_CHAT] 🔧 - GEMINI_IMAGE_MODEL:', GEMINI_IMAGE_MODEL);
   
   console.log('🤖 [GEMINI_CHAT] 📝 Input parameters:');
   console.log('🤖 [GEMINI_CHAT] 📝 - Messages count:', params.messages.length);
@@ -57,7 +58,7 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
     return "I'm a mock Gemini response. This is a test response for the fashion consultant AI assistant.";
   }
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const endpoint = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   console.log('🤖 [GEMINI_CHAT] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
 
   const body = {
@@ -90,48 +91,11 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
 
   const data = await resp.json();
   console.log('🤖 [GEMINI_CHAT] 📥 Received response from Gemini API');
-  console.log('🤖 [GEMINI_CHAT] 🔍 Full API response structure:', JSON.stringify(data, null, 2));
 
-  // Enhanced response parsing with better error handling
-  let responseText = null;
-  
-  if (data?.candidates && data.candidates.length > 0) {
-    const candidate = data.candidates[0];
-    console.log('🤖 [GEMINI_CHAT] 🔍 First candidate structure:', JSON.stringify(candidate, null, 2));
-    
-    if (candidate?.content?.parts && candidate.content.parts.length > 0) {
-      const firstPart = candidate.content.parts[0];
-      console.log('🤖 [GEMINI_CHAT] 🔍 First part structure:', JSON.stringify(firstPart, null, 2));
-      
-      if (firstPart?.text) {
-        responseText = firstPart.text;
-        console.log('🤖 [GEMINI_CHAT] ✅ Found response text:', responseText.substring(0, 100) + '...');
-      } else {
-        console.log('🤖 [GEMINI_CHAT] ⚠️ First part has no text property');
-      }
-    } else {
-      console.log('🤖 [GEMINI_CHAT] ⚠️ Candidate has no content.parts');
-    }
-  } else {
-    console.log('🤖 [GEMINI_CHAT] ⚠️ No candidates found in response');
-  }
-
+  const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!responseText) {
-    console.error('🤖 [GEMINI_CHAT] ❌ No response text found in API response');
-    console.error('🤖 [GEMINI_CHAT] ❌ Full response data:', JSON.stringify(data, null, 2));
-    
-    // Try alternative parsing methods
-    if (data?.candidates?.[0]?.content?.text) {
-      responseText = data.candidates[0].content.text;
-      console.log('🤖 [GEMINI_CHAT] 🔄 Found text in alternative location:', responseText.substring(0, 100) + '...');
-    } else if (data?.text) {
-      responseText = data.text;
-      console.log('🤖 [GEMINI_CHAT] 🔄 Found text in root level:', responseText.substring(0, 100) + '...');
-    } else {
-      // Return a fallback response instead of throwing an error
-      console.log('🤖 [GEMINI_CHAT] 🔄 Using fallback response due to parsing issues');
-      responseText = "I apologize, but I'm having trouble processing your request right now. Please try rephrasing your message or try again later.";
-    }
+    console.error('🤖 [GEMINI_CHAT] ❌ No response text found in API response:', data);
+    throw new Error("Gemini Chat API returned no response text");
   }
 
   console.log('🤖 [GEMINI_CHAT] ✅ Successfully generated chat completion');
@@ -139,7 +103,7 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
 }
 
 export async function listAvailableModels(): Promise<any> {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`;
+  const endpoint = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models?key=${GEMINI_API_KEY}`;
   console.log('🤖 [GEMINI_MODELS] 🌐 Listing available models...');
   
   try {
@@ -171,7 +135,7 @@ export async function analyzeImageWithGemini(params: GeminiImageAnalysisParams):
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔧 Environment check:');
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔧 - MOCK_GEMINI:', process.env.MOCK_GEMINI);
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔧 - GEMINI_API_KEY:', GEMINI_API_KEY ? 'SET' : 'MISSING');
-  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔧 - GEMINI_CHAT_MODEL:', GEMINI_CHAT_MODEL);
+  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔧 - GEMINI_IMAGE_MODEL:', GEMINI_IMAGE_MODEL);
   
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 📝 Input parameters:');
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 📝 - Image URL:', params.imageUrl?.substring(0, 100) + '...');
@@ -204,7 +168,7 @@ Please respond in English with a professional and friendly tone.`;
   const imageBase64 = await urlToFile(params.imageUrl, 'image.jpg', 'image/jpeg').then(fileToBase64);
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔄 Image converted, size:', imageBase64.length, 'chars');
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const endpoint = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
 
   const body = {
@@ -244,48 +208,11 @@ Please respond in English with a professional and friendly tone.`;
 
   const data = await resp.json();
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 📥 Received response from Gemini API');
-  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔍 Full API response structure:', JSON.stringify(data, null, 2));
 
-  // Enhanced response parsing with better error handling
-  let responseText = null;
-  
-  if (data?.candidates && data.candidates.length > 0) {
-    const candidate = data.candidates[0];
-    console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔍 First candidate structure:', JSON.stringify(candidate, null, 2));
-    
-    if (candidate?.content?.parts && candidate.content.parts.length > 0) {
-      const firstPart = candidate.content.parts[0];
-      console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔍 First part structure:', JSON.stringify(firstPart, null, 2));
-      
-      if (firstPart?.text) {
-        responseText = firstPart.text;
-        console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ✅ Found response text:', responseText.substring(0, 100) + '...');
-      } else {
-        console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ⚠️ First part has no text property');
-      }
-    } else {
-      console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ⚠️ Candidate has no content.parts');
-    }
-  } else {
-    console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ⚠️ No candidates found in response');
-  }
-
+  const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!responseText) {
-    console.error('🤖 [GEMINI_IMAGE_ANALYSIS] ❌ No response text found in API response');
-    console.error('🤖 [GEMINI_IMAGE_ANALYSIS] ❌ Full response data:', JSON.stringify(data, null, 2));
-    
-    // Try alternative parsing methods
-    if (data?.candidates?.[0]?.content?.text) {
-      responseText = data.candidates[0].content.text;
-      console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔄 Found text in alternative location:', responseText.substring(0, 100) + '...');
-    } else if (data?.text) {
-      responseText = data.text;
-      console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔄 Found text in root level:', responseText.substring(0, 100) + '...');
-    } else {
-      // Return a fallback response instead of throwing an error
-      console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔄 Using fallback response due to parsing issues');
-      responseText = "I apologize, but I'm having trouble analyzing this image right now. Please try uploading a different image or rephrasing your request.";
-    }
+    console.error('🤖 [GEMINI_IMAGE_ANALYSIS] ❌ No response text found in API response:', data);
+    throw new Error("Gemini Image Analysis API returned no response text");
   }
 
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ✅ Successfully generated image analysis');
@@ -297,7 +224,7 @@ export async function generateStyledImagesWithGemini(params: GeminiImageGenerati
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔧 Environment check:');
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔧 - MOCK_GEMINI:', process.env.MOCK_GEMINI);
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_API_KEY:', GEMINI_API_KEY ? 'SET' : 'MISSING');
-  console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_CHAT_MODEL:', GEMINI_CHAT_MODEL);
+  console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_IMAGE_MODEL:', GEMINI_IMAGE_MODEL);
   
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 Input parameters:');
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 - Image URL:', params.imageUrl?.substring(0, 100) + '...');
@@ -331,7 +258,7 @@ Make each image unique, fashionable, and true to the selected style aesthetic.`;
   const imageBase64 = await urlToFile(params.imageUrl, 'image.jpg', 'image/jpeg').then(fileToBase64);
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔄 Image converted, size:', imageBase64.length, 'chars');
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const endpoint = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
 
   const body = {
