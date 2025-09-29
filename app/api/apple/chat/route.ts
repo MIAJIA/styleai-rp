@@ -1,12 +1,7 @@
-import OpenAI from "openai";
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { Job } from '@/lib/types';
-
-// 初始化OpenAI客户端
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+import { generateChatCompletionWithGemini, GeminiChatMessage } from '@/lib/gemini';
 
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
@@ -56,7 +51,7 @@ Based on the above context information, please provide professional fashion advi
 3. Answer questions about fashion and styling
 4. Adjust styling plans according to user needs
 
-Please communicate with users in a friendly and professional tone, and provide practical and specific advice.`;
+Please communicate with users in English with a friendly and professional tone, and provide practical and specific advice.`;
 
     return contextPrompt;
 }
@@ -125,7 +120,7 @@ export async function POST(request: NextRequest) {
 
         // Get JOB context information
         let job: Job | null = null;
-        let systemPrompt = "You are a professional fashion consultant AI assistant. Please provide professional fashion advice and styling guidance to users.";
+        let systemPrompt = "You are a professional fashion consultant AI assistant. Please provide professional fashion advice and styling guidance to users in English.";
 
         if (includeJobContext) {
             job = await getJobContext(jobId);
@@ -140,37 +135,34 @@ export async function POST(request: NextRequest) {
         // Get chat history
         const chatHistory = await getChatHistory(sessionId || '');
 
-        // Build message array
-        const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+        // Build message array for Gemini
+        const messages: GeminiChatMessage[] = [
             {
-                role: 'system',
-                content: systemPrompt
+                role: 'user',
+                parts: [{ text: systemPrompt }]
             },
             // Add historical conversation
             ...chatHistory.map(msg => ({
-                role: msg.role as 'user' | 'assistant',
-                content: msg.content
+                role: msg.role === 'assistant' ? 'model' : 'user' as 'user' | 'model',
+                parts: [{ text: msg.content }]
             })),
             // Add current user message
             {
                 role: 'user',
-                content: message
+                parts: [{ text: message }]
             }
         ];
 
-        console.log(`[Chat API] Sending request to OpenAI with ${messages.length} messages`);
+        console.log(`[Chat API] Sending request to Gemini with ${messages.length} messages`);
 
-        // Call OpenAI API
-        const completion = await openai.chat.completions.create({
-            model: 'gpt-4o',
+        // Call Gemini API
+        const aiResponse = await generateChatCompletionWithGemini({
             messages: messages,
-            max_tokens: 1000,
+            maxOutputTokens: 1000,
             temperature: 0.7,
         });
 
-        const aiResponse = completion.choices[0]?.message?.content || 'Sorry, I cannot generate a response.';
-
-        console.log(`[Chat API] Received response from OpenAI`);
+        console.log(`[Chat API] Received response from Gemini`);
 
         // Save chat history
         const userMessage: ChatMessage = {
