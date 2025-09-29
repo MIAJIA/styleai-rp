@@ -1,4 +1,4 @@
-import { generateFinalImagesWithGemini, analyzeImageWithGemini } from "@/lib/gemini";
+import { analyzeImageWithGemini } from "@/lib/gemini";
 import { NextRequest, NextResponse } from 'next/server';
 
 interface ImageAnalysisRequest {

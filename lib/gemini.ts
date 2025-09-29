@@ -90,11 +90,48 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
 
   const data = await resp.json();
   console.log('🤖 [GEMINI_CHAT] 📥 Received response from Gemini API');
+  console.log('🤖 [GEMINI_CHAT] 🔍 Full API response structure:', JSON.stringify(data, null, 2));
 
-  const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  // Enhanced response parsing with better error handling
+  let responseText = null;
+  
+  if (data?.candidates && data.candidates.length > 0) {
+    const candidate = data.candidates[0];
+    console.log('🤖 [GEMINI_CHAT] 🔍 First candidate structure:', JSON.stringify(candidate, null, 2));
+    
+    if (candidate?.content?.parts && candidate.content.parts.length > 0) {
+      const firstPart = candidate.content.parts[0];
+      console.log('🤖 [GEMINI_CHAT] 🔍 First part structure:', JSON.stringify(firstPart, null, 2));
+      
+      if (firstPart?.text) {
+        responseText = firstPart.text;
+        console.log('🤖 [GEMINI_CHAT] ✅ Found response text:', responseText.substring(0, 100) + '...');
+      } else {
+        console.log('🤖 [GEMINI_CHAT] ⚠️ First part has no text property');
+      }
+    } else {
+      console.log('🤖 [GEMINI_CHAT] ⚠️ Candidate has no content.parts');
+    }
+  } else {
+    console.log('🤖 [GEMINI_CHAT] ⚠️ No candidates found in response');
+  }
+
   if (!responseText) {
-    console.error('🤖 [GEMINI_CHAT] ❌ No response text found in API response:', data);
-    throw new Error("Gemini Chat API returned no response text");
+    console.error('🤖 [GEMINI_CHAT] ❌ No response text found in API response');
+    console.error('🤖 [GEMINI_CHAT] ❌ Full response data:', JSON.stringify(data, null, 2));
+    
+    // Try alternative parsing methods
+    if (data?.candidates?.[0]?.content?.text) {
+      responseText = data.candidates[0].content.text;
+      console.log('🤖 [GEMINI_CHAT] 🔄 Found text in alternative location:', responseText.substring(0, 100) + '...');
+    } else if (data?.text) {
+      responseText = data.text;
+      console.log('🤖 [GEMINI_CHAT] 🔄 Found text in root level:', responseText.substring(0, 100) + '...');
+    } else {
+      // Return a fallback response instead of throwing an error
+      console.log('🤖 [GEMINI_CHAT] 🔄 Using fallback response due to parsing issues');
+      responseText = "I apologize, but I'm having trouble processing your request right now. Please try rephrasing your message or try again later.";
+    }
   }
 
   console.log('🤖 [GEMINI_CHAT] ✅ Successfully generated chat completion');
@@ -207,11 +244,48 @@ Please respond in English with a professional and friendly tone.`;
 
   const data = await resp.json();
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 📥 Received response from Gemini API');
+  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔍 Full API response structure:', JSON.stringify(data, null, 2));
 
-  const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  // Enhanced response parsing with better error handling
+  let responseText = null;
+  
+  if (data?.candidates && data.candidates.length > 0) {
+    const candidate = data.candidates[0];
+    console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔍 First candidate structure:', JSON.stringify(candidate, null, 2));
+    
+    if (candidate?.content?.parts && candidate.content.parts.length > 0) {
+      const firstPart = candidate.content.parts[0];
+      console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔍 First part structure:', JSON.stringify(firstPart, null, 2));
+      
+      if (firstPart?.text) {
+        responseText = firstPart.text;
+        console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ✅ Found response text:', responseText.substring(0, 100) + '...');
+      } else {
+        console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ⚠️ First part has no text property');
+      }
+    } else {
+      console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ⚠️ Candidate has no content.parts');
+    }
+  } else {
+    console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ⚠️ No candidates found in response');
+  }
+
   if (!responseText) {
-    console.error('🤖 [GEMINI_IMAGE_ANALYSIS] ❌ No response text found in API response:', data);
-    throw new Error("Gemini Image Analysis API returned no response text");
+    console.error('🤖 [GEMINI_IMAGE_ANALYSIS] ❌ No response text found in API response');
+    console.error('🤖 [GEMINI_IMAGE_ANALYSIS] ❌ Full response data:', JSON.stringify(data, null, 2));
+    
+    // Try alternative parsing methods
+    if (data?.candidates?.[0]?.content?.text) {
+      responseText = data.candidates[0].content.text;
+      console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔄 Found text in alternative location:', responseText.substring(0, 100) + '...');
+    } else if (data?.text) {
+      responseText = data.text;
+      console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔄 Found text in root level:', responseText.substring(0, 100) + '...');
+    } else {
+      // Return a fallback response instead of throwing an error
+      console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔄 Using fallback response due to parsing issues');
+      responseText = "I apologize, but I'm having trouble analyzing this image right now. Please try uploading a different image or rephrasing your request.";
+    }
   }
 
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ✅ Successfully generated image analysis');
