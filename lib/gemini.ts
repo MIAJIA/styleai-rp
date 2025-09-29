@@ -2,7 +2,7 @@ import { fetchWithTimeout, urlToFile, fileToBase64 } from "./utils";
 
 const GEMINI_API_URL = process.env.GEMINI_API_URL || "";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-1.5-flash-latest";
+const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-1.5-pro";
 
 export interface GeminiGenerateParams {
   prompt: string;
@@ -111,7 +111,7 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
     return "I'm a mock Gemini response. This is a test response for the fashion consultant AI assistant.";
   }
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   console.log('🤖 [GEMINI_CHAT] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
 
   const body = {
@@ -155,6 +155,34 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
   return responseText;
 }
 
+export async function listAvailableModels(): Promise<any> {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`;
+  console.log('🤖 [GEMINI_MODELS] 🌐 Listing available models...');
+  
+  try {
+    const resp = await fetchWithTimeout(endpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 10000,
+    });
+    
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error('🤖 [GEMINI_MODELS] ❌ Error listing models:', resp.status, text);
+      return null;
+    }
+    
+    const data = await resp.json();
+    console.log('🤖 [GEMINI_MODELS] 📋 Available models:', data);
+    return data;
+  } catch (error) {
+    console.error('🤖 [GEMINI_MODELS] ❌ Error listing models:', error);
+    return null;
+  }
+}
+
 export async function analyzeImageWithGemini(params: GeminiImageAnalysisParams): Promise<string> {
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] ===== GEMINI IMAGE ANALYSIS STARTED =====');
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔧 Environment check:');
@@ -173,6 +201,10 @@ export async function analyzeImageWithGemini(params: GeminiImageAnalysisParams):
     return "This is a fashion outfit image. I can see the user is wearing elegant clothing with coordinated styling and harmonious color combinations. I suggest trying different accessories to enhance the overall look's layering effect.";
   }
 
+  // List available models for debugging
+  console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔍 Listing available models for debugging...');
+  await listAvailableModels();
+
   // Default fashion analysis prompt in English
   const defaultPrompt = `Please analyze the outfit style in this image, including:
 1. Clothing type and style (formal, casual, trendy, etc.)
@@ -189,7 +221,7 @@ Please respond in English with a professional and friendly tone.`;
   const imageBase64 = await urlToFile(params.imageUrl, 'image.jpg', 'image/jpeg').then(fileToBase64);
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔄 Image converted, size:', imageBase64.length, 'chars');
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
 
   const body = {
@@ -279,7 +311,7 @@ Make each image unique, fashionable, and true to the selected style aesthetic.`;
   const imageBase64 = await urlToFile(params.imageUrl, 'image.jpg', 'image/jpeg').then(fileToBase64);
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔄 Image converted, size:', imageBase64.length, 'chars');
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
 
   const body = {
