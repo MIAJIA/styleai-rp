@@ -110,12 +110,6 @@ export async function POST(request: NextRequest) {
         const body: ChatRequest = await request.json();
         const { jobId, message, sessionId, includeJobContext = true } = body;
 
-        if (!jobId || !message) {
-            return NextResponse.json({ 
-                error: 'jobId and message are required' 
-            }, { status: 400 });
-        }
-
         console.log(`[Chat API] Processing chat request for job: ${jobId}`);
 
         // Get JOB context information
@@ -173,10 +167,10 @@ export async function POST(request: NextRequest) {
 
         const assistantMessage: ChatMessage = {
             role: 'assistant',
-            content: aiResponse,
+            content: aiResponse.text,
             timestamp: new Date().toISOString()
         };
-
+        console.log(`[Chat API] Assistant message: ${assistantMessage.content}`);
         await saveChatMessage(sessionId || '', userMessage);
         await saveChatMessage(sessionId || '', assistantMessage);
 

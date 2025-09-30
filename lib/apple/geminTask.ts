@@ -15,7 +15,12 @@ export interface GeminiAnalysisResult {
   
 
 // 对Gemini 请求 进行包装 
-export async function geminiTask(userId: string, prompt: string, imagesBase64: string, imagesMimeType: string): Promise<GeminiAnalysisResult> {
+export async function geminiTask(
+    userId: string, 
+    prompt: string, 
+    imagesBase64: string, 
+    imagesMimeType: string,
+): Promise<GeminiAnalysisResult> {
     console.log('🤖 [GEMINI_SERVICE] ===== GEMINI TASK STARTED =====');
     const endpoint = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
     console.log('🤖 [GEMINI_SERVICE] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));

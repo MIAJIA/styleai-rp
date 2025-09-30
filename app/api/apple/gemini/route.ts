@@ -1,4 +1,5 @@
 import { analyzeImageWithGemini } from "@/lib/apple/gemini";
+import { put } from "@vercel/blob";
 import { NextRequest, NextResponse } from 'next/server';
 
 
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
         const contentType = request.headers.get('content-type') || '';
         const fileName = request.headers.get('file-name') || '';
         const userId = request.headers.get('user-id') || '';
-        const analysisType = request.headers.get('analysisType') || '';
+        const analysisType = request.headers.get('analysisType') || 'fashion';
         console.log('Content-Type:', contentType);
         console.log('File name from header:', fileName);
 
@@ -27,8 +28,6 @@ export async function POST(request: NextRequest) {
 1. Clothing type and style (formal, casual, trendy, etc.)
 2. Color coordination analysis
 3. Overall styling strengths and weaknesses
-4. Improvement suggestions and styling advice
-5. Suitable occasions
 Please respond in English with a professional and friendly tone.`;
                     break;
                 case 'detailed':
@@ -49,32 +48,37 @@ Please respond in English with professional and practical advice.`;
                     break;
             }
         }
-
+        console.log('Analysis prompt:', analysisPrompt);
         const arrayBuffer = await request.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-
         console.log('JPEG image data received, size:', buffer.length);
-
+        
         // 将buffer转换为base64字符串
         const imageBase64 = buffer.toString('base64');
         console.log('Image converted to base64, length:', imageBase64.length);
-
+        
+        
         // 验证图片数据
         if (!imageBase64 || imageBase64.length < 100) {
             return NextResponse.json({ 
                 error: 'Invalid image data - too small or empty' 
             }, { status: 400 });
         }
-
+        
         // 调用Gemini进行图片分析
         const analysisResult = await analyzeImageWithGemini(userId, analysisPrompt, imageBase64, 'image/jpeg');
-
+        
         console.log(`[Gemini API] Analysis completed successfully`);
-
+        
+        const blob = await put(`app/users/${userId}/gemini_${fileName}`, buffer, {
+            access: 'public',
+            addRandomSuffix: false
+        });
         return NextResponse.json({
             success: true,
             message: analysisResult.texts[0],
-            image: analysisResult.images[0]
+            image: analysisResult.images[0],
+            uploadedImage: blob.url
         });
 
     } catch (error) {

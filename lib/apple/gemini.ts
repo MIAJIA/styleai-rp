@@ -43,6 +43,7 @@ export interface GeminiImageAnalysisParams {
 }
 
 export interface GeminiImageGenerationParams {
+  userId: string;
   imageUrl: string;
   styleOptions: string[];
   prompt?: string;
@@ -230,7 +231,7 @@ export async function analyzeImageWithGemini(userId: string, analysisPrompt: str
 
   // List available models for debugging
   console.log('🤖 [GEMINI_IMAGE_ANALYSIS] 🔍 Listing available models for debugging...');
-  await listAvailableModels();
+  // await listAvailableModels();
 
   // Default fashion analysis prompt in English
   const defaultPrompt = `Please analyze the outfit style in this image, including:
@@ -292,78 +293,9 @@ Make each image unique, fashionable, and true to the selected style aesthetic.`;
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔄 Converting image to base64...');
   const imageBase64 = await urlToFile(params.imageUrl, 'image.jpg', 'image/jpeg').then(fileToBase64);
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔄 Image converted, size:', imageBase64.length, 'chars');
+  const result = await geminiTask(params.userId, generationPrompt, imageBase64, "image/jpeg");
 
-  const endpoint = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-  console.log('🤖 [GEMINI_IMAGE_GENERATION] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
-
-  const body = {
-    contents: [{
-      parts: [
-        { text: generationPrompt },
-        {
-          inline_data: {
-            mime_type: "image/jpeg",
-            data: imageBase64
-          }
-        }
-      ]
-    }],
-    generationConfig: {
-      maxOutputTokens: params.maxOutputTokens || 2000,
-      temperature: params.temperature || 0.8,
-    }
-  };
-
-  console.log('🤖 [GEMINI_IMAGE_GENERATION] 📤 Sending request to Gemini API...');
-
-  const resp = await fetchWithTimeout(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-    timeout: 60000, // Longer timeout for image generation
-  });
-
-  if (!resp.ok) {
-    const text = await resp.text();
-    console.error('🤖 [GEMINI_IMAGE_GENERATION] ❌ API Error:', resp.status, text);
-    throw new Error(`Gemini Image Generation API error: ${resp.status} ${text}`);
-  }
-
-  const data = await resp.json();
-  console.log('🤖 [GEMINI_IMAGE_GENERATION] 📥 Received response from Gemini API');
-
-  // Debug: summarize response structure
-  try {
-    const candidates = Array.isArray(data?.candidates) ? data.candidates : [];
-    let textCount = 0;
-    let imageCount = 0;
-    const mimes = new Set<string>();
-    for (const c of candidates) {
-      const parts = c?.content?.parts || [];
-      for (const p of parts) {
-        if (typeof p?.text === 'string') textCount++;
-        const inline = p?.inlineData || p?.inline_data;
-        if (inline?.data) {
-          imageCount++;
-          if (inline?.mimeType || inline?.mime_type) mimes.add(inline.mimeType || inline.mime_type);
-        }
-      }
-    }
-    console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔎 Response summary:', { candidates: candidates.length, textParts: textCount, imageParts: imageCount, imageMimes: Array.from(mimes) });
-  } catch (e) {
-    console.log('🤖 [GEMINI_IMAGE_GENERATION] (summary failed)', e);
-  }
-
-  // For now, return mock images since Gemini doesn't directly generate images
-  // In a real implementation, you would need to use a different service for image generation
-  console.log('🤖 [GEMINI_IMAGE_GENERATION] ⚠️ Note: Gemini API does not directly generate images, returning mock data');
-
-  const mockImages = Array(params.numImages || 3).fill("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU77hQAAAABJRU5ErkJggg==");
-
-  console.log('🤖 [GEMINI_IMAGE_GENERATION] ✅ Successfully generated styled images');
-  return mockImages;
+  return result.images;
 }
 
 
