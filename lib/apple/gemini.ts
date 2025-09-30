@@ -264,7 +264,7 @@ export async function generateStyledImagesWithGemini(params: GeminiImageGenerati
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 Input parameters:');
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 - Image URL:', params.imageUrl?.substring(0, 100) + '...');
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 - Style options:', params.styleOptions);
-  console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 - Custom prompt:', params.prompt || 'Using default generation prompt');
+  // console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 - Custom prompt:', params.prompt || 'Using default generation prompt');
 
   if (process.env.MOCK_GEMINI === 'true' || !GEMINI_API_KEY) {
     console.log('🤖 [GEMINI_IMAGE_GENERATION] 🎭 Using MOCK mode - returning mock images');
@@ -273,55 +273,18 @@ export async function generateStyledImagesWithGemini(params: GeminiImageGenerati
   }
 
   // Build generation prompt based on style options
-  const defaultPrompt = `🎨 FASHION IMAGE GENERATION TASK
+  const defaultPrompt = `Generate ${params.styleOptions.length} styled outfit variations for: ${params.styleOptions.join(', ')}
 
-You are an expert fashion stylist AI. Generate ${params.styleOptions.length} distinct styled outfit variation(s) based on the uploaded image.
+Transform the uploaded outfit with:
+- Style-specific colors, fabrics, and silhouettes
+- Characteristic accessories and details
+- Professional, magazine-quality results
+- Distinct, recognizable styling for each
 
-📋 STYLE TARGETS: ${params.styleOptions.join(', ')}
-
-🎯 GENERATION REQUIREMENTS:
-
-1. **Style Accuracy** (CRITICAL):
-   - Each image must authentically represent its designated style
-   - Follow the specific aesthetic, color palettes, and silhouettes of each style
-   - Include signature pieces and accessories that define the style
-   - Ensure fabrics and textures match the style's typical materials
-
-2. **Color & Palette**:
-   - Apply style-appropriate color schemes
-   - Use harmonious color combinations that reflect the style's identity
-   - Adjust saturation, tones, and contrast to match the aesthetic
-
-3. **Silhouette & Fit**:
-   - Modify proportions to match the style (e.g., oversized for Streetstyle, fitted for Classy)
-   - Adjust lengths, shapes, and structural elements appropriately
-   - Ensure the silhouette embodies the style's characteristic look
-
-4. **Details & Accessories**:
-   - Add style-defining accessories (jewelry, bags, shoes, hats)
-   - Include finishing touches that complete the look
-   - Pay attention to small details (buttons, patterns, trim, hardware)
-
-5. **Fabric & Texture**:
-   - Visualize appropriate materials (leather for Edgy, linen for Coastal, silk for Classy)
-   - Show texture differences (soft knits, structured fabrics, flowing materials)
-   - Reflect quality and material choices typical of the style
-
-6. **Overall Aesthetic**:
-   - Create a cohesive, complete outfit that tells a visual story
-   - Ensure the outfit is practical, wearable, and fashion-forward
-   - Make each style immediately recognizable and distinctly different from others
-
-💡 TRANSFORMATION GUIDANCE:
-- Start with the base outfit structure from the uploaded image
-- Transform it completely to embody the target style(s)
-- Be bold and specific - avoid generic interpretations
-- Create magazine-worthy, professionally styled results
-
-Generate high-quality fashion imagery that a stylist would be proud to present.`;
+Create complete, wearable fashion images.`;
 
   const generationPrompt = params.prompt || defaultPrompt;
-
+  console.log('🤖 [GEMINI_IMAGE_GENERATION] 📤 Prompt length:', generationPrompt.length);
   // Convert image URL to base64
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔄 Converting image to base64...');
   const imageBase64 = await urlToFile(params.imageUrl, 'image.jpg', 'image/jpeg').then(fileToBase64);
