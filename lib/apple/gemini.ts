@@ -47,7 +47,6 @@ export interface GeminiImageGenerationParams {
   imageUrl: string;
   styleOptions: string[];
   prompt?: string;
-  numImages?: number;
   maxOutputTokens?: number;
   temperature?: number;
 }
@@ -265,27 +264,61 @@ export async function generateStyledImagesWithGemini(params: GeminiImageGenerati
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 Input parameters:');
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 - Image URL:', params.imageUrl?.substring(0, 100) + '...');
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 - Style options:', params.styleOptions);
-  console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 - Number of images:', params.numImages || 3);
   console.log('🤖 [GEMINI_IMAGE_GENERATION] 📝 - Custom prompt:', params.prompt || 'Using default generation prompt');
 
   if (process.env.MOCK_GEMINI === 'true' || !GEMINI_API_KEY) {
     console.log('🤖 [GEMINI_IMAGE_GENERATION] 🎭 Using MOCK mode - returning mock images');
-    const mockImages = Array(params.numImages || 3).fill("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU77hQAAAABJRU5ErkJggg==");
+    const mockImages = Array(1).fill("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU77hQAAAABJRU5ErkJggg==");
     return mockImages;
   }
 
   // Build generation prompt based on style options
-  const defaultPrompt = `Generate ${params.numImages || 3} different styled outfit variations based on the uploaded image and the following style options: ${params.styleOptions.join(', ')}. 
+  const defaultPrompt = `🎨 FASHION IMAGE GENERATION TASK
 
-Each image should showcase a different style interpretation while maintaining the core outfit structure. Focus on:
-- Color variations and palette changes
-- Accessory modifications and additions
-- Styling details and finishing touches
-- Overall aesthetic differences
-- Fabric and texture variations
-- Silhouette adjustments
+You are an expert fashion stylist AI. Generate ${params.styleOptions.length} distinct styled outfit variation(s) based on the uploaded image.
 
-Make each image unique, fashionable, and true to the selected style aesthetic.`;
+📋 STYLE TARGETS: ${params.styleOptions.join(', ')}
+
+🎯 GENERATION REQUIREMENTS:
+
+1. **Style Accuracy** (CRITICAL):
+   - Each image must authentically represent its designated style
+   - Follow the specific aesthetic, color palettes, and silhouettes of each style
+   - Include signature pieces and accessories that define the style
+   - Ensure fabrics and textures match the style's typical materials
+
+2. **Color & Palette**:
+   - Apply style-appropriate color schemes
+   - Use harmonious color combinations that reflect the style's identity
+   - Adjust saturation, tones, and contrast to match the aesthetic
+
+3. **Silhouette & Fit**:
+   - Modify proportions to match the style (e.g., oversized for Streetstyle, fitted for Classy)
+   - Adjust lengths, shapes, and structural elements appropriately
+   - Ensure the silhouette embodies the style's characteristic look
+
+4. **Details & Accessories**:
+   - Add style-defining accessories (jewelry, bags, shoes, hats)
+   - Include finishing touches that complete the look
+   - Pay attention to small details (buttons, patterns, trim, hardware)
+
+5. **Fabric & Texture**:
+   - Visualize appropriate materials (leather for Edgy, linen for Coastal, silk for Classy)
+   - Show texture differences (soft knits, structured fabrics, flowing materials)
+   - Reflect quality and material choices typical of the style
+
+6. **Overall Aesthetic**:
+   - Create a cohesive, complete outfit that tells a visual story
+   - Ensure the outfit is practical, wearable, and fashion-forward
+   - Make each style immediately recognizable and distinctly different from others
+
+💡 TRANSFORMATION GUIDANCE:
+- Start with the base outfit structure from the uploaded image
+- Transform it completely to embody the target style(s)
+- Be bold and specific - avoid generic interpretations
+- Create magazine-worthy, professionally styled results
+
+Generate high-quality fashion imagery that a stylist would be proud to present.`;
 
   const generationPrompt = params.prompt || defaultPrompt;
 
