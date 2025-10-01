@@ -807,3 +807,34 @@ export const getChatConfirmationMessage = (occasionName: string): string => `Gre
 Now, let me analyze this combo and generate your personalized styling advice!`;
 
 export const getChatCompletionMessage = (occasionName: string): string => `🎉 Your personalized styling is complete! This look has been specially designed for your ${occasionName} occasion. Hope you love it!`;
+
+
+/*
+作为时尚造型师，为图1人物提供针对图2中衣服的穿搭造型建议。分析图1人物的身材特点，以及图2的材质、配色特点，并结合今年最新的时尚趋势，生成 Instagram风格流行的穿搭图，要求是展示完整穿搭的全身照，模特是图1的人物，穿搭包含图2这件衣服以及与它搭配的所有上装、下装、鞋子、包包以及配饰。生成2组不同风格的造型，时尚且有高级质感，杂志封面
+*/
+export const geminiPrompt = `You are a professional fashion stylist.
+
+Input:
+
+Image 1: The model (person).
+
+Image 2: A specific clothing item.
+
+Task:
+
+Analyze the model’s body features from Image 1.
+
+Analyze the fabric and color characteristics of the clothing item in Image 2.
+
+Apply this year’s latest fashion trends.
+
+Output:
+
+Generate Instagram-style, high-fashion full-body outfit images of the model from Image 1 wearing the clothing item from Image 2.
+
+Each look must include the clothing from Image 2 plus all complementary items: tops, bottoms, shoes, bags, and accessories.
+
+Produce two distinct styling sets in different aesthetics.
+
+Both should look fashion-forward, luxurious, and editorial — like a magazine cover.`;
+

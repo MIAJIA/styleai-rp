@@ -1,0 +1,1500 @@
+2025-10-01T04:29:13.366096+00:00 app[web.1]: {
+2025-10-01T04:29:13.366096+00:00 app[web.1]: "role": "system",
+2025-10-01T04:29:13.366116+00:00 app[web.1]: "content": "You are a senior fashion stylist and a professional prompt engineer. You are skilled at analyzing user profile traits, integrating essential wardrobe items, and crafting stylish yet practical outfit suggestions. You also specialize in writing vivid, Midjourney-compatible visual prompts to generate fashion images based on the outfit and occasion.\nYour task is to:\nGenerate complete outfit suggestion in structured JSON format.\nCreate an image generation prompt for Kling AI, describing the full-body look of the user wearing this outfit in a specific scene.\nNote: Generating a high-quality \"image_prompt\" is extremely important in this task. It is not a secondary or optional step — it must be visually rich, scene-specific, and suitable for Kling AI to produce a full-body, vertical fashion image with strong styling and emotional coherence. Focus on fashion aesthetics and sensory visuals. Avoid generic phrasing.\n##User Understanding and Personalization\nAnalyze the provided information about the user's appearance:\nBody Type: Hourglass\nSkin Tone: fair\nBody Size: Petite\nFaceshape: oval\nStyle Preference: \nDesign the outfit using:\nUser’s appearance traits\nThe required key piece\nThe occasion and scene context\nCurrent season and weather\nThe outfit must be:\nFlattering to the user's features.\nSuit the occasion and reflect the user's personal style.\nAdapted to current season and weather.\nUse the key piece as the focal point and build the entire outfit to complement it.\nThe overall outfit's color scheme follows classic principles with a clear hierarchy and harmony, up to three main colors per look: a primary color, a secondary color, and a small accent color.\nAlways include the KEY PIECE in the outfit.\nDon't fill in wearing details of shoes.\n##Outfit Composition Guidelines\nEach outfit must include, make sure the KEY PIECE is included and the outfit is built around the KEY PIECE for the user and the occasion:\nTops\nBottoms\nShoes\nBag\nHairstyle\nFor each item, use this descriptive structure: {Color + Material + Silhouette + Category} + Style Features + Wearing InstructionsWrite clearly:\nOutfit can include multiple top layers. If a top stands well on its own, or its fabric or pattern is too complex for layering, or it's hot summer, then don't layer it. If there are multiple tops, please describe the specific layering and styling method.\nWhen selecting tops and bottoms, pay attention to choosing designs, cuts, and materials that suit the user's body shape and occasion.\nDescribe each item's color, material, and silhouette in style_details.\nBriefly explain how each style choice enhances the user's overall look\nThe suggested hairstyle should elevate the overall look and suit the user’s current hair length.\n##Explanation Guidelines\nIn explanation, briefly summarize the outfit in one sentence, and concisely explain why it works for the user's body shape and suit the occasion.\n# Image Prompt Guidelines\nIn image_prompt, Write a Midjourney-style visual prompt in Chinese for Kling AI that reflects the user wearing the outfit in the described scene. The image needs to be 9:16 full-body fashion candid shot in a natural and unposed moment. Ensure the prompt reflects outfit details, scene context, and user physical traits.\nYour image_prompt should follow this structure:\nUser Physical Features: Describe the user's body type, body size, hairstyle, and overall vibe, matching the styling intent.\nOutfit Description: Describe the entire outfit, including the tops, bottoms, shoes, bag and accessories, using the items listed in \"outfit_suggestion\".\nScene Description: Describe the setting and atmosphere of the occasion.\n## Output Format (JSON)\nYour reply should strictly follow the JSON format, containing two keys:\n\\`json\n{\n\"outfit_suggestion\": {\n\"outfit_title\": \"A short, catchy title for the outfit\",\n\"items\": {\n\"tops\": [\n{\n\"item_name\": \"...\",\n\"style_details\": \"...\",\n\"wearing_details\": \"...\",\n}\n],\n\"bottoms\": {\n\"item_name\": \"...\",\n\"style_details\": \"...\",\n\"wearing_details\": \"...\",\n},\n\"shoes\": {\n\"item_name\": \"...\",\n\"style_details\": \"...\",\n\"wearing_details\": \"...\",\n},\n\"bag\": {\n\"item_name\": \"...\",\n\"style_details\": \"...\",\n\"wearing_details\": \"...\",\n},\n\"accessories\": [\n{\n\"item_name\": \"...\",\n\"style_details\": \"...\",\n\"wearing_details\": \"...\",\n}\n],\n\"hairstyle\": {\n\"style_name\": \"...\",\n\"description\": \"...\"\n}\n},\n\"explanation\": \"\"\n},\n\"image_prompt\": \"\"\n}\n\\`\n## Notes\nThe final output MUST be one valid JSON object as described above. Do not include any other commentary.\nIf you are uncertain, always generate a reasonable guess based on the outfit and scene. Never leave the image_prompt empty or generic.\n"
+2025-10-01T04:29:13.366116+00:00 app[web.1]: },
+2025-10-01T04:29:13.366117+00:00 app[web.1]: {
+2025-10-01T04:29:13.366117+00:00 app[web.1]: "role": "user",
+2025-10-01T04:29:13.366118+00:00 app[web.1]: "content": [
+2025-10-01T04:29:13.366118+00:00 app[web.1]: {
+2025-10-01T04:29:13.366118+00:00 app[web.1]: "type": "text",
+2025-10-01T04:29:13.366121+00:00 app[web.1]: "text": "Please provide styling suggestions based on the following information. User's photo is the first image, and the Key Piece user wants to style is the second.\n\n**IMPORTANT: Please first analyze the user in the first image to understand the user's features, then build the outfit around the Key Piece in the second image according to the user's features and the occasion.**\n\n# User Profile\nAnalyze the user's ethnicity, skin tone, body type, body size, and face shape in the first attached image.\nMake sure the outfit recommendations are suitable for the user, helping them to highlight their strengths and downplay their weaknesses.\n\n\n# KEY PIECE\nAnalyze the Key Piece's style, color, material, silhouette and formality level in the second attached image.\nBuild the outfit around this \"KEY PIECE\" and make sure the KEY PIECE must be incorporated into the outfit suggestion.\n\n\n# Occasion & Scene Details\nBuild the outfit for Casual. The styling guidelines are casual outfit, relaxed and comfortable, effortlessly stylish, easy to move in, ideal for weekend downtime, coffee and shopping. The scene is a urban street lined with outdoor café tables and chairs.\nMake sure the outfit is suitable for the occasion and meet the styling guidelines.\n\n# Style Preference\nCreate a stylish and flattering outfit that incorporates the essential item for the specified occasion. Focus on silhouettes that flatter a Hourglass body type. Align with the user's style preferences: Get new outfit ideas for my clothes. Emphasize creating a cohesive look that enhances the user's natural features and builds confidence.\n\n**Styling Instructions:**\n- Generate 2 different and distinct styling suggestions. Each suggestion should feature a distinct style and color strategy that suits the user and complements the key piece for the occasion.\n"
+2025-10-01T04:29:13.366121+00:00 app[web.1]: },
+2025-10-01T04:29:13.366121+00:00 app[web.1]: {
+2025-10-01T04:29:13.366121+00:00 app[web.1]: "type": "image_url",
+2025-10-01T04:29:13.366122+00:00 app[web.1]: "image_url": {
+2025-10-01T04:29:13.366130+00:00 app[web.1]: "url": "https://aft07xnw52tcy9ig.public.blob.vercel-storag...",
+2025-10-01T04:29:13.366130+00:00 app[web.1]: "detail": "low"
+2025-10-01T04:29:13.366130+00:00 app[web.1]: }
+2025-10-01T04:29:13.366131+00:00 app[web.1]: },
+2025-10-01T04:29:13.366131+00:00 app[web.1]: {
+2025-10-01T04:29:13.366131+00:00 app[web.1]: "type": "image_url",
+2025-10-01T04:29:13.366131+00:00 app[web.1]: "image_url": {
+2025-10-01T04:29:13.366131+00:00 app[web.1]: "url": "https://aft07xnw52tcy9ig.public.blob.vercel-storag...",
+2025-10-01T04:29:13.366132+00:00 app[web.1]: "detail": "low"
+2025-10-01T04:29:13.366132+00:00 app[web.1]: }
+2025-10-01T04:29:13.366133+00:00 app[web.1]: }
+2025-10-01T04:29:13.366133+00:00 app[web.1]: ]
+2025-10-01T04:29:13.366133+00:00 app[web.1]: }
+2025-10-01T04:29:13.366133+00:00 app[web.1]: ],
+2025-10-01T04:29:13.366133+00:00 app[web.1]: "max_tokens": 6000,
+2025-10-01T04:29:13.366133+00:00 app[web.1]: "tools": [
+2025-10-01T04:29:13.366134+00:00 app[web.1]: {
+2025-10-01T04:29:13.366134+00:00 app[web.1]: "type": "function",
+2025-10-01T04:29:13.366134+00:00 app[web.1]: "function": {
+2025-10-01T04:29:13.366134+00:00 app[web.1]: "name": "get_multiple_style_suggestions",
+2025-10-01T04:29:13.366134+00:00 app[web.1]: "description": "Return exactly 2 complete and distinct outfit suggestions in a structured JSON format (do NOT return more than 2). The image_prompt field is highly recommended for best results.",
+2025-10-01T04:29:13.366134+00:00 app[web.1]: "parameters": {
+2025-10-01T04:29:13.366135+00:00 app[web.1]: "type": "object",
+2025-10-01T04:29:13.366135+00:00 app[web.1]: "properties": {
+2025-10-01T04:29:13.366135+00:00 app[web.1]: "suggestions": {
+2025-10-01T04:29:13.366135+00:00 app[web.1]: "type": "array",
+2025-10-01T04:29:13.366135+00:00 app[web.1]: "items": {
+2025-10-01T04:29:13.366135+00:00 app[web.1]: "type": "object",
+2025-10-01T04:29:13.366135+00:00 app[web.1]: "properties": {
+2025-10-01T04:29:13.366135+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T04:29:13.366136+00:00 app[web.1]: "type": "object",
+2025-10-01T04:29:13.366136+00:00 app[web.1]: "properties": {
+2025-10-01T04:29:13.366136+00:00 app[web.1]: "outfit_title": {
+2025-10-01T04:29:13.366136+00:00 app[web.1]: "type": "string",
+2025-10-01T04:29:13.366136+00:00 app[web.1]: "description": "A short, catchy title for the outfit."
+2025-10-01T04:29:13.366136+00:00 app[web.1]: },
+2025-10-01T04:29:13.366137+00:00 app[web.1]: "items": {
+2025-10-01T04:29:13.366137+00:00 app[web.1]: "type": "object",
+2025-10-01T04:29:13.366139+00:00 app[web.1]: "properties": {
+2025-10-01T04:29:13.366139+00:00 app[web.1]: "tops": {
+2025-10-01T04:29:13.366139+00:00 app[web.1]: "type": "array",
+2025-10-01T04:29:13.366139+00:00 app[web.1]: "items": {
+2025-10-01T04:29:13.366139+00:00 app[web.1]: "type": "object",
+2025-10-01T04:29:13.366139+00:00 app[web.1]: "properties": {
+2025-10-01T04:29:13.366140+00:00 app[web.1]: "item_name": {
+2025-10-01T04:29:13.366140+00:00 app[web.1]: "type": "string",
+2025-10-01T04:29:13.366140+00:00 app[web.1]: "description": "The name of the clothing item or accessory."
+2025-10-01T04:29:13.366140+00:00 app[web.1]: },
+2025-10-01T04:29:13.366140+00:00 app[web.1]: "style_details": {
+2025-10-01T04:29:13.366140+00:00 app[web.1]: "type": "string",
+2025-10-01T04:29:13.366141+00:00 app[web.1]: "description": "The style details of the clothing item or accessory."
+2025-10-01T04:29:13.366141+00:00 app[web.1]: },
+2025-10-01T04:29:13.366141+00:00 app[web.1]: "wearing_details": {
+2025-10-01T04:29:13.366141+00:00 app[web.1]: "type": "string",
+2025-10-01T04:29:13.366141+00:00 app[web.1]: "description": "The wearing details of the clothing item or accessory."
+2025-10-01T04:29:13.366141+00:00 app[web.1]: },
+2025-10-01T04:29:13.366142+00:00 app[web.1]: "effect_description": {
+2025-10-01T04:29:13.366142+00:00 app[web.1]: "type": "string",
+2025-10-01T04:29:13.366142+00:00 app[web.1]: "description": "The effect description of the clothing item or accessory."
+2025-10-01T04:29:13.366142+00:00 app[web.1]: }
+2025-10-01T04:29:13.366142+00:00 app[web.1]: },
+2025-10-01T04:29:13.366142+00:00 app[web.1]: "required": [
+2025-10-01T04:29:13.366142+00:00 app[web.1]: "item_name",
+2025-10-01T04:29:13.366142+00:00 app[web.1]: "style_details",
+2025-10-01T04:29:13.366143+00:00 app[web.1]: "wearing_details"
+2025-10-01T04:29:13.366143+00:00 app[web.1]: ],
+2025-10-01T04:29:13.366143+00:00 app[web.1]: "additionalProperties": false
+2025-10-01T04:29:13.366143+00:00 app[web.1]: },
+2025-10-01T04:29:13.366143+00:00 app[web.1]: "description": "An array of top items, which can include layers."
+2025-10-01T04:29:13.366143+00:00 app[web.1]: },
+2025-10-01T04:29:13.366144+00:00 app[web.1]: "bottoms": {
+2025-10-01T04:29:13.366144+00:00 app[web.1]: "type": "object",
+2025-10-01T04:29:13.366144+00:00 app[web.1]: "properties": {
+2025-10-01T04:29:13.366144+00:00 app[web.1]: "item_name": {
+2025-10-01T04:29:13.366145+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/item_name"
+2025-10-01T04:29:13.366145+00:00 app[web.1]: },
+2025-10-01T04:29:13.366145+00:00 app[web.1]: "style_details": {
+2025-10-01T04:29:13.366146+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/style_details"
+2025-10-01T04:29:13.366146+00:00 app[web.1]: },
+2025-10-01T04:29:13.366146+00:00 app[web.1]: "wearing_details": {
+2025-10-01T04:29:13.366146+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/wearing_details"
+2025-10-01T04:29:13.366147+00:00 app[web.1]: },
+2025-10-01T04:29:13.366147+00:00 app[web.1]: "effect_description": {
+2025-10-01T04:29:13.366147+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/effect_description"
+2025-10-01T04:29:13.366147+00:00 app[web.1]: }
+2025-10-01T04:29:13.366147+00:00 app[web.1]: },
+2025-10-01T04:29:13.366147+00:00 app[web.1]: "required": [
+2025-10-01T04:29:13.366147+00:00 app[web.1]: "item_name",
+2025-10-01T04:29:13.366148+00:00 app[web.1]: "style_details",
+2025-10-01T04:29:13.366148+00:00 app[web.1]: "wearing_details"
+2025-10-01T04:29:13.366148+00:00 app[web.1]: ],
+2025-10-01T04:29:13.366148+00:00 app[web.1]: "additionalProperties": false,
+2025-10-01T04:29:13.366148+00:00 app[web.1]: "description": "The bottom item."
+2025-10-01T04:29:13.366148+00:00 app[web.1]: },
+2025-10-01T04:29:13.366148+00:00 app[web.1]: "shoes": {
+2025-10-01T04:29:13.366148+00:00 app[web.1]: "type": "object",
+2025-10-01T04:29:13.366149+00:00 app[web.1]: "properties": {
+2025-10-01T04:29:13.366149+00:00 app[web.1]: "item_name": {
+2025-10-01T04:29:13.366149+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/item_name"
+2025-10-01T04:29:13.366149+00:00 app[web.1]: },
+2025-10-01T04:29:13.366149+00:00 app[web.1]: "style_details": {
+2025-10-01T04:29:13.366149+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/style_details"
+2025-10-01T04:29:13.366149+00:00 app[web.1]: },
+2025-10-01T04:29:13.366149+00:00 app[web.1]: "wearing_details": {
+2025-10-01T04:29:13.366149+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/wearing_details"
+2025-10-01T04:29:13.366150+00:00 app[web.1]: },
+2025-10-01T04:29:13.366152+00:00 app[web.1]: "effect_description": {
+2025-10-01T04:29:13.366152+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/effect_description"
+2025-10-01T04:29:13.366152+00:00 app[web.1]: }
+2025-10-01T04:29:13.366152+00:00 app[web.1]: },
+2025-10-01T04:29:13.366152+00:00 app[web.1]: "required": [
+2025-10-01T04:29:13.366152+00:00 app[web.1]: "item_name",
+2025-10-01T04:29:13.366153+00:00 app[web.1]: "style_details",
+2025-10-01T04:29:13.366153+00:00 app[web.1]: "wearing_details"
+2025-10-01T04:29:13.366153+00:00 app[web.1]: ],
+2025-10-01T04:29:13.366153+00:00 app[web.1]: "additionalProperties": false,
+2025-10-01T04:29:13.366153+00:00 app[web.1]: "description": "The shoes."
+2025-10-01T04:29:13.366153+00:00 app[web.1]: },
+2025-10-01T04:29:13.366153+00:00 app[web.1]: "bag": {
+2025-10-01T04:29:13.366153+00:00 app[web.1]: "type": "object",
+2025-10-01T04:29:13.366153+00:00 app[web.1]: "properties": {
+2025-10-01T04:29:13.366154+00:00 app[web.1]: "item_name": {
+2025-10-01T04:29:13.366154+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/item_name"
+2025-10-01T04:29:13.366154+00:00 app[web.1]: },
+2025-10-01T04:29:13.366154+00:00 app[web.1]: "style_details": {
+2025-10-01T04:29:13.366154+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/style_details"
+2025-10-01T04:29:13.366154+00:00 app[web.1]: },
+2025-10-01T04:29:13.366154+00:00 app[web.1]: "wearing_details": {
+2025-10-01T04:29:13.366154+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/wearing_details"
+2025-10-01T04:29:13.366155+00:00 app[web.1]: },
+2025-10-01T04:29:13.366155+00:00 app[web.1]: "effect_description": {
+2025-10-01T04:29:13.366155+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/effect_description"
+2025-10-01T04:29:13.366155+00:00 app[web.1]: }
+2025-10-01T04:29:13.366155+00:00 app[web.1]: },
+2025-10-01T04:29:13.366155+00:00 app[web.1]: "required": [
+2025-10-01T04:29:13.366155+00:00 app[web.1]: "item_name",
+2025-10-01T04:29:13.366156+00:00 app[web.1]: "style_details",
+2025-10-01T04:29:13.366156+00:00 app[web.1]: "wearing_details"
+2025-10-01T04:29:13.366156+00:00 app[web.1]: ],
+2025-10-01T04:29:13.366156+00:00 app[web.1]: "additionalProperties": false,
+2025-10-01T04:29:13.366156+00:00 app[web.1]: "description": "The bag or purse."
+2025-10-01T04:29:13.366156+00:00 app[web.1]: },
+2025-10-01T04:29:13.366156+00:00 app[web.1]: "layering_description": {
+2025-10-01T04:29:13.366156+00:00 app[web.1]: "type": "string",
+2025-10-01T04:29:13.366157+00:00 app[web.1]: "description": "A description of layering relationships, including the order of wearing, the details of exposure, and the role of layers in style, atmosphere, or structural shaping."
+2025-10-01T04:29:13.366157+00:00 app[web.1]: },
+2025-10-01T04:29:13.366157+00:00 app[web.1]: "hairstyle": {
+2025-10-01T04:29:13.366157+00:00 app[web.1]: "type": "object",
+2025-10-01T04:29:13.366157+00:00 app[web.1]: "properties": {
+2025-10-01T04:29:13.366157+00:00 app[web.1]: "style_name": {
+2025-10-01T04:29:13.366157+00:00 app[web.1]: "type": "string",
+2025-10-01T04:29:13.366157+00:00 app[web.1]: "description": "The name of the hairstyle."
+2025-10-01T04:29:13.366158+00:00 app[web.1]: },
+2025-10-01T04:29:13.366158+00:00 app[web.1]: "description": {
+2025-10-01T04:29:13.366158+00:00 app[web.1]: "type": "string",
+2025-10-01T04:29:13.366158+00:00 app[web.1]: "description": "A brief description of the hairstyle and why it complements the outfit."
+2025-10-01T04:29:13.366158+00:00 app[web.1]: }
+2025-10-01T04:29:13.366158+00:00 app[web.1]: },
+2025-10-01T04:29:13.366159+00:00 app[web.1]: "required": [
+2025-10-01T04:29:13.366159+00:00 app[web.1]: "style_name",
+2025-10-01T04:29:13.366159+00:00 app[web.1]: "description"
+2025-10-01T04:29:13.366159+00:00 app[web.1]: ],
+2025-10-01T04:29:13.366159+00:00 app[web.1]: "additionalProperties": false,
+2025-10-01T04:29:13.366160+00:00 app[web.1]: "description": "The suggested hairstyle."
+2025-10-01T04:29:13.366160+00:00 app[web.1]: }
+2025-10-01T04:29:13.366160+00:00 app[web.1]: },
+2025-10-01T04:29:13.366160+00:00 app[web.1]: "required": [
+2025-10-01T04:29:13.366160+00:00 app[web.1]: "tops",
+2025-10-01T04:29:13.366160+00:00 app[web.1]: "bottoms",
+2025-10-01T04:29:13.366160+00:00 app[web.1]: "shoes",
+2025-10-01T04:29:13.366161+00:00 app[web.1]: "bag",
+2025-10-01T04:29:13.366161+00:00 app[web.1]: "hairstyle"
+2025-10-01T04:29:13.366161+00:00 app[web.1]: ],
+2025-10-01T04:29:13.366161+00:00 app[web.1]: "additionalProperties": false
+2025-10-01T04:29:13.366161+00:00 app[web.1]: },
+2025-10-01T04:29:13.366161+00:00 app[web.1]: "explanation": {
+2025-10-01T04:29:13.366161+00:00 app[web.1]: "type": "string",
+2025-10-01T04:29:13.366162+00:00 app[web.1]: "description": "A detailed explanation of why this outfit works for the user, providing styling tips and emotional value."
+2025-10-01T04:29:13.366162+00:00 app[web.1]: }
+2025-10-01T04:29:13.366162+00:00 app[web.1]: },
+2025-10-01T04:29:13.366162+00:00 app[web.1]: "required": [
+2025-10-01T04:29:13.366163+00:00 app[web.1]: "outfit_title",
+2025-10-01T04:29:13.366163+00:00 app[web.1]: "items"
+2025-10-01T04:29:13.366164+00:00 app[web.1]: ],
+2025-10-01T04:29:13.366164+00:00 app[web.1]: "additionalProperties": false,
+2025-10-01T04:29:13.366164+00:00 app[web.1]: "description": "A single complete outfit suggestion."
+2025-10-01T04:29:13.366164+00:00 app[web.1]: },
+2025-10-01T04:29:13.366164+00:00 app[web.1]: "image_prompt": {
+2025-10-01T04:29:13.366164+00:00 app[web.1]: "type": "string",
+2025-10-01T04:29:13.366165+00:00 app[web.1]: "description": "A vivid, Chinese-only visual prompt for an AI image generator. It should describe the user wearing the outfit in the intended scene, including outfit details, setting, atmosphere, and overall mood. This prompt will be passed to Midjourney or similar models to produce a full-body fashion image. This field is REQUIRED and extremely important."
+2025-10-01T04:29:13.366165+00:00 app[web.1]: }
+2025-10-01T04:29:13.366165+00:00 app[web.1]: },
+2025-10-01T04:29:13.366165+00:00 app[web.1]: "required": [
+2025-10-01T04:29:13.366165+00:00 app[web.1]: "outfit_suggestion"
+2025-10-01T04:29:13.366165+00:00 app[web.1]: ],
+2025-10-01T04:29:13.366165+00:00 app[web.1]: "additionalProperties": false
+2025-10-01T04:29:13.366165+00:00 app[web.1]: },
+2025-10-01T04:29:13.366166+00:00 app[web.1]: "minItems": 1,
+2025-10-01T04:29:13.366166+00:00 app[web.1]: "maxItems": 2
+2025-10-01T04:29:13.366166+00:00 app[web.1]: }
+2025-10-01T04:29:13.366166+00:00 app[web.1]: },
+2025-10-01T04:29:13.366166+00:00 app[web.1]: "required": [
+2025-10-01T04:29:13.366166+00:00 app[web.1]: "suggestions"
+2025-10-01T04:29:13.366166+00:00 app[web.1]: ],
+2025-10-01T04:29:13.366166+00:00 app[web.1]: "additionalProperties": false,
+2025-10-01T04:29:13.366167+00:00 app[web.1]: "$schema": "http://json-schema.org/draft-07/schema#"
+2025-10-01T04:29:13.366167+00:00 app[web.1]: }
+2025-10-01T04:29:13.366167+00:00 app[web.1]: }
+2025-10-01T04:29:13.366167+00:00 app[web.1]: }
+2025-10-01T04:29:13.366167+00:00 app[web.1]: ],
+2025-10-01T04:29:13.366167+00:00 app[web.1]: "tool_choice": {
+2025-10-01T04:29:13.366167+00:00 app[web.1]: "type": "function",
+2025-10-01T04:29:13.366167+00:00 app[web.1]: "function": {
+2025-10-01T04:29:13.366168+00:00 app[web.1]: "name": "get_multiple_style_suggestions"
+2025-10-01T04:29:13.366168+00:00 app[web.1]: }
+2025-10-01T04:29:13.366168+00:00 app[web.1]: }
+2025-10-01T04:29:13.366168+00:00 app[web.1]: }
+2025-10-01T04:29:13.366168+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] ===== SENDING REQUEST TO OPENAI =====
+2025-10-01T04:29:39.409578+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] ===== OPENAI RESPONSE RECEIVED =====
+2025-10-01T04:29:39.409660+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] 📊 Response usage: {
+2025-10-01T04:29:39.409661+00:00 app[web.1]: prompt_tokens: 1957,
+2025-10-01T04:29:39.409661+00:00 app[web.1]: completion_tokens: 1033,
+2025-10-01T04:29:39.409662+00:00 app[web.1]: total_tokens: 2990,
+2025-10-01T04:29:39.409662+00:00 app[web.1]: prompt_tokens_details: { cached_tokens: 0, audio_tokens: 0 },
+2025-10-01T04:29:39.409662+00:00 app[web.1]: completion_tokens_details: {
+2025-10-01T04:29:39.409662+00:00 app[web.1]: reasoning_tokens: 0,
+2025-10-01T04:29:39.409662+00:00 app[web.1]: audio_tokens: 0,
+2025-10-01T04:29:39.409662+00:00 app[web.1]: accepted_prediction_tokens: 0,
+2025-10-01T04:29:39.409663+00:00 app[web.1]: rejected_prediction_tokens: 0
+2025-10-01T04:29:39.409663+00:00 app[web.1]: }
+2025-10-01T04:29:39.409663+00:00 app[web.1]: }
+2025-10-01T04:29:39.409664+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] 📊 Finish reason: stop
+2025-10-01T04:29:39.409683+00:00 app[web.1]: 🤖 [OPENAI] ===== COMPLETE RESPONSE MESSAGE =====
+2025-10-01T04:29:39.409742+00:00 app[web.1]: 🤖 [OPENAI] 📥 FULL RESPONSE MESSAGE: {
+2025-10-01T04:29:39.409742+00:00 app[web.1]: "role": "assistant",
+2025-10-01T04:29:39.409743+00:00 app[web.1]: "content": null,
+2025-10-01T04:29:39.409743+00:00 app[web.1]: "tool_calls": [
+2025-10-01T04:29:39.409743+00:00 app[web.1]: {
+2025-10-01T04:29:39.409743+00:00 app[web.1]: "id": "call_CFIFQEborn17qDJ4ZLZWzLwo",
+2025-10-01T04:29:39.409743+00:00 app[web.1]: "type": "function",
+2025-10-01T04:29:39.409744+00:00 app[web.1]: "function": {
+2025-10-01T04:29:39.409744+00:00 app[web.1]: "name": "get_multiple_style_suggestions",
+2025-10-01T04:29:39.409753+00:00 app[web.1]: "arguments": "{\"suggestions\":[{\"outfit_suggestion\":{\"outfit_title\":\"Sunny Chic Stroll\",\"items\":{\"tops\":[{\"item_name\":\"Yellow Asymmetric Tube Top\",\"style_details\":\"Pale yellow, soft fabric, asymmetric draped silhouette\",\"wearing_details\":\"The tube top worn as a statement piece, perfect for highlighting the hourglass figure\",\"effect_description\":\"Draws attention to the user's waist, enhancing the hourglass shape\"}],\"bottoms\":{\"item_name\":\"High-Waisted White Linen Trousers\",\"style_details\":\"White, breathable linen, wide-leg silhouette\",\"wearing_details\":\"Trousers to elongate the petite frame and create a balanced look\",\"effect_description\":\"Creates a clean, elongated line to enhance height\"},\"shoes\":{\"item_name\":\"Beige Espadrille Wedges\",\"style_details\":\"Neutral beige, canvas material, adjustable ankle strap\",\"wearing_details\":\"Worn to add height while ensuring comfort and style\",\"effect_description\":\"Lifts the silhouette without sacrificing comfort for casual wear\"},\"bag\":{\"item_name\":\"Tan Leather Crossbody Bag\",\"style_details\":\"Tan, smooth leather, casual structure\",\"wearing_details\":\"Sling style for easy access during shopping outings\",\"effect_description\":\"Complements the casual vibe of the outfit\"},\"accessories\":[{\"item_name\":\"Gold Hoop Earrings\",\"style_details\":\"Simple gold, medium size, polished finish\",\"wearing_details\":\"Adds a subtle touch of elegance to the casual ensemble\",\"effect_description\":\"Brings a polished touch without overpowering the outfit\"}],\"hairstyle\":{\"style_name\":\"Sleek Low Ponytail\",\"description\":\"A polished low ponytail to keep the look refined and neat\"}},\"explanation\":\"This outfit enhances the user's hourglass shape with a statement tube top and elongates their petite frame with white wide-leg trousers. The touches of gold in the accessories add a bit of elegance, while the espadrille wedges and crossbody bag keep the look casual but chic for a stroll in an urban setting.\"},\"image_prompt\":\"苗条的人身材匀称，身材娇小，头发光滑，扎成低马尾，穿着淡黄色的非对称抹胸上衣，搭配白色高腰宽腿亚麻长裤，脚穿米色草编坡跟鞋，斜挎棕色皮革挎包，耳边搭配简约金色圈耳环。场景是街道，一边是户外咖啡桌和椅子，阳光明媚，都市休闲氛围。\"},{\"outfit_suggestion\":{\"outfit_title\":\"Casual Elegance\",\"items\":{\"tops\":[{\"item_name\":\"Yellow Asymmetric Tube Top\",\"style_details\":\"Pale yellow, soft fabric, asymmetric draped silhouette\",\"wearing_details\":\"Key piece tucked slightly into the skirt for a sophisticated touch\",\"effect_description\":\"Highlights the user's waist and decollété, drawing attention\"}],\"bottoms\":{\"item_name\":\"Muted Olive A-Line Midi Skirt\",\"style_details\":\"Muted olive, flowy cotton, mid-length\",\"wearing_details\":\"The midi skirt balances the outfit and offers a touch of elegance\",\"effect_description\":\"Accentuates the waist and provides graceful movement\"},\"shoes\":{\"item_name\":\"White Low-Top Sneakers\",\"style_details\":\"White, leather material, minimalist design\",\"wearing_details\":\"Relaxed addition, bringing comfort for city strolling\",\"effect_description\":\"Maintains the casual aesthetic while ensuring ease of movement\"},\"bag\":{\"item_name\":\"Small Yellow Leather Tote\",\"style_details\":\"Bright yellow, structured leather, medium-sized\",\"wearing_details\":\"Carried by hand for a pop of color that complements the top\",\"effect_description\":\"Acts as a bold accent, tying the outfit together\"},\"accessories\":[{\"item_name\":\"Thin Gold Bangle\",\"style_details\":\"Delicate gold, polished finish\",\"wearing_details\":\"Worn on the wrist to subtly enhance elegance\",\"effect_description\":\"Adds a refined detail to a casual but polished outfit\"}],\"hairstyle\":{\"style_name\":\"Loose Waves\",\"description\":\"Soft waves to create a relaxed yet stylish look, enhancing the user's oval face\"},\"layering_description\":\"The tube top is the focal point, with the midi skirt providing balance. Accessories are kept minimal to highlight the elegance of the outfit.\"},\"explanation\":\"Balancing elegance and casual style, this ensemble pairs the key piece with an A-line skirt to flatter the user's shape and maintain comfort. Sleek accessories enhance the look without overpowering it.\"},\"image_prompt\":\"小巧女性，身体略呈沙漏状，穿着淡黄色的不对称抹胸上衣，搭配橄榄绿的A字型中长裙，脚穿白色低帮运动鞋，手中提着明黄色皮革小手提袋，戴着一个纤细的金手镯。场景是一条阳光明媚的城市街道，两旁是咖啡桌和椅子，营造出休闲的氛围。\"}]}"
+2025-10-01T04:29:39.409754+00:00 app[web.1]: }
+2025-10-01T04:29:39.409754+00:00 app[web.1]: }
+2025-10-01T04:29:39.409754+00:00 app[web.1]: ],
+2025-10-01T04:29:39.409754+00:00 app[web.1]: "refusal": null,
+2025-10-01T04:29:39.409754+00:00 app[web.1]: "annotations": []
+2025-10-01T04:29:39.409755+00:00 app[web.1]: }
+2025-10-01T04:29:39.409838+00:00 app[web.1]: 🤖 [OPENAI] 🔍 RAW AI RESPONSE: {
+2025-10-01T04:29:39.409838+00:00 app[web.1]: "suggestions": [
+2025-10-01T04:29:39.409838+00:00 app[web.1]: {
+2025-10-01T04:29:39.409839+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T04:29:39.409839+00:00 app[web.1]: "outfit_title": "Sunny Chic Stroll",
+2025-10-01T04:29:39.409839+00:00 app[web.1]: "items": {
+2025-10-01T04:29:39.409839+00:00 app[web.1]: "tops": [
+2025-10-01T04:29:39.409839+00:00 app[web.1]: {
+2025-10-01T04:29:39.409840+00:00 app[web.1]: "item_name": "Yellow Asymmetric Tube Top",
+2025-10-01T04:29:39.409841+00:00 app[web.1]: "style_details": "Pale yellow, soft fabric, asymmetric draped silhouette",
+2025-10-01T04:29:39.409842+00:00 app[web.1]: "wearing_details": "The tube top worn as a statement piece, perfect for highlighting the hourglass figure",
+2025-10-01T04:29:39.409843+00:00 app[web.1]: "effect_description": "Draws attention to the user's waist, enhancing the hourglass shape"
+2025-10-01T04:29:39.409843+00:00 app[web.1]: }
+2025-10-01T04:29:39.409843+00:00 app[web.1]: ],
+2025-10-01T04:29:39.409844+00:00 app[web.1]: "bottoms": {
+2025-10-01T04:29:39.409844+00:00 app[web.1]: "item_name": "High-Waisted White Linen Trousers",
+2025-10-01T04:29:39.409845+00:00 app[web.1]: "style_details": "White, breathable linen, wide-leg silhouette",
+2025-10-01T04:29:39.409845+00:00 app[web.1]: "wearing_details": "Trousers to elongate the petite frame and create a balanced look",
+2025-10-01T04:29:39.409846+00:00 app[web.1]: "effect_description": "Creates a clean, elongated line to enhance height"
+2025-10-01T04:29:39.409846+00:00 app[web.1]: },
+2025-10-01T04:29:39.409846+00:00 app[web.1]: "shoes": {
+2025-10-01T04:29:39.409846+00:00 app[web.1]: "item_name": "Beige Espadrille Wedges",
+2025-10-01T04:29:39.409846+00:00 app[web.1]: "style_details": "Neutral beige, canvas material, adjustable ankle strap",
+2025-10-01T04:29:39.409847+00:00 app[web.1]: "wearing_details": "Worn to add height while ensuring comfort and style",
+2025-10-01T04:29:39.409847+00:00 app[web.1]: "effect_description": "Lifts the silhouette without sacrificing comfort for casual wear"
+2025-10-01T04:29:39.409847+00:00 app[web.1]: },
+2025-10-01T04:29:39.409847+00:00 app[web.1]: "bag": {
+2025-10-01T04:29:39.409848+00:00 app[web.1]: "item_name": "Tan Leather Crossbody Bag",
+2025-10-01T04:29:39.409848+00:00 app[web.1]: "style_details": "Tan, smooth leather, casual structure",
+2025-10-01T04:29:39.409848+00:00 app[web.1]: "wearing_details": "Sling style for easy access during shopping outings",
+2025-10-01T04:29:39.409849+00:00 app[web.1]: "effect_description": "Complements the casual vibe of the outfit"
+2025-10-01T04:29:39.409849+00:00 app[web.1]: },
+2025-10-01T04:29:39.409849+00:00 app[web.1]: "accessories": [
+2025-10-01T04:29:39.409849+00:00 app[web.1]: {
+2025-10-01T04:29:39.409850+00:00 app[web.1]: "item_name": "Gold Hoop Earrings",
+2025-10-01T04:29:39.409850+00:00 app[web.1]: "style_details": "Simple gold, medium size, polished finish",
+2025-10-01T04:29:39.409850+00:00 app[web.1]: "wearing_details": "Adds a subtle touch of elegance to the casual ensemble",
+2025-10-01T04:29:39.409850+00:00 app[web.1]: "effect_description": "Brings a polished touch without overpowering the outfit"
+2025-10-01T04:29:39.409850+00:00 app[web.1]: }
+2025-10-01T04:29:39.409850+00:00 app[web.1]: ],
+2025-10-01T04:29:39.409851+00:00 app[web.1]: "hairstyle": {
+2025-10-01T04:29:39.409851+00:00 app[web.1]: "style_name": "Sleek Low Ponytail",
+2025-10-01T04:29:39.409851+00:00 app[web.1]: "description": "A polished low ponytail to keep the look refined and neat"
+2025-10-01T04:29:39.409851+00:00 app[web.1]: }
+2025-10-01T04:29:39.409851+00:00 app[web.1]: },
+2025-10-01T04:29:39.409852+00:00 app[web.1]: "explanation": "This outfit enhances the user's hourglass shape with a statement tube top and elongates their petite frame with white wide-leg trousers. The touches of gold in the accessories add a bit of elegance, while the espadrille wedges and crossbody bag keep the look casual but chic for a stroll in an urban setting."
+2025-10-01T04:29:39.409853+00:00 app[web.1]: },
+2025-10-01T04:29:39.409853+00:00 app[web.1]: "image_prompt": "苗条的人身材匀称，身材娇小，头发光滑，扎成低马尾，穿着淡黄色的非对称抹胸上衣，搭配白色高腰宽腿亚麻长裤，脚穿米色草编坡跟鞋，斜挎棕色皮革挎包，耳边搭配简约金色圈耳环。场景是街道，一边是户外咖啡桌和椅子，阳光明媚，都市休闲氛围。"
+2025-10-01T04:29:39.409853+00:00 app[web.1]: },
+2025-10-01T04:29:39.409853+00:00 app[web.1]: {
+2025-10-01T04:29:39.409853+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T04:29:39.409853+00:00 app[web.1]: "outfit_title": "Casual Elegance",
+2025-10-01T04:29:39.409854+00:00 app[web.1]: "items": {
+2025-10-01T04:29:39.409854+00:00 app[web.1]: "tops": [
+2025-10-01T04:29:39.409854+00:00 app[web.1]: {
+2025-10-01T04:29:39.409854+00:00 app[web.1]: "item_name": "Yellow Asymmetric Tube Top",
+2025-10-01T04:29:39.409855+00:00 app[web.1]: "style_details": "Pale yellow, soft fabric, asymmetric draped silhouette",
+2025-10-01T04:29:39.409855+00:00 app[web.1]: "wearing_details": "Key piece tucked slightly into the skirt for a sophisticated touch",
+2025-10-01T04:29:39.409855+00:00 app[web.1]: "effect_description": "Highlights the user's waist and decollété, drawing attention"
+2025-10-01T04:29:39.409855+00:00 app[web.1]: }
+2025-10-01T04:29:39.409856+00:00 app[web.1]: ],
+2025-10-01T04:29:39.409856+00:00 app[web.1]: "bottoms": {
+2025-10-01T04:29:39.409856+00:00 app[web.1]: "item_name": "Muted Olive A-Line Midi Skirt",
+2025-10-01T04:29:39.409856+00:00 app[web.1]: "style_details": "Muted olive, flowy cotton, mid-length",
+2025-10-01T04:29:39.409857+00:00 app[web.1]: "wearing_details": "The midi skirt balances the outfit and offers a touch of elegance",
+2025-10-01T04:29:39.409857+00:00 app[web.1]: "effect_description": "Accentuates the waist and provides graceful movement"
+2025-10-01T04:29:39.409857+00:00 app[web.1]: },
+2025-10-01T04:29:39.409857+00:00 app[web.1]: "shoes": {
+2025-10-01T04:29:39.409857+00:00 app[web.1]: "item_name": "White Low-Top Sneakers",
+2025-10-01T04:29:39.409858+00:00 app[web.1]: "style_details": "White, leather material, minimalist design",
+2025-10-01T04:29:39.409858+00:00 app[web.1]: "wearing_details": "Relaxed addition, bringing comfort for city strolling",
+2025-10-01T04:29:39.409859+00:00 app[web.1]: "effect_description": "Maintains the casual aesthetic while ensuring ease of movement"
+2025-10-01T04:29:39.409860+00:00 app[web.1]: },
+2025-10-01T04:29:39.409860+00:00 app[web.1]: "bag": {
+2025-10-01T04:29:39.409860+00:00 app[web.1]: "item_name": "Small Yellow Leather Tote",
+2025-10-01T04:29:39.409860+00:00 app[web.1]: "style_details": "Bright yellow, structured leather, medium-sized",
+2025-10-01T04:29:39.409860+00:00 app[web.1]: "wearing_details": "Carried by hand for a pop of color that complements the top",
+2025-10-01T04:29:39.409860+00:00 app[web.1]: "effect_description": "Acts as a bold accent, tying the outfit together"
+2025-10-01T04:29:39.409860+00:00 app[web.1]: },
+2025-10-01T04:29:39.409861+00:00 app[web.1]: "accessories": [
+2025-10-01T04:29:39.409861+00:00 app[web.1]: {
+2025-10-01T04:29:39.409861+00:00 app[web.1]: "item_name": "Thin Gold Bangle",
+2025-10-01T04:29:39.409861+00:00 app[web.1]: "style_details": "Delicate gold, polished finish",
+2025-10-01T04:29:39.409861+00:00 app[web.1]: "wearing_details": "Worn on the wrist to subtly enhance elegance",
+2025-10-01T04:29:39.409861+00:00 app[web.1]: "effect_description": "Adds a refined detail to a casual but polished outfit"
+2025-10-01T04:29:39.409861+00:00 app[web.1]: }
+2025-10-01T04:29:39.409862+00:00 app[web.1]: ],
+2025-10-01T04:29:39.409862+00:00 app[web.1]: "hairstyle": {
+2025-10-01T04:29:39.409862+00:00 app[web.1]: "style_name": "Loose Waves",
+2025-10-01T04:29:39.409862+00:00 app[web.1]: "description": "Soft waves to create a relaxed yet stylish look, enhancing the user's oval face"
+2025-10-01T04:29:39.409862+00:00 app[web.1]: },
+2025-10-01T04:29:39.409863+00:00 app[web.1]: "layering_description": "The tube top is the focal point, with the midi skirt providing balance. Accessories are kept minimal to highlight the elegance of the outfit."
+2025-10-01T04:29:39.409863+00:00 app[web.1]: },
+2025-10-01T04:29:39.409867+00:00 app[web.1]: "explanation": "Balancing elegance and casual style, this ensemble pairs the key piece with an A-line skirt to flatter the user's shape and maintain comfort. Sleek accessories enhance the look without overpowering it."
+2025-10-01T04:29:39.409867+00:00 app[web.1]: },
+2025-10-01T04:29:39.409867+00:00 app[web.1]: "image_prompt": "小巧女性，身体略呈沙漏状，穿着淡黄色的不对称抹胸上衣，搭配橄榄绿的A字型中长裙，脚穿白色低帮运动鞋，手中提着明黄色皮革小手提袋，戴着一个纤细的金手镯。场景是一条阳光明媚的城市街道，两旁是咖啡桌和椅子，营造出休闲的氛围。"
+2025-10-01T04:29:39.409867+00:00 app[web.1]: }
+2025-10-01T04:29:39.409868+00:00 app[web.1]: ]
+2025-10-01T04:29:39.409868+00:00 app[web.1]: }
+2025-10-01T04:29:39.409927+00:00 app[web.1]: 🤖 [OPENAI] 🔧 RESTRUCTURED DATA: {
+2025-10-01T04:29:39.409927+00:00 app[web.1]: "suggestions": [
+2025-10-01T04:29:39.409927+00:00 app[web.1]: {
+2025-10-01T04:29:39.409927+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T04:29:39.409928+00:00 app[web.1]: "outfit_title": "Sunny Chic Stroll",
+2025-10-01T04:29:39.409928+00:00 app[web.1]: "items": {
+2025-10-01T04:29:39.409928+00:00 app[web.1]: "tops": [
+2025-10-01T04:29:39.409928+00:00 app[web.1]: {
+2025-10-01T04:29:39.409929+00:00 app[web.1]: "item_name": "Yellow Asymmetric Tube Top",
+2025-10-01T04:29:39.409929+00:00 app[web.1]: "style_details": "Pale yellow, soft fabric, asymmetric draped silhouette",
+2025-10-01T04:29:39.409929+00:00 app[web.1]: "wearing_details": "The tube top worn as a statement piece, perfect for highlighting the hourglass figure",
+2025-10-01T04:29:39.409929+00:00 app[web.1]: "effect_description": "Draws attention to the user's waist, enhancing the hourglass shape"
+2025-10-01T04:29:39.409929+00:00 app[web.1]: }
+2025-10-01T04:29:39.409929+00:00 app[web.1]: ],
+2025-10-01T04:29:39.409930+00:00 app[web.1]: "bottoms": {
+2025-10-01T04:29:39.409930+00:00 app[web.1]: "item_name": "High-Waisted White Linen Trousers",
+2025-10-01T04:29:39.409930+00:00 app[web.1]: "style_details": "White, breathable linen, wide-leg silhouette",
+2025-10-01T04:29:39.409930+00:00 app[web.1]: "wearing_details": "Trousers to elongate the petite frame and create a balanced look",
+2025-10-01T04:29:39.409930+00:00 app[web.1]: "effect_description": "Creates a clean, elongated line to enhance height"
+2025-10-01T04:29:39.409930+00:00 app[web.1]: },
+2025-10-01T04:29:39.409930+00:00 app[web.1]: "shoes": {
+2025-10-01T04:29:39.409931+00:00 app[web.1]: "item_name": "Beige Espadrille Wedges",
+2025-10-01T04:29:39.409931+00:00 app[web.1]: "style_details": "Neutral beige, canvas material, adjustable ankle strap",
+2025-10-01T04:29:39.409931+00:00 app[web.1]: "wearing_details": "Worn to add height while ensuring comfort and style",
+2025-10-01T04:29:39.409931+00:00 app[web.1]: "effect_description": "Lifts the silhouette without sacrificing comfort for casual wear"
+2025-10-01T04:29:39.409931+00:00 app[web.1]: },
+2025-10-01T04:29:39.409931+00:00 app[web.1]: "bag": {
+2025-10-01T04:29:39.409931+00:00 app[web.1]: "item_name": "Tan Leather Crossbody Bag",
+2025-10-01T04:29:39.409932+00:00 app[web.1]: "style_details": "Tan, smooth leather, casual structure",
+2025-10-01T04:29:39.409932+00:00 app[web.1]: "wearing_details": "Sling style for easy access during shopping outings",
+2025-10-01T04:29:39.409932+00:00 app[web.1]: "effect_description": "Complements the casual vibe of the outfit"
+2025-10-01T04:29:39.409932+00:00 app[web.1]: },
+2025-10-01T04:29:39.409932+00:00 app[web.1]: "accessories": [
+2025-10-01T04:29:39.409932+00:00 app[web.1]: {
+2025-10-01T04:29:39.409932+00:00 app[web.1]: "item_name": "Gold Hoop Earrings",
+2025-10-01T04:29:39.409932+00:00 app[web.1]: "style_details": "Simple gold, medium size, polished finish",
+2025-10-01T04:29:39.409933+00:00 app[web.1]: "wearing_details": "Adds a subtle touch of elegance to the casual ensemble",
+2025-10-01T04:29:39.409933+00:00 app[web.1]: "effect_description": "Brings a polished touch without overpowering the outfit"
+2025-10-01T04:29:39.409933+00:00 app[web.1]: }
+2025-10-01T04:29:39.409933+00:00 app[web.1]: ],
+2025-10-01T04:29:39.409933+00:00 app[web.1]: "hairstyle": {
+2025-10-01T04:29:39.409933+00:00 app[web.1]: "style_name": "Sleek Low Ponytail",
+2025-10-01T04:29:39.409933+00:00 app[web.1]: "description": "A polished low ponytail to keep the look refined and neat"
+2025-10-01T04:29:39.409934+00:00 app[web.1]: }
+2025-10-01T04:29:39.409934+00:00 app[web.1]: },
+2025-10-01T04:29:39.409934+00:00 app[web.1]: "explanation": "This outfit enhances the user's hourglass shape with a statement tube top and elongates their petite frame with white wide-leg trousers. The touches of gold in the accessories add a bit of elegance, while the espadrille wedges and crossbody bag keep the look casual but chic for a stroll in an urban setting."
+2025-10-01T04:29:39.409935+00:00 app[web.1]: },
+2025-10-01T04:29:39.409935+00:00 app[web.1]: "image_prompt": "苗条的人身材匀称，身材娇小，头发光滑，扎成低马尾，穿着淡黄色的非对称抹胸上衣，搭配白色高腰宽腿亚麻长裤，脚穿米色草编坡跟鞋，斜挎棕色皮革挎包，耳边搭配简约金色圈耳环。场景是街道，一边是户外咖啡桌和椅子，阳光明媚，都市休闲氛围。"
+2025-10-01T04:29:39.409935+00:00 app[web.1]: },
+2025-10-01T04:29:39.409935+00:00 app[web.1]: {
+2025-10-01T04:29:39.409935+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T04:29:39.409936+00:00 app[web.1]: "outfit_title": "Casual Elegance",
+2025-10-01T04:29:39.409936+00:00 app[web.1]: "items": {
+2025-10-01T04:29:39.409936+00:00 app[web.1]: "tops": [
+2025-10-01T04:29:39.409937+00:00 app[web.1]: {
+2025-10-01T04:29:39.409937+00:00 app[web.1]: "item_name": "Yellow Asymmetric Tube Top",
+2025-10-01T04:29:39.409937+00:00 app[web.1]: "style_details": "Pale yellow, soft fabric, asymmetric draped silhouette",
+2025-10-01T04:29:39.409937+00:00 app[web.1]: "wearing_details": "Key piece tucked slightly into the skirt for a sophisticated touch",
+2025-10-01T04:29:39.409937+00:00 app[web.1]: "effect_description": "Highlights the user's waist and decollété, drawing attention"
+2025-10-01T04:29:39.409937+00:00 app[web.1]: }
+2025-10-01T04:29:39.409937+00:00 app[web.1]: ],
+2025-10-01T04:29:39.409937+00:00 app[web.1]: "bottoms": {
+2025-10-01T04:29:39.409938+00:00 app[web.1]: "item_name": "Muted Olive A-Line Midi Skirt",
+2025-10-01T04:29:39.409938+00:00 app[web.1]: "style_details": "Muted olive, flowy cotton, mid-length",
+2025-10-01T04:29:39.409938+00:00 app[web.1]: "wearing_details": "The midi skirt balances the outfit and offers a touch of elegance",
+2025-10-01T04:29:39.409938+00:00 app[web.1]: "effect_description": "Accentuates the waist and provides graceful movement"
+2025-10-01T04:29:39.409938+00:00 app[web.1]: },
+2025-10-01T04:29:39.409938+00:00 app[web.1]: "shoes": {
+2025-10-01T04:29:39.409938+00:00 app[web.1]: "item_name": "White Low-Top Sneakers",
+2025-10-01T04:29:39.409939+00:00 app[web.1]: "style_details": "White, leather material, minimalist design",
+2025-10-01T04:29:39.409939+00:00 app[web.1]: "wearing_details": "Relaxed addition, bringing comfort for city strolling",
+2025-10-01T04:29:39.409940+00:00 app[web.1]: "effect_description": "Maintains the casual aesthetic while ensuring ease of movement"
+2025-10-01T04:29:39.409941+00:00 app[web.1]: },
+2025-10-01T04:29:39.409941+00:00 app[web.1]: "bag": {
+2025-10-01T04:29:39.409941+00:00 app[web.1]: "item_name": "Small Yellow Leather Tote",
+2025-10-01T04:29:39.409941+00:00 app[web.1]: "style_details": "Bright yellow, structured leather, medium-sized",
+2025-10-01T04:29:39.409941+00:00 app[web.1]: "wearing_details": "Carried by hand for a pop of color that complements the top",
+2025-10-01T04:29:39.409941+00:00 app[web.1]: "effect_description": "Acts as a bold accent, tying the outfit together"
+2025-10-01T04:29:39.409941+00:00 app[web.1]: },
+2025-10-01T04:29:39.409941+00:00 app[web.1]: "accessories": [
+2025-10-01T04:29:39.409942+00:00 app[web.1]: {
+2025-10-01T04:29:39.409942+00:00 app[web.1]: "item_name": "Thin Gold Bangle",
+2025-10-01T04:29:39.409942+00:00 app[web.1]: "style_details": "Delicate gold, polished finish",
+2025-10-01T04:29:39.409942+00:00 app[web.1]: "wearing_details": "Worn on the wrist to subtly enhance elegance",
+2025-10-01T04:29:39.409942+00:00 app[web.1]: "effect_description": "Adds a refined detail to a casual but polished outfit"
+2025-10-01T04:29:39.409942+00:00 app[web.1]: }
+2025-10-01T04:29:39.409942+00:00 app[web.1]: ],
+2025-10-01T04:29:39.409942+00:00 app[web.1]: "hairstyle": {
+2025-10-01T04:29:39.409943+00:00 app[web.1]: "style_name": "Loose Waves",
+2025-10-01T04:29:39.409943+00:00 app[web.1]: "description": "Soft waves to create a relaxed yet stylish look, enhancing the user's oval face"
+2025-10-01T04:29:39.409943+00:00 app[web.1]: },
+2025-10-01T04:29:39.409943+00:00 app[web.1]: "layering_description": "The tube top is the focal point, with the midi skirt providing balance. Accessories are kept minimal to highlight the elegance of the outfit."
+2025-10-01T04:29:39.409943+00:00 app[web.1]: },
+2025-10-01T04:29:39.409944+00:00 app[web.1]: "explanation": "Balancing elegance and casual style, this ensemble pairs the key piece with an A-line skirt to flatter the user's shape and maintain comfort. Sleek accessories enhance the look without overpowering it."
+2025-10-01T04:29:39.409944+00:00 app[web.1]: },
+2025-10-01T04:29:39.409944+00:00 app[web.1]: "image_prompt": "小巧女性，身体略呈沙漏状，穿着淡黄色的不对称抹胸上衣，搭配橄榄绿的A字型中长裙，脚穿白色低帮运动鞋，手中提着明黄色皮革小手提袋，戴着一个纤细的金手镯。场景是一条阳光明媚的城市街道，两旁是咖啡桌和椅子，营造出休闲的氛围。"
+2025-10-01T04:29:39.409944+00:00 app[web.1]: }
+2025-10-01T04:29:39.409944+00:00 app[web.1]: ]
+2025-10-01T04:29:39.409944+00:00 app[web.1]: }
+2025-10-01T04:29:39.410099+00:00 app[web.1]: 🤖 [OPENAI] [PRE-VALIDATION] Suggestion 0: {
+2025-10-01T04:29:39.410099+00:00 app[web.1]: hasOutfitSuggestion: true,
+2025-10-01T04:29:39.410099+00:00 app[web.1]: hasImagePrompt: true,
+2025-10-01T04:29:39.410099+00:00 app[web.1]: hasImagePromptInOutfitSuggestion: false,
+2025-10-01T04:29:39.410099+00:00 app[web.1]: imagePromptType: 'string',
+2025-10-01T04:29:39.410099+00:00 app[web.1]: imagePromptInOutfitSuggestionType: 'undefined',
+2025-10-01T04:29:39.410100+00:00 app[web.1]: imagePromptPreview: '苗条的人身材匀称，身材娇小，头发光滑，扎成低马尾，穿着淡黄色的非对称抹胸上衣，搭配白色高腰宽腿亚麻长裤，脚穿米色草编坡跟鞋，斜挎棕色皮革挎包，耳边搭配简约金色圈耳环。场景是街道，一边是户外咖啡桌和椅子...'
+2025-10-01T04:29:39.410100+00:00 app[web.1]: }
+2025-10-01T04:29:39.410928+00:00 app[web.1]: 🤖 [OPENAI] [PRE-VALIDATION] Suggestion 1: {
+2025-10-01T04:29:39.410928+00:00 app[web.1]: hasOutfitSuggestion: true,
+2025-10-01T04:29:39.410928+00:00 app[web.1]: hasImagePrompt: true,
+2025-10-01T04:29:39.410928+00:00 app[web.1]: hasImagePromptInOutfitSuggestion: false,
+2025-10-01T04:29:39.410928+00:00 app[web.1]: imagePromptType: 'string',
+2025-10-01T04:29:39.410929+00:00 app[web.1]: imagePromptInOutfitSuggestionType: 'undefined',
+2025-10-01T04:29:39.410929+00:00 app[web.1]: imagePromptPreview: '小巧女性，身体略呈沙漏状，穿着淡黄色的不对称抹胸上衣，搭配橄榄绿的A字型中长裙，脚穿白色低帮运动鞋，手中提着明黄色皮革小手提袋，戴着一个纤细的金手镯。场景是一条阳光明媚的城市街道，两旁是咖啡桌和椅子，...'
+2025-10-01T04:29:39.410929+00:00 app[web.1]: }
+2025-10-01T04:29:39.411914+00:00 app[web.1]: 🤖 [OPENAI] ✅ Zod validation successful
+2025-10-01T04:29:39.412028+00:00 app[web.1]: 🤖 [OPENAI] [POST-VALIDATION] Suggestion 0: {
+2025-10-01T04:29:39.412028+00:00 app[web.1]: hasOutfitSuggestion: true,
+2025-10-01T04:29:39.412028+00:00 app[web.1]: hasImagePrompt: true,
+2025-10-01T04:29:39.412028+00:00 app[web.1]: imagePromptType: 'string',
+2025-10-01T04:29:39.412028+00:00 app[web.1]: imagePromptPreview: '苗条的人身材匀称，身材娇小，头发光滑，扎成低马尾，穿着淡黄色的非对称抹胸上衣，搭配白色高腰宽腿亚麻长裤，脚穿米色草编坡跟鞋，斜挎棕色皮革挎包，耳边搭配简约金色圈耳环。场景是街道，一边是户外咖啡桌和椅子...'
+2025-10-01T04:29:39.412028+00:00 app[web.1]: }
+2025-10-01T04:29:39.412062+00:00 app[web.1]: 🤖 [OPENAI] [POST-VALIDATION] Suggestion 1: {
+2025-10-01T04:29:39.412062+00:00 app[web.1]: hasOutfitSuggestion: true,
+2025-10-01T04:29:39.412062+00:00 app[web.1]: hasImagePrompt: true,
+2025-10-01T04:29:39.412063+00:00 app[web.1]: imagePromptType: 'string',
+2025-10-01T04:29:39.412063+00:00 app[web.1]: imagePromptPreview: '小巧女性，身体略呈沙漏状，穿着淡黄色的不对称抹胸上衣，搭配橄榄绿的A字型中长裙，脚穿白色低帮运动鞋，手中提着明黄色皮革小手提袋，戴着一个纤细的金手镯。场景是一条阳光明媚的城市街道，两旁是咖啡桌和椅子，...'
+2025-10-01T04:29:39.412063+00:00 app[web.1]: }
+2025-10-01T04:29:39.412225+00:00 app[web.1]: 🤖 [OPENAI] [AI DEBUG] Cleaned OpenAI Suggestion: {
+2025-10-01T04:29:39.412225+00:00 app[web.1]: "suggestions": [
+2025-10-01T04:29:39.412225+00:00 app[web.1]: {
+2025-10-01T04:29:39.412225+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T04:29:39.412225+00:00 app[web.1]: "outfit_title": "Sunny Chic Stroll",
+2025-10-01T04:29:39.412225+00:00 app[web.1]: "items": {
+2025-10-01T04:29:39.412226+00:00 app[web.1]: "tops": [
+2025-10-01T04:29:39.412226+00:00 app[web.1]: {
+2025-10-01T04:29:39.412226+00:00 app[web.1]: "item_name": "Yellow Asymmetric Tube Top",
+2025-10-01T04:29:39.412226+00:00 app[web.1]: "style_details": "Pale yellow, soft fabric, asymmetric draped silhouette",
+2025-10-01T04:29:39.412226+00:00 app[web.1]: "wearing_details": "The tube top worn as a statement piece, perfect for highlighting the hourglass figure",
+2025-10-01T04:29:39.412226+00:00 app[web.1]: "effect_description": "Draws attention to the user's waist, enhancing the hourglass shape"
+2025-10-01T04:29:39.412226+00:00 app[web.1]: }
+2025-10-01T04:29:39.412226+00:00 app[web.1]: ],
+2025-10-01T04:29:39.412227+00:00 app[web.1]: "bottoms": {
+2025-10-01T04:29:39.412227+00:00 app[web.1]: "item_name": "High-Waisted White Linen Trousers",
+2025-10-01T04:29:39.412227+00:00 app[web.1]: "style_details": "White, breathable linen, wide-leg silhouette",
+2025-10-01T04:29:39.412227+00:00 app[web.1]: "wearing_details": "Trousers to elongate the petite frame and create a balanced look",
+2025-10-01T04:29:39.412227+00:00 app[web.1]: "effect_description": "Creates a clean, elongated line to enhance height"
+2025-10-01T04:29:39.412227+00:00 app[web.1]: },
+2025-10-01T04:29:39.412227+00:00 app[web.1]: "shoes": {
+2025-10-01T04:29:39.412227+00:00 app[web.1]: "item_name": "Beige Espadrille Wedges",
+2025-10-01T04:29:39.412227+00:00 app[web.1]: "style_details": "Neutral beige, canvas material, adjustable ankle strap",
+2025-10-01T04:29:39.412228+00:00 app[web.1]: "wearing_details": "Worn to add height while ensuring comfort and style",
+2025-10-01T04:29:39.412228+00:00 app[web.1]: "effect_description": "Lifts the silhouette without sacrificing comfort for casual wear"
+2025-10-01T04:29:39.412228+00:00 app[web.1]: },
+2025-10-01T04:29:39.412228+00:00 app[web.1]: "bag": {
+2025-10-01T04:29:39.412228+00:00 app[web.1]: "item_name": "Tan Leather Crossbody Bag",
+2025-10-01T04:29:39.412228+00:00 app[web.1]: "style_details": "Tan, smooth leather, casual structure",
+2025-10-01T04:29:39.412228+00:00 app[web.1]: "wearing_details": "Sling style for easy access during shopping outings",
+2025-10-01T04:29:39.412228+00:00 app[web.1]: "effect_description": "Complements the casual vibe of the outfit"
+2025-10-01T04:29:39.412228+00:00 app[web.1]: },
+2025-10-01T04:29:39.412228+00:00 app[web.1]: "hairstyle": {
+2025-10-01T04:29:39.412228+00:00 app[web.1]: "style_name": "Sleek Low Ponytail",
+2025-10-01T04:29:39.412229+00:00 app[web.1]: "description": "A polished low ponytail to keep the look refined and neat"
+2025-10-01T04:29:39.412229+00:00 app[web.1]: }
+2025-10-01T04:29:39.412229+00:00 app[web.1]: },
+2025-10-01T04:29:39.412229+00:00 app[web.1]: "explanation": "This outfit enhances the user's hourglass shape with a statement tube top and elongates their petite frame with white wide-leg trousers. The touches of gold in the accessories add a bit of elegance, while the espadrille wedges and crossbody bag keep the look casual but chic for a stroll in an urban setting."
+2025-10-01T04:29:39.412229+00:00 app[web.1]: },
+2025-10-01T04:29:39.412229+00:00 app[web.1]: "image_prompt": "苗条的人身材匀称，身材娇小，头发光滑，扎成低马尾，穿着淡黄色的非对称抹胸上衣，搭配白色高腰宽腿亚麻长裤，脚穿米色草编坡跟鞋，斜挎棕色皮革挎包，耳边搭配简约金色圈耳环。场景是街道，一边是户外咖啡桌和椅子，阳光明媚，都市休闲氛围。"
+2025-10-01T04:29:39.412229+00:00 app[web.1]: },
+2025-10-01T04:29:39.412229+00:00 app[web.1]: {
+2025-10-01T04:29:39.412229+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T04:29:39.412230+00:00 app[web.1]: "outfit_title": "Casual Elegance",
+2025-10-01T04:29:39.412230+00:00 app[web.1]: "items": {
+2025-10-01T04:29:39.412230+00:00 app[web.1]: "tops": [
+2025-10-01T04:29:39.412230+00:00 app[web.1]: {
+2025-10-01T04:29:39.412230+00:00 app[web.1]: "item_name": "Yellow Asymmetric Tube Top",
+2025-10-01T04:29:39.412230+00:00 app[web.1]: "style_details": "Pale yellow, soft fabric, asymmetric draped silhouette",
+2025-10-01T04:29:39.412230+00:00 app[web.1]: "wearing_details": "Key piece tucked slightly into the skirt for a sophisticated touch",
+2025-10-01T04:29:39.412230+00:00 app[web.1]: "effect_description": "Highlights the user's waist and decollété, drawing attention"
+2025-10-01T04:29:39.412230+00:00 app[web.1]: }
+2025-10-01T04:29:39.412230+00:00 app[web.1]: ],
+2025-10-01T04:29:39.412230+00:00 app[web.1]: "bottoms": {
+2025-10-01T04:29:39.412231+00:00 app[web.1]: "item_name": "Muted Olive A-Line Midi Skirt",
+2025-10-01T04:29:39.412231+00:00 app[web.1]: "style_details": "Muted olive, flowy cotton, mid-length",
+2025-10-01T04:29:39.412231+00:00 app[web.1]: "wearing_details": "The midi skirt balances the outfit and offers a touch of elegance",
+2025-10-01T04:29:39.412231+00:00 app[web.1]: "effect_description": "Accentuates the waist and provides graceful movement"
+2025-10-01T04:29:39.412231+00:00 app[web.1]: },
+2025-10-01T04:29:39.412231+00:00 app[web.1]: "shoes": {
+2025-10-01T04:29:39.412232+00:00 app[web.1]: "item_name": "White Low-Top Sneakers",
+2025-10-01T04:29:39.412232+00:00 app[web.1]: "style_details": "White, leather material, minimalist design",
+2025-10-01T04:29:39.412232+00:00 app[web.1]: "wearing_details": "Relaxed addition, bringing comfort for city strolling",
+2025-10-01T04:29:39.412232+00:00 app[web.1]: "effect_description": "Maintains the casual aesthetic while ensuring ease of movement"
+2025-10-01T04:29:39.412232+00:00 app[web.1]: },
+2025-10-01T04:29:39.412232+00:00 app[web.1]: "bag": {
+2025-10-01T04:29:39.412232+00:00 app[web.1]: "item_name": "Small Yellow Leather Tote",
+2025-10-01T04:29:39.412232+00:00 app[web.1]: "style_details": "Bright yellow, structured leather, medium-sized",
+2025-10-01T04:29:39.412232+00:00 app[web.1]: "wearing_details": "Carried by hand for a pop of color that complements the top",
+2025-10-01T04:29:39.412232+00:00 app[web.1]: "effect_description": "Acts as a bold accent, tying the outfit together"
+2025-10-01T04:29:39.412232+00:00 app[web.1]: },
+2025-10-01T04:29:39.412235+00:00 app[web.1]: "layering_description": "The tube top is the focal point, with the midi skirt providing balance. Accessories are kept minimal to highlight the elegance of the outfit.",
+2025-10-01T04:29:39.412235+00:00 app[web.1]: "hairstyle": {
+2025-10-01T04:29:39.412235+00:00 app[web.1]: "style_name": "Loose Waves",
+2025-10-01T04:29:39.412235+00:00 app[web.1]: "description": "Soft waves to create a relaxed yet stylish look, enhancing the user's oval face"
+2025-10-01T04:29:39.412235+00:00 app[web.1]: }
+2025-10-01T04:29:39.412236+00:00 app[web.1]: },
+2025-10-01T04:29:39.412236+00:00 app[web.1]: "explanation": "Balancing elegance and casual style, this ensemble pairs the key piece with an A-line skirt to flatter the user's shape and maintain comfort. Sleek accessories enhance the look without overpowering it."
+2025-10-01T04:29:39.412236+00:00 app[web.1]: },
+2025-10-01T04:29:39.412236+00:00 app[web.1]: "image_prompt": "小巧女性，身体略呈沙漏状，穿着淡黄色的不对称抹胸上衣，搭配橄榄绿的A字型中长裙，脚穿白色低帮运动��，手中提着明黄色皮革小手提袋，戴着一个纤细的金手镯。场景是一条阳光明媚的城市街道，两旁是咖啡桌和椅子，营造出休闲的氛围。"
+2025-10-01T04:29:39.412236+00:00 app[web.1]: }
+2025-10-01T04:29:39.412236+00:00 app[web.1]: ]
+2025-10-01T04:29:39.412236+00:00 app[web.1]: }
+2025-10-01T04:29:39.412237+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] ===== IMAGE PROCESSING ANALYSIS COMPLETE =====
+2025-10-01T04:29:39.491240+00:00 heroku[router]: at=info method=POST path="/api/apple/openai" host=styleai.h.zzn.im request_id=1d8edf1b-a9ca-4956-7072-9cb54fbeeb44 fwd="172.58.166.246" dyno=web.1 connect=0ms service=26330ms status=200 bytes=397 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T04:29:41.262760+00:00 app[web.1]: generate req:  {
+2025-10-01T04:29:41.262778+00:00 app[web.1]: userId: '001450.5b96d4bc84b7490cb33ea2d36c1aa57c.0034',
+2025-10-01T04:29:41.262778+00:00 app[web.1]: jobId: 'apple_openai_4ab77782-40f2-40e6-b395-805f8286374f',
+2025-10-01T04:29:41.262779+00:00 app[web.1]: index: 0
+2025-10-01T04:29:41.262779+00:00 app[web.1]: }
+2025-10-01T04:29:41.262783+00:00 app[web.1]: generate jobId:  apple_openai_4ab77782-40f2-40e6-b395-805f8286374f
+2025-10-01T04:29:41.262783+00:00 app[web.1]: generate index:  0
+2025-10-01T04:29:41.338882+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] ===== GEMINI PROVIDER STARTED =====
+2025-10-01T04:29:41.338885+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 📋 Context details:
+2025-10-01T04:29:41.338906+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 📋 - Job ID: apple_openai_4ab77782-40f2-40e6-b395-805f8286374f
+2025-10-01T04:29:41.338907+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 📋 - Suggestion index: 0
+2025-10-01T04:29:41.338924+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 📋 - Human image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T04:29:41.338926+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 📋 - Garment image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/app_10_yellow_sleeveless_top.jpg...
+2025-10-01T04:29:41.338940+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 📋 - User ID: 001450.5b96d4bc84b7490cb33ea2d36c1aa57c.0034
+2025-10-01T04:29:41.338978+00:00 app[web.1]: [PROVIDER_PROGRESS] init:
+2025-10-01T04:29:41.338978+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 🔧 Building prompt...
+2025-10-01T04:29:41.338995+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 🔧 Suggestion data available: true
+2025-10-01T04:29:41.338995+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 🔧 Style suggestion available: true
+2025-10-01T04:29:41.339010+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 🔧 Image prompt available: true
+2025-10-01T04:29:41.339010+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 🔧 Using AI-generated image_prompt (highest priority)
+2025-10-01T04:29:41.339039+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] ===== FINAL PROMPT FOR GEMINI =====
+2025-10-01T04:29:41.339040+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 📄 PROMPT LENGTH: 202
+2025-10-01T04:29:41.339059+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 📄 PROMPT CONTENT: 苗条的人身材匀称，身材娇小，头发光滑，扎成低马尾，穿着淡黄色的非对称抹胸上衣，搭配白色高腰宽腿亚麻长裤，脚穿米色草编坡跟鞋，斜挎棕色皮革挎包，耳边搭配简约金色圈耳环。场景是街道，一边是户外咖啡桌和椅子，阳光明��，都市休闲氛围。. 画面为 9:16 竖向全身镜头，随性抓拍，模特微笑自信，超写实自然光，人物比例真实不过度美化。 时尚和优雅，超写实的街头风格摄影，超清晰的画质，背景中没有人物，时尚街拍风格。
+2025-10-01T04:29:41.339059+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] ===== END PROMPT =====
+2025-10-01T04:29:41.339068+00:00 app[web.1]: [PROVIDER_PROGRESS] submit:
+2025-10-01T04:29:41.339069+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 🔄 Calling Gemini service...
+2025-10-01T04:29:41.339409+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ===== GEMINI API CALL STARTED =====
+2025-10-01T04:29:41.339410+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔧 Environment check:
+2025-10-01T04:29:41.339426+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔧 - MOCK_GEMINI: false
+2025-10-01T04:29:41.339427+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔧 - GEMINI_API_KEY: SET
+2025-10-01T04:29:41.339441+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔧 - GEMINI_IMAGE_MODEL: gemini-2.5-flash-image-preview
+2025-10-01T04:29:41.339441+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📝 Input parameters:
+2025-10-01T04:29:41.339456+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📝 - Prompt length: 202
+2025-10-01T04:29:41.339464+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📝 - Human image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T04:29:41.339466+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📝 - Garment image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/app_10_yellow_sleeveless_top.jpg...
+2025-10-01T04:29:41.339482+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ===== COMPLETE PROMPT =====
+2025-10-01T04:29:41.339483+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📄 PROMPT: 苗条的人身材匀称，身材娇小，头发光滑，扎成低马尾，穿着淡黄色的非对称抹胸上衣，搭配白色高腰宽腿亚麻长裤，脚穿米色草编坡跟鞋，斜挎棕色皮革挎包，耳边搭配简约金色圈耳环。场景是街道，一边是户外咖啡桌和椅子，阳光明媚，都市休闲氛围。. 画面为 9:16 竖向全身镜头，随性抓拍，模特微笑自信，超写实自然光，人物比例真实不过度美化。 时尚和优雅，超写实的街头风格摄影，超清晰的画质，背景中没有人物，时尚街拍风格。
+2025-10-01T04:29:41.339491+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ===== END PROMPT =====
+2025-10-01T04:29:41.339500+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔄 Converting images to base64...
+2025-10-01T04:29:41.339627+00:00 app[web.1]: Converting URL to file (attempt 1/3): https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T04:29:41.357791+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔄 Human image converted, size: 141680 chars
+2025-10-01T04:29:41.357816+00:00 app[web.1]: Converting URL to file (attempt 1/3): https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/app_10_yellow_sleeveless_top.jpg...
+2025-10-01T04:29:41.432344+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔄 Garment image converted, size: 30384 chars
+2025-10-01T04:29:41.432368+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🌐 API Endpoint: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=[REDACTED_KEY]
+2025-10-01T04:29:41.432399+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📦 Request body structure:
+2025-10-01T04:29:41.432407+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📦 - Contents count: 1
+2025-10-01T04:29:41.432414+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📦 - Parts count: 3
+2025-10-01T04:29:41.432461+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📦 - Response modalities: [ 'TEXT', 'IMAGE' ]
+2025-10-01T04:29:41.432518+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📦 - Parts types: text, inline_data, inline_data
+2025-10-01T04:29:41.432520+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🚀 Sending request to Gemini API...
+2025-10-01T04:29:49.803085+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📡 Response received:
+2025-10-01T04:29:49.803103+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📡 - Status: 200
+2025-10-01T04:29:49.803104+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📡 - Status text: OK
+2025-10-01T04:29:49.803124+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📡 - OK: true
+2025-10-01T04:29:50.007061+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📥 Success response received
+2025-10-01T04:29:50.007142+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 📥 Response keys: [ 'candidates', 'usageMetadata', 'modelVersion', 'responseId' ]
+2025-10-01T04:29:50.007163+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Parsing response for images and text...
+2025-10-01T04:29:50.007173+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Candidates count: 1
+2025-10-01T04:29:50.007190+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Parts in candidate: 1
+2025-10-01T04:29:50.007208+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Found image, mime type: image/png
+2025-10-01T04:29:50.007224+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Image data length: 3197196 chars
+2025-10-01T04:29:50.007239+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ✅ Total images extracted: 1
+2025-10-01T04:29:50.007249+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 💾 Saving images to Vercel Blob storage...
+2025-10-01T04:29:50.211571+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 💾 Image saved: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/anonymous/gemini_gemini_1759292990020_0.png
+2025-10-01T04:29:50.211591+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ===== GEMINI API CALL COMPLETED =====
+2025-10-01T04:29:50.211591+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] ✅ Gemini service returned 1 images
+2025-10-01T04:29:50.211690+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 📷 Image 1 type: https://aft07xnw52tcy9ig.publi...
+2025-10-01T04:29:50.211717+00:00 app[web.1]: [PROVIDER_PROGRESS] save:
+2025-10-01T04:29:50.211718+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] 💾 Saving results to KV...
+2025-10-01T04:29:50.361348+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] ✅ KV updated successfully
+2025-10-01T04:29:50.361359+00:00 app[web.1]: [PROVIDER_PROGRESS] done:
+2025-10-01T04:29:50.361368+00:00 app[web.1]: 🚀 [GEMINI_PROVIDER] ===== GEMINI PROVIDER COMPLETED =====
+2025-10-01T04:29:50.362251+00:00 heroku[router]: sock=client at=warning code=H27 desc="Client Request Interrupted" method=POST path="/api/apple/generate" host=styleai.h.zzn.im request_id=96afeac7-bada-9022-a218-674cd4c0fd8b fwd="172.58.166.246" dyno=web.1 connect=0ms service=9102ms status=200 bytes=0 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:17:56.227207+00:00 app[web.1]: [NewGen API] Processing image generation request
+2025-10-01T05:17:56.227248+00:00 app[web.1]: [NewGen API] Image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T05:17:56.227253+00:00 app[web.1]: [NewGen API] Style options: Classy
+2025-10-01T05:17:56.227337+00:00 app[web.1]: [NewGen API] Custom prompt length: 472
+2025-10-01T05:17:56.227376+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] ===== GEMINI IMAGE GENERATION STARTED =====
+2025-10-01T05:17:56.227387+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 Environment check:
+2025-10-01T05:17:56.227403+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 - MOCK_GEMINI: false
+2025-10-01T05:17:56.227415+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_API_KEY: SET
+2025-10-01T05:17:56.227431+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_IMAGE_MODEL: gemini-2.5-flash-image-preview
+2025-10-01T05:17:56.227442+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📝 Input parameters:
+2025-10-01T05:17:56.227461+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📝 - Image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T05:17:56.227521+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📝 - Style options: [ 'Classy' ]
+2025-10-01T05:17:56.227539+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📤 Prompt length: 472
+2025-10-01T05:17:56.227551+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔄 Converting image to base64...
+2025-10-01T05:17:56.227591+00:00 app[web.1]: Converting URL to file (attempt 1/3): https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T05:17:56.263253+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔄 Image converted, size: 141680 chars
+2025-10-01T05:17:56.263269+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ===== GEMINI TASK STARTED =====
+2025-10-01T05:17:56.263282+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🌐 API Endpoint: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=[REDACTED_KEY]
+2025-10-01T05:17:56.263284+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Adding image to body image/jpeg
+2025-10-01T05:18:03.277519+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📥 Received response from Gemini API
+2025-10-01T05:18:03.277584+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📥 Response keys: [ 'candidates', 'usageMetadata', 'modelVersion', 'responseId' ]
+2025-10-01T05:18:03.277594+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔍 Parsing response for images and text...
+2025-10-01T05:18:03.277607+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔍 Candidates count: 1
+2025-10-01T05:18:03.277618+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Parts in candidate: 2
+2025-10-01T05:18:03.277630+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Found image, mime type: image/png
+2025-10-01T05:18:03.277644+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Image data length: 1989860 chars
+2025-10-01T05:18:03.277653+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ✅ Total texts extracted: 1
+2025-10-01T05:18:03.277656+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ✅ Total images extracted: 1
+2025-10-01T05:18:03.277667+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 💾 Saving images to Vercel Blob storage...
+2025-10-01T05:18:03.617274+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 💾 Image saved: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1aa57c.0034/gemini_gemini_1759295883283_0.png
+2025-10-01T05:18:03.617297+00:00 app[web.1]: [NewGen API] Generated 1 images successfully
+2025-10-01T05:18:03.618594+00:00 heroku[router]: at=info method=POST path="/api/apple/lookbook" host=styleai.h.zzn.im request_id=2c2fdb91-aab1-7349-3749-f62e0e3a30c8 fwd="172.58.166.246" dyno=web.1 connect=0ms service=7395ms status=200 bytes=301 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:18:03.916607+00:00 app[web.1]: [NewGen API] Processing image generation request
+2025-10-01T05:18:03.916626+00:00 app[web.1]: [NewGen API] Image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T05:18:03.916627+00:00 app[web.1]: [NewGen API] Style options: Classy
+2025-10-01T05:18:03.916627+00:00 app[web.1]: [NewGen API] Custom prompt length: 472
+2025-10-01T05:18:03.916643+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] ===== GEMINI IMAGE GENERATION STARTED =====
+2025-10-01T05:18:03.916645+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 Environment check:
+2025-10-01T05:18:03.916652+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 - MOCK_GEMINI: false
+2025-10-01T05:18:03.916653+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_API_KEY: SET
+2025-10-01T05:18:03.916668+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_IMAGE_MODEL: gemini-2.5-flash-image-preview
+2025-10-01T05:18:03.916668+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📝 Input parameters:
+2025-10-01T05:18:03.916682+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📝 - Image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T05:18:03.916723+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📝 - Style options: [ 'Classy' ]
+2025-10-01T05:18:03.916730+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📤 Prompt length: 472
+2025-10-01T05:18:03.916737+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔄 Converting image to base64...
+2025-10-01T05:18:03.916752+00:00 app[web.1]: Converting URL to file (attempt 1/3): https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T05:18:03.930208+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔄 Image converted, size: 141680 chars
+2025-10-01T05:18:03.930229+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ===== GEMINI TASK STARTED =====
+2025-10-01T05:18:03.930243+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🌐 API Endpoint: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=[REDACTED_KEY]
+2025-10-01T05:18:03.930254+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Adding image to body image/jpeg
+2025-10-01T05:18:11.089045+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📥 Received response from Gemini API
+2025-10-01T05:18:11.089116+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📥 Response keys: [ 'candidates', 'usageMetadata', 'modelVersion', 'responseId' ]
+2025-10-01T05:18:11.089131+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔍 Parsing response for images and text...
+2025-10-01T05:18:11.089144+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔍 Candidates count: 1
+2025-10-01T05:18:11.089158+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Parts in candidate: 2
+2025-10-01T05:18:11.089171+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Found image, mime type: image/png
+2025-10-01T05:18:11.089185+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Image data length: 1785572 chars
+2025-10-01T05:18:11.089198+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ✅ Total texts extracted: 1
+2025-10-01T05:18:11.089210+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ✅ Total images extracted: 1
+2025-10-01T05:18:11.089222+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 💾 Saving images to Vercel Blob storage...
+2025-10-01T05:18:11.278933+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 💾 Image saved: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1aa57c.0034/gemini_gemini_1759295891094_0.png
+2025-10-01T05:18:11.278946+00:00 app[web.1]: [NewGen API] Generated 1 images successfully
+2025-10-01T05:18:11.280212+00:00 heroku[router]: at=info method=POST path="/api/apple/lookbook" host=styleai.h.zzn.im request_id=7cedf9c7-4e93-aa49-3a74-e553fe57ecfb fwd="172.58.166.246" dyno=web.1 connect=0ms service=7366ms status=200 bytes=301 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:18:15.281049+00:00 app[web.1]: [NewGen API] Processing image generation request
+2025-10-01T05:18:15.281064+00:00 app[web.1]: [NewGen API] Image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T05:18:15.281065+00:00 app[web.1]: [NewGen API] Style options: Classy
+2025-10-01T05:18:15.281086+00:00 app[web.1]: [NewGen API] Custom prompt length: 472
+2025-10-01T05:18:15.281088+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] ===== GEMINI IMAGE GENERATION STARTED =====
+2025-10-01T05:18:15.281099+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 Environment check:
+2025-10-01T05:18:15.281110+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 - MOCK_GEMINI: false
+2025-10-01T05:18:15.281117+00:00 app[web.1]: ��� [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_API_KEY: SET
+2025-10-01T05:18:15.281126+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_IMAGE_MODEL: gemini-2.5-flash-image-preview
+2025-10-01T05:18:15.281134+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📝 Input parameters:
+2025-10-01T05:18:15.281137+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📝 - Image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T05:18:15.281196+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📝 - Style options: [ 'Classy' ]
+2025-10-01T05:18:15.281217+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📤 Prompt length: 472
+2025-10-01T05:18:15.281217+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔄 Converting image to base64...
+2025-10-01T05:18:15.281233+00:00 app[web.1]: Converting URL to file (attempt 1/3): https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T05:18:15.308020+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔄 Image converted, size: 141680 chars
+2025-10-01T05:18:15.308034+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ===== GEMINI TASK STARTED =====
+2025-10-01T05:18:15.308059+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🌐 API Endpoint: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=[REDACTED_KEY]
+2025-10-01T05:18:15.308060+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Adding image to body image/jpeg
+2025-10-01T05:18:23.342779+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📥 Received response from Gemini API
+2025-10-01T05:18:23.342825+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📥 Response keys: [ 'candidates', 'usageMetadata', 'modelVersion', 'responseId' ]
+2025-10-01T05:18:23.342838+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔍 Parsing response for images and text...
+2025-10-01T05:18:23.342849+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔍 Candidates count: 1
+2025-10-01T05:18:23.342851+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Parts in candidate: 2
+2025-10-01T05:18:23.342865+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Found image, mime type: image/png
+2025-10-01T05:18:23.342876+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Image data length: 2058080 chars
+2025-10-01T05:18:23.342877+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ✅ Total texts extracted: 1
+2025-10-01T05:18:23.342890+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ✅ Total images extracted: 1
+2025-10-01T05:18:23.342890+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 💾 Saving images to Vercel Blob storage...
+2025-10-01T05:18:23.516737+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 💾 Image saved: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1aa57c.0034/gemini_gemini_1759295903348_0.png
+2025-10-01T05:18:23.516754+00:00 app[web.1]: [NewGen API] Generated 1 images successfully
+2025-10-01T05:18:23.517956+00:00 heroku[router]: at=info method=POST path="/api/apple/lookbook" host=styleai.h.zzn.im request_id=aa8e5f0c-69ff-a4ce-e2ef-16158ca46248 fwd="172.58.166.246" dyno=web.1 connect=0ms service=8239ms status=200 bytes=301 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:18:23.824433+00:00 app[web.1]: [NewGen API] Processing image generation request
+2025-10-01T05:18:23.824455+00:00 app[web.1]: [NewGen API] Image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T05:18:23.824455+00:00 app[web.1]: [NewGen API] Style options: Classy
+2025-10-01T05:18:23.824456+00:00 app[web.1]: [NewGen API] Custom prompt length: 472
+2025-10-01T05:18:23.824469+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] ===== GEMINI IMAGE GENERATION STARTED =====
+2025-10-01T05:18:23.824470+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 Environment check:
+2025-10-01T05:18:23.824470+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 - MOCK_GEMINI: false
+2025-10-01T05:18:23.824485+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_API_KEY: SET
+2025-10-01T05:18:23.824485+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔧 - GEMINI_IMAGE_MODEL: gemini-2.5-flash-image-preview
+2025-10-01T05:18:23.824498+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📝 Input parameters:
+2025-10-01T05:18:23.824499+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📝 - Image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T05:18:23.824546+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📝 - Style options: [ 'Classy' ]
+2025-10-01T05:18:23.824553+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📤 Prompt length: 472
+2025-10-01T05:18:23.824560+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔄 Converting image to base64...
+2025-10-01T05:18:23.824575+00:00 app[web.1]: Converting URL to file (attempt 1/3): https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1...
+2025-10-01T05:18:23.840931+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔄 Image converted, size: 141680 chars
+2025-10-01T05:18:23.840945+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ===== GEMINI TASK STARTED =====
+2025-10-01T05:18:23.840958+00:00 app[web.1]: �� [GEMINI_SERVICE] 🌐 API Endpoint: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=[REDACTED_KEY]
+2025-10-01T05:18:23.840968+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Adding image to body image/jpeg
+2025-10-01T05:18:31.790650+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📥 Received response from Gemini API
+2025-10-01T05:18:31.790738+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 📥 Response keys: [ 'candidates', 'usageMetadata', 'modelVersion', 'responseId' ]
+2025-10-01T05:18:31.790749+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔍 Parsing response for images and text...
+2025-10-01T05:18:31.790760+00:00 app[web.1]: 🤖 [GEMINI_IMAGE_GENERATION] 🔍 Candidates count: 1
+2025-10-01T05:18:31.790769+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Parts in candidate: 2
+2025-10-01T05:18:31.790779+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Found image, mime type: image/png
+2025-10-01T05:18:31.790789+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 🔍 Image data length: 2046908 chars
+2025-10-01T05:18:31.790797+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ✅ Total texts extracted: 1
+2025-10-01T05:18:31.790805+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] ✅ Total images extracted: 1
+2025-10-01T05:18:31.790809+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 💾 Saving images to Vercel Blob storage...
+2025-10-01T05:18:31.960313+00:00 app[web.1]: 🤖 [GEMINI_SERVICE] 💾 Image saved: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1aa57c.0034/gemini_gemini_1759295911796_0.png
+2025-10-01T05:18:31.960335+00:00 app[web.1]: [NewGen API] Generated 1 images successfully
+2025-10-01T05:18:31.961368+00:00 heroku[router]: at=info method=POST path="/api/apple/lookbook" host=styleai.h.zzn.im request_id=7872e94c-60a1-306b-8e01-bced34f90a0d fwd="172.58.166.246" dyno=web.1 connect=0ms service=8142ms status=200 bytes=301 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:19:35.653869+00:00 app[web.1]: {
+2025-10-01T05:19:35.653874+00:00 app[web.1]: humanImageUrl: 'https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1aa57c.0034/apple_F4C23552-BDF7-4304-BFB4-E8522E946CD2.jpeg',
+2025-10-01T05:19:35.653875+00:00 app[web.1]: garmentImageUrl: 'https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/app_06_printed_shirt.jpg',
+2025-10-01T05:19:35.653876+00:00 app[web.1]: occasion: 'Casual',
+2025-10-01T05:19:35.653877+00:00 app[web.1]: userProfile: {
+2025-10-01T05:19:35.653885+00:00 app[web.1]: userId: 'b88a71c0-5e5c-4a2d-b1db-f5d4e50b3d86',
+2025-10-01T05:19:35.653886+00:00 app[web.1]: stylePreferences: [ 'Get new outfit ideas for my clothes' ],
+2025-10-01T05:19:35.653887+00:00 app[web.1]: fullBodyPhoto: 'https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1aa57c.0034/apple_F4C23552-BDF7-4304-BFB4-E8522E946CD2.jpeg',
+2025-10-01T05:19:35.653887+00:00 app[web.1]: skinTone: 'fair',
+2025-10-01T05:19:35.653888+00:00 app[web.1]: bodyType: 'Hourglass',
+2025-10-01T05:19:35.653888+00:00 app[web.1]: bodyStructure: 'Petite',
+2025-10-01T05:19:35.653888+00:00 app[web.1]: faceShape: 'oval',
+2025-10-01T05:19:35.653889+00:00 app[web.1]: selectedStyles: [],
+2025-10-01T05:19:35.653889+00:00 app[web.1]: gender: 'Female'
+2025-10-01T05:19:35.653889+00:00 app[web.1]: },
+2025-10-01T05:19:35.653890+00:00 app[web.1]: stylePrompt: 'casual outfit, relaxed and comfortable, effortlessly stylish, easy to move in, ideal for weekend downtime, coffee and shopping. The scene is a urban street lined with outdoor café tables and chairs'
+2025-10-01T05:19:35.653890+00:00 app[web.1]: }
+2025-10-01T05:19:35.808589+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] ===== STARTING IMAGE PROCESSING ANALYSIS =====
+2025-10-01T05:19:35.808605+00:00 app[web.1]: 🤖 [OPENAI] Using image generation model: Kling AI
+2025-10-01T05:19:35.808607+00:00 app[web.1]: 🤖 [OPENAI] 🎯 Received stylePrompt: YES
+2025-10-01T05:19:35.808635+00:00 app[web.1]: 🤖 [OPENAI] 📝 StylePrompt content (first 150 chars): casual outfit, relaxed and comfortable, effortlessly stylish, easy to move in, ideal for weekend downtime, coffee and shopping. The scene is a urban s
+2025-10-01T05:19:35.808635+00:00 app[web.1]: 🤖 [OPENAI] 🎯 Received customPrompt: NO
+2025-10-01T05:19:35.808658+00:00 app[web.1]: 🤖 [OPENAI] Received userProfile for suggestion: {
+2025-10-01T05:19:35.808658+00:00 app[web.1]: "userId": "b88a71c0-5e5c-4a2d-b1db-f5d4e50b3d86",
+2025-10-01T05:19:35.808660+00:00 app[web.1]: "stylePreferences": [
+2025-10-01T05:19:35.808660+00:00 app[web.1]: "Get new outfit ideas for my clothes"
+2025-10-01T05:19:35.808661+00:00 app[web.1]: ],
+2025-10-01T05:19:35.808661+00:00 app[web.1]: "fullBodyPhoto": "***",
+2025-10-01T05:19:35.808662+00:00 app[web.1]: "skinTone": "fair",
+2025-10-01T05:19:35.808662+00:00 app[web.1]: "bodyType": "Hourglass",
+2025-10-01T05:19:35.808662+00:00 app[web.1]: "bodyStructure": "Petite",
+2025-10-01T05:19:35.808662+00:00 app[web.1]: "faceShape": "oval",
+2025-10-01T05:19:35.808663+00:00 app[web.1]: "selectedStyles": [],
+2025-10-01T05:19:35.808663+00:00 app[web.1]: "gender": "Female"
+2025-10-01T05:19:35.808663+00:00 app[web.1]: }
+2025-10-01T05:19:35.808664+00:00 app[web.1]: 🤖🖼️ [OPENAI_IMAGE] 👤 Using Human Image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/users/001450.5b96d4bc84b7490cb33ea2d36c1aa57c.0034/apple_F4C23552-BDF7-4304-BFB4-E8522E946CD2.jpeg
+2025-10-01T05:19:35.808666+00:00 app[web.1]: 🤖🖼️ [OPENAI_IMAGE] 👔 Using Garment Image URL: https://aft07xnw52tcy9ig.public.blob.vercel-storage.com/app/app_06_printed_shirt.jpg
+2025-10-01T05:19:35.808680+00:00 app[web.1]: 🤖 [OPENAI] 🎨 OccasionSection built with stylePrompt: YES
+2025-10-01T05:19:35.808681+00:00 app[web.1]: 🤖 [OPENAI] 📄 OccasionSection content: # Occasion & Scene Details
+2025-10-01T05:19:35.808683+00:00 app[web.1]: Build the outfit for Casual. The styling guidelines are casual outfit, relaxed and comfortable, effortlessly stylish, easy to move in, ideal for weekend downtime, coffee and shopping. The scene is a urban street lined with outdoor café tables and chairs.
+2025-10-01T05:19:35.808684+00:00 app[web.1]: Make sure the outfit is suitable for the occasion and meet the styling guidelines.
+2025-10-01T05:19:35.808775+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] === FINAL REQUEST ANALYSIS ===
+2025-10-01T05:19:35.808797+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] 📝 User Message Tokens: ~455
+2025-10-01T05:19:35.808804+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] 🔧 System Prompt Tokens: ~1,156
+2025-10-01T05:19:35.808811+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] 🎯 TOTAL REQUEST TOKENS: ~1,611
+2025-10-01T05:19:35.808812+00:00 app[web.1]: 🤖 [OPENAI] ===== COMPLETE SYSTEM PROMPT =====
+2025-10-01T05:19:35.808836+00:00 app[web.1]: 🤖 [OPENAI] 📝 SYSTEM PROMPT: You are a senior fashion stylist and a professional prompt engineer. You are skilled at analyzing user profile traits, integrating essential wardrobe items, and crafting stylish yet practical outfit suggestions. You also specialize in writing vivid, Midjourney-compatible visual prompts to generate fashion images based on the outfit and occasion.
+2025-10-01T05:19:35.808836+00:00 app[web.1]: Your task is to:
+2025-10-01T05:19:35.808836+00:00 app[web.1]: Generate complete outfit suggestion in structured JSON format.
+2025-10-01T05:19:35.808836+00:00 app[web.1]: Create an image generation prompt for Kling AI, describing the full-body look of the user wearing this outfit in a specific scene.
+2025-10-01T05:19:35.808837+00:00 app[web.1]: Note: Generating a high-quality "image_prompt" is extremely important in this task. It is not a secondary or optional step — it must be visually rich, scene-specific, and suitable for Kling AI to produce a full-body, vertical fashion image with strong styling and emotional coherence. Focus on fashion aesthetics and sensory visuals. Avoid generic phrasing.
+2025-10-01T05:19:35.808837+00:00 app[web.1]: ##User Understanding and Personalization
+2025-10-01T05:19:35.808837+00:00 app[web.1]: Analyze the provided information about the user's appearance:
+2025-10-01T05:19:35.808837+00:00 app[web.1]: Body Type: Hourglass
+2025-10-01T05:19:35.808837+00:00 app[web.1]: Skin Tone: fair
+2025-10-01T05:19:35.808837+00:00 app[web.1]: Body Size: Petite
+2025-10-01T05:19:35.808837+00:00 app[web.1]: Faceshape: oval
+2025-10-01T05:19:35.808837+00:00 app[web.1]: Style Preference:
+2025-10-01T05:19:35.808838+00:00 app[web.1]: Design the outfit using:
+2025-10-01T05:19:35.808838+00:00 app[web.1]: User’s appearance traits
+2025-10-01T05:19:35.808838+00:00 app[web.1]: The required key piece
+2025-10-01T05:19:35.808838+00:00 app[web.1]: The occasion and scene context
+2025-10-01T05:19:35.808838+00:00 app[web.1]: Current season and weather
+2025-10-01T05:19:35.808838+00:00 app[web.1]: The outfit must be:
+2025-10-01T05:19:35.808839+00:00 app[web.1]: Flattering to the user's features.
+2025-10-01T05:19:35.808839+00:00 app[web.1]: Suit the occasion and reflect the user's personal style.
+2025-10-01T05:19:35.808839+00:00 app[web.1]: Adapted to current season and weather.
+2025-10-01T05:19:35.808839+00:00 app[web.1]: Use the key piece as the focal point and build the entire outfit to complement it.
+2025-10-01T05:19:35.808840+00:00 app[web.1]: The overall outfit's color scheme follows classic principles with a clear hierarchy and harmony, up to three main colors per look: a primary color, a secondary color, and a small accent color.
+2025-10-01T05:19:35.808841+00:00 app[web.1]: Always include the KEY PIECE in the outfit.
+2025-10-01T05:19:35.808841+00:00 app[web.1]: Don't fill in wearing details of shoes.
+2025-10-01T05:19:35.808841+00:00 app[web.1]: ##Outfit Composition Guidelines
+2025-10-01T05:19:35.808841+00:00 app[web.1]: Each outfit must include, make sure the KEY PIECE is included and the outfit is built around the KEY PIECE for the user and the occasion:
+2025-10-01T05:19:35.808841+00:00 app[web.1]: Tops
+2025-10-01T05:19:35.808841+00:00 app[web.1]: Bottoms
+2025-10-01T05:19:35.808842+00:00 app[web.1]: Shoes
+2025-10-01T05:19:35.808842+00:00 app[web.1]: Bag
+2025-10-01T05:19:35.808842+00:00 app[web.1]: Hairstyle
+2025-10-01T05:19:35.808842+00:00 app[web.1]: For each item, use this descriptive structure: {Color + Material + Silhouette + Category} + Style Features + Wearing InstructionsWrite clearly:
+2025-10-01T05:19:35.808842+00:00 app[web.1]: Outfit can include multiple top layers. If a top stands well on its own, or its fabric or pattern is too complex for layering, or it's hot summer, then don't layer it. If there are multiple tops, please describe the specific layering and styling method.
+2025-10-01T05:19:35.808842+00:00 app[web.1]: When selecting tops and bottoms, pay attention to choosing designs, cuts, and materials that suit the user's body shape and occasion.
+2025-10-01T05:19:35.808842+00:00 app[web.1]: Describe each item's color, material, and silhouette in style_details.
+2025-10-01T05:19:35.808843+00:00 app[web.1]: Briefly explain how each style choice enhances the user's overall look
+2025-10-01T05:19:35.808844+00:00 app[web.1]: The suggested hairstyle should elevate the overall look and suit the user’s current hair length.
+2025-10-01T05:19:35.808844+00:00 app[web.1]: ##Explanation Guidelines
+2025-10-01T05:19:35.808845+00:00 app[web.1]: In explanation, briefly summarize the outfit in one sentence, and concisely explain why it works for the user's body shape and suit the occasion.
+2025-10-01T05:19:35.808845+00:00 app[web.1]: # Image Prompt Guidelines
+2025-10-01T05:19:35.808846+00:00 app[web.1]: In image_prompt, Write a Midjourney-style visual prompt in Chinese for Kling AI that reflects the user wearing the outfit in the described scene. The image needs to be 9:16 full-body fashion candid shot in a natural and unposed moment. Ensure the prompt reflects outfit details, scene context, and user physical traits.
+2025-10-01T05:19:35.808846+00:00 app[web.1]: Your image_prompt should follow this structure:
+2025-10-01T05:19:35.808847+00:00 app[web.1]: User Physical Features: Describe the user's body type, body size, hairstyle, and overall vibe, matching the styling intent.
+2025-10-01T05:19:35.808848+00:00 app[web.1]: Outfit Description: Describe the entire outfit, including the tops, bottoms, shoes, bag and accessories, using the items listed in "outfit_suggestion".
+2025-10-01T05:19:35.808848+00:00 app[web.1]: Scene Description: Describe the setting and atmosphere of the occasion.
+2025-10-01T05:19:35.808848+00:00 app[web.1]: ## Output Format (JSON)
+2025-10-01T05:19:35.808848+00:00 app[web.1]: Your reply should strictly follow the JSON format, containing two keys:
+2025-10-01T05:19:35.808848+00:00 app[web.1]: \`json
+2025-10-01T05:19:35.808848+00:00 app[web.1]: {
+2025-10-01T05:19:35.808848+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T05:19:35.808848+00:00 app[web.1]: "outfit_title": "A short, catchy title for the outfit",
+2025-10-01T05:19:35.808849+00:00 app[web.1]: "items": {
+2025-10-01T05:19:35.808849+00:00 app[web.1]: "tops": [
+2025-10-01T05:19:35.808849+00:00 app[web.1]: {
+2025-10-01T05:19:35.808849+00:00 app[web.1]: "item_name": "...",
+2025-10-01T05:19:35.808849+00:00 app[web.1]: "style_details": "...",
+2025-10-01T05:19:35.808849+00:00 app[web.1]: "wearing_details": "...",
+2025-10-01T05:19:35.808849+00:00 app[web.1]: }
+2025-10-01T05:19:35.808850+00:00 app[web.1]: ],
+2025-10-01T05:19:35.808850+00:00 app[web.1]: "bottoms": {
+2025-10-01T05:19:35.808850+00:00 app[web.1]: "item_name": "...",
+2025-10-01T05:19:35.808850+00:00 app[web.1]: "style_details": "...",
+2025-10-01T05:19:35.808850+00:00 app[web.1]: "wearing_details": "...",
+2025-10-01T05:19:35.808850+00:00 app[web.1]: },
+2025-10-01T05:19:35.808850+00:00 app[web.1]: "shoes": {
+2025-10-01T05:19:35.808851+00:00 app[web.1]: "item_name": "...",
+2025-10-01T05:19:35.808854+00:00 app[web.1]: "style_details": "...",
+2025-10-01T05:19:35.808854+00:00 app[web.1]: "wearing_details": "...",
+2025-10-01T05:19:35.808854+00:00 app[web.1]: },
+2025-10-01T05:19:35.808855+00:00 app[web.1]: "bag": {
+2025-10-01T05:19:35.808855+00:00 app[web.1]: "item_name": "...",
+2025-10-01T05:19:35.808855+00:00 app[web.1]: "style_details": "...",
+2025-10-01T05:19:35.808855+00:00 app[web.1]: "wearing_details": "...",
+2025-10-01T05:19:35.808855+00:00 app[web.1]: },
+2025-10-01T05:19:35.808855+00:00 app[web.1]: "accessories": [
+2025-10-01T05:19:35.808856+00:00 app[web.1]: {
+2025-10-01T05:19:35.808856+00:00 app[web.1]: "item_name": "...",
+2025-10-01T05:19:35.808856+00:00 app[web.1]: "style_details": "...",
+2025-10-01T05:19:35.808856+00:00 app[web.1]: "wearing_details": "...",
+2025-10-01T05:19:35.808856+00:00 app[web.1]: }
+2025-10-01T05:19:35.808857+00:00 app[web.1]: ],
+2025-10-01T05:19:35.808857+00:00 app[web.1]: "hairstyle": {
+2025-10-01T05:19:35.808857+00:00 app[web.1]: "style_name": "...",
+2025-10-01T05:19:35.808857+00:00 app[web.1]: "description": "..."
+2025-10-01T05:19:35.808857+00:00 app[web.1]: }
+2025-10-01T05:19:35.808857+00:00 app[web.1]: },
+2025-10-01T05:19:35.808857+00:00 app[web.1]: "explanation": ""
+2025-10-01T05:19:35.808858+00:00 app[web.1]: },
+2025-10-01T05:19:35.808858+00:00 app[web.1]: "image_prompt": ""
+2025-10-01T05:19:35.808858+00:00 app[web.1]: }
+2025-10-01T05:19:35.808858+00:00 app[web.1]: \`
+2025-10-01T05:19:35.808858+00:00 app[web.1]: ## Notes
+2025-10-01T05:19:35.808859+00:00 app[web.1]: The final output MUST be one valid JSON object as described above. Do not include any other commentary.
+2025-10-01T05:19:35.808859+00:00 app[web.1]: If you are uncertain, always generate a reasonable guess based on the outfit and scene. Never leave the image_prompt empty or generic.
+2025-10-01T05:19:35.808859+00:00 app[web.1]: 
+2025-10-01T05:19:35.808859+00:00 app[web.1]: 🤖 [OPENAI] ===== COMPLETE USER MESSAGE =====
+2025-10-01T05:19:35.808862+00:00 app[web.1]: 🤖 [OPENAI] 📝 USER MESSAGE: Please provide styling suggestions based on the following information. User's photo is the first image, and the Key Piece user wants to style is the second.
+2025-10-01T05:19:35.808862+00:00 app[web.1]: 
+2025-10-01T05:19:35.808862+00:00 app[web.1]: **IMPORTANT: Please first analyze the user in the first image to understand the user's features, then build the outfit around the Key Piece in the second image according to the user's features and the occasion.**
+2025-10-01T05:19:35.808862+00:00 app[web.1]: 
+2025-10-01T05:19:35.808862+00:00 app[web.1]: # User Profile
+2025-10-01T05:19:35.808863+00:00 app[web.1]: Analyze the user's ethnicity, skin tone, body type, body size, and face shape in the first attached image.
+2025-10-01T05:19:35.808863+00:00 app[web.1]: Make sure the outfit recommendations are suitable for the user, helping them to highlight their strengths and downplay their weaknesses.
+2025-10-01T05:19:35.808863+00:00 app[web.1]: 
+2025-10-01T05:19:35.808863+00:00 app[web.1]: 
+2025-10-01T05:19:35.808863+00:00 app[web.1]: # KEY PIECE
+2025-10-01T05:19:35.808863+00:00 app[web.1]: Analyze the Key Piece's style, color, material, silhouette and formality level in the second attached image.
+2025-10-01T05:19:35.808864+00:00 app[web.1]: Build the outfit around this "KEY PIECE" and make sure the KEY PIECE must be incorporated into the outfit suggestion.
+2025-10-01T05:19:35.808864+00:00 app[web.1]: 
+2025-10-01T05:19:35.808864+00:00 app[web.1]: 
+2025-10-01T05:19:35.808864+00:00 app[web.1]: # Occasion & Scene Details
+2025-10-01T05:19:35.808864+00:00 app[web.1]: Build the outfit for Casual. The styling guidelines are casual outfit, relaxed and comfortable, effortlessly stylish, easy to move in, ideal for weekend downtime, coffee and shopping. The scene is a urban street lined with outdoor café tables and chairs.
+2025-10-01T05:19:35.808865+00:00 app[web.1]: Make sure the outfit is suitable for the occasion and meet the styling guidelines.
+2025-10-01T05:19:35.808865+00:00 app[web.1]: 
+2025-10-01T05:19:35.808865+00:00 app[web.1]: # Style Preference
+2025-10-01T05:19:35.808866+00:00 app[web.1]: Create a stylish and flattering outfit that incorporates the essential item for the specified occasion. Focus on silhouettes that flatter a Hourglass body type. Align with the user's style preferences: Get new outfit ideas for my clothes. Emphasize creating a cohesive look that enhances the user's natural features and builds confidence.
+2025-10-01T05:19:35.808866+00:00 app[web.1]: 
+2025-10-01T05:19:35.808866+00:00 app[web.1]: **Styling Instructions:**
+2025-10-01T05:19:35.808866+00:00 app[web.1]: - Generate 2 different and distinct styling suggestions. Each suggestion should feature a distinct style and color strategy that suits the user and complements the key piece for the occasion.
+2025-10-01T05:19:35.808866+00:00 app[web.1]: 
+2025-10-01T05:19:35.812012+00:00 app[web.1]: 🤖 [OPENAI] ===== COMPLETE REQUEST BODY =====
+2025-10-01T05:19:35.812152+00:00 app[web.1]: 🤖 [OPENAI] 📤 FULL REQUEST: {
+2025-10-01T05:19:35.812152+00:00 app[web.1]: "model": "gpt-4o",
+2025-10-01T05:19:35.812152+00:00 app[web.1]: "messages": [
+2025-10-01T05:19:35.812152+00:00 app[web.1]: {
+2025-10-01T05:19:35.812153+00:00 app[web.1]: "role": "system",
+2025-10-01T05:19:35.812164+00:00 app[web.1]: "content": "You are a senior fashion stylist and a professional prompt engineer. You are skilled at analyzing user profile traits, integrating essential wardrobe items, and crafting stylish yet practical outfit suggestions. You also specialize in writing vivid, Midjourney-compatible visual prompts to generate fashion images based on the outfit and occasion.\nYour task is to:\nGenerate complete outfit suggestion in structured JSON format.\nCreate an image generation prompt for Kling AI, describing the full-body look of the user wearing this outfit in a specific scene.\nNote: Generating a high-quality \"image_prompt\" is extremely important in this task. It is not a secondary or optional step — it must be visually rich, scene-specific, and suitable for Kling AI to produce a full-body, vertical fashion image with strong styling and emotional coherence. Focus on fashion aesthetics and sensory visuals. Avoid generic phrasing.\n##User Understanding and Personalization\nAnalyze the provided information about the user's appearance:\nBody Type: Hourglass\nSkin Tone: fair\nBody Size: Petite\nFaceshape: oval\nStyle Preference: \nDesign the outfit using:\nUser’s appearance traits\nThe required key piece\nThe occasion and scene context\nCurrent season and weather\nThe outfit must be:\nFlattering to the user's features.\nSuit the occasion and reflect the user's personal style.\nAdapted to current season and weather.\nUse the key piece as the focal point and build the entire outfit to complement it.\nThe overall outfit's color scheme follows classic principles with a clear hierarchy and harmony, up to three main colors per look: a primary color, a secondary color, and a small accent color.\nAlways include the KEY PIECE in the outfit.\nDon't fill in wearing details of shoes.\n##Outfit Composition Guidelines\nEach outfit must include, make sure the KEY PIECE is included and the outfit is built around the KEY PIECE for the user and the occasion:\nTops\nBottoms\nShoes\nBag\nHairstyle\nFor each item, use this descriptive structure: {Color + Material + Silhouette + Category} + Style Features + Wearing InstructionsWrite clearly:\nOutfit can include multiple top layers. If a top stands well on its own, or its fabric or pattern is too complex for layering, or it's hot summer, then don't layer it. If there are multiple tops, please describe the specific layering and styling method.\nWhen selecting tops and bottoms, pay attention to choosing designs, cuts, and materials that suit the user's body shape and occasion.\nDescribe each item's color, material, and silhouette in style_details.\nBriefly explain how each style choice enhances the user's overall look\nThe suggested hairstyle should elevate the overall look and suit the user’s current hair length.\n##Explanation Guidelines\nIn explanation, briefly summarize the outfit in one sentence, and concisely explain why it works for the user's body shape and suit the occasion.\n# Image Prompt Guidelines\nIn image_prompt, Write a Midjourney-style visual prompt in Chinese for Kling AI that reflects the user wearing the outfit in the described scene. The image needs to be 9:16 full-body fashion candid shot in a natural and unposed moment. Ensure the prompt reflects outfit details, scene context, and user physical traits.\nYour image_prompt should follow this structure:\nUser Physical Features: Describe the user's body type, body size, hairstyle, and overall vibe, matching the styling intent.\nOutfit Description: Describe the entire outfit, including the tops, bottoms, shoes, bag and accessories, using the items listed in \"outfit_suggestion\".\nScene Description: Describe the setting and atmosphere of the occasion.\n## Output Format (JSON)\nYour reply should strictly follow the JSON format, containing two keys:\n\\`json\n{\n\"outfit_suggestion\": {\n\"outfit_title\": \"A short, catchy title for the outfit\",\n\"items\": {\n\"tops\": [\n{\n\"item_name\": \"...\",\n\"style_details\": \"...\",\n\"wearing_details\": \"...\",\n}\n],\n\"bottoms\": {\n\"item_name\": \"...\",\n\"style_details\": \"...\",\n\"wearing_details\": \"...\",\n},\n\"shoes\": {\n\"item_name\": \"...\",\n\"style_details\": \"...\",\n\"wearing_details\": \"...\",\n},\n\"bag\": {\n\"item_name\": \"...\",\n\"style_details\": \"...\",\n\"wearing_details\": \"...\",\n},\n\"accessories\": [\n{\n\"item_name\": \"...\",\n\"style_details\": \"...\",\n\"wearing_details\": \"...\",\n}\n],\n\"hairstyle\": {\n\"style_name\": \"...\",\n\"description\": \"...\"\n}\n},\n\"explanation\": \"\"\n},\n\"image_prompt\": \"\"\n}\n\\`\n## Notes\nThe final output MUST be one valid JSON object as described above. Do not include any other commentary.\nIf you are uncertain, always generate a reasonable guess based on the outfit and scene. Never leave the image_prompt empty or generic.\n"
+2025-10-01T05:19:35.812164+00:00 app[web.1]: },
+2025-10-01T05:19:35.812165+00:00 app[web.1]: {
+2025-10-01T05:19:35.812165+00:00 app[web.1]: "role": "user",
+2025-10-01T05:19:35.812165+00:00 app[web.1]: "content": [
+2025-10-01T05:19:35.812165+00:00 app[web.1]: {
+2025-10-01T05:19:35.812166+00:00 app[web.1]: "type": "text",
+2025-10-01T05:19:35.812167+00:00 app[web.1]: "text": "Please provide styling suggestions based on the following information. User's photo is the first image, and the Key Piece user wants to style is the second.\n\n**IMPORTANT: Please first analyze the user in the first image to understand the user's features, then build the outfit around the Key Piece in the second image according to the user's features and the occasion.**\n\n# User Profile\nAnalyze the user's ethnicity, skin tone, body type, body size, and face shape in the first attached image.\nMake sure the outfit recommendations are suitable for the user, helping them to highlight their strengths and downplay their weaknesses.\n\n\n# KEY PIECE\nAnalyze the Key Piece's style, color, material, silhouette and formality level in the second attached image.\nBuild the outfit around this \"KEY PIECE\" and make sure the KEY PIECE must be incorporated into the outfit suggestion.\n\n\n# Occasion & Scene Details\nBuild the outfit for Casual. The styling guidelines are casual outfit, relaxed and comfortable, effortlessly stylish, easy to move in, ideal for weekend downtime, coffee and shopping. The scene is a urban street lined with outdoor café tables and chairs.\nMake sure the outfit is suitable for the occasion and meet the styling guidelines.\n\n# Style Preference\nCreate a stylish and flattering outfit that incorporates the essential item for the specified occasion. Focus on silhouettes that flatter a Hourglass body type. Align with the user's style preferences: Get new outfit ideas for my clothes. Emphasize creating a cohesive look that enhances the user's natural features and builds confidence.\n\n**Styling Instructions:**\n- Generate 2 different and distinct styling suggestions. Each suggestion should feature a distinct style and color strategy that suits the user and complements the key piece for the occasion.\n"
+2025-10-01T05:19:35.812167+00:00 app[web.1]: },
+2025-10-01T05:19:35.812167+00:00 app[web.1]: {
+2025-10-01T05:19:35.812168+00:00 app[web.1]: "type": "image_url",
+2025-10-01T05:19:35.812168+00:00 app[web.1]: "image_url": {
+2025-10-01T05:19:35.812168+00:00 app[web.1]: "url": "https://aft07xnw52tcy9ig.public.blob.vercel-storag...",
+2025-10-01T05:19:35.812168+00:00 app[web.1]: "detail": "low"
+2025-10-01T05:19:35.812168+00:00 app[web.1]: }
+2025-10-01T05:19:35.812169+00:00 app[web.1]: },
+2025-10-01T05:19:35.812169+00:00 app[web.1]: {
+2025-10-01T05:19:35.812169+00:00 app[web.1]: "type": "image_url",
+2025-10-01T05:19:35.812169+00:00 app[web.1]: "image_url": {
+2025-10-01T05:19:35.812169+00:00 app[web.1]: "url": "https://aft07xnw52tcy9ig.public.blob.vercel-storag...",
+2025-10-01T05:19:35.812169+00:00 app[web.1]: "detail": "low"
+2025-10-01T05:19:35.812169+00:00 app[web.1]: }
+2025-10-01T05:19:35.812169+00:00 app[web.1]: }
+2025-10-01T05:19:35.812169+00:00 app[web.1]: ]
+2025-10-01T05:19:35.812170+00:00 app[web.1]: }
+2025-10-01T05:19:35.812170+00:00 app[web.1]: ],
+2025-10-01T05:19:35.812170+00:00 app[web.1]: "max_tokens": 6000,
+2025-10-01T05:19:35.812170+00:00 app[web.1]: "tools": [
+2025-10-01T05:19:35.812170+00:00 app[web.1]: {
+2025-10-01T05:19:35.812170+00:00 app[web.1]: "type": "function",
+2025-10-01T05:19:35.812170+00:00 app[web.1]: "function": {
+2025-10-01T05:19:35.812170+00:00 app[web.1]: "name": "get_multiple_style_suggestions",
+2025-10-01T05:19:35.812171+00:00 app[web.1]: "description": "Return exactly 2 complete and distinct outfit suggestions in a structured JSON format (do NOT return more than 2). The image_prompt field is highly recommended for best results.",
+2025-10-01T05:19:35.812171+00:00 app[web.1]: "parameters": {
+2025-10-01T05:19:35.812171+00:00 app[web.1]: "type": "object",
+2025-10-01T05:19:35.812171+00:00 app[web.1]: "properties": {
+2025-10-01T05:19:35.812171+00:00 app[web.1]: "suggestions": {
+2025-10-01T05:19:35.812171+00:00 app[web.1]: "type": "array",
+2025-10-01T05:19:35.812171+00:00 app[web.1]: "items": {
+2025-10-01T05:19:35.812171+00:00 app[web.1]: "type": "object",
+2025-10-01T05:19:35.812172+00:00 app[web.1]: "properties": {
+2025-10-01T05:19:35.812172+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T05:19:35.812172+00:00 app[web.1]: "type": "object",
+2025-10-01T05:19:35.812172+00:00 app[web.1]: "properties": {
+2025-10-01T05:19:35.812172+00:00 app[web.1]: "outfit_title": {
+2025-10-01T05:19:35.812172+00:00 app[web.1]: "type": "string",
+2025-10-01T05:19:35.812172+00:00 app[web.1]: "description": "A short, catchy title for the outfit."
+2025-10-01T05:19:35.812173+00:00 app[web.1]: },
+2025-10-01T05:19:35.812173+00:00 app[web.1]: "items": {
+2025-10-01T05:19:35.812173+00:00 app[web.1]: "type": "object",
+2025-10-01T05:19:35.812175+00:00 app[web.1]: "properties": {
+2025-10-01T05:19:35.812175+00:00 app[web.1]: "tops": {
+2025-10-01T05:19:35.812175+00:00 app[web.1]: "type": "array",
+2025-10-01T05:19:35.812175+00:00 app[web.1]: "items": {
+2025-10-01T05:19:35.812175+00:00 app[web.1]: "type": "object",
+2025-10-01T05:19:35.812175+00:00 app[web.1]: "properties": {
+2025-10-01T05:19:35.812175+00:00 app[web.1]: "item_name": {
+2025-10-01T05:19:35.812175+00:00 app[web.1]: "type": "string",
+2025-10-01T05:19:35.812175+00:00 app[web.1]: "description": "The name of the clothing item or accessory."
+2025-10-01T05:19:35.812176+00:00 app[web.1]: },
+2025-10-01T05:19:35.812176+00:00 app[web.1]: "style_details": {
+2025-10-01T05:19:35.812176+00:00 app[web.1]: "type": "string",
+2025-10-01T05:19:35.812176+00:00 app[web.1]: "description": "The style details of the clothing item or accessory."
+2025-10-01T05:19:35.812176+00:00 app[web.1]: },
+2025-10-01T05:19:35.812176+00:00 app[web.1]: "wearing_details": {
+2025-10-01T05:19:35.812176+00:00 app[web.1]: "type": "string",
+2025-10-01T05:19:35.812176+00:00 app[web.1]: "description": "The wearing details of the clothing item or accessory."
+2025-10-01T05:19:35.812177+00:00 app[web.1]: },
+2025-10-01T05:19:35.812177+00:00 app[web.1]: "effect_description": {
+2025-10-01T05:19:35.812177+00:00 app[web.1]: "type": "string",
+2025-10-01T05:19:35.812177+00:00 app[web.1]: "description": "The effect description of the clothing item or accessory."
+2025-10-01T05:19:35.812177+00:00 app[web.1]: }
+2025-10-01T05:19:35.812178+00:00 app[web.1]: },
+2025-10-01T05:19:35.812178+00:00 app[web.1]: "required": [
+2025-10-01T05:19:35.812178+00:00 app[web.1]: "item_name",
+2025-10-01T05:19:35.812178+00:00 app[web.1]: "style_details",
+2025-10-01T05:19:35.812178+00:00 app[web.1]: "wearing_details"
+2025-10-01T05:19:35.812178+00:00 app[web.1]: ],
+2025-10-01T05:19:35.812178+00:00 app[web.1]: "additionalProperties": false
+2025-10-01T05:19:35.812178+00:00 app[web.1]: },
+2025-10-01T05:19:35.812179+00:00 app[web.1]: "description": "An array of top items, which can include layers."
+2025-10-01T05:19:35.812179+00:00 app[web.1]: },
+2025-10-01T05:19:35.812179+00:00 app[web.1]: "bottoms": {
+2025-10-01T05:19:35.812179+00:00 app[web.1]: "type": "object",
+2025-10-01T05:19:35.812179+00:00 app[web.1]: "properties": {
+2025-10-01T05:19:35.812179+00:00 app[web.1]: "item_name": {
+2025-10-01T05:19:35.812180+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/item_name"
+2025-10-01T05:19:35.812180+00:00 app[web.1]: },
+2025-10-01T05:19:35.812180+00:00 app[web.1]: "style_details": {
+2025-10-01T05:19:35.812181+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/style_details"
+2025-10-01T05:19:35.812181+00:00 app[web.1]: },
+2025-10-01T05:19:35.812182+00:00 app[web.1]: "wearing_details": {
+2025-10-01T05:19:35.812182+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/wearing_details"
+2025-10-01T05:19:35.812182+00:00 app[web.1]: },
+2025-10-01T05:19:35.812182+00:00 app[web.1]: "effect_description": {
+2025-10-01T05:19:35.812182+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/effect_description"
+2025-10-01T05:19:35.812182+00:00 app[web.1]: }
+2025-10-01T05:19:35.812183+00:00 app[web.1]: },
+2025-10-01T05:19:35.812183+00:00 app[web.1]: "required": [
+2025-10-01T05:19:35.812183+00:00 app[web.1]: "item_name",
+2025-10-01T05:19:35.812183+00:00 app[web.1]: "style_details",
+2025-10-01T05:19:35.812183+00:00 app[web.1]: "wearing_details"
+2025-10-01T05:19:35.812183+00:00 app[web.1]: ],
+2025-10-01T05:19:35.812183+00:00 app[web.1]: "additionalProperties": false,
+2025-10-01T05:19:35.812183+00:00 app[web.1]: "description": "The bottom item."
+2025-10-01T05:19:35.812183+00:00 app[web.1]: },
+2025-10-01T05:19:35.812183+00:00 app[web.1]: "shoes": {
+2025-10-01T05:19:35.812184+00:00 app[web.1]: "type": "object",
+2025-10-01T05:19:35.812184+00:00 app[web.1]: "properties": {
+2025-10-01T05:19:35.812184+00:00 app[web.1]: "item_name": {
+2025-10-01T05:19:35.812184+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/item_name"
+2025-10-01T05:19:35.812184+00:00 app[web.1]: },
+2025-10-01T05:19:35.812184+00:00 app[web.1]: "style_details": {
+2025-10-01T05:19:35.812184+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/style_details"
+2025-10-01T05:19:35.812184+00:00 app[web.1]: },
+2025-10-01T05:19:35.812184+00:00 app[web.1]: "wearing_details": {
+2025-10-01T05:19:35.812184+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/wearing_details"
+2025-10-01T05:19:35.812185+00:00 app[web.1]: },
+2025-10-01T05:19:35.812186+00:00 app[web.1]: "effect_description": {
+2025-10-01T05:19:35.812187+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/effect_description"
+2025-10-01T05:19:35.812187+00:00 app[web.1]: }
+2025-10-01T05:19:35.812187+00:00 app[web.1]: },
+2025-10-01T05:19:35.812187+00:00 app[web.1]: "required": [
+2025-10-01T05:19:35.812187+00:00 app[web.1]: "item_name",
+2025-10-01T05:19:35.812187+00:00 app[web.1]: "style_details",
+2025-10-01T05:19:35.812187+00:00 app[web.1]: "wearing_details"
+2025-10-01T05:19:35.812187+00:00 app[web.1]: ],
+2025-10-01T05:19:35.812187+00:00 app[web.1]: "additionalProperties": false,
+2025-10-01T05:19:35.812187+00:00 app[web.1]: "description": "The shoes."
+2025-10-01T05:19:35.812188+00:00 app[web.1]: },
+2025-10-01T05:19:35.812188+00:00 app[web.1]: "bag": {
+2025-10-01T05:19:35.812188+00:00 app[web.1]: "type": "object",
+2025-10-01T05:19:35.812188+00:00 app[web.1]: "properties": {
+2025-10-01T05:19:35.812188+00:00 app[web.1]: "item_name": {
+2025-10-01T05:19:35.812188+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/item_name"
+2025-10-01T05:19:35.812188+00:00 app[web.1]: },
+2025-10-01T05:19:35.812188+00:00 app[web.1]: "style_details": {
+2025-10-01T05:19:35.812188+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/style_details"
+2025-10-01T05:19:35.812188+00:00 app[web.1]: },
+2025-10-01T05:19:35.812189+00:00 app[web.1]: "wearing_details": {
+2025-10-01T05:19:35.812189+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/wearing_details"
+2025-10-01T05:19:35.812189+00:00 app[web.1]: },
+2025-10-01T05:19:35.812189+00:00 app[web.1]: "effect_description": {
+2025-10-01T05:19:35.812189+00:00 app[web.1]: "$ref": "#/properties/suggestions/items/properties/outfit_suggestion/properties/items/properties/tops/items/properties/effect_description"
+2025-10-01T05:19:35.812189+00:00 app[web.1]: }
+2025-10-01T05:19:35.812189+00:00 app[web.1]: },
+2025-10-01T05:19:35.812189+00:00 app[web.1]: "required": [
+2025-10-01T05:19:35.812189+00:00 app[web.1]: "item_name",
+2025-10-01T05:19:35.812189+00:00 app[web.1]: "style_details",
+2025-10-01T05:19:35.812190+00:00 app[web.1]: "wearing_details"
+2025-10-01T05:19:35.812190+00:00 app[web.1]: ],
+2025-10-01T05:19:35.812190+00:00 app[web.1]: "additionalProperties": false,
+2025-10-01T05:19:35.812190+00:00 app[web.1]: "description": "The bag or purse."
+2025-10-01T05:19:35.812190+00:00 app[web.1]: },
+2025-10-01T05:19:35.812190+00:00 app[web.1]: "layering_description": {
+2025-10-01T05:19:35.812190+00:00 app[web.1]: "type": "string",
+2025-10-01T05:19:35.812190+00:00 app[web.1]: "description": "A description of layering relationships, including the order of wearing, the details of exposure, and the role of layers in style, atmosphere, or structural shaping."
+2025-10-01T05:19:35.812190+00:00 app[web.1]: },
+2025-10-01T05:19:35.812190+00:00 app[web.1]: "hairstyle": {
+2025-10-01T05:19:35.812191+00:00 app[web.1]: "type": "object",
+2025-10-01T05:19:35.812191+00:00 app[web.1]: "properties": {
+2025-10-01T05:19:35.812191+00:00 app[web.1]: "style_name": {
+2025-10-01T05:19:35.812191+00:00 app[web.1]: "type": "string",
+2025-10-01T05:19:35.812191+00:00 app[web.1]: "description": "The name of the hairstyle."
+2025-10-01T05:19:35.812191+00:00 app[web.1]: },
+2025-10-01T05:19:35.812191+00:00 app[web.1]: "description": {
+2025-10-01T05:19:35.812191+00:00 app[web.1]: "type": "string",
+2025-10-01T05:19:35.812191+00:00 app[web.1]: "description": "A brief description of the hairstyle and why it complements the outfit."
+2025-10-01T05:19:35.812192+00:00 app[web.1]: }
+2025-10-01T05:19:35.812192+00:00 app[web.1]: },
+2025-10-01T05:19:35.812192+00:00 app[web.1]: "required": [
+2025-10-01T05:19:35.812192+00:00 app[web.1]: "style_name",
+2025-10-01T05:19:35.812192+00:00 app[web.1]: "description"
+2025-10-01T05:19:35.812192+00:00 app[web.1]: ],
+2025-10-01T05:19:35.812193+00:00 app[web.1]: "additionalProperties": false,
+2025-10-01T05:19:35.812193+00:00 app[web.1]: "description": "The suggested hairstyle."
+2025-10-01T05:19:35.812193+00:00 app[web.1]: }
+2025-10-01T05:19:35.812193+00:00 app[web.1]: },
+2025-10-01T05:19:35.812193+00:00 app[web.1]: "required": [
+2025-10-01T05:19:35.812194+00:00 app[web.1]: "tops",
+2025-10-01T05:19:35.812194+00:00 app[web.1]: "bottoms",
+2025-10-01T05:19:35.812194+00:00 app[web.1]: "shoes",
+2025-10-01T05:19:35.812194+00:00 app[web.1]: "bag",
+2025-10-01T05:19:35.812194+00:00 app[web.1]: "hairstyle"
+2025-10-01T05:19:35.812194+00:00 app[web.1]: ],
+2025-10-01T05:19:35.812194+00:00 app[web.1]: "additionalProperties": false
+2025-10-01T05:19:35.812194+00:00 app[web.1]: },
+2025-10-01T05:19:35.812195+00:00 app[web.1]: "explanation": {
+2025-10-01T05:19:35.812195+00:00 app[web.1]: "type": "string",
+2025-10-01T05:19:35.812195+00:00 app[web.1]: "description": "A detailed explanation of why this outfit works for the user, providing styling tips and emotional value."
+2025-10-01T05:19:35.812195+00:00 app[web.1]: }
+2025-10-01T05:19:35.812195+00:00 app[web.1]: },
+2025-10-01T05:19:35.812195+00:00 app[web.1]: "required": [
+2025-10-01T05:19:35.812196+00:00 app[web.1]: "outfit_title",
+2025-10-01T05:19:35.812197+00:00 app[web.1]: "items"
+2025-10-01T05:19:35.812197+00:00 app[web.1]: ],
+2025-10-01T05:19:35.812197+00:00 app[web.1]: "additionalProperties": false,
+2025-10-01T05:19:35.812197+00:00 app[web.1]: "description": "A single complete outfit suggestion."
+2025-10-01T05:19:35.812197+00:00 app[web.1]: },
+2025-10-01T05:19:35.812197+00:00 app[web.1]: "image_prompt": {
+2025-10-01T05:19:35.812197+00:00 app[web.1]: "type": "string",
+2025-10-01T05:19:35.812198+00:00 app[web.1]: "description": "A vivid, Chinese-only visual prompt for an AI image generator. It should describe the user wearing the outfit in the intended scene, including outfit details, setting, atmosphere, and overall mood. This prompt will be passed to Midjourney or similar models to produce a full-body fashion image. This field is REQUIRED and extremely important."
+2025-10-01T05:19:35.812198+00:00 app[web.1]: }
+2025-10-01T05:19:35.812198+00:00 app[web.1]: },
+2025-10-01T05:19:35.812198+00:00 app[web.1]: "required": [
+2025-10-01T05:19:35.812198+00:00 app[web.1]: "outfit_suggestion"
+2025-10-01T05:19:35.812198+00:00 app[web.1]: ],
+2025-10-01T05:19:35.812198+00:00 app[web.1]: "additionalProperties": false
+2025-10-01T05:19:35.812198+00:00 app[web.1]: },
+2025-10-01T05:19:35.812199+00:00 app[web.1]: "minItems": 1,
+2025-10-01T05:19:35.812199+00:00 app[web.1]: "maxItems": 2
+2025-10-01T05:19:35.812199+00:00 app[web.1]: }
+2025-10-01T05:19:35.812199+00:00 app[web.1]: },
+2025-10-01T05:19:35.812199+00:00 app[web.1]: "required": [
+2025-10-01T05:19:35.812199+00:00 app[web.1]: "suggestions"
+2025-10-01T05:19:35.812199+00:00 app[web.1]: ],
+2025-10-01T05:19:35.812199+00:00 app[web.1]: "additionalProperties": false,
+2025-10-01T05:19:35.812199+00:00 app[web.1]: "$schema": "http://json-schema.org/draft-07/schema#"
+2025-10-01T05:19:35.812200+00:00 app[web.1]: }
+2025-10-01T05:19:35.812200+00:00 app[web.1]: }
+2025-10-01T05:19:35.812200+00:00 app[web.1]: }
+2025-10-01T05:19:35.812200+00:00 app[web.1]: ],
+2025-10-01T05:19:35.812200+00:00 app[web.1]: "tool_choice": {
+2025-10-01T05:19:35.812200+00:00 app[web.1]: "type": "function",
+2025-10-01T05:19:35.812200+00:00 app[web.1]: "function": {
+2025-10-01T05:19:35.812200+00:00 app[web.1]: "name": "get_multiple_style_suggestions"
+2025-10-01T05:19:35.812200+00:00 app[web.1]: }
+2025-10-01T05:19:35.812201+00:00 app[web.1]: }
+2025-10-01T05:19:35.812201+00:00 app[web.1]: }
+2025-10-01T05:19:35.812201+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] ===== SENDING REQUEST TO OPENAI =====
+2025-10-01T05:20:05.650768+00:00 heroku[router]: at=error code=H12 desc="Request timeout" method=POST path="/api/apple/openai" host=styleai.h.zzn.im request_id=eb8e5972-b92f-1b03-c087-0bc157828bb4 fwd="172.58.166.246" dyno=web.1 connect=0ms service=30000ms status=503 bytes=567 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:20:15.472399+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] ===== OPENAI RESPONSE RECEIVED =====
+2025-10-01T05:20:15.472468+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] 📊 Response usage: {
+2025-10-01T05:20:15.472468+00:00 app[web.1]: prompt_tokens: 1957,
+2025-10-01T05:20:15.472469+00:00 app[web.1]: completion_tokens: 765,
+2025-10-01T05:20:15.472469+00:00 app[web.1]: total_tokens: 2722,
+2025-10-01T05:20:15.472469+00:00 app[web.1]: prompt_tokens_details: { cached_tokens: 0, audio_tokens: 0 },
+2025-10-01T05:20:15.472470+00:00 app[web.1]: completion_tokens_details: {
+2025-10-01T05:20:15.472470+00:00 app[web.1]: reasoning_tokens: 0,
+2025-10-01T05:20:15.472470+00:00 app[web.1]: audio_tokens: 0,
+2025-10-01T05:20:15.472470+00:00 app[web.1]: accepted_prediction_tokens: 0,
+2025-10-01T05:20:15.472470+00:00 app[web.1]: rejected_prediction_tokens: 0
+2025-10-01T05:20:15.472471+00:00 app[web.1]: }
+2025-10-01T05:20:15.472471+00:00 app[web.1]: }
+2025-10-01T05:20:15.472472+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] 📊 Finish reason: stop
+2025-10-01T05:20:15.472488+00:00 app[web.1]: 🤖 [OPENAI] ===== COMPLETE RESPONSE MESSAGE =====
+2025-10-01T05:20:15.472534+00:00 app[web.1]: 🤖 [OPENAI] 📥 FULL RESPONSE MESSAGE: {
+2025-10-01T05:20:15.472534+00:00 app[web.1]: "role": "assistant",
+2025-10-01T05:20:15.472534+00:00 app[web.1]: "content": null,
+2025-10-01T05:20:15.472535+00:00 app[web.1]: "tool_calls": [
+2025-10-01T05:20:15.472535+00:00 app[web.1]: {
+2025-10-01T05:20:15.472535+00:00 app[web.1]: "id": "call_sCyOyx1xdeKo6DOzAyqK4oPI",
+2025-10-01T05:20:15.472535+00:00 app[web.1]: "type": "function",
+2025-10-01T05:20:15.472535+00:00 app[web.1]: "function": {
+2025-10-01T05:20:15.472535+00:00 app[web.1]: "name": "get_multiple_style_suggestions",
+2025-10-01T05:20:15.472544+00:00 app[web.1]: "arguments": "{\"suggestions\":[{\"outfit_suggestion\":{\"outfit_title\":\"Chic Urban Comfort\",\"items\":{\"tops\":[{\"item_name\":\"Graphic T-Shirt\",\"style_details\":\"White Cotton Relaxed-Fit Graphic Tee\",\"wearing_details\":\"Tuck into the waistband for a tailored look.\"}],\"bottoms\":{\"item_name\":\"High-Waisted Jeans\",\"style_details\":\"Indigo Denim Straight-Leg Jeans\",\"wearing_details\":\"Wear high on the waist to emphasize the hourglass shape.\"},\"shoes\":{\"item_name\":\"Platform Sneakers\",\"style_details\":\"White Leather Lace-Up Sneakers\",\"wearing_details\":\"Pair with ankle socks for a casual vibe.\"},\"bag\":{\"item_name\":\"Crossbody Bag\",\"style_details\":\"Black Leather Minimalist Crossbody Bag\",\"wearing_details\":\"Wear across the body for easy movement.\"},\"accessories\":[{\"item_name\":\"Sunglasses\",\"style_details\":\"Black Oversized Cat-Eye Sunglasses\",\"wearing_details\":\"Wear for added flair and sun protection.\"}],\"hairstyle\":{\"style_name\":\"Loose Waves\",\"description\":\"Soft and relaxed waves enhance the casual and effortless look while balancing the outfit.\"}},\"explanation\":\"This outfit combines a relaxed graphic tee with structured high-waisted jeans to flatter the hourglass figure. The casual sneakers and crossbody bag provide comfort and ease, while the sunglasses add a stylish touch suitable for an urban street vibe.\"},\"image_prompt\":\"女人身材匀称，卷发慵懒自然。穿着白色卡通图案T恤搭配深色牛仔直筒裤，脚蹬白色厚底运动鞋，背着黑色简约斜挎包。场景是在阳光明媚的城市街区，四周是户外咖啡桌和椅子，散发出轻松休闲的氛围。\"},{\"outfit_suggestion\":{\"outfit_title\":\"Effortlessly Stylish\",\"items\":{\"tops\":[{\"item_name\":\"Graphic T-Shirt\",\"style_details\":\"White Cotton Relaxed-Fit Graphic Tee\",\"wearing_details\":\"Layer with an unbuttoned lightweight cardigan for depth.\"}],\"bottoms\":{\"item_name\":\"A-Line Skirt\",\"style_details\":\"Navy Cotton High-Waist A-Line Skirt\",\"wearing_details\":\"Sits at the waist to enhance the hourglass silhouette.\"},\"shoes\":{\"item_name\":\"Ankle Boots\",\"style_details\":\"Tan Suede Block Heel Ankle Boots\",\"wearing_details\":\"Add height and complement the skirt length.\"},\"bag\":{\"item_name\":\"Tote Bag\",\"style_details\":\"Tan Leather Large Tote Bag\",\"wearing_details\":\"Carry over the shoulder for a chic appearance.\"},\"accessories\":[{\"item_name\":\"Statement Necklace\",\"style_details\":\"Gold Chain Statement Necklace\",\"wearing_details\":\"Wear over the tee for a touch of elegance.\"}],\"hairstyle\":{\"style_name\":\"Sleek Ponytail\",\"description\":\"A sleek ponytail maintains elegance and draws attention to facial features, complementing the outfit.\"}},\"explanation\":\"Pairing the graphic tee with a high-waist A-line skirt creates a balanced silhouette perfect for a relaxed urban setting. The tan accessories and boots bring warmth, and the tote bag adds practicality for shopping around town.\"},\"image_prompt\":\"身材娇小的女性，发型为利落的马尾。穿着白色卡通图案T恤，搭配藏青色高腰A字裙，脚穿棕色绒面短靴，肩挎棕色大手提包。场景为阳光下的城市街区，露天咖啡桌椅环绕着，透出一种悠然自得的氛围。\"}]}"
+2025-10-01T05:20:15.472544+00:00 app[web.1]: }
+2025-10-01T05:20:15.472544+00:00 app[web.1]: }
+2025-10-01T05:20:15.472544+00:00 app[web.1]: ],
+2025-10-01T05:20:15.472544+00:00 app[web.1]: "refusal": null,
+2025-10-01T05:20:15.472544+00:00 app[web.1]: "annotations": []
+2025-10-01T05:20:15.472544+00:00 app[web.1]: }
+2025-10-01T05:20:15.472616+00:00 app[web.1]: 🤖 [OPENAI] 🔍 RAW AI RESPONSE: {
+2025-10-01T05:20:15.472616+00:00 app[web.1]: "suggestions": [
+2025-10-01T05:20:15.472617+00:00 app[web.1]: {
+2025-10-01T05:20:15.472617+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T05:20:15.472617+00:00 app[web.1]: "outfit_title": "Chic Urban Comfort",
+2025-10-01T05:20:15.472617+00:00 app[web.1]: "items": {
+2025-10-01T05:20:15.472617+00:00 app[web.1]: "tops": [
+2025-10-01T05:20:15.472617+00:00 app[web.1]: {
+2025-10-01T05:20:15.472617+00:00 app[web.1]: "item_name": "Graphic T-Shirt",
+2025-10-01T05:20:15.472618+00:00 app[web.1]: "style_details": "White Cotton Relaxed-Fit Graphic Tee",
+2025-10-01T05:20:15.472618+00:00 app[web.1]: "wearing_details": "Tuck into the waistband for a tailored look."
+2025-10-01T05:20:15.472618+00:00 app[web.1]: }
+2025-10-01T05:20:15.472618+00:00 app[web.1]: ],
+2025-10-01T05:20:15.472618+00:00 app[web.1]: "bottoms": {
+2025-10-01T05:20:15.472619+00:00 app[web.1]: "item_name": "High-Waisted Jeans",
+2025-10-01T05:20:15.472619+00:00 app[web.1]: "style_details": "Indigo Denim Straight-Leg Jeans",
+2025-10-01T05:20:15.472620+00:00 app[web.1]: "wearing_details": "Wear high on the waist to emphasize the hourglass shape."
+2025-10-01T05:20:15.472620+00:00 app[web.1]: },
+2025-10-01T05:20:15.472620+00:00 app[web.1]: "shoes": {
+2025-10-01T05:20:15.472620+00:00 app[web.1]: "item_name": "Platform Sneakers",
+2025-10-01T05:20:15.472621+00:00 app[web.1]: "style_details": "White Leather Lace-Up Sneakers",
+2025-10-01T05:20:15.472621+00:00 app[web.1]: "wearing_details": "Pair with ankle socks for a casual vibe."
+2025-10-01T05:20:15.472621+00:00 app[web.1]: },
+2025-10-01T05:20:15.472621+00:00 app[web.1]: "bag": {
+2025-10-01T05:20:15.472621+00:00 app[web.1]: "item_name": "Crossbody Bag",
+2025-10-01T05:20:15.472622+00:00 app[web.1]: "style_details": "Black Leather Minimalist Crossbody Bag",
+2025-10-01T05:20:15.472622+00:00 app[web.1]: "wearing_details": "Wear across the body for easy movement."
+2025-10-01T05:20:15.472622+00:00 app[web.1]: },
+2025-10-01T05:20:15.472622+00:00 app[web.1]: "accessories": [
+2025-10-01T05:20:15.472622+00:00 app[web.1]: {
+2025-10-01T05:20:15.472622+00:00 app[web.1]: "item_name": "Sunglasses",
+2025-10-01T05:20:15.472623+00:00 app[web.1]: "style_details": "Black Oversized Cat-Eye Sunglasses",
+2025-10-01T05:20:15.472623+00:00 app[web.1]: "wearing_details": "Wear for added flair and sun protection."
+2025-10-01T05:20:15.472623+00:00 app[web.1]: }
+2025-10-01T05:20:15.472623+00:00 app[web.1]: ],
+2025-10-01T05:20:15.472623+00:00 app[web.1]: "hairstyle": {
+2025-10-01T05:20:15.472623+00:00 app[web.1]: "style_name": "Loose Waves",
+2025-10-01T05:20:15.472624+00:00 app[web.1]: "description": "Soft and relaxed waves enhance the casual and effortless look while balancing the outfit."
+2025-10-01T05:20:15.472624+00:00 app[web.1]: }
+2025-10-01T05:20:15.472624+00:00 app[web.1]: },
+2025-10-01T05:20:15.472627+00:00 app[web.1]: "explanation": "This outfit combines a relaxed graphic tee with structured high-waisted jeans to flatter the hourglass figure. The casual sneakers and crossbody bag provide comfort and ease, while the sunglasses add a stylish touch suitable for an urban street vibe."
+2025-10-01T05:20:15.472627+00:00 app[web.1]: },
+2025-10-01T05:20:15.472628+00:00 app[web.1]: "image_prompt": "女人身材匀称，卷发慵懒自然。穿着白色卡通图案T恤搭配深色牛仔直筒裤，脚蹬白色厚底运动鞋，背着黑色简约斜挎包。场景是在阳光明媚的城市街区，四周是户外咖啡桌和椅子，散发出轻松休闲的氛围。"
+2025-10-01T05:20:15.472628+00:00 app[web.1]: },
+2025-10-01T05:20:15.472628+00:00 app[web.1]: {
+2025-10-01T05:20:15.472628+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T05:20:15.472628+00:00 app[web.1]: "outfit_title": "Effortlessly Stylish",
+2025-10-01T05:20:15.472628+00:00 app[web.1]: "items": {
+2025-10-01T05:20:15.472629+00:00 app[web.1]: "tops": [
+2025-10-01T05:20:15.472629+00:00 app[web.1]: {
+2025-10-01T05:20:15.472629+00:00 app[web.1]: "item_name": "Graphic T-Shirt",
+2025-10-01T05:20:15.472629+00:00 app[web.1]: "style_details": "White Cotton Relaxed-Fit Graphic Tee",
+2025-10-01T05:20:15.472629+00:00 app[web.1]: "wearing_details": "Layer with an unbuttoned lightweight cardigan for depth."
+2025-10-01T05:20:15.472629+00:00 app[web.1]: }
+2025-10-01T05:20:15.472629+00:00 app[web.1]: ],
+2025-10-01T05:20:15.472630+00:00 app[web.1]: "bottoms": {
+2025-10-01T05:20:15.472630+00:00 app[web.1]: "item_name": "A-Line Skirt",
+2025-10-01T05:20:15.472630+00:00 app[web.1]: "style_details": "Navy Cotton High-Waist A-Line Skirt",
+2025-10-01T05:20:15.472630+00:00 app[web.1]: "wearing_details": "Sits at the waist to enhance the hourglass silhouette."
+2025-10-01T05:20:15.472630+00:00 app[web.1]: },
+2025-10-01T05:20:15.472631+00:00 app[web.1]: "shoes": {
+2025-10-01T05:20:15.472631+00:00 app[web.1]: "item_name": "Ankle Boots",
+2025-10-01T05:20:15.472631+00:00 app[web.1]: "style_details": "Tan Suede Block Heel Ankle Boots",
+2025-10-01T05:20:15.472631+00:00 app[web.1]: "wearing_details": "Add height and complement the skirt length."
+2025-10-01T05:20:15.472631+00:00 app[web.1]: },
+2025-10-01T05:20:15.472631+00:00 app[web.1]: "bag": {
+2025-10-01T05:20:15.472632+00:00 app[web.1]: "item_name": "Tote Bag",
+2025-10-01T05:20:15.472632+00:00 app[web.1]: "style_details": "Tan Leather Large Tote Bag",
+2025-10-01T05:20:15.472632+00:00 app[web.1]: "wearing_details": "Carry over the shoulder for a chic appearance."
+2025-10-01T05:20:15.472632+00:00 app[web.1]: },
+2025-10-01T05:20:15.472632+00:00 app[web.1]: "accessories": [
+2025-10-01T05:20:15.472632+00:00 app[web.1]: {
+2025-10-01T05:20:15.472632+00:00 app[web.1]: "item_name": "Statement Necklace",
+2025-10-01T05:20:15.472633+00:00 app[web.1]: "style_details": "Gold Chain Statement Necklace",
+2025-10-01T05:20:15.472633+00:00 app[web.1]: "wearing_details": "Wear over the tee for a touch of elegance."
+2025-10-01T05:20:15.472633+00:00 app[web.1]: }
+2025-10-01T05:20:15.472633+00:00 app[web.1]: ],
+2025-10-01T05:20:15.472633+00:00 app[web.1]: "hairstyle": {
+2025-10-01T05:20:15.472633+00:00 app[web.1]: "style_name": "Sleek Ponytail",
+2025-10-01T05:20:15.472634+00:00 app[web.1]: "description": "A sleek ponytail maintains elegance and draws attention to facial features, complementing the outfit."
+2025-10-01T05:20:15.472634+00:00 app[web.1]: }
+2025-10-01T05:20:15.472634+00:00 app[web.1]: },
+2025-10-01T05:20:15.472635+00:00 app[web.1]: "explanation": "Pairing the graphic tee with a high-waist A-line skirt creates a balanced silhouette perfect for a relaxed urban setting. The tan accessories and boots bring warmth, and the tote bag adds practicality for shopping around town."
+2025-10-01T05:20:15.472636+00:00 app[web.1]: },
+2025-10-01T05:20:15.472638+00:00 app[web.1]: "image_prompt": "身材娇小的女性，发型为利落的马尾。穿着白色卡通图案T恤，搭配藏青色高腰A字裙，脚穿棕色绒面短靴，肩挎棕色大手提包。场景为阳光下的城市街区，露天咖啡桌椅环绕着，透出一种悠然自得的氛围。"
+2025-10-01T05:20:15.472638+00:00 app[web.1]: }
+2025-10-01T05:20:15.472638+00:00 app[web.1]: ]
+2025-10-01T05:20:15.472638+00:00 app[web.1]: }
+2025-10-01T05:20:15.472710+00:00 app[web.1]: 🤖 [OPENAI] 🔧 RESTRUCTURED DATA: {
+2025-10-01T05:20:15.472710+00:00 app[web.1]: "suggestions": [
+2025-10-01T05:20:15.472710+00:00 app[web.1]: {
+2025-10-01T05:20:15.472710+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T05:20:15.472710+00:00 app[web.1]: "outfit_title": "Chic Urban Comfort",
+2025-10-01T05:20:15.472711+00:00 app[web.1]: "items": {
+2025-10-01T05:20:15.472711+00:00 app[web.1]: "tops": [
+2025-10-01T05:20:15.472711+00:00 app[web.1]: {
+2025-10-01T05:20:15.472711+00:00 app[web.1]: "item_name": "Graphic T-Shirt",
+2025-10-01T05:20:15.472711+00:00 app[web.1]: "style_details": "White Cotton Relaxed-Fit Graphic Tee",
+2025-10-01T05:20:15.472711+00:00 app[web.1]: "wearing_details": "Tuck into the waistband for a tailored look."
+2025-10-01T05:20:15.472711+00:00 app[web.1]: }
+2025-10-01T05:20:15.472711+00:00 app[web.1]: ],
+2025-10-01T05:20:15.472711+00:00 app[web.1]: "bottoms": {
+2025-10-01T05:20:15.472712+00:00 app[web.1]: "item_name": "High-Waisted Jeans",
+2025-10-01T05:20:15.472712+00:00 app[web.1]: "style_details": "Indigo Denim Straight-Leg Jeans",
+2025-10-01T05:20:15.472712+00:00 app[web.1]: "wearing_details": "Wear high on the waist to emphasize the hourglass shape."
+2025-10-01T05:20:15.472712+00:00 app[web.1]: },
+2025-10-01T05:20:15.472712+00:00 app[web.1]: "shoes": {
+2025-10-01T05:20:15.472712+00:00 app[web.1]: "item_name": "Platform Sneakers",
+2025-10-01T05:20:15.472712+00:00 app[web.1]: "style_details": "White Leather Lace-Up Sneakers",
+2025-10-01T05:20:15.472713+00:00 app[web.1]: "wearing_details": "Pair with ankle socks for a casual vibe."
+2025-10-01T05:20:15.472713+00:00 app[web.1]: },
+2025-10-01T05:20:15.472713+00:00 app[web.1]: "bag": {
+2025-10-01T05:20:15.472713+00:00 app[web.1]: "item_name": "Crossbody Bag",
+2025-10-01T05:20:15.472713+00:00 app[web.1]: "style_details": "Black Leather Minimalist Crossbody Bag",
+2025-10-01T05:20:15.472713+00:00 app[web.1]: "wearing_details": "Wear across the body for easy movement."
+2025-10-01T05:20:15.472713+00:00 app[web.1]: },
+2025-10-01T05:20:15.472714+00:00 app[web.1]: "accessories": [
+2025-10-01T05:20:15.472714+00:00 app[web.1]: {
+2025-10-01T05:20:15.472714+00:00 app[web.1]: "item_name": "Sunglasses",
+2025-10-01T05:20:15.472714+00:00 app[web.1]: "style_details": "Black Oversized Cat-Eye Sunglasses",
+2025-10-01T05:20:15.472714+00:00 app[web.1]: "wearing_details": "Wear for added flair and sun protection."
+2025-10-01T05:20:15.472714+00:00 app[web.1]: }
+2025-10-01T05:20:15.472714+00:00 app[web.1]: ],
+2025-10-01T05:20:15.472714+00:00 app[web.1]: "hairstyle": {
+2025-10-01T05:20:15.472714+00:00 app[web.1]: "style_name": "Loose Waves",
+2025-10-01T05:20:15.472715+00:00 app[web.1]: "description": "Soft and relaxed waves enhance the casual and effortless look while balancing the outfit."
+2025-10-01T05:20:15.472715+00:00 app[web.1]: }
+2025-10-01T05:20:15.472715+00:00 app[web.1]: },
+2025-10-01T05:20:15.472715+00:00 app[web.1]: "explanation": "This outfit combines a relaxed graphic tee with structured high-waisted jeans to flatter the hourglass figure. The casual sneakers and crossbody bag provide comfort and ease, while the sunglasses add a stylish touch suitable for an urban street vibe."
+2025-10-01T05:20:15.472715+00:00 app[web.1]: },
+2025-10-01T05:20:15.472715+00:00 app[web.1]: "image_prompt": "女人身材匀称，卷发慵懒自然。穿着白色卡通图案T恤搭配深色牛仔直筒裤，脚蹬白色厚底运动鞋，背着黑色简约斜挎包。场景是在阳光明媚的城市街区，四周是户外咖啡桌和椅子，散发出轻松休闲的氛围。"
+2025-10-01T05:20:15.472715+00:00 app[web.1]: },
+2025-10-01T05:20:15.472716+00:00 app[web.1]: {
+2025-10-01T05:20:15.472716+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T05:20:15.472716+00:00 app[web.1]: "outfit_title": "Effortlessly Stylish",
+2025-10-01T05:20:15.472716+00:00 app[web.1]: "items": {
+2025-10-01T05:20:15.472716+00:00 app[web.1]: "tops": [
+2025-10-01T05:20:15.472716+00:00 app[web.1]: {
+2025-10-01T05:20:15.472716+00:00 app[web.1]: "item_name": "Graphic T-Shirt",
+2025-10-01T05:20:15.472717+00:00 app[web.1]: "style_details": "White Cotton Relaxed-Fit Graphic Tee",
+2025-10-01T05:20:15.472717+00:00 app[web.1]: "wearing_details": "Layer with an unbuttoned lightweight cardigan for depth."
+2025-10-01T05:20:15.472717+00:00 app[web.1]: }
+2025-10-01T05:20:15.472717+00:00 app[web.1]: ],
+2025-10-01T05:20:15.472717+00:00 app[web.1]: "bottoms": {
+2025-10-01T05:20:15.472717+00:00 app[web.1]: "item_name": "A-Line Skirt",
+2025-10-01T05:20:15.472718+00:00 app[web.1]: "style_details": "Navy Cotton High-Waist A-Line Skirt",
+2025-10-01T05:20:15.472718+00:00 app[web.1]: "wearing_details": "Sits at the waist to enhance the hourglass silhouette."
+2025-10-01T05:20:15.472718+00:00 app[web.1]: },
+2025-10-01T05:20:15.472718+00:00 app[web.1]: "shoes": {
+2025-10-01T05:20:15.472718+00:00 app[web.1]: "item_name": "Ankle Boots",
+2025-10-01T05:20:15.472718+00:00 app[web.1]: "style_details": "Tan Suede Block Heel Ankle Boots",
+2025-10-01T05:20:15.472719+00:00 app[web.1]: "wearing_details": "Add height and complement the skirt length."
+2025-10-01T05:20:15.472719+00:00 app[web.1]: },
+2025-10-01T05:20:15.472719+00:00 app[web.1]: "bag": {
+2025-10-01T05:20:15.472719+00:00 app[web.1]: "item_name": "Tote Bag",
+2025-10-01T05:20:15.472719+00:00 app[web.1]: "style_details": "Tan Leather Large Tote Bag",
+2025-10-01T05:20:15.472719+00:00 app[web.1]: "wearing_details": "Carry over the shoulder for a chic appearance."
+2025-10-01T05:20:15.472719+00:00 app[web.1]: },
+2025-10-01T05:20:15.472720+00:00 app[web.1]: "accessories": [
+2025-10-01T05:20:15.472720+00:00 app[web.1]: {
+2025-10-01T05:20:15.472720+00:00 app[web.1]: "item_name": "Statement Necklace",
+2025-10-01T05:20:15.472720+00:00 app[web.1]: "style_details": "Gold Chain Statement Necklace",
+2025-10-01T05:20:15.472720+00:00 app[web.1]: "wearing_details": "Wear over the tee for a touch of elegance."
+2025-10-01T05:20:15.472720+00:00 app[web.1]: }
+2025-10-01T05:20:15.472720+00:00 app[web.1]: ],
+2025-10-01T05:20:15.472720+00:00 app[web.1]: "hairstyle": {
+2025-10-01T05:20:15.472721+00:00 app[web.1]: "style_name": "Sleek Ponytail",
+2025-10-01T05:20:15.472721+00:00 app[web.1]: "description": "A sleek ponytail maintains elegance and draws attention to facial features, complementing the outfit."
+2025-10-01T05:20:15.472721+00:00 app[web.1]: }
+2025-10-01T05:20:15.472721+00:00 app[web.1]: },
+2025-10-01T05:20:15.472721+00:00 app[web.1]: "explanation": "Pairing the graphic tee with a high-waist A-line skirt creates a balanced silhouette perfect for a relaxed urban setting. The tan accessories and boots bring warmth, and the tote bag adds practicality for shopping around town."
+2025-10-01T05:20:15.472721+00:00 app[web.1]: },
+2025-10-01T05:20:15.472723+00:00 app[web.1]: "image_prompt": "身材娇小的女性，发型为利落的马尾。穿着白色卡通图案T恤，搭配藏青色高腰A字裙，脚穿棕色绒面短靴，肩挎棕色大手提包。场景为阳光下的城市街区，露天咖啡桌椅环绕着，透出一种悠然自得的氛围。"
+2025-10-01T05:20:15.472723+00:00 app[web.1]: }
+2025-10-01T05:20:15.472723+00:00 app[web.1]: ]
+2025-10-01T05:20:15.472723+00:00 app[web.1]: }
+2025-10-01T05:20:15.472835+00:00 app[web.1]: 🤖 [OPENAI] [PRE-VALIDATION] Suggestion 0: {
+2025-10-01T05:20:15.472835+00:00 app[web.1]: hasOutfitSuggestion: true,
+2025-10-01T05:20:15.472835+00:00 app[web.1]: hasImagePrompt: true,
+2025-10-01T05:20:15.472836+00:00 app[web.1]: hasImagePromptInOutfitSuggestion: false,
+2025-10-01T05:20:15.472836+00:00 app[web.1]: imagePromptType: 'string',
+2025-10-01T05:20:15.472836+00:00 app[web.1]: imagePromptInOutfitSuggestionType: 'undefined',
+2025-10-01T05:20:15.472836+00:00 app[web.1]: imagePromptPreview: '女人身材匀称，卷发慵懒自然。穿着白色卡通图案T恤搭配深色牛仔直筒裤，脚蹬白色厚底运动鞋，背着黑色简约斜挎包。场景是在阳光明媚的城市街区，四周是户外咖啡桌和椅子，散发出轻松休闲的氛围。...'
+2025-10-01T05:20:15.472836+00:00 app[web.1]: }
+2025-10-01T05:20:15.472873+00:00 app[web.1]: 🤖 [OPENAI] [PRE-VALIDATION] Suggestion 1: {
+2025-10-01T05:20:15.472874+00:00 app[web.1]: hasOutfitSuggestion: true,
+2025-10-01T05:20:15.472874+00:00 app[web.1]: hasImagePrompt: true,
+2025-10-01T05:20:15.472874+00:00 app[web.1]: hasImagePromptInOutfitSuggestion: false,
+2025-10-01T05:20:15.472874+00:00 app[web.1]: imagePromptType: 'string',
+2025-10-01T05:20:15.472874+00:00 app[web.1]: imagePromptInOutfitSuggestionType: 'undefined',
+2025-10-01T05:20:15.472874+00:00 app[web.1]: imagePromptPreview: '身材娇小的女性，发型为利落的马尾。穿着白色卡通图案T恤，搭配藏青色高腰A字裙，脚穿棕色绒面短靴，肩挎棕色大手提包。场景为阳光下的城市街区，露天咖啡桌椅环绕着，透出一种悠然自得的氛围。...'
+2025-10-01T05:20:15.472874+00:00 app[web.1]: }
+2025-10-01T05:20:15.474019+00:00 app[web.1]: 🤖 [OPENAI] ✅ Zod validation successful
+2025-10-01T05:20:15.474158+00:00 app[web.1]: 🤖 [OPENAI] [POST-VALIDATION] Suggestion 0: {
+2025-10-01T05:20:15.474158+00:00 app[web.1]: hasOutfitSuggestion: true,
+2025-10-01T05:20:15.474158+00:00 app[web.1]: hasImagePrompt: true,
+2025-10-01T05:20:15.474158+00:00 app[web.1]: imagePromptType: 'string',
+2025-10-01T05:20:15.474159+00:00 app[web.1]: imagePromptPreview: '女人身材匀称，卷发慵懒自然。穿着白色卡通图案T恤搭配深色牛仔直筒裤，脚蹬白色厚底运动鞋，背着黑色简约斜挎包。场景是在阳光明媚的城市街区，四周是户外咖啡桌和椅子，散发出轻松休闲的氛围。...'
+2025-10-01T05:20:15.474159+00:00 app[web.1]: }
+2025-10-01T05:20:15.474194+00:00 app[web.1]: 🤖 [OPENAI] [POST-VALIDATION] Suggestion 1: {
+2025-10-01T05:20:15.474194+00:00 app[web.1]: hasOutfitSuggestion: true,
+2025-10-01T05:20:15.474194+00:00 app[web.1]: hasImagePrompt: true,
+2025-10-01T05:20:15.474194+00:00 app[web.1]: imagePromptType: 'string',
+2025-10-01T05:20:15.474195+00:00 app[web.1]: imagePromptPreview: '身材娇小的女性，发型为利落的马尾。穿着白色卡通图案T恤，搭配藏青色高腰A字裙，脚穿棕色绒面短靴，肩挎棕色大手提包。场景为阳光下的城市街区，露天咖啡桌椅环绕着，透出一种悠然自得的氛围。...'
+2025-10-01T05:20:15.474195+00:00 app[web.1]: }
+2025-10-01T05:20:15.474369+00:00 app[web.1]: 🤖 [OPENAI] [AI DEBUG] Cleaned OpenAI Suggestion: {
+2025-10-01T05:20:15.474369+00:00 app[web.1]: "suggestions": [
+2025-10-01T05:20:15.474370+00:00 app[web.1]: {
+2025-10-01T05:20:15.474370+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T05:20:15.474370+00:00 app[web.1]: "outfit_title": "Chic Urban Comfort",
+2025-10-01T05:20:15.474370+00:00 app[web.1]: "items": {
+2025-10-01T05:20:15.474370+00:00 app[web.1]: "tops": [
+2025-10-01T05:20:15.474370+00:00 app[web.1]: {
+2025-10-01T05:20:15.474370+00:00 app[web.1]: "item_name": "Graphic T-Shirt",
+2025-10-01T05:20:15.474371+00:00 app[web.1]: "style_details": "White Cotton Relaxed-Fit Graphic Tee",
+2025-10-01T05:20:15.474371+00:00 app[web.1]: "wearing_details": "Tuck into the waistband for a tailored look."
+2025-10-01T05:20:15.474371+00:00 app[web.1]: }
+2025-10-01T05:20:15.474371+00:00 app[web.1]: ],
+2025-10-01T05:20:15.474371+00:00 app[web.1]: "bottoms": {
+2025-10-01T05:20:15.474371+00:00 app[web.1]: "item_name": "High-Waisted Jeans",
+2025-10-01T05:20:15.474371+00:00 app[web.1]: "style_details": "Indigo Denim Straight-Leg Jeans",
+2025-10-01T05:20:15.474371+00:00 app[web.1]: "wearing_details": "Wear high on the waist to emphasize the hourglass shape."
+2025-10-01T05:20:15.474372+00:00 app[web.1]: },
+2025-10-01T05:20:15.474372+00:00 app[web.1]: "shoes": {
+2025-10-01T05:20:15.474372+00:00 app[web.1]: "item_name": "Platform Sneakers",
+2025-10-01T05:20:15.474372+00:00 app[web.1]: "style_details": "White Leather Lace-Up Sneakers",
+2025-10-01T05:20:15.474372+00:00 app[web.1]: "wearing_details": "Pair with ankle socks for a casual vibe."
+2025-10-01T05:20:15.474373+00:00 app[web.1]: },
+2025-10-01T05:20:15.474373+00:00 app[web.1]: "bag": {
+2025-10-01T05:20:15.474373+00:00 app[web.1]: "item_name": "Crossbody Bag",
+2025-10-01T05:20:15.474374+00:00 app[web.1]: "style_details": "Black Leather Minimalist Crossbody Bag",
+2025-10-01T05:20:15.474374+00:00 app[web.1]: "wearing_details": "Wear across the body for easy movement."
+2025-10-01T05:20:15.474374+00:00 app[web.1]: },
+2025-10-01T05:20:15.474374+00:00 app[web.1]: "hairstyle": {
+2025-10-01T05:20:15.474374+00:00 app[web.1]: "style_name": "Loose Waves",
+2025-10-01T05:20:15.474375+00:00 app[web.1]: "description": "Soft and relaxed waves enhance the casual and effortless look while balancing the outfit."
+2025-10-01T05:20:15.474375+00:00 app[web.1]: }
+2025-10-01T05:20:15.474375+00:00 app[web.1]: },
+2025-10-01T05:20:15.474375+00:00 app[web.1]: "explanation": "This outfit combines a relaxed graphic tee with structured high-waisted jeans to flatter the hourglass figure. The casual sneakers and crossbody bag provide comfort and ease, while the sunglasses add a stylish touch suitable for an urban street vibe."
+2025-10-01T05:20:15.474375+00:00 app[web.1]: },
+2025-10-01T05:20:15.474375+00:00 app[web.1]: "image_prompt": "女人身材匀称，卷发慵懒自然。穿着白色卡通图案T恤搭配深色牛仔直筒裤，脚蹬白色厚底运动鞋，背着黑色简约斜挎包。场景是在阳光明媚的城市街区，四周是户外咖啡桌和椅子，散发出轻松休闲的氛围。"
+2025-10-01T05:20:15.474376+00:00 app[web.1]: },
+2025-10-01T05:20:15.474376+00:00 app[web.1]: {
+2025-10-01T05:20:15.474376+00:00 app[web.1]: "outfit_suggestion": {
+2025-10-01T05:20:15.474376+00:00 app[web.1]: "outfit_title": "Effortlessly Stylish",
+2025-10-01T05:20:15.474376+00:00 app[web.1]: "items": {
+2025-10-01T05:20:15.474377+00:00 app[web.1]: "tops": [
+2025-10-01T05:20:15.474377+00:00 app[web.1]: {
+2025-10-01T05:20:15.474377+00:00 app[web.1]: "item_name": "Graphic T-Shirt",
+2025-10-01T05:20:15.474377+00:00 app[web.1]: "style_details": "White Cotton Relaxed-Fit Graphic Tee",
+2025-10-01T05:20:15.474377+00:00 app[web.1]: "wearing_details": "Layer with an unbuttoned lightweight cardigan for depth."
+2025-10-01T05:20:15.474377+00:00 app[web.1]: }
+2025-10-01T05:20:15.474377+00:00 app[web.1]: ],
+2025-10-01T05:20:15.474377+00:00 app[web.1]: "bottoms": {
+2025-10-01T05:20:15.474378+00:00 app[web.1]: "item_name": "A-Line Skirt",
+2025-10-01T05:20:15.474378+00:00 app[web.1]: "style_details": "Navy Cotton High-Waist A-Line Skirt",
+2025-10-01T05:20:15.474385+00:00 app[web.1]: "wearing_details": "Sits at the waist to enhance the hourglass silhouette."
+2025-10-01T05:20:15.474385+00:00 app[web.1]: },
+2025-10-01T05:20:15.474385+00:00 app[web.1]: "shoes": {
+2025-10-01T05:20:15.474385+00:00 app[web.1]: "item_name": "Ankle Boots",
+2025-10-01T05:20:15.474385+00:00 app[web.1]: "style_details": "Tan Suede Block Heel Ankle Boots",
+2025-10-01T05:20:15.474385+00:00 app[web.1]: "wearing_details": "Add height and complement the skirt length."
+2025-10-01T05:20:15.474385+00:00 app[web.1]: },
+2025-10-01T05:20:15.474385+00:00 app[web.1]: "bag": {
+2025-10-01T05:20:15.474386+00:00 app[web.1]: "item_name": "Tote Bag",
+2025-10-01T05:20:15.474386+00:00 app[web.1]: "style_details": "Tan Leather Large Tote Bag",
+2025-10-01T05:20:15.474386+00:00 app[web.1]: "wearing_details": "Carry over the shoulder for a chic appearance."
+2025-10-01T05:20:15.474386+00:00 app[web.1]: },
+2025-10-01T05:20:15.474386+00:00 app[web.1]: "hairstyle": {
+2025-10-01T05:20:15.474386+00:00 app[web.1]: "style_name": "Sleek Ponytail",
+2025-10-01T05:20:15.474386+00:00 app[web.1]: "description": "A sleek ponytail maintains elegance and draws attention to facial features, complementing the outfit."
+2025-10-01T05:20:15.474386+00:00 app[web.1]: }
+2025-10-01T05:20:15.474387+00:00 app[web.1]: },
+2025-10-01T05:20:15.474387+00:00 app[web.1]: "explanation": "Pairing the graphic tee with a high-waist A-line skirt creates a balanced silhouette perfect for a relaxed urban setting. The tan accessories and boots bring warmth, and the tote bag adds practicality for shopping around town."
+2025-10-01T05:20:15.474387+00:00 app[web.1]: },
+2025-10-01T05:20:15.474387+00:00 app[web.1]: "image_prompt": "身材娇小的女性，发型为利落的马尾。穿着白色卡通图案T恤，搭配藏青色高腰A字裙，脚穿棕色绒面短靴，肩挎棕色大手提包。场景为阳光下的城市街区，露天咖啡桌椅环绕着，透出一种悠然自得的氛围。"
+2025-10-01T05:20:15.474387+00:00 app[web.1]: }
+2025-10-01T05:20:15.474387+00:00 app[web.1]: ]
+2025-10-01T05:20:15.474387+00:00 app[web.1]: }
+2025-10-01T05:20:15.474388+00:00 app[web.1]: 🤖📊 [OPENAI_TOKEN] ===== IMAGE PROCESSING ANALYSIS COMPLETE =====
+2025-10-01T05:25:17.965301+00:00 heroku[router]: at=info method=GET path="/chat1" host=styleai.h.zzn.im request_id=c6089c99-77f3-57f0-3a64-9681ee952e90 fwd="112.164.231.49" dyno=web.1 connect=0ms service=24ms status=200 bytes=4034 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:25:19.591845+00:00 heroku[router]: at=info method=GET path="/_next/static/chunks/main-app-795c00e388337b1f.js" host=styleai.h.zzn.im request_id=a3e55f31-857d-1991-a77f-4b71e072b2be fwd="112.164.231.49" dyno=web.1 connect=0ms service=1ms status=200 bytes=506 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:25:20.474781+00:00 heroku[router]: at=info method=GET path="/_next/static/chunks/app/layout-120a3a1e9f4faace.js" host=styleai.h.zzn.im request_id=920350d2-3a41-97db-b313-29e5e71f91fe fwd="112.164.231.49" dyno=web.1 connect=0ms service=1ms status=200 bytes=823 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:25:25.643446+00:00 heroku[router]: at=info method=GET path="/_next/static/chunks/app/chat1/page-db85cefb7e14ea85.js" host=styleai.h.zzn.im request_id=11002484-18ca-e02e-85e5-b72f9611a50e fwd="112.164.231.49" dyno=web.1 connect=0ms service=3ms status=200 bytes=8915 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:25:26.543404+00:00 heroku[router]: at=info method=GET path="/api/auth/session" host=styleai.h.zzn.im request_id=1fc85750-448f-dc40-e47b-8c8058e833ea fwd="112.164.231.49" dyno=web.1 connect=0ms service=13ms status=200 bytes=229 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:25:27.245724+00:00 heroku[router]: at=info method=GET path="/favicon.ico" host=styleai.h.zzn.im request_id=85a914c3-f9c3-5b50-d9e4-f567342112e8 fwd="112.164.231.49" dyno=web.1 connect=0ms service=42ms status=404 bytes=3628 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:25:27.287718+00:00 heroku[router]: at=info method=GET path="/thumbnail_image.png" host=styleai.h.zzn.im request_id=52e2af93-5209-d315-dc02-97de6cff257c fwd="112.164.231.49" dyno=web.1 connect=0ms service=7ms status=200 bytes=134014 protocol=http2.0 tls=true tls_version=tls1.3
+2025-10-01T05:25:29.049205+00:00 app[web.1]: [Chat API] Retrieved 4 messages for session guest_1759027895509_so452ecra
+2025-10-01T05:25:29.849671+00:00 heroku[router]: at=info method=GET path="/api/chat/messages?sessionId=guest_1759027895509_so452ecra" host=styleai.h.zzn.im request_id=889f1f76-fa98-5df4-7cfc-de749e3ef212 fwd="112.164.231.49" dyno=web.1 connect=0ms service=2463ms status=200 bytes=2823344 protocol=http2.0 tls=true tls_version=tls1.3
