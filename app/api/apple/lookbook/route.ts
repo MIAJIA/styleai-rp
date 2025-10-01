@@ -80,36 +80,47 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Build custom prompt based on selected styles
-        let customPrompt = prompt;
-        if (!customPrompt) {
-            const styleDescriptions = styleOptions.map(style =>
-                `${style}: ${STYLE_PROMPTS[style as keyof typeof STYLE_PROMPTS] || 'Create a stylish look.'}`
-            ).join('\n\n');
+        let generatedImages: (string[] | { style: string; url: string; }[]) = [];
 
-            customPrompt = `Transform the outfit image into ${styleOptions.length} distinct style variations:
+        if (prompt) {
+            // If a custom prompt is provided, use the original single-call logic
+            console.log(`[NewGen API] Using provided custom prompt with length: ${prompt.length}`);
+            generatedImages = await generateStyledImagesWithGemini({
+                userId,
+                imageUrl,
+                styleOptions,
+                prompt: prompt,
+                maxOutputTokens: maxTokens,
+                temperature,
+            });
 
-${styleDescriptions}
+        } else {
+            // If no custom prompt, generate images for each style in parallel
+            console.log(`[NewGen API] Generating ${styleOptions.length} images in parallel...`);
 
-For each style:
-- Apply its specific colors, fabrics, and silhouettes
-- Add characteristic accessories and details
-- Make it visually distinct and recognizable
-- Keep professional, polished, fashion-magazine quality
+            const generationPromises = styleOptions.map(style => {
+                const singleStylePrompt = `Transform the outfit image into a '${style}' style variation.
+Style Description: ${STYLE_PROMPTS[style as keyof typeof STYLE_PROMPTS] || 'A stylish look.'}
+Apply the style's specific colors, fabrics, and silhouettes.
+Add characteristic accessories and details.
+The final image must be professional, polished, and of fashion-magazine quality.
+Generate one complete, wearable styled image based on the original outfit.`;
 
-Generate ${styleOptions.length} complete, wearable styled images.`;
+                return generateStyledImagesWithGemini({
+                    userId,
+                    imageUrl,
+                    styleOptions: [style],
+                    prompt: singleStylePrompt,
+                    maxOutputTokens: maxTokens,
+                    temperature,
+                });
+            });
+
+            // The result will be an array of arrays of images (e.g., [[img1], [img2]]), so we flatten it.
+            const results = await Promise.all(generationPromises);
+            generatedImages = results.flat();
         }
-        console.log(`[NewGen API] Custom prompt length: ${customPrompt.length}`);
-        // Generate styled images
-        const generatedImages = await generateStyledImagesWithGemini({
-            userId,
-            imageUrl,
-            styleOptions,
-            prompt: customPrompt,
-            maxOutputTokens: maxTokens,
-            temperature,
-        });
-
+        
         console.log(`[NewGen API] Generated ${generatedImages.length} images successfully`);
 
 
