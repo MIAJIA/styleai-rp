@@ -10,6 +10,7 @@ interface ChatMessage {
 }
 
 interface ChatRequest {
+    userId: string;
     jobId: string;
     message: string;
     sessionId?: string;
@@ -108,9 +109,9 @@ async function getChatHistory(sessionId: string, limit: number = 10): Promise<Ch
 export async function POST(request: NextRequest) {
     try {
         const body: ChatRequest = await request.json();
-        const { jobId, message, sessionId, includeJobContext = true } = body;
+        const { userId, jobId, message, sessionId, includeJobContext = true } = body;
 
-        console.log(`[Chat API] Processing chat request for job: ${jobId}`);
+        console.log(`[Chat API] Processing chat request for job: ${userId}  -> ${jobId}`);
 
         // Get JOB context information
         let job: Job | null = null;
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
         console.log(`[Chat API] Sending request to Gemini with ${messages.length} messages`);
 
         // Call Gemini API
-        const aiResponse = await generateChatCompletionWithGemini({
+        const aiResponse = await generateChatCompletionWithGemini(userId,{
             messages: messages,
             maxOutputTokens: 1000,
             temperature: 0.7,

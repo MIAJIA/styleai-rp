@@ -25,9 +25,10 @@ export async function geminiTask(
     const endpoint = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
     console.log('🤖 [GEMINI_SERVICE] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
 
-    const parts: any[] = [
-        { text: prompt },
-    ];
+    const parts: any[] = [ ];
+    if (prompt) {
+        parts.push({ text: prompt });
+    }
     // 如果传入图片，则添加到body中
     if (imagesBase64) {
         console.log('🤖 [GEMINI_SERVICE] 🔍 Adding image to body', imagesMimeType);

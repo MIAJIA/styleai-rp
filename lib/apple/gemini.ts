@@ -1,3 +1,4 @@
+import { put } from "@vercel/blob";
 import { fetchWithTimeout, urlToFile, fileToBase64 } from "../utils";
 import { GeminiAnalysisResult, geminiTask } from "./geminTask";
 
@@ -52,7 +53,7 @@ export interface GeminiImageGenerationParams {
 }
 
 
-export async function generateChatCompletionWithGemini(params: GeminiChatParams): Promise<GeminiChatResult> {
+export async function generateChatCompletionWithGemini(userId: string, params: GeminiChatParams): Promise<GeminiChatResult> {
   console.log('🤖 [GEMINI_CHAT] ===== GEMINI CHAT API CALL STARTED =====');
   console.log('🤖 [GEMINI_CHAT] 🔧 Environment check:');
   console.log('🤖 [GEMINI_CHAT] 🔧 - MOCK_GEMINI:', process.env.MOCK_GEMINI);
@@ -156,6 +157,31 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
     }
   }
 
+  const imagesUrls: string[] = [];
+
+  for (let i = 0; i < responseImages.length; i++) {
+    const imageData = responseImages[i];
+    const base64Data = imageData.split(',')[1]; // Remove data:image/...;base64, prefix
+    const buffer = Buffer.from(base64Data, 'base64');
+    const fileName = `gemini_${Date.now()}_${i}.png`;
+
+    try {
+      const blob = await put(`app/users/${userId}/gemini_${fileName}`, buffer, {
+        access: 'public',
+        addRandomSuffix: false
+      });
+
+      imagesUrls.push(blob.url);
+
+      console.log('🤖 [GEMINI_SERVICE] 💾 Image saved:', blob.url);
+    } catch (error) {
+      console.error('🤖 [GEMINI_SERVICE] ❌ Failed to save image:', error);
+      throw new Error(`Failed to save image ${i + 1} to Vercel Blob: ${error}`);
+    }
+  }
+
+
+
   // 如果没有文本响应，提供默认消息
   if (!responseText.trim()) {
     if (responseImages.length > 0) {
@@ -181,7 +207,7 @@ export async function generateChatCompletionWithGemini(params: GeminiChatParams)
 
   return {
     text: responseText.trim(),
-    images: responseImages,
+    images: imagesUrls,
     metadata
   };
 }
