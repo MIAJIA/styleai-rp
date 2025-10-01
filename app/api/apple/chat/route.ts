@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import { Job } from '@/lib/types';
 import { generateChatCompletionWithGemini, GeminiChatMessage } from '@/lib/apple/gemini';
 import { fileToBase64, urlToFile } from '@/lib/utils';
+import { geminiPrompt } from '@/lib/prompts';
 
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
@@ -10,10 +11,10 @@ interface ChatMessage {
     timestamp?: string;
 }
 
+
 interface ChatRequest {
     userId: string;
-    jobId: string;
-    imageUrl?: string;
+    imageUrl?: string[]; // Legacy: array of image URLs
     message: string;
     sessionId?: string;
     includeJobContext?: boolean;
@@ -111,35 +112,58 @@ async function getChatHistory(sessionId: string, limit: number = 10): Promise<Ch
 export async function POST(request: NextRequest) {
     try {
         const body: ChatRequest = await request.json();
-        const { userId, jobId, message, imageUrl, sessionId, includeJobContext = true } = body;
+        const { userId, message, imageUrl, sessionId } = body;
 
-        console.log(`[Chat API] Processing chat request for job: ${userId}  -> ${jobId}`);
+        console.log(`[Chat API] Processing chat request for user: ${userId}`);
 
         // Get JOB context information
-        let job: Job | null = null;
         let systemPrompt = "You are a professional fashion consultant AI assistant. Please provide professional fashion advice and styling guidance to users in English.";
 
-        if (includeJobContext) {
-            job = await getJobContext(jobId);
-            if (job) {
-                systemPrompt = buildSystemPromptWithJobContext(job);
-                console.log(`[Chat API] Job context loaded for job: ${jobId}`);
-            } else {
-                console.warn(`[Chat API] Job not found: ${jobId}, using default system prompt`);
+
+        // Get chat history
+        const chatHistory = await getChatHistory(sessionId || '');
+
+        // Process images
+        const imageParts: any[] = [];
+
+        // Handle new multi-image format with names and mime types
+        if (imageUrl && imageUrl.length > 0) {
+            console.log(`[Chat API] Processing ${imageUrl.length} images (with metadata)...`);
+
+            systemPrompt = geminiPrompt;
+
+            for (let i = 0; i < imageUrl.length; i++) {
+                const img = imageUrl[i];
+                const imageName = `Image ${i + 1}`;
+                const mimeType = 'image/jpeg';
+
+                try {
+                    console.log(`[Chat API] Converting ${imageName} (${i + 1}/${imageUrl.length})...`);
+                    const imageBase64 = await urlToFile(img, imageName, mimeType).then(fileToBase64);
+
+                    imageParts.push({
+                        inline_data: {
+                            mime_type: mimeType,
+                            data: imageBase64
+                        }
+                    });
+
+                    console.log(`[Chat API] ✅ ${imageName} converted, size: ${imageBase64?.length} chars`);
+                } catch (error) {
+                    console.error(`[Chat API] ❌ Failed to process ${imageName}:`, error);
+                    // Continue with other images even if one fails
+                }
             }
         }
 
-        // Get chat history
-        let imageBase64: string | undefined = undefined;
-        const chatHistory = await getChatHistory(sessionId || '');
-        if (imageUrl && imageUrl.length > 0) {
-            imageBase64 = await urlToFile(imageUrl, 'image.jpg', 'image/jpeg').then(fileToBase64);
-            console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔄 Image converted, size:', imageBase64?.length, 'chars');
+
+        // Build message parts: text first, then all images
+        const parts: any[] = [...imageParts];
+        if (imageParts.length === 0) {
+            parts.push({ text: message });
         }
-        const parts: any[] = [{ text: message }];
-        if (imageBase64) {
-            parts.push({ inline_data: { mime_type: 'image/jpeg', data: imageBase64 } });
-        }
+
+        console.log(`[Chat API] Message parts: 1 text + ${imageParts.length} image(s)`);
         // Build message array for Gemini
         const messages: GeminiChatMessage[] = [
             {
@@ -156,7 +180,7 @@ export async function POST(request: NextRequest) {
                 role: 'user',
                 parts: parts
             },
-            
+
         ];
 
         console.log(`[Chat API] Sending request to Gemini with ${messages.length} messages`);
