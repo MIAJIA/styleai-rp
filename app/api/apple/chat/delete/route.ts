@@ -82,7 +82,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchDele
                 failureCount: 0,
                 details: [],
                 error: 'sessionIds must be a non-empty array'
-            }, { status: 400 });
+            }, { status: 200 });
         }
 
         if (sessionIds.length === 0) {
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchDele
                 failureCount: 0,
                 details: [],
                 error: 'sessionIds array cannot be empty'
-            }, { status: 400 });
+            }, { status: 200 });
         }
 
 
