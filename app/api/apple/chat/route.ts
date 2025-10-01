@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { Job } from '@/lib/types';
 import { generateChatCompletionWithGemini, GeminiChatMessage } from '@/lib/apple/gemini';
+import { fileToBase64, urlToFile } from '@/lib/utils';
 
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
@@ -12,6 +13,7 @@ interface ChatMessage {
 interface ChatRequest {
     userId: string;
     jobId: string;
+    imageUrl?: string;
     message: string;
     sessionId?: string;
     includeJobContext?: boolean;
@@ -21,7 +23,7 @@ interface ChatRequest {
 function buildSystemPromptWithJobContext(job: Job): string {
     const { input, suggestions } = job;
     const { userProfile, occasion, generationMode, customPrompt, stylePrompt } = input;
-    
+
     let contextPrompt = `You are a professional fashion consultant AI assistant. The current conversation is related to a fashion styling task. Here is the task context information:
 
 ## Task Basic Information
@@ -39,11 +41,11 @@ function buildSystemPromptWithJobContext(job: Job): string {
 
 ## Generated Style Suggestions
 ${suggestions.length > 0 ? suggestions.map((suggestion, index) => {
-    const outfit = suggestion.styleSuggestion?.outfit_suggestion;
-    return `Suggestion ${index + 1}: ${outfit?.outfit_title || 'No title'}
+        const outfit = suggestion.styleSuggestion?.outfit_suggestion;
+        return `Suggestion ${index + 1}: ${outfit?.outfit_title || 'No title'}
 - Styling Description: ${outfit?.explanation || 'No description'}
 - Status: ${suggestion.status}`;
-}).join('\n') : 'No style suggestions yet'}
+    }).join('\n') : 'No style suggestions yet'}
 
 ## Your Role
 Based on the above context information, please provide professional fashion advice and styling guidance to users. You can:
@@ -73,11 +75,11 @@ async function saveChatMessage(sessionId: string, message: ChatMessage): Promise
     try {
         const messageKey = `chat:message:${sessionId}:${Date.now()}`;
         await kv.set(messageKey, message);
-        
+
         // Add to session message list
         const messagesListKey = `chat:messages:${sessionId}`;
         await kv.lpush(messagesListKey, messageKey);
-        
+
         // Limit history length
         await kv.ltrim(messagesListKey, 0, 99);
     } catch (error) {
@@ -90,7 +92,7 @@ async function getChatHistory(sessionId: string, limit: number = 10): Promise<Ch
     try {
         const messagesListKey = `chat:messages:${sessionId}`;
         const messageKeys = await kv.lrange(messagesListKey, 0, limit - 1);
-        
+
         const messages: ChatMessage[] = [];
         for (const key of messageKeys) {
             const message = await kv.get(key) as ChatMessage;
@@ -98,7 +100,7 @@ async function getChatHistory(sessionId: string, limit: number = 10): Promise<Ch
                 messages.push(message);
             }
         }
-        
+
         return messages.reverse(); // Sort in chronological order
     } catch (error) {
         console.error('[Chat API] Error fetching chat history:', error);
@@ -109,7 +111,7 @@ async function getChatHistory(sessionId: string, limit: number = 10): Promise<Ch
 export async function POST(request: NextRequest) {
     try {
         const body: ChatRequest = await request.json();
-        const { userId, jobId, message, sessionId, includeJobContext = true } = body;
+        const { userId, jobId, message, imageUrl, sessionId, includeJobContext = true } = body;
 
         console.log(`[Chat API] Processing chat request for job: ${userId}  -> ${jobId}`);
 
@@ -128,8 +130,16 @@ export async function POST(request: NextRequest) {
         }
 
         // Get chat history
+        let imageBase64: string | undefined = undefined;
         const chatHistory = await getChatHistory(sessionId || '');
-
+        if (imageUrl && imageUrl.length > 0) {
+            imageBase64 = await urlToFile(imageUrl, 'image.jpg', 'image/jpeg').then(fileToBase64);
+            console.log('🤖 [GEMINI_IMAGE_GENERATION] 🔄 Image converted, size:', imageBase64?.length, 'chars');
+        }
+        const parts: any[] = [{ text: message }];
+        if (imageBase64) {
+            parts.push({ inline_data: { mime_type: 'image/jpeg', data: imageBase64 } });
+        }
         // Build message array for Gemini
         const messages: GeminiChatMessage[] = [
             {
@@ -144,14 +154,15 @@ export async function POST(request: NextRequest) {
             // Add current user message
             {
                 role: 'user',
-                parts: [{ text: message }]
-            }
+                parts: parts
+            },
+            
         ];
 
         console.log(`[Chat API] Sending request to Gemini with ${messages.length} messages`);
 
         // Call Gemini API
-        const aiResponse = await generateChatCompletionWithGemini(userId,{
+        const aiResponse = await generateChatCompletionWithGemini(userId, {
             messages: messages,
             maxOutputTokens: 1000,
             temperature: 0.7,
@@ -199,13 +210,13 @@ export async function GET(request: NextRequest) {
         const sessionId = searchParams.get('sessionId');
 
         if (!sessionId) {
-            return NextResponse.json({ 
-                error: 'sessionId is required' 
+            return NextResponse.json({
+                error: 'sessionId is required'
             }, { status: 400 });
         }
 
         const chatHistory = await getChatHistory(sessionId, 20);
-        
+
         return NextResponse.json({
             success: true,
             messages: chatHistory,
@@ -228,8 +239,8 @@ export async function DELETE(request: NextRequest) {
         const sessionId = searchParams.get('sessionId');
 
         if (!sessionId) {
-            return NextResponse.json({ 
-                error: 'sessionId is required' 
+            return NextResponse.json({
+                error: 'sessionId is required'
             }, { status: 400 });
         }
 
