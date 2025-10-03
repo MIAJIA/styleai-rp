@@ -127,11 +127,11 @@ export async function POST(request: NextRequest) {
         const imageParts: any[] = [];
 
         // Handle new multi-image format with names and mime types
-        if (imageUrl && imageUrl.length > 1) {
+        if (imageUrl && imageUrl.length > 0) {
             console.log(`[Chat API] Processing ${imageUrl.length} images (with metadata)...`);
-
-            systemPrompt = geminiPrompt;
-
+            if (imageUrl.length > 1) {
+                systemPrompt = geminiPrompt;
+            }
             for (let i = 0; i < imageUrl.length; i++) {
                 const img = imageUrl[i];
                 const imageName = `Image ${i + 1}`;
