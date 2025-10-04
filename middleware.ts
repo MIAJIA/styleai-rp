@@ -18,6 +18,8 @@ const publicRoutes = [
   "/api",
   "/_next",
   "/favicon.ico",
+  "/terms.html",
+  "/privacy.html",
 ];
 
 // 特别指定的公开API路由（确保不需要鉴权）
