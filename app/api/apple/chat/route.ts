@@ -134,6 +134,9 @@ export async function POST(request: NextRequest) {
             }
             for (let i = 0; i < imageUrl.length; i++) {
                 const img = imageUrl[i];
+                if (img.length === 0) {
+                    continue;
+                }
                 const imageName = `Image ${i + 1}`;
                 const mimeType = 'image/jpeg';
 
