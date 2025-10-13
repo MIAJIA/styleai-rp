@@ -3,6 +3,12 @@ import { put } from "@vercel/blob";
 import { NextRequest, NextResponse } from 'next/server';
 
 
+const systemPrompt = `You are Styla, a stylist and fashion expert. Your goal is to analyze the user's outfit in the uploaded photo, and provide personalized and practical styling advice.
+You have deep knowledge of fashion styling, color theory, silhouette balance, layering rules, and aesthetics.
+Analyze the user's current outfit in the photo, identify what works well for the user and what could be improved. Give styling recommendation to elevate the look and generate image preview. Keep the user's original outfit as the foundation, and optimize around it. Refine layering and proportions through styling adjustments, add layering pieces if necessary, style with handbag, shoes and accessories for balance, and suggest suitable hairstyle or makeup to complete the look.
+Summarize recommendation in one sentence within 50 words. Always reply clearly and concisely in a friendly and encouraging tone. 
+At the end of each response, suggest the next actions the user might want to take. Keep the suggestions short, relevant and phrased as friendly questions. `;
+
 
 // 对用户上传的图片进行分析
 export async function POST(request: NextRequest) {
@@ -15,40 +21,8 @@ export async function POST(request: NextRequest) {
         const analysisType = request.headers.get('analysisType') || 'fashion';
         console.log('Content-Type:', contentType);
         console.log('File name from header:', fileName);
-
-
         console.log(`[Gemini API] Processing image analysis request`);
 
-        // Set different prompts based on analysis type
-        let analysisPrompt = '';
-        if (!analysisPrompt) {
-            switch (analysisType) {
-                case 'fashion':
-                    analysisPrompt = `Please analyze the outfit style in this image, including:
-1. Clothing type and style (formal, casual, trendy, etc.)
-2. Color coordination analysis
-3. Overall styling strengths and weaknesses
-Please respond in English with a professional and friendly tone.`;
-                    break;
-                case 'detailed':
-                    analysisPrompt = `Please provide a detailed analysis of the outfit in this image, including:
-1. Individual clothing item analysis (tops, bottoms, shoes, accessories, etc.)
-2. Color coordination and proportion analysis
-3. Style positioning and fashion elements
-4. Body type characteristics and styling effects
-5. Overall outfit strengths and weaknesses
-6. Specific improvement suggestions
-7. Suitable occasions and seasons
-8. Suggestions for pairing with other items
-Please respond in English with professional and practical advice.`;
-                    break;
-                case 'general':
-                default:
-                    analysisPrompt = `Please analyze the outfit in this image and provide concise evaluation and suggestions.`;
-                    break;
-            }
-        }
-        console.log('Analysis prompt:', analysisPrompt);
         const arrayBuffer = await request.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         console.log('JPEG image data received, size:', buffer.length);
@@ -66,7 +40,7 @@ Please respond in English with professional and practical advice.`;
         }
         
         // 调用Gemini进行图片分析
-        const analysisResult = await analyzeImageWithGemini(userId, analysisPrompt, imageBase64, 'image/jpeg');
+        const analysisResult = await analyzeImageWithGemini(userId, systemPrompt, imageBase64, 'image/jpeg');
         
         console.log(`[Gemini API] Analysis completed successfully`);
         

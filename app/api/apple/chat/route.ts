@@ -3,7 +3,6 @@ import { kv } from '@vercel/kv';
 import { Job } from '@/lib/types';
 import { generateChatCompletionWithGemini, GeminiChatMessage } from '@/lib/apple/gemini';
 import { fileToBase64, urlToFile } from '@/lib/utils';
-import { geminiPrompt } from '@/lib/prompts';
 
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
@@ -18,6 +17,10 @@ interface ChatRequest {
     message: string;
     sessionId?: string;
     includeJobContext?: boolean;
+    bodyShape?: string;
+    skincolor?: string;
+    bodySize?: string;
+    stylePreference?: string;
 }
 
 // Build system prompt with JOB context
@@ -109,10 +112,11 @@ async function getChatHistory(sessionId: string, limit: number = 10): Promise<Ch
     }
 }
 
+
 export async function POST(request: NextRequest) {
     try {
         const body: ChatRequest = await request.json();
-        const { userId, message, imageUrl, sessionId } = body;
+        const { userId, message, imageUrl, sessionId, bodyShape, skincolor, bodySize, stylePreference } = body;
 
         console.log(`[Chat API] Processing chat request for user: ${userId}`);
 
@@ -130,7 +134,13 @@ export async function POST(request: NextRequest) {
         if (imageUrl && imageUrl.length > 0) {
             console.log(`[Chat API] Processing ${imageUrl.length} images (with metadata)...`);
             if (imageUrl.length > 1) {
-                systemPrompt = geminiPrompt;
+                systemPrompt = `You are Styla, a stylist and fashion expert. Your goal is to create complete outfits for the user in image1, styled around the key piece shown in image2. The outfit must suit the occasion and current season. 
+                You have deep knowledge of fashion styling, color theory, silhouette balance, layering rules, and aesthetics.
+                The user has ${bodyShape} body shape, ${skincolor} skin, ${bodySize} body-size, prefers ${stylePreference} style. Combine user's characteristics with the latest fashion trends to provide personalized and practical styling recommendation. Choose the style from the user’s preferred styles that best matches the item and occasion; if they conflict, prioritize the item and occasion, and do not mention the user’s preferred style.
+                Create 2 different outfits and generate image preview of each outfit. Each preview should be high-quality fashion-editorial full-body photography of the user wearing the entire outfit. Keep the character consistent with the user, and use a stunning and cinematic background that reflects the occasion. 
+                Build the complete outfit around the key piece for the user and the occasion. Select tops, bottoms and layering pieces that match the color, material and style of the key piece. Style with suitable handbags, shoes and accessories. Suggest suitable hairstyle or makeup to complete the look.
+                Summarize recommendation in one sentence within 50 words. Always reply clearly and concisely in a friendly and encouraging tone, and avoid explicitly mentioning the user’s physical traits. 
+                At the end of each response, suggest the next actions the user might want to take. Keep the suggestions short, relevant and phrased as friendly questions. `;
             }
             for (let i = 0; i < imageUrl.length; i++) {
                 const img = imageUrl[i];
