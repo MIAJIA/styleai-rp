@@ -1,3 +1,4 @@
+import { checkAndIncrementLimit } from "@/lib/apple/checkLimit";
 import { analyzeImageWithGemini } from "@/lib/apple/gemini";
 import { put } from "@vercel/blob";
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,6 +13,15 @@ At the end of each response, suggest the next actions the user might want to tak
 
 // 对用户上传的图片进行分析
 export async function POST(request: NextRequest) {
+    
+    const limitCheck = await checkAndIncrementLimit();
+    if (!limitCheck.allowed) {
+        return NextResponse.json({
+            success: false,
+            error: limitCheck.message
+        }, { status: 429 });
+    }
+    
     try {
 
 

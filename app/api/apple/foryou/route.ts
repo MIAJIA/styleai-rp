@@ -1,3 +1,4 @@
+import { checkAndIncrementLimit } from "@/lib/apple/checkLimit";
 import { GeminiChatMessage, generateChatCompletionWithGemini, generateStyledImagesWithGemini } from "@/lib/apple/gemini";
 import { fileToBase64, urlToFile } from "@/lib/utils";
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,6 +13,14 @@ interface ImageGenerationRequest {
 }
 
 export async function POST(request: NextRequest) {
+    const limitCheck = await checkAndIncrementLimit();
+    if (!limitCheck.allowed) {
+        return NextResponse.json({
+            success: false,
+            error: limitCheck.message
+        }, { status: 429 });
+    }
+    
     try {
         const body: ImageGenerationRequest = await request.json();
         const {

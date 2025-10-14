@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import { Job } from '@/lib/types';
 import { generateChatCompletionWithGemini, GeminiChatMessage } from '@/lib/apple/gemini';
 import { fileToBase64, urlToFile } from '@/lib/utils';
+import { checkAndIncrementLimit } from '@/lib/apple/checkLimit';
 
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
@@ -114,6 +115,15 @@ async function getChatHistory(sessionId: string, limit: number = 10): Promise<Ch
 
 
 export async function POST(request: NextRequest) {
+
+    const limitCheck = await checkAndIncrementLimit();
+    if (!limitCheck.allowed) {
+        return NextResponse.json({
+            success: false,
+            error: limitCheck.message
+        }, { status: 429 });
+    }
+    
     try {
         const body: ChatRequest = await request.json();
         const { userId, message, imageUrl, sessionId, bodyShape, skincolor, bodySize, stylePreference } = body;
