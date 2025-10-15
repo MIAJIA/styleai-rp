@@ -5,10 +5,25 @@ import { generateChatCompletionWithGemini, GeminiChatMessage } from '@/lib/apple
 import { fileToBase64, urlToFile } from '@/lib/utils';
 import { checkAndIncrementLimit } from '@/lib/apple/checkLimit';
 
+interface ImageInfo {
+    url: string;
+    type: 'uploaded' | 'generated'; // 区分用户上传和AI生成的图片
+    mimeType?: string;
+    name?: string;
+    generatedPrompt?: string; // AI生成图片时使用的提示词
+}
+
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
     content: string;
     timestamp?: string;
+    images?: ImageInfo[]; // 保存图片信息
+    metadata?: {
+        bodyShape?: string;
+        skincolor?: string;
+        bodySize?: string;
+        stylePreference?: string;
+    };
 }
 
 
@@ -110,6 +125,44 @@ async function getChatHistory(sessionId: string, limit: number = 10): Promise<Ch
     } catch (error) {
         console.error('[Chat API] Error fetching chat history:', error);
         return [];
+    }
+}
+
+// 获取会话中所有图片信息
+async function getSessionImages(sessionId: string): Promise<ImageInfo[]> {
+    try {
+        const messages = await getChatHistory(sessionId, 100); // 获取最近100条消息
+        const allImages: ImageInfo[] = [];
+
+        messages.forEach(msg => {
+            if (msg.images && msg.images.length > 0) {
+                allImages.push(...msg.images);
+            }
+        });
+
+        return allImages;
+    } catch (error) {
+        console.error('[Chat API] Error fetching session images:', error);
+        return [];
+    }
+}
+
+// 统计会话图片信息
+async function getSessionImageStats(sessionId: string): Promise<{
+    total: number;
+    uploaded: number;
+    generated: number;
+}> {
+    try {
+        const images = await getSessionImages(sessionId);
+        return {
+            total: images.length,
+            uploaded: images.filter(img => img.type === 'uploaded').length,
+            generated: images.filter(img => img.type === 'generated').length
+        };
+    } catch (error) {
+        console.error('[Chat API] Error getting image stats:', error);
+        return { total: 0, uploaded: 0, generated: 0 };
     }
 }
 
@@ -217,19 +270,66 @@ export async function POST(request: NextRequest) {
 
         console.log(`[Chat API] Received response from Gemini`);
 
-        // Save chat history
+        // 准备用户上传的图片信息
+        const uploadedImages: ImageInfo[] = [];
+        if (imageUrl && imageUrl.length > 0) {
+            imageUrl.forEach((url, index) => {
+                if (url.length > 0) {
+                    uploadedImages.push({
+                        url: url,
+                        type: 'uploaded',
+                        mimeType: 'image/jpeg',
+                        name: `Image ${index + 1}`
+                    });
+                }
+            });
+        }
+
+        // 提取AI生成的图片信息（从响应中解析）
+        const generatedImages: ImageInfo[] = [];
+        try {
+            // 尝试从响应中提取图片URL（如果AI响应包含图片链接）
+            const imageUrlPattern = /https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp)/gi;
+            const foundUrls = aiResponse.text.match(imageUrlPattern);
+            if (foundUrls) {
+                foundUrls.forEach((url, index) => {
+                    generatedImages.push({
+                        url: url,
+                        type: 'generated',
+                        name: `Generated Image ${index + 1}`,
+                        generatedPrompt: message // 记录生成图片时的用户提示词
+                    });
+                });
+            }
+        } catch (error) {
+            console.error('[Chat API] Error extracting generated images:', error);
+        }
+
+        // Save chat history with image information
         const userMessage: ChatMessage = {
             role: 'user',
             content: message,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            images: uploadedImages.length > 0 ? uploadedImages : undefined,
+            metadata: {
+                bodyShape,
+                skincolor,
+                bodySize,
+                stylePreference
+            }
         };
 
         const assistantMessage: ChatMessage = {
             role: 'assistant',
             content: aiResponse.text,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            images: generatedImages.length > 0 ? generatedImages : undefined
         };
+        
+        console.log(`[Chat API] Saving user message with ${uploadedImages.length} uploaded image(s)`);
+        console.log(`[Chat API] Saving assistant message with ${generatedImages.length} generated image(s)`);
         console.log(`[Chat API] Assistant message: ${assistantMessage.content}`);
+        
         await saveChatMessage(sessionId || '', userMessage);
         await saveChatMessage(sessionId || '', assistantMessage);
 
@@ -250,11 +350,13 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// GET - Get chat history
+// GET - Get chat history with image statistics
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const sessionId = searchParams.get('sessionId');
+        const includeImages = searchParams.get('includeImages') === 'true';
+        const imagesOnly = searchParams.get('imagesOnly') === 'true';
 
         if (!sessionId) {
             return NextResponse.json({
@@ -262,13 +364,37 @@ export async function GET(request: NextRequest) {
             }, { status: 400 });
         }
 
-        const chatHistory = await getChatHistory(sessionId, 20);
+        // 如果只需要图片信息
+        if (imagesOnly) {
+            const images = await getSessionImages(sessionId);
+            const stats = await getSessionImageStats(sessionId);
+            
+            return NextResponse.json({
+                success: true,
+                images,
+                stats,
+                sessionId
+            });
+        }
 
-        return NextResponse.json({
+        const chatHistory = await getChatHistory(sessionId, 20);
+        
+        // 默认包含图片统计
+        const imageStats = await getSessionImageStats(sessionId);
+
+        const response: any = {
             success: true,
             messages: chatHistory,
-            sessionId: sessionId
-        });
+            sessionId: sessionId,
+            imageStats
+        };
+
+        // 如果需要完整的图片列表
+        if (includeImages) {
+            response.allImages = await getSessionImages(sessionId);
+        }
+
+        return NextResponse.json(response);
 
     } catch (error) {
         console.error('[Chat API] Error fetching chat history:', error);
