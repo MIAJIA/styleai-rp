@@ -182,10 +182,37 @@ export async function POST(request: NextRequest) {
         const { userId, message, imageUrl, sessionId, bodyShape, skincolor, bodySize, stylePreference } = body;
 
         console.log(`[Chat API] Processing chat request for user: ${userId}`);
+        console.log(`[Chat API] User message: ${message}`);
+
+        // 检测用户是否要求生成图片
+        const imageGenerationKeywords = [
+            '生成', 'generate', '创建', 'create', '设计', 'design',
+            '图片', 'image', '照片', 'photo', '搭配', 'outfit',
+            '造型', 'look', '穿搭', 'style', '展示', 'show', '再次'
+        ];
+        const requiresImageGeneration = imageGenerationKeywords.some(keyword =>
+            message.toLowerCase().includes(keyword.toLowerCase())
+        );
+
+        console.log(`[Chat API] 🎨 Image generation required: ${requiresImageGeneration}`);
 
         // Get JOB context information
         let systemPrompt = "You are a professional fashion consultant AI assistant. Please provide professional fashion advice and styling guidance to users in English.";
 
+        // 如果需要生成图片，增强系统提示
+        if (requiresImageGeneration) {
+            systemPrompt = `You are Styla, a professional AI fashion consultant and visual designer. 
+When users ask you to generate, create, or show outfit images, you MUST generate visual previews using image generation capabilities.
+
+IMPORTANT: For ANY request to generate outfits or styling images:
+1. Generate 1 high-quality fashion photography images showing the complete outfit
+2. Each image should be a full-body fashion editorial shot with professional lighting
+3. Use a stunning, cinematic background that matches the occasion
+4. Keep the styling modern, trendy, and visually appealing
+5. After generating images, provide a brief text description
+
+Your response should include BOTH text description AND generated images.`;
+        }
 
         // Get chat history
         const chatHistory = await getChatHistory(sessionId || '');
