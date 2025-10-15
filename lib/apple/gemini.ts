@@ -87,6 +87,7 @@ export async function generateChatCompletionWithGemini(userId: string, params: G
       parts: msg.parts
     })),
     generationConfig: {
+      responseModalities: ["TEXT", "IMAGE"],
       maxOutputTokens: params.maxOutputTokens || 2000, // 增加token限制
       temperature: params.temperature || 0.7,
     }
