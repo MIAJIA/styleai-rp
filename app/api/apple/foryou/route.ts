@@ -1,9 +1,11 @@
 import { checkAndIncrementLimit } from "@/lib/apple/checkLimit";
 import { GeminiChatMessage, generateChatCompletionWithGemini, generateStyledImagesWithGemini } from "@/lib/apple/gemini";
-import { fileToBase64, urlToFile } from "@/lib/utils";
+import { fileToBase64, sleep, urlToFile } from "@/lib/utils";
+import { kv } from "@vercel/kv";
 import { NextRequest, NextResponse } from 'next/server';
 
 interface ImageGenerationRequest {
+    requestId: string;
     userId: string;
     imageUrl: string[];
     prompt: string;
@@ -20,10 +22,11 @@ export async function POST(request: NextRequest) {
             error: limitCheck.message
         }, { status: 429 });
     }
-    
+
     try {
         const body: ImageGenerationRequest = await request.json();
         const {
+            requestId,
             userId,
             imageUrl,
             prompt,
@@ -31,9 +34,24 @@ export async function POST(request: NextRequest) {
             temperature = 0.8
         } = body;
 
-        console.log(`[NewGen API] Processing image generation request`);
+        console.log(`[NewGen API] Request ID: ${requestId}`);
+        console.log(`[NewGen API] User ID: ${userId}`);
         console.log(`[NewGen API] Image URL: ${imageUrl.length}...`);
         console.log(`[NewGen API] Custom prompt length: ${prompt.length}`);
+
+        const result = await kv.get(requestId);
+        if (result) {
+            return NextResponse.json(result as {
+                success: boolean;
+                message: string;
+                data: {
+                    images: string[];
+                    numImages: number;
+                    timestamp: string;
+                };
+            });
+        }
+
 
         const imageParts: any[] = [];
         for (let i = 0; i < imageUrl.length; i++) {
@@ -54,7 +72,7 @@ export async function POST(request: NextRequest) {
             },
 
         ];
-        
+
         // Generate styled images
         const generatedImages = await generateChatCompletionWithGemini(userId, {
             messages: messages,
@@ -64,6 +82,17 @@ export async function POST(request: NextRequest) {
 
         console.log(`[NewGen API] Generated ${generatedImages.images?.length} images successfully`);
 
+        await kv.set(requestId, {
+            success: true,
+            message: "Image generation completed",
+            data: {
+                images: generatedImages.images,
+                numImages: generatedImages.images?.length,
+                timestamp: new Date().toISOString()
+            }
+        });
+
+        kv.expire(requestId, 86400 * 7); // 86400秒 = 24小时
 
         return NextResponse.json({
             success: true,
