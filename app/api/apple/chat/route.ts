@@ -169,14 +169,7 @@ async function getSessionImageStats(sessionId: string): Promise<{
 
 export async function POST(request: NextRequest) {
 
-    const limitCheck = await checkAndIncrementLimit();
-    if (!limitCheck.allowed) {
-        return NextResponse.json({
-            success: false,
-            error: limitCheck.message
-        }, { status: 429 });
-    }
-    
+
     try {
         const body: ChatRequest = await request.json();
         const { userId, message, imageUrl, sessionId, bodyShape, skincolor, bodySize, stylePreference } = body;

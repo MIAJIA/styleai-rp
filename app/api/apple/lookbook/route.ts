@@ -46,14 +46,7 @@ const STYLE_PROMPTS = {
 
 export async function POST(request: NextRequest) {
     
-    const limitCheck = await checkAndIncrementLimit();
-    if (!limitCheck.allowed) {
-        return NextResponse.json({
-            success: false,
-            error: limitCheck.message
-        }, { status: 429 });
-    }
-    
+
     try {
         const body: ImageGenerationRequest = await request.json();
         const {
