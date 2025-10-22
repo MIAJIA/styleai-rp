@@ -25,10 +25,6 @@ const publicRoutes = [
   "/privacy.html",
 ];
 
-// 特别指定的公开API路由（确保不需要鉴权）
-const publicApiRoutes = [
-  "/api/apple",
-];
 const AppAppApiRoutes = [
   "/api/apple",
 ];
@@ -42,6 +38,11 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute = publicRoutes.some(route =>
     pathname.startsWith(route)
   );
+  
+  // 如果是公开路由，直接通过
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
 
   // 检查是否是App API路由（需要JWT验证）
   const isAppApiRoute = AppAppApiRoutes.some(route => 
@@ -49,9 +50,13 @@ export async function middleware(request: NextRequest) {
   );
 
   console.log(`[Middleware] isAppApiRoute: ${isAppApiRoute}, isPublicRoute: ${isPublicRoute}`);
+  console.log(`[Middleware] request.Method: ${request.method}`);
+  console.log(`[Middleware] request.Body: ${JSON.stringify(request.body)}`);
+  console.log(`[Middleware] request.Url: ${request.url}`);
 
+  const AppApiRoute = false;
   // 如果是App API路由，进行JWT验证
-  if (isAppApiRoute) {
+  if (isAppApiRoute && AppApiRoute) {
     console.log(`[Middleware] 开始验证 JWT for ${pathname}`);
     const supabaseToken = request.headers.get("Authorization") || "";
     if (supabaseToken && supabaseToken.startsWith("Bearer ")) {
@@ -133,12 +138,6 @@ export async function middleware(request: NextRequest) {
     console.error("[Middleware] 缺少Authorization header");
     return NextResponse.json({ error: "Unauthorized - Missing token" }, { status: 401 });
   }
-
-  // 如果是公开路由，直接通过
-  if (isPublicRoute) {
-    return NextResponse.next();
-  }
-
   // 检查是否是受保护的路由
   const isProtectedRoute = protectedRoutes.some(route =>
     pathname.startsWith(route)

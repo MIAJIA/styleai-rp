@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { Job } from '@/lib/types';
-import { generateChatCompletionWithGemini, GeminiChatMessage } from '@/lib/apple/gemini';
+import { generateChatCompletionWithGemini, GeminiChatMessage, GeminiChatResult } from '@/lib/apple/gemini';
 import { fileToBase64, urlToFile } from '@/lib/utils';
 import { checkAndIncrementLimit } from '@/lib/apple/checkLimit';
 
@@ -255,40 +255,101 @@ Your response should include BOTH text description AND generated images.`;
 
         // Build message parts: text first, then all images
         const parts: any[] = [...imageParts];
-        if (imageParts.length === 0) {
-            parts.push({ text: message });
-        }
+        parts.push({ text: message });
 
         console.log(`[Chat API] Message parts: 1 text + ${imageParts.length} image(s)`);
-        // Build message array for Gemini
+        
+        // Build message array for Gemini with historical images
         const messages: GeminiChatMessage[] = [
             {
                 role: 'user',
                 parts: [{ text: systemPrompt }]
-            },
-            // Add historical conversation
-            ...chatHistory.map(msg => ({
-                role: msg.role === 'assistant' ? 'model' : 'user' as 'user' | 'model',
-                parts: [{ text: msg.content }]
-            })),
-            // Add current user message
-            {
-                role: 'user',
-                parts: parts
-            },
-
+            }
         ];
 
-        console.log(`[Chat API] Sending request to Gemini with ${messages.length} messages`);
+        // Add historical conversation WITH images
+        console.log(`[Chat API] 📚 Loading ${chatHistory.length} historical messages...`);
+        for (const msg of chatHistory) {
+            const messageParts: any[] = [];
+            
+            // Add text content
+            if (msg.content && msg.content.trim()) {
+                messageParts.push({ text: msg.content });
+            }
+            
+            // Add images from history (only uploaded images)
+            if (msg.images && msg.images.length > 0 && msg.role === 'user') {
+                console.log(`[Chat API] 🖼️ Loading ${msg.images.length} image(s) from history...`);
+                for (const img of msg.images) {
+                    // 只包含用户上传的图片作为上下文，不包含AI生成的图片
+                    if (img.type === 'uploaded') {
+                        try {
+                            console.log(`[Chat API]    Converting ${img.name} to base64...`);
+                            const imageBase64 = await urlToFile(img.url, img.name || 'image.jpg', img.mimeType || 'image/jpeg')
+                                .then(fileToBase64);
+                            messageParts.push({
+                                inline_data: {
+                                    mime_type: img.mimeType || 'image/jpeg',
+                                    data: imageBase64
+                                }
+                            });
+                            console.log(`[Chat API]    ✅ Added historical image: ${img.name}`);
+                        } catch (error) {
+                            console.error(`[Chat API]    ❌ Failed to load image ${img.name}:`, error);
+                        }
+                    }
+                }
+            }
+            
+            // Only add message if it has valid parts
+            if (messageParts.length > 0) {
+                messages.push({
+                    role: msg.role === 'assistant' ? 'model' : 'user' as 'user' | 'model',
+                    parts: messageParts
+                });
+            }
+        }
 
-        // Call Gemini API
+        // Add current user message
+        messages.push({
+            role: 'user',
+            parts: parts
+        });
+        
+        console.log(`[Chat API] ✅ Built ${messages.length} messages for Gemini (including system prompt)`);
+
+        console.log(`[Chat API] Sending request to Gemini with ${messages.length} messages`);
+        // messages.forEach(message => {
+        //     console.log(`[Chat API] Message: ${message.role}`);
+        //     message.parts.forEach(part => {
+        //         if (part.text) {
+        //             console.log(`[Chat API] Part: ${part.text}`);
+        //         }
+        //         if (part.inline_data) {
+        //             console.log(`[Chat API] Part: ${part.inline_data.mime_type} - ${part.inline_data.data} chars`);
+        //         }
+
+        //     });
+        // });
+        // // Call Gemini API
+
+        //  禁止生成图片，在一般的情况
+        if (messages.length < 2) {
+            messages.push({
+                role: 'system',
+                parts: [{ text: 'Don\'t generate any images. Just provide text response.' }]
+            });
+            console.log(`[Chat API] 🔞 No historical messages, adding system prompt to disable image generation`);
+        }
+
         const aiResponse = await generateChatCompletionWithGemini(userId, {
             messages: messages,
             maxOutputTokens: 1000,
             temperature: 0.7,
         });
-
-        console.log(`[Chat API] Received response from Gemini`);
+        
+        console.log(`[Chat API] AI Response text length: ${aiResponse.text?.length || 0}`);
+        console.log(`[Chat API] AI Response images: ${aiResponse.images?.length || 0}`);
 
         // 准备用户上传的图片信息
         const uploadedImages: ImageInfo[] = [];
@@ -310,6 +371,7 @@ Your response should include BOTH text description AND generated images.`;
         try {
             // 尝试从响应中提取图片URL（如果AI响应包含图片链接）
             const imageUrlPattern = /https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp)/gi;
+            console.log(`[Chat API] AI response: ${aiResponse.text}`);
             const foundUrls = aiResponse.text.match(imageUrlPattern);
             if (foundUrls) {
                 foundUrls.forEach((url, index) => {
@@ -346,9 +408,20 @@ Your response should include BOTH text description AND generated images.`;
             images: generatedImages.length > 0 ? generatedImages : undefined
         };
         
-        console.log(`[Chat API] Saving user message with ${uploadedImages.length} uploaded image(s)`);
-        console.log(`[Chat API] Saving assistant message with ${generatedImages.length} generated image(s)`);
-        console.log(`[Chat API] Assistant message: ${assistantMessage.content}`);
+        console.log(`[Chat API] 💾 Saving chat messages to history...`);
+        console.log(`[Chat API] 💾 User message with ${uploadedImages.length} uploaded image(s):`);
+        // if (uploadedImages.length > 0) {
+        //     uploadedImages.forEach((img, idx) => {
+        //         console.log(`[Chat API]    [${idx + 1}] ${img.name} (${img.type}): ${img.url.substring(0, 80)}...`);
+        //     });
+        // }
+        // console.log(`[Chat API] 💾 Assistant message with ${generatedImages.length} generated image(s):`);
+        // if (generatedImages.length > 0) {
+        //     generatedImages.forEach((img, idx) => {
+        //         console.log(`[Chat API]    [${idx + 1}] ${img.name} (${img.type}): ${img.url.substring(0, 80)}...`);
+        //     });
+        // }
+        // console.log(`[Chat API] 💾 Assistant text: ${assistantMessage.content.substring(0, 100)}...`);
         
         await saveChatMessage(sessionId || '', userMessage);
         await saveChatMessage(sessionId || '', assistantMessage);
