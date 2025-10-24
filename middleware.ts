@@ -23,10 +23,11 @@ const publicRoutes = [
   "/favicon.ico",
   "/terms.html",
   "/privacy.html",
+  "/api/apple",
 ];
 
 const AppAppApiRoutes = [
-  "/api/apple",
+  "/api/apple1",
 ];
 
 export async function middleware(request: NextRequest) {
