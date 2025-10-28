@@ -258,7 +258,7 @@ Your response should include BOTH text description AND generated images.`;
         parts.push({ text: message });
 
         console.log(`[Chat API] Message parts: 1 text + ${imageParts.length} image(s)`);
-        
+
         // Build message array for Gemini with historical images
         const messages: GeminiChatMessage[] = [
             {
@@ -271,12 +271,12 @@ Your response should include BOTH text description AND generated images.`;
         console.log(`[Chat API] 📚 Loading ${chatHistory.length} historical messages...`);
         for (const msg of chatHistory) {
             const messageParts: any[] = [];
-            
+
             // Add text content
             if (msg.content && msg.content.trim()) {
                 messageParts.push({ text: msg.content });
             }
-            
+
             // Add images from history (only uploaded images)
             if (msg.images && msg.images.length > 0 && msg.role === 'user') {
                 console.log(`[Chat API] 🖼️ Loading ${msg.images.length} image(s) from history...`);
@@ -300,7 +300,7 @@ Your response should include BOTH text description AND generated images.`;
                     }
                 }
             }
-            
+
             // Only add message if it has valid parts
             if (messageParts.length > 0) {
                 messages.push({
@@ -315,7 +315,7 @@ Your response should include BOTH text description AND generated images.`;
             role: 'user',
             parts: parts
         });
-        
+
         console.log(`[Chat API] ✅ Built ${messages.length} messages for Gemini (including system prompt)`);
 
         console.log(`[Chat API] Sending request to Gemini with ${messages.length} messages`);
@@ -347,7 +347,7 @@ Your response should include BOTH text description AND generated images.`;
             maxOutputTokens: 1000,
             temperature: 0.7,
         });
-        
+
         console.log(`[Chat API] AI Response text length: ${aiResponse.text?.length || 0}`);
         console.log(`[Chat API] AI Response images: ${aiResponse.images?.length || 0}`);
 
@@ -370,16 +370,13 @@ Your response should include BOTH text description AND generated images.`;
         const generatedImages: ImageInfo[] = [];
         try {
             // 尝试从响应中提取图片URL（如果AI响应包含图片链接）
-            const imageUrlPattern = /https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp)/gi;
-            console.log(`[Chat API] AI response: ${aiResponse.text}`);
-            const foundUrls = aiResponse.text.match(imageUrlPattern);
+            const foundUrls = aiResponse.images;
             if (foundUrls) {
                 foundUrls.forEach((url, index) => {
                     generatedImages.push({
                         url: url,
                         type: 'generated',
                         name: `Generated Image ${index + 1}`,
-                        generatedPrompt: message // 记录生成图片时的用户提示词
                     });
                 });
             }
@@ -407,7 +404,7 @@ Your response should include BOTH text description AND generated images.`;
             timestamp: new Date().toISOString(),
             images: generatedImages.length > 0 ? generatedImages : undefined
         };
-        
+
         console.log(`[Chat API] 💾 Saving chat messages to history...`);
         console.log(`[Chat API] 💾 User message with ${uploadedImages.length} uploaded image(s):`);
         // if (uploadedImages.length > 0) {
@@ -422,7 +419,7 @@ Your response should include BOTH text description AND generated images.`;
         //     });
         // }
         // console.log(`[Chat API] 💾 Assistant text: ${assistantMessage.content.substring(0, 100)}...`);
-        
+
         await saveChatMessage(sessionId || '', userMessage);
         await saveChatMessage(sessionId || '', assistantMessage);
 
@@ -461,7 +458,7 @@ export async function GET(request: NextRequest) {
         if (imagesOnly) {
             const images = await getSessionImages(sessionId);
             const stats = await getSessionImageStats(sessionId);
-            
+
             return NextResponse.json({
                 success: true,
                 images,
@@ -471,7 +468,7 @@ export async function GET(request: NextRequest) {
         }
 
         const chatHistory = await getChatHistory(sessionId, 20);
-        
+
         // 默认包含图片统计
         const imageStats = await getSessionImageStats(sessionId);
 
