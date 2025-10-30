@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kv } from '@vercel/kv';
+import { supabase} from '@/lib/supabase';
 
 // Webhook authorization token - should be moved to environment variables in production
 const WEBHOOK_TOKEN = process.env.WEBHOOK_TOKEN || "31tbbDBvLRX4Kc8WExOiX6y2OSKhZ3T6Zg+jEJThr3c=";
@@ -48,7 +49,46 @@ enum EventType {
     NON_RENEWING_PURCHASE_EXPIRATION = 'NON_RENEWING_PURCHASE_EXPIRATION',
     SUBSCRIPTION_EXPIRED = 'SUBSCRIPTION_EXPIRED',//订阅过期订阅过期
     BILLING_ISSUE = 'BILLING_ISSUE',
-    SUBSCRIBER_ALIAS = 'SUBSCRIBER_ALIAS'
+    SUBSCRIBER_ALIAS = 'SUBSCRIBER_ALIAS',
+    TEST = 'TEST' // 测试事件
+}
+
+
+interface RevenueCatWebhookData {
+    api_version: string;
+    event: {
+        aliases: string[];
+        app_id: string;
+        app_user_id: string;
+        commission_percentage: number | null;
+        country_code: string;
+        currency: string | null;
+        entitlement_id: string | null;
+        entitlement_ids: string[] | null;
+        environment: string;
+        event_timestamp_ms: number;
+        expiration_at_ms: number;
+        id: string;
+        is_family_share: boolean | null;
+        metadata: Record<string, unknown> | null;
+        offer_code: string | null;
+        original_app_user_id: string;
+        original_transaction_id: string | null;
+        period_type: string;
+        presented_offering_id: string | null;
+        price: number | null;
+        price_in_purchased_currency: number | null;
+        product_id: string;
+        purchased_at_ms: number;
+        renewal_number: number | null;
+        store: string;
+        subscriber_attributes: Record<string, unknown>;
+        takehome_percentage: number | null;
+        tax_percentage: number | null;
+        transaction_id: string | null;
+        type: string;
+    };
+
 }
 
 // 订阅计划配置
@@ -143,8 +183,9 @@ export async function POST(request: NextRequest) {
         }
 
         // Parse and validate request body
-        const body = await request.json();
-        
+        const body: RevenueCatWebhookData = await request.json();
+        kv.lpush('webhook_log', JSON.stringify(body));
+
         // 详细打印 webhook 数据
         console.log("=== WEBHOOK RECEIVED ===");
         console.log("Timestamp:", new Date().toISOString());
@@ -153,52 +194,10 @@ export async function POST(request: NextRequest) {
         console.log("Request URL:", request.url);
         // console.log("Authorization Token:", token);
         // console.log("Raw Body:", JSON.stringify(body, null, 2));
-        
+
         // 解析关键字段
         if (body) {
-            console.log("\n=== PARSED DATA ===");
-            console.log("Event Type:", body.type || "unknown");
-            console.log("App User ID:", body.app_user_id || "unknown");
-            console.log("Product ID:", body.product_id || "unknown");
-            console.log("Original App User ID:", body.original_app_user_id || "unknown");
-            console.log("Store:", body.store || "unknown");
-            console.log("Environment:", body.environment || "unknown");
-            
-            if (body.subscriber) {
-                console.log("\n=== SUBSCRIBER INFO ===");
-                console.log("Subscriber ID:", body.subscriber.subscriber_id);
-                console.log("Original App User ID:", body.subscriber.original_app_user_id);
-                console.log("Original Application Version:", body.subscriber.original_application_version);
-                console.log("First Seen:", body.subscriber.first_seen);
-                console.log("Last Seen:", body.subscriber.last_seen);
-                
-                if (body.subscriber.entitlements) {
-                    console.log("\n=== ENTITLEMENTS ===");
-                    Object.entries(body.subscriber.entitlements).forEach(([key, value]: [string, any]) => {
-                        console.log(`Entitlement ${key}:`, {
-                            expires_date: value.expires_date,
-                            product_identifier: value.product_identifier,
-                            purchase_date: value.purchase_date,
-                            is_active: value.is_active
-                        });
-                    });
-                }
-                
-                if (body.subscriber.subscriptions) {
-                    console.log("\n=== SUBSCRIPTIONS ===");
-                    Object.entries(body.subscriber.subscriptions).forEach(([key, value]: [string, any]) => {
-                        console.log(`Subscription ${key}:`, {
-                            expires_date: value.expires_date,
-                            product_identifier: value.product_identifier,
-                            purchase_date: value.purchase_date,
-                            is_active: value.is_active,
-                            period_type: value.period_type,
-                            store: value.store
-                        });
-                    });
-                }
-            }
-            
+            console.log("API Version:", body.api_version);
             if (body.event) {
                 console.log("\n=== EVENT DETAILS ===");
                 console.log("Event Type:", body.event.type);
@@ -212,7 +211,7 @@ export async function POST(request: NextRequest) {
                 console.log("Environment:", body.event.environment);
             }
         }
-        
+
         console.log("=== END WEBHOOK DATA ===\n");
 
         // 处理订阅事件
@@ -220,10 +219,10 @@ export async function POST(request: NextRequest) {
         console.log("Processing result:", processResult);
 
         // Return success response
-        return NextResponse.json({ 
-            success: true, 
+        return NextResponse.json({
+            success: true,
             message: "Webhook processed successfully",
-            processed: processResult
+            // processed: processResult
         });
 
     } catch (error) {
@@ -232,111 +231,93 @@ export async function POST(request: NextRequest) {
     }
 }
 
+async function getUserId(webhookData: RevenueCatWebhookData) {
+    const userId = webhookData.event.app_user_id;
+
+    const id = kv.get(`${userId}`);
+    if (id) {
+        return id;
+    }
+    const data = await supabase.from('payments').select('user_id').eq('revenuecat_customer_id', userId).limit(1).single();
+    if (data.error) {
+        console.error("Error getting user ID:", data.error);
+        throw new Error("Error getting user ID:" + data.error.message);
+    }
+    kv.set(`${userId}`, data.data?.user_id);
+    return data.data?.user_id;
+}
+
 /**
  * 处理订阅事件的核心函数
  */
-async function processSubscriptionEvent(webhookData: any): Promise<{
-    success: boolean;
-    action: string;
-    userId?: string;
-    subscriptionStatus?: string;
-    message: string;
-}> {
-    try {
-        console.log("🔄 Processing subscription event...");
-        
-        const eventType = webhookData.type as EventType;
-        const subscriberId = webhookData.subscriber?.subscriber_id;
-        const appUserId = webhookData.app_user_id || webhookData.original_app_user_id;
-        
-        if (!subscriberId) {
-            return {
-                success: false,
-                action: 'validation_failed',
-                message: 'Missing subscriber ID'
-            };
-        }
+async function processSubscriptionEvent(webhookData: RevenueCatWebhookData) {
 
-        console.log(`📊 Event Type: ${eventType}, Subscriber ID: ${subscriberId}, App User ID: ${appUserId}`);
+    console.log("🔄 Processing subscription event...");
 
-        switch (eventType) {
-            case EventType.INITIAL_PURCHASE://首次购买
-                return await handleInitialPurchase(webhookData);
-            
-            case EventType.RENEWAL://订阅自动续费成功
-                return await handleRenewal(webhookData);
-            
-            case EventType.CANCELLATION://用户取消订阅
-                return await handleCancellation(webhookData);
-            
-            case EventType.UNCANCELLATION://用户在订阅过期前恢复订阅
-                return await handleUncancellation(webhookData);
-            
-            case EventType.SUBSCRIPTION_EXPIRED://订阅过期
-                return await handleSubscriptionExpired(webhookData);
-            
-            case EventType.BILLING_ISSUE://账单问题
-                return await handleBillingIssue(webhookData);
-            
-            case EventType.PRODUCT_CHANGE://产品变更
-                return await handleProductChange(webhookData);
-            
-            case EventType.NON_RENEWING_PURCHASE://非续费购买
-                return await handleNonRenewingPurchase(webhookData);
-            
-            case EventType.NON_RENEWING_PURCHASE_EXPIRATION://非续费购买过期
-                return await handleNonRenewingExpiration(webhookData);
-            
-            default:
-                console.log(`⚠️ Unhandled event type: ${eventType}`);
-                return {
-                    success: true,
-                    action: 'ignored',
-                    message: `Event type ${eventType} is not handled`
-                };
-        }
-    } catch (error) {
-        console.error("❌ Error processing subscription event:", error);
-        return {
-            success: false,
-            action: 'error',
-            message: `Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-        };
+    switch (webhookData.event.type) {
+        case EventType.INITIAL_PURCHASE://首次购买
+            return await handleInitialPurchase(webhookData);
+
+        case EventType.RENEWAL://订阅自动续费成功
+            return await handleRenewal(webhookData);
+
+        case EventType.CANCELLATION://用户取消订阅
+            return await handleCancellation(webhookData);
+
+        case EventType.UNCANCELLATION://用户在订阅过期前恢复订阅
+            return await handleUncancellation(webhookData);
+
+        case EventType.SUBSCRIPTION_EXPIRED://订阅过期
+            return await handleSubscriptionExpired(webhookData);
+
+        case EventType.BILLING_ISSUE://账单问题
+            return await handleBillingIssue(webhookData);
+
+        case EventType.PRODUCT_CHANGE://产品变更
+            return await handleProductChange(webhookData);
+
+        case EventType.NON_RENEWING_PURCHASE://非续费购买
+            return await handleNonRenewingPurchase(webhookData);
+
+        case EventType.NON_RENEWING_PURCHASE_EXPIRATION://非续费购买过期
+            return await handleNonRenewingExpiration(webhookData);
+
+        case EventType.TEST://测试事件
+            return await handleTestEvent(webhookData);
+
+        default:
+            console.log(`⚠️ Unhandled event type: ${webhookData.event.type}`);
     }
+
 }
 
 /**
  * 处理首次购买事件
  */
-async function handleInitialPurchase(webhookData: any) {
+async function handleInitialPurchase(webhookData: RevenueCatWebhookData) {
     console.log("🛒 Handling initial purchase...");
-    
-    const subscription = await parseSubscriptionData(webhookData);
-    if (!subscription) {
-        return {
-            success: false,
-            action: 'parse_failed',
-            message: 'Failed to parse subscription data'
-        };
-    }
-
-    // 保存订阅信息
-    await saveUserSubscription(subscription);
-    
-    // 记录购买事件
-    await logSubscriptionEvent(subscription.userId, 'initial_purchase', {
-        productId: subscription.productId,
-        plan: subscription.plan,
-        purchaseDate: subscription.purchaseDate
+    const paymentId = webhookData.event.transaction_id  ;
+    const monthlyCredits = 1000; // 每月1000积分
+    const userId = await getUserId(webhookData);
+    // 立即发放第一个月的积分
+    await supabase.rpc('add_credits', {
+      p_user_id: userId,
+      p_amount: monthlyCredits,
+      p_transaction_type: 'subscription_monthly',
+      p_payment_id: paymentId,
+      p_description: `Initial subscription credits - ${monthlyCredits} credits`
     });
 
-    return {
-        success: true,
-        action: 'initial_purchase',
-        userId: subscription.userId,
-        subscriptionStatus: subscription.status,
-        message: `Initial purchase processed for ${subscription.plan} plan`
-    };
+    // 设置月度积分重置日期（30天后）
+    const nextResetDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await supabase
+      .from('user_credits')
+      .update({
+        subscription_credits_monthly: monthlyCredits,
+        subscription_credits_used: 0,
+        subscription_credits_reset_date: nextResetDate.toISOString(),
+      })
+      .eq('user_id', userId);
 }
 
 /**
@@ -344,36 +325,33 @@ async function handleInitialPurchase(webhookData: any) {
  */
 async function handleRenewal(webhookData: any) {
     console.log("🔄 Handling renewal...");
-    
-    const subscription = await parseSubscriptionData(webhookData);
-    if (!subscription) {
-        return {
-            success: false,
-            action: 'parse_failed',
-            message: 'Failed to parse subscription data'
-        };
-    }
+    const userId = await getUserId(webhookData);
+    const {data:user_credits} = await supabase.from('user_credits').select('subscription_credits_used').eq('user_id', userId).single();
 
-    // 更新订阅信息
-    await saveUserSubscription(subscription);
-    
-    // 重置使用限制
-    await resetUserUsageCounters(subscription.userId);
-    
-    // 记录续费事件
-    await logSubscriptionEvent(subscription.userId, 'renewal', {
-        productId: subscription.productId,
-        plan: subscription.plan,
-        expiresDate: subscription.expiresDate
+    // 1. 扣除用户剩余积分
+    if (1000 - (user_credits?.subscription_credits_used || 0) > 0) {    
+    await supabase.rpc('use_credits', {
+        p_user_id: userId,
+        p_amount: 1000 - (user_credits?.subscription_credits_used || 0),
+            p_transaction_type: 'subscription_monthly',
+            p_payment_id: webhookData.event.transaction_id,
+            p_description: `Subscription renewal credits - ${user_credits?.subscription_credits_used} credits`
+        });
+    }
+    // 2. 更新用户积分使用情况
+    await supabase.from('user_credits').update({
+        subscription_credits_used: 0,
+        subscription_credits_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    }).eq('user_id', userId);
+    // 3. 发放1000积分
+    await supabase.rpc('add_credits', {
+        p_user_id: userId,
+        p_amount: 1000,
+        p_transaction_type: 'subscription_monthly',
+        p_payment_id: webhookData.event.transaction_id,
+        p_description: `Subscription renewal credits - ${1000} credits`
     });
 
-    return {
-        success: true,
-        action: 'renewal',
-        userId: subscription.userId,
-        subscriptionStatus: subscription.status,
-        message: `Renewal processed for ${subscription.plan} plan`
-    };
 }
 
 /**
@@ -381,36 +359,11 @@ async function handleRenewal(webhookData: any) {
  */
 async function handleCancellation(webhookData: any) {
     console.log("❌ Handling cancellation...");
-    
-    const subscription = await parseSubscriptionData(webhookData);
-    if (!subscription) {
-        return {
-            success: false,
-            action: 'parse_failed',
-            message: 'Failed to parse subscription data'
-        };
-    }
-
-    // 更新订阅状态为已取消
-    subscription.status = SubscriptionStatus.CANCELED;
-    subscription.isActive = false;
-    
-    await saveUserSubscription(subscription);
-    
-    // 记录取消事件
-    await logSubscriptionEvent(subscription.userId, 'cancellation', {
-        productId: subscription.productId,
-        plan: subscription.plan,
-        expiresDate: subscription.expiresDate
+    const userId = await getUserId(webhookData);
+    supabase.rpc('cancel_subscription_credits', {
+        p_user_id: userId,
     });
 
-    return {
-        success: true,
-        action: 'cancellation',
-        userId: subscription.userId,
-        subscriptionStatus: subscription.status,
-        message: `Cancellation processed for ${subscription.plan} plan`
-    };
 }
 
 /**
@@ -418,36 +371,7 @@ async function handleCancellation(webhookData: any) {
  */
 async function handleUncancellation(webhookData: any) {
     console.log("✅ Handling uncancellation...");
-    
-    const subscription = await parseSubscriptionData(webhookData);
-    if (!subscription) {
-        return {
-            success: false,
-            action: 'parse_failed',
-            message: 'Failed to parse subscription data'
-        };
-    }
 
-    // 恢复订阅状态
-    subscription.status = SubscriptionStatus.ACTIVE;
-    subscription.isActive = true;
-    
-    await saveUserSubscription(subscription);
-    
-    // 记录恢复事件
-    await logSubscriptionEvent(subscription.userId, 'uncancellation', {
-        productId: subscription.productId,
-        plan: subscription.plan,
-        expiresDate: subscription.expiresDate
-    });
-
-    return {
-        success: true,
-        action: 'uncancellation',
-        userId: subscription.userId,
-        subscriptionStatus: subscription.status,
-        message: `Uncancellation processed for ${subscription.plan} plan`
-    };
 }
 
 /**
@@ -455,39 +379,16 @@ async function handleUncancellation(webhookData: any) {
  */
 async function handleSubscriptionExpired(webhookData: any) {
     console.log("⏰ Handling subscription expiration...");
-    
-    const subscription = await parseSubscriptionData(webhookData);
-    if (!subscription) {
-        return {
-            success: false,
-            action: 'parse_failed',
-            message: 'Failed to parse subscription data'
-        };
-    }
 
-    // 更新订阅状态为已过期
-    subscription.status = SubscriptionStatus.EXPIRED;
-    subscription.isActive = false;
-    
-    // 降级到免费计划
-    subscription.plan = SubscriptionPlan.FREE;
-    
-    await saveUserSubscription(subscription);
-    
-    // 记录过期事件
-    await logSubscriptionEvent(subscription.userId, 'expiration', {
-        productId: subscription.productId,
-        plan: subscription.plan,
-        expiresDate: subscription.expiresDate
-    });
+    const userId = await getUserId(webhookData);
+    await supabase.from('user_credits').update({
+        subscription_credits_monthly: 0,
+        subscription_credits_used: 0,
+        subscription_credits_reset_date: null,
+    }).eq('user_id', userId);
 
-    return {
-        success: true,
-        action: 'expiration',
-        userId: subscription.userId,
-        subscriptionStatus: subscription.status,
-        message: `Subscription expired, downgraded to free plan`
-    };
+
+
 }
 
 /**
@@ -495,7 +396,7 @@ async function handleSubscriptionExpired(webhookData: any) {
  */
 async function handleBillingIssue(webhookData: any) {
     console.log("💳 Handling billing issue...");
-    
+
     const subscription = await parseSubscriptionData(webhookData);
     if (!subscription) {
         return {
@@ -526,7 +427,7 @@ async function handleBillingIssue(webhookData: any) {
  */
 async function handleProductChange(webhookData: any) {
     console.log("🔄 Handling product change...");
-    
+
     const subscription = await parseSubscriptionData(webhookData);
     if (!subscription) {
         return {
@@ -538,7 +439,7 @@ async function handleProductChange(webhookData: any) {
 
     // 更新订阅信息
     await saveUserSubscription(subscription);
-    
+
     // 记录产品变更事件
     await logSubscriptionEvent(subscription.userId, 'product_change', {
         productId: subscription.productId,
@@ -560,7 +461,7 @@ async function handleProductChange(webhookData: any) {
  */
 async function handleNonRenewingPurchase(webhookData: any) {
     console.log("🛍️ Handling non-renewing purchase...");
-    
+
     const subscription = await parseSubscriptionData(webhookData);
     if (!subscription) {
         return {
@@ -572,7 +473,7 @@ async function handleNonRenewingPurchase(webhookData: any) {
 
     // 保存订阅信息
     await saveUserSubscription(subscription);
-    
+
     // 记录购买事件
     await logSubscriptionEvent(subscription.userId, 'non_renewing_purchase', {
         productId: subscription.productId,
@@ -594,7 +495,7 @@ async function handleNonRenewingPurchase(webhookData: any) {
  */
 async function handleNonRenewingExpiration(webhookData: any) {
     console.log("⏰ Handling non-renewing expiration...");
-    
+
     const subscription = await parseSubscriptionData(webhookData);
     if (!subscription) {
         return {
@@ -607,10 +508,10 @@ async function handleNonRenewingExpiration(webhookData: any) {
     // 更新订阅状态为已过期
     subscription.status = SubscriptionStatus.EXPIRED;
     subscription.isActive = false;
-    
-    
+
+
     await saveUserSubscription(subscription);
-    
+
     // 记录过期事件
     await logSubscriptionEvent(subscription.userId, 'non_renewing_expiration', {
         productId: subscription.productId,
@@ -628,13 +529,73 @@ async function handleNonRenewingExpiration(webhookData: any) {
 }
 
 /**
+ * 处理测试事件
+ * TEST 事件是 RevenueCat 发送的测试 webhook，通常用于验证 webhook 配置
+ */
+async function handleTestEvent(webhookData: any) {
+    console.log("🧪 Handling TEST event...");
+
+    const event = webhookData.event;
+    const userId = webhookData.app_user_id || event?.app_user_id || 'test_user';
+    const productId = event?.product_id;
+
+    // 记录测试事件
+    console.log("TEST Event Details:", {
+        userId,
+        productId,
+        environment: event?.environment,
+        store: event?.store,
+        expirationAt: event?.expiration_at_ms,
+        subscriberAttributes: event?.subscriber_attributes
+    });
+
+    // 如果是测试产品，可以创建一个测试订阅记录
+    if (productId && SUBSCRIPTION_PLANS[productId as keyof typeof SUBSCRIPTION_PLANS]) {
+        const subscription = await parseTestSubscriptionData(webhookData);
+        if (subscription) {
+            await saveUserSubscription(subscription);
+
+            await logSubscriptionEvent(userId, 'test_purchase', {
+                productId,
+                plan: subscription.plan,
+                purchaseDate: subscription.purchaseDate,
+                expiresDate: subscription.expiresDate
+            });
+
+            return {
+                success: true,
+                action: 'test_purchase',
+                userId: subscription.userId,
+                subscriptionStatus: subscription.status,
+                message: `Test purchase processed for ${subscription.plan} plan`
+            };
+        }
+    }
+
+    // 对于非订阅产品的测试事件，仅记录日志
+    await logSubscriptionEvent(userId, 'test_event', {
+        productId,
+        eventId: event?.id,
+        environment: event?.environment,
+        store: event?.store
+    });
+
+    return {
+        success: true,
+        action: 'test_event',
+        userId,
+        message: `Test event received and logged for product ${productId || 'unknown'}`
+    };
+}
+
+/**
  * 解析订阅数据
  */
 async function parseSubscriptionData(webhookData: any): Promise<UserSubscription | null> {
     try {
         const subscriber = webhookData.subscriber;
         const event = webhookData.event;
-        
+
         if (!subscriber || !event) {
             console.error("Missing subscriber or event data");
             return null;
@@ -643,7 +604,7 @@ async function parseSubscriptionData(webhookData: any): Promise<UserSubscription
         const userId = webhookData.app_user_id || webhookData.original_app_user_id || subscriber.original_app_user_id || 'anonymous';
         const productId = event.product_id;
         const planConfig = SUBSCRIPTION_PLANS[productId as keyof typeof SUBSCRIPTION_PLANS];
-        
+
         if (!planConfig) {
             console.error(`Unknown product ID: ${productId}`);
             return null;
@@ -652,7 +613,7 @@ async function parseSubscriptionData(webhookData: any): Promise<UserSubscription
         // 确定订阅状态
         let status = SubscriptionStatus.INACTIVE;
         let isActive = false;
-        
+
         if (event.type === 'INITIAL_PURCHASE' || event.type === 'RENEWAL') {
             status = SubscriptionStatus.ACTIVE;
             isActive = true;
@@ -687,27 +648,76 @@ async function parseSubscriptionData(webhookData: any): Promise<UserSubscription
 }
 
 /**
+ * 解析测试订阅数据（针对 TEST 事件）
+ * TEST 事件的数据结构与标准事件不同，需要特殊处理
+ */
+async function parseTestSubscriptionData(webhookData: any): Promise<UserSubscription | null> {
+    try {
+        const event = webhookData.event;
+
+        if (!event) {
+            console.error("Missing event data in test event");
+            return null;
+        }
+
+        // TEST 事件可能没有 subscriber 对象，使用 app_user_id
+        const userId = webhookData.app_user_id || event.app_user_id || event.original_app_user_id || 'test_user';
+        const productId = event.product_id;
+        const planConfig = SUBSCRIPTION_PLANS[productId as keyof typeof SUBSCRIPTION_PLANS];
+
+        if (!planConfig) {
+            console.error(`Unknown product ID: ${productId}`);
+            return null;
+        }
+
+        // 从时间戳转换为 ISO 字符串
+        const purchaseDate = event.purchased_at_ms ? new Date(event.purchased_at_ms).toISOString() : new Date().toISOString();
+        const expiresDate = event.expiration_at_ms ? new Date(event.expiration_at_ms).toISOString() : null;
+
+        const subscription: UserSubscription = {
+            userId,
+            subscriberId: userId, // TEST 事件可能没有 subscriber_id，使用 userId
+            status: SubscriptionStatus.TRIAL,
+            plan: planConfig.plan,
+            productId,
+            originalTransactionId: event.original_transaction_id || event.id,
+            purchaseDate,
+            expiresDate,
+            isActive: true, // TEST 事件通常表示有效订阅
+            environment: webhookData.environment || event.environment || 'sandbox',
+            store: event.store || 'app_store',
+            lastUpdated: Date.now(),
+        };
+
+        return subscription;
+    } catch (error) {
+        console.error("Error parsing test subscription data:", error);
+        return null;
+    }
+}
+
+/**
  * 保存用户订阅信息到 KV 存储
  */
 async function saveUserSubscription(subscription: UserSubscription): Promise<void> {
     try {
         const subscriptionKey = `subscription_${subscription.userId}`;
         const subscriberKey = `subscriber_${subscription.subscriberId}`;
-        
+
         // 保存到用户订阅记录
         await kv.hset(subscriptionKey, subscription as unknown as Record<string, unknown>);
-        
+
         // 保存到订阅者记录（用于查找）
         await kv.hset(subscriberKey, {
             userId: subscription.userId,
             subscriberId: subscription.subscriberId,
             lastUpdated: subscription.lastUpdated
         });
-        
+
         // 设置过期时间（30天）
         await kv.expire(subscriptionKey, 2592000);
         await kv.expire(subscriberKey, 2592000);
-        
+
         console.log(`✅ Subscription saved for user ${subscription.userId}`);
     } catch (error) {
         console.error("Error saving subscription:", error);
@@ -726,7 +736,7 @@ async function resetUserUsageCounters(userId: string): Promise<void> {
             monthlyCount: 0,
             lastReset: Date.now()
         });
-        
+
         console.log(`✅ Usage counters reset for user ${userId}`);
     } catch (error) {
         console.error("Error resetting usage counters:", error);
@@ -745,13 +755,13 @@ async function logSubscriptionEvent(userId: string, eventType: string, data: any
             data,
             timestamp: Date.now()
         };
-        
+
         // 添加到日志列表
         await kv.lpush(logKey, JSON.stringify(logEntry));
-        
+
         // 限制日志数量（保留最近100条）
         await kv.ltrim(logKey, 0, 99);
-        
+
         console.log(`✅ Event logged: ${eventType} for user ${userId}`);
     } catch (error) {
         console.error("Error logging subscription event:", error);
@@ -764,14 +774,14 @@ async function logSubscriptionEvent(userId: string, eventType: string, data: any
  */
 async function handleAIPointsPurchase(webhookData: any) {
     console.log("💎 Handling AI Points purchase...");
-    
+
     const event = webhookData.event;
     const subscriber = webhookData.subscriber;
     const productId = event?.product_id;
     const userId = webhookData.app_user_id || webhookData.original_app_user_id || subscriber?.original_app_user_id || 'anonymous';
-    
+
     const pointsConfig = AI_POINTS_PRODUCTS[productId as keyof typeof AI_POINTS_PRODUCTS];
-    
+
     if (!pointsConfig) {
         return {
             success: false,
@@ -779,10 +789,10 @@ async function handleAIPointsPurchase(webhookData: any) {
             message: `Invalid AI Points product: ${productId}`
         };
     }
-    
+
     // 添加 AI Points 到用户账户
     await addAIPointsToUser(userId, pointsConfig.totalPoints);
-    
+
     // 记录购买事件
     await logSubscriptionEvent(userId, 'ai_points_purchase', {
         productId,
@@ -792,7 +802,7 @@ async function handleAIPointsPurchase(webhookData: any) {
         purchaseDate: event?.purchase_date,
         transactionId: event?.original_transaction_id
     });
-    
+
     return {
         success: true,
         action: 'ai_points_purchase',
@@ -807,14 +817,14 @@ async function handleAIPointsPurchase(webhookData: any) {
 async function addAIPointsToUser(userId: string, points: number): Promise<void> {
     try {
         const pointsKey = `ai_points_${userId}`;
-        
+
         // 获取当前 points
         const currentPoints = await kv.get<number>(pointsKey) || 0;
-        
+
         // 添加新 points
         const newTotal = currentPoints + points;
         await kv.set(pointsKey, newTotal);
-        
+
         // 记录 points 交易历史
         const historyKey = `ai_points_history_${userId}`;
         const historyEntry = {
@@ -823,10 +833,10 @@ async function addAIPointsToUser(userId: string, points: number): Promise<void> 
             balance: newTotal,
             timestamp: Date.now()
         };
-        
+
         await kv.lpush(historyKey, JSON.stringify(historyEntry));
         await kv.ltrim(historyKey, 0, 499); // 保留最近500条记录
-        
+
         console.log(`✅ Added ${points} AI Points to user ${userId}. New balance: ${newTotal}`);
     } catch (error) {
         console.error("Error adding AI Points:", error);
@@ -855,15 +865,15 @@ async function deductUserAIPoints(userId: string, points: number): Promise<boole
     try {
         const pointsKey = `ai_points_${userId}`;
         const currentPoints = await kv.get<number>(pointsKey) || 0;
-        
+
         if (currentPoints < points) {
             console.log(`❌ Insufficient AI Points for user ${userId}. Current: ${currentPoints}, Required: ${points}`);
             return false;
         }
-        
+
         const newTotal = currentPoints - points;
         await kv.set(pointsKey, newTotal);
-        
+
         // 记录 points 交易历史
         const historyKey = `ai_points_history_${userId}`;
         const historyEntry = {
@@ -872,10 +882,10 @@ async function deductUserAIPoints(userId: string, points: number): Promise<boole
             balance: newTotal,
             timestamp: Date.now()
         };
-        
+
         await kv.lpush(historyKey, JSON.stringify(historyEntry));
         await kv.ltrim(historyKey, 0, 499);
-        
+
         console.log(`✅ Deducted ${points} AI Points from user ${userId}. New balance: ${newTotal}`);
         return true;
     } catch (error) {
