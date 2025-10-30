@@ -102,8 +102,8 @@ importers:
         specifier: latest
         version: 1.2.7(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@supabase/supabase-js':
-        specifier: ^2.77.0
-        version: 2.77.0
+        specifier: 2.50.0
+        version: 2.50.0
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
@@ -4093,7 +4093,7 @@ snapshots:
 
   '@js-sdsl/ordered-map@4.4.2': {}
 
-  '@langchain/community@0.3.47(@browserbasehq/sdk@2.6.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.53.1)(deepmerge@4.3.1)(dotenv@16.5.0)(openai@5.7.0(ws@8.18.2)(zod@3.24.1))(zod@3.24.1))(@ibm-cloud/watsonx-ai@1.6.8)(@langchain/core@0.3.61(openai@5.7.0(ws@8.18.2)(zod@3.24.1)))(@supabase/supabase-js@2.77.0)(@upstash/ratelimit@2.0.5(@upstash/redis@1.35.0))(@upstash/redis@1.35.0)(@vercel/kv@3.0.0)(axios@1.10.0)(ibm-cloud-sdk-core@5.4.0)(jsonwebtoken@9.0.2)(lodash@4.17.21)(openai@5.7.0(ws@8.18.2)(zod@3.24.1))(playwright@1.53.1)(weaviate-client@3.6.2)(ws@8.18.2)':
+  '@langchain/community@0.3.47(@browserbasehq/sdk@2.6.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.53.1)(deepmerge@4.3.1)(dotenv@16.5.0)(openai@5.7.0(ws@8.18.2)(zod@3.24.1))(zod@3.24.1))(@ibm-cloud/watsonx-ai@1.6.8)(@langchain/core@0.3.61(openai@5.7.0(ws@8.18.2)(zod@3.24.1)))(@supabase/supabase-js@2.50.0)(@upstash/ratelimit@2.0.5(@upstash/redis@1.35.0))(@upstash/redis@1.35.0)(@vercel/kv@3.0.0)(axios@1.10.0)(ibm-cloud-sdk-core@5.4.0)(jsonwebtoken@9.0.2)(lodash@4.17.21)(openai@5.7.0(ws@8.18.2)(zod@3.24.1))(playwright@1.53.1)(weaviate-client@3.6.2)(ws@8.18.2)':
     dependencies:
       '@browserbasehq/stagehand': 1.14.0(@playwright/test@1.53.1)(deepmerge@4.3.1)(dotenv@16.5.0)(openai@5.7.0(ws@8.18.2)(zod@3.24.1))(zod@3.24.1)
       '@ibm-cloud/watsonx-ai': 1.6.8
