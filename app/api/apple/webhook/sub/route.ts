@@ -264,7 +264,7 @@ async function processSubscriptionEvent(webhookData: RevenueCatWebhookData) {
             return await handleRenewal(webhookData);
 
         case EventType.CANCELLATION://用户取消订阅
-            return await handleCancellation(webhookData);
+            return await handleSubscriptionExpired(webhookData);
 
         case EventType.UNCANCELLATION://用户在订阅过期前恢复订阅
             return await handleUncancellation(webhookData);
@@ -404,25 +404,25 @@ async function handleSubscriptionExpired(webhookData: any) {
     const { data: user_credits } = await supabase.from('user_credits').select('subscription_credits_monthly,subscription_credits_used').eq('user_id', userId).single();
     console.log("user_credits:", user_credits);
 
-    // 1. 扣除用户剩余积分
-    if (1000 - (user_credits?.subscription_credits_used || 0) > 0) {
-
-        const result = await supabase.rpc('cancel_subscription_credits', {
-            p_user_id: userId,
-        });
-        if (result.error) {
-            console.error("Error using credits:", result.error);
-            throw new Error("Error using credits:" + result.error.message);
+    // 是否还有积分
+    if (user_credits?.subscription_credits_monthly > 0) {
+        // 是否还有剩余积分
+        if (1000 - (user_credits?.subscription_credits_used || 0) > 0) {
+            // 扣除剩余积分
+            const result = await supabase.rpc('cancel_subscription_credits', {
+                p_user_id: userId,
+            });
+            if (result.error) {
+                console.error("Error using credits:", result.error);
+                throw new Error("Error using credits:" + result.error.message);
+            }
         }
+        await supabase.from('user_credits').update({
+            subscription_credits_monthly: 0,
+            subscription_credits_used: 0,
+            subscription_credits_reset_date: null,
+        }).eq('user_id', userId);
     }
-    await supabase.from('user_credits').update({
-        subscription_credits_monthly: 0,
-        subscription_credits_used: 0,
-        subscription_credits_reset_date: null,
-    }).eq('user_id', userId);
-
-
-
 }
 
 /**
