@@ -54,40 +54,52 @@ enum EventType {
     TEST = 'TEST' // 测试事件
 }
 
-
+// https://www.revenuecat.com/docs/integrations/webhooks/event-types-and-fields
 interface RevenueCatWebhookData {
     api_version: string;
     event: {
-        aliases: string[];
-        app_id: string;
-        app_user_id: string;
-        commission_percentage: number | null;
-        country_code: string;
-        currency: string | null;
-        entitlement_id: string | null;
-        entitlement_ids: string[] | null;
-        environment: string;
-        event_timestamp_ms: number;
-        expiration_at_ms: number;
-        id: string;
-        is_family_share: boolean | null;
+        type: string;//事件类型
+        id: string; //事件ID
+        app_id: string; //应用ID
+        event_timestamp_ms: number;//事件时间戳
+        
+        app_user_id: string;//用户ID
+        original_app_user_id: string; //原始用户ID
+        aliases: string[];//别名：订阅者曾经使用过的所有应用用户 ID
+        
+        // 订阅事件字段
+        product_id: string; //产品ID
+        entitlement_ids: string[];//权益ID
+        entitlement_id: string | null;//已抛弃
+        period_type: string;//交易类型
+        grace_period_expiration_at_ms: number | null;//宽限期到期时间
+        expiration_at_ms: number;//订阅过期时间
+        store: string;//商店
+        environment: string;//环境
+        cancel_reason: string | null;//取消原因
+        expiration_reason: string | null;//过期原因
+        new_product_id: string | null;//新产品ID
+        presented_offering_id: string | null;//展示的套餐ID
+        price: number | null;//价格
+        currency: string | null;//货币
+        price_in_purchased_currency: number | null;//购买货币价格
+        tax_percentage: number | null;//税率
+        commission_percentage: number | null;//佣金比例
+        takehome_percentage: number | null;//已抛弃
+        transaction_id: string | null;//原始交易ID
+        is_family_share: boolean | null;//是否是家庭共享
+        transferred_from: string[] | null;//TRANSFER 时，此字段才可用
+        transferred_to: string[] | null;//TRANSFER 时，此字段才可用
+        country_code: string;//国家代码
+        renewal_number: number | null;//续订次数
+
         metadata: Record<string, unknown> | null;
         offer_code: string | null;
-        original_app_user_id: string;
         original_transaction_id: string | null;
-        period_type: string;
-        presented_offering_id: string | null;
-        price: number | null;
-        price_in_purchased_currency: number | null;
-        product_id: string;
         purchased_at_ms: number;
-        renewal_number: number | null;
-        store: string;
+
         subscriber_attributes: Record<string, unknown>;
-        takehome_percentage: number | null;
-        tax_percentage: number | null;
-        transaction_id: string | null;
-        type: string;
+
     };
 
 }
@@ -233,7 +245,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function getUserId(webhookData: RevenueCatWebhookData) {
-    const userId = webhookData.event.app_user_id;
+    const userId = webhookData.event.original_app_user_id;
     console.log("userId:", userId);
     const id = await kv.get(`${userId}`);
     console.log("id:", id);
@@ -264,7 +276,7 @@ async function processSubscriptionEvent(webhookData: RevenueCatWebhookData) {
             return await handleRenewal(webhookData);
 
         case EventType.CANCELLATION://用户取消订阅
-            return await handleSubscriptionExpired(webhookData);
+            return await handleCancellation(webhookData);
 
         case EventType.UNCANCELLATION://用户在订阅过期前恢复订阅
             return await handleUncancellation(webhookData);
@@ -376,15 +388,15 @@ async function handleRenewal(webhookData: any) {
  */
 async function handleCancellation(webhookData: any) {
     console.log("❌ Handling cancellation...");
-    const userId = await getUserId(webhookData);
-    const result = await supabase.rpc('cancel_subscription_credits', {
-        p_user_id: userId,
-    });
-    if (result.error) {
-        console.error("Error canceling subscription credits:", result.error);
-        throw new Error("Error canceling subscription credits:" + result.error.message);
-    }
-    return result.data;
+    // const userId = await getUserId(webhookData);
+    // const result = await supabase.rpc('cancel_subscription_credits', {
+    //     p_user_id: userId,
+    // });
+    // if (result.error) {
+    //     console.error("Error canceling subscription credits:", result.error);
+    //     throw new Error("Error canceling subscription credits:" + result.error.message);
+    // }
+    // return result.data;
 }
 
 /**
