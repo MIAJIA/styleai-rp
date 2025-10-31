@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kv } from '@vercel/kv';
-import { supabase} from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 // Webhook authorization token - should be moved to environment variables in production
 const WEBHOOK_TOKEN = process.env.WEBHOOK_TOKEN || "31tbbDBvLRX4Kc8WExOiX6y2OSKhZ3T6Zg+jEJThr3c=";
@@ -50,6 +50,7 @@ enum EventType {
     SUBSCRIPTION_EXPIRED = 'SUBSCRIPTION_EXPIRED',//订阅过期订阅过期
     BILLING_ISSUE = 'BILLING_ISSUE',
     SUBSCRIBER_ALIAS = 'SUBSCRIBER_ALIAS',
+    EXPIRATION = "EXPIRATION",//订阅过期订阅过期
     TEST = 'TEST' // 测试事件
 }
 
@@ -233,8 +234,9 @@ export async function POST(request: NextRequest) {
 
 async function getUserId(webhookData: RevenueCatWebhookData) {
     const userId = webhookData.event.app_user_id;
-
-    const id = kv.get(`${userId}`);
+    console.log("userId:", userId);
+    const id = await kv.get(`${userId}`);
+    console.log("id:", id);
     if (id) {
         return id;
     }
@@ -284,7 +286,8 @@ async function processSubscriptionEvent(webhookData: RevenueCatWebhookData) {
 
         case EventType.TEST://测试事件
             return await handleTestEvent(webhookData);
-
+        case EventType.EXPIRATION://订阅过期
+            return await handleSubscriptionExpired(webhookData);
         default:
             console.log(`⚠️ Unhandled event type: ${webhookData.event.type}`);
     }
@@ -296,28 +299,28 @@ async function processSubscriptionEvent(webhookData: RevenueCatWebhookData) {
  */
 async function handleInitialPurchase(webhookData: RevenueCatWebhookData) {
     console.log("🛒 Handling initial purchase...");
-    const paymentId = webhookData.event.transaction_id  ;
+    const paymentId = webhookData.event.transaction_id;
     const monthlyCredits = 1000; // 每月1000积分
     const userId = await getUserId(webhookData);
     // 立即发放第一个月的积分
     await supabase.rpc('add_credits', {
-      p_user_id: userId,
-      p_amount: monthlyCredits,
-      p_transaction_type: 'subscription_monthly',
-      p_payment_id: paymentId,
-      p_description: `Initial subscription credits - ${monthlyCredits} credits`
+        p_user_id: userId,
+        p_amount: monthlyCredits,
+        p_transaction_type: 'subscription_monthly',
+        p_payment_id: paymentId,
+        p_description: `Initial subscription credits - ${monthlyCredits} credits`
     });
 
     // 设置月度积分重置日期（30天后）
     const nextResetDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     await supabase
-      .from('user_credits')
-      .update({
-        subscription_credits_monthly: monthlyCredits,
-        subscription_credits_used: 0,
-        subscription_credits_reset_date: nextResetDate.toISOString(),
-      })
-      .eq('user_id', userId);
+        .from('user_credits')
+        .update({
+            subscription_credits_monthly: monthlyCredits,
+            subscription_credits_used: 0,
+            subscription_credits_reset_date: nextResetDate.toISOString(),
+        })
+        .eq('user_id', userId);
 }
 
 /**
@@ -326,31 +329,45 @@ async function handleInitialPurchase(webhookData: RevenueCatWebhookData) {
 async function handleRenewal(webhookData: any) {
     console.log("🔄 Handling renewal...");
     const userId = await getUserId(webhookData);
-    const {data:user_credits} = await supabase.from('user_credits').select('subscription_credits_used').eq('user_id', userId).single();
+    const { data: user_credits } = await supabase.from('user_credits').select('subscription_credits_monthly,subscription_credits_used').eq('user_id', userId).single();
+    console.log("user_credits:", user_credits);
 
     // 1. 扣除用户剩余积分
-    if (1000 - (user_credits?.subscription_credits_used || 0) > 0) {    
-    await supabase.rpc('use_credits', {
-        p_user_id: userId,
-        p_amount: 1000 - (user_credits?.subscription_credits_used || 0),
-            p_transaction_type: 'subscription_monthly',
-            p_payment_id: webhookData.event.transaction_id,
-            p_description: `Subscription renewal credits - ${user_credits?.subscription_credits_used} credits`
+    if (user_credits?.subscription_credits_monthly > 0 && 1000 - (user_credits?.subscription_credits_used || 0) > 0) {
+        const result = await supabase.rpc('use_credits', {
+            p_user_id: userId,
+            p_amount: 1000 - (user_credits?.subscription_credits_used || 0),
+            p_related_entity_type: 'subscription_monthly',
+            p_related_entity_id: null,
+            p_description: `Subscription cancel credits - ${1000 - user_credits?.subscription_credits_used} credits`
         });
+        if (result.error) {
+            console.error("Error using credits:", result.error);
+            throw new Error("Error using credits:" + result.error.message);
+        }
     }
     // 2. 更新用户积分使用情况
-    await supabase.from('user_credits').update({
+    const result = await supabase.from('user_credits').update({
+        subscription_credits_monthly: 1000,
         subscription_credits_used: 0,
         subscription_credits_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     }).eq('user_id', userId);
+    if (result.error) {
+        console.error("Error using credits:", result.error);
+        throw new Error("Error using credits:" + result.error.message);
+    }
     // 3. 发放1000积分
-    await supabase.rpc('add_credits', {
+    const result1 = await supabase.rpc('add_credits', {
         p_user_id: userId,
         p_amount: 1000,
         p_transaction_type: 'subscription_monthly',
         p_payment_id: webhookData.event.transaction_id,
         p_description: `Subscription renewal credits - ${1000} credits`
     });
+    if (result1.error) {
+        console.error("Error using credits:", result1.error);
+        throw new Error("Error using credits:" + result1.error.message);
+    }
 
 }
 
@@ -360,10 +377,14 @@ async function handleRenewal(webhookData: any) {
 async function handleCancellation(webhookData: any) {
     console.log("❌ Handling cancellation...");
     const userId = await getUserId(webhookData);
-    supabase.rpc('cancel_subscription_credits', {
+    const result = await supabase.rpc('cancel_subscription_credits', {
         p_user_id: userId,
     });
-
+    if (result.error) {
+        console.error("Error canceling subscription credits:", result.error);
+        throw new Error("Error canceling subscription credits:" + result.error.message);
+    }
+    return result.data;
 }
 
 /**
@@ -379,8 +400,21 @@ async function handleUncancellation(webhookData: any) {
  */
 async function handleSubscriptionExpired(webhookData: any) {
     console.log("⏰ Handling subscription expiration...");
-
     const userId = await getUserId(webhookData);
+    const { data: user_credits } = await supabase.from('user_credits').select('subscription_credits_monthly,subscription_credits_used').eq('user_id', userId).single();
+    console.log("user_credits:", user_credits);
+
+    // 1. 扣除用户剩余积分
+    if (1000 - (user_credits?.subscription_credits_used || 0) > 0) {
+
+        const result = await supabase.rpc('cancel_subscription_credits', {
+            p_user_id: userId,
+        });
+        if (result.error) {
+            console.error("Error using credits:", result.error);
+            throw new Error("Error using credits:" + result.error.message);
+        }
+    }
     await supabase.from('user_credits').update({
         subscription_credits_monthly: 0,
         subscription_credits_used: 0,
