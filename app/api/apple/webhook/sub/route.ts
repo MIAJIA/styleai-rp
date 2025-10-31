@@ -397,6 +397,9 @@ async function handleCancellation(webhookData: any) {
     //     throw new Error("Error canceling subscription credits:" + result.error.message);
     // }
     // return result.data;
+    if (webhookData.event.cancel_reason === "CUSTOMER_SUPPORT") {
+        handleSubscriptionExpired(webhookData);
+    }
 }
 
 /**
