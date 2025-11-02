@@ -42,6 +42,7 @@
     "@radix-ui/react-toggle": "latest",
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
+    "@supabase/supabase-js": "2.50.0",
     "@types/ws": "^8.18.1",
     "@vercel/blob": "latest",
     "@vercel/kv": "latest",

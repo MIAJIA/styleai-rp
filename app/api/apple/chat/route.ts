@@ -22,7 +22,7 @@ interface ChatMessage {
         bodyShape?: string;
         skincolor?: string;
         bodySize?: string;
-        stylePreference?: string;
+        stylePreferences?: string;
     };
 }
 
@@ -34,9 +34,9 @@ interface ChatRequest {
     sessionId?: string;
     includeJobContext?: boolean;
     bodyShape?: string;
-    skincolor?: string;
+    skinTone?: string;
     bodySize?: string;
-    stylePreference?: string;
+    stylePreferences?: string;
 }
 
 // Build system prompt with JOB context
@@ -172,10 +172,14 @@ export async function POST(request: NextRequest) {
 
     try {
         const body: ChatRequest = await request.json();
-        const { userId, message, imageUrl, sessionId, bodyShape, skincolor, bodySize, stylePreference } = body;
+        const { userId, message, imageUrl, sessionId, bodyShape, skinTone:skincolor, bodySize, stylePreferences } = body;
 
         console.log(`[Chat API] Processing chat request for user: ${userId}`);
         console.log(`[Chat API] User message: ${message}`);
+        console.log(`[Chat API] Body Shape: ${bodyShape}`);
+        console.log(`[Chat API] Skin Tone: ${skincolor}`);
+        console.log(`[Chat API] Body Size: ${bodySize}`);
+        console.log(`[Chat API] Style Preference: ${stylePreferences}`);
 
         // 检测用户是否要求生成图片
         const imageGenerationKeywords = [
@@ -190,7 +194,20 @@ export async function POST(request: NextRequest) {
         console.log(`[Chat API] 🎨 Image generation required: ${requiresImageGeneration}`);
 
         // Get JOB context information
-        let systemPrompt = "You are a professional fashion consultant AI assistant. Please provide professional fashion advice and styling guidance to users in English.";
+        let systemPrompt = `You are Styla, a fashion stylist and personal image consultant. Your goal is to help the user with outfit ideas, styling logic, color pairing, occasion dressing, shopping guidance, and fashion education. 
+You have knowledge of silhouettes, color theory, fabrics, proportions, layering, hairstyle, accessories, seasonal trends, and occasion-based outfits. Avoid negative judgment about body, age, or skin. Always respond in a friendly, concise, and encouraging tone. 
+The user has ${bodyShape} body shape, ${skincolor} skin, ${bodySize} body-size, prefers ${stylePreferences} style. When asked for outfit advice, consider user’s characteristics and give personalized feedback.
+Ask clarifying questions if needed (occasion, weather, color preference, formality, footwear options, etc.). 
+When the user uploads clothing or outfit photos, analyze silhouette, fit, color coordination, footwear pairing, and accessories. Offer gentle improvement suggestions.
+Offer to generate a visual preview when:
+- user asks you to do so
+- user asks how to elevate the look
+- user wants to visualize or compare styling ideas
+- user provides reference items or asks how to style an item 
+For previews: generate high-quality fashion-editorial full-body images with consistent facial identity, realistic fabric texture, accurate seasonality, cohesive styling, and clean, aesthetic backgrounds.
+Avoid unrealistic body modification or sexualization by default.
+If the user chats casually, respond naturally while adding helpful style insight when relevant.
+Keep your response short and concise. End each response with 1–2 short follow-up questions to continue the conversation. ;`;
 
         // 如果需要生成图片，增强系统提示
         if (requiresImageGeneration) {
@@ -219,7 +236,7 @@ Your response should include BOTH text description AND generated images.`;
             if (imageUrl.length > 1) {
                 systemPrompt = `You are Styla, a stylist and fashion expert. Your goal is to create complete outfits for the user in image1, styled around the key piece shown in image2. The outfit must suit the occasion and current season. 
                 You have deep knowledge of fashion styling, color theory, silhouette balance, layering rules, and aesthetics.
-                The user has ${bodyShape} body shape, ${skincolor} skin, ${bodySize} body-size, prefers ${stylePreference} style. Combine user's characteristics with the latest fashion trends to provide personalized and practical styling recommendation. Choose the style from the user’s preferred styles that best matches the item and occasion; if they conflict, prioritize the item and occasion, and do not mention the user’s preferred style.
+                The user has ${bodyShape} body shape, ${skincolor} skin, ${bodySize} body-size, prefers ${stylePreferences} style. Combine user's characteristics with the latest fashion trends to provide personalized and practical styling recommendation. Choose the style from the user’s preferred styles that best matches the item and occasion; if they conflict, prioritize the item and occasion, and do not mention the user’s preferred style.
                 Create 2 different outfits and generate image preview of each outfit. Each preview should be high-quality fashion-editorial full-body photography of the user wearing the entire outfit. Keep the character consistent with the user, and use a stunning and cinematic background that reflects the occasion. 
                 Build the complete outfit around the key piece for the user and the occasion. Select tops, bottoms and layering pieces that match the color, material and style of the key piece. Style with suitable handbags, shoes and accessories. Suggest suitable hairstyle or makeup to complete the look.
                 Summarize recommendation in one sentence within 50 words. Always reply clearly and concisely in a friendly and encouraging tone, and avoid explicitly mentioning the user’s physical traits. 
@@ -394,7 +411,7 @@ Your response should include BOTH text description AND generated images.`;
                 bodyShape,
                 skincolor,
                 bodySize,
-                stylePreference
+                stylePreferences
             }
         };
 
