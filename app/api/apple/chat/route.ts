@@ -291,6 +291,7 @@ Your response should include BOTH text description AND generated images.`;
 
             // Add text content
             if (msg.content && msg.content.trim()) {
+                console.log(`[Chat API] 📚 Loading historical message: ${msg.content.length} characters`);
                 messageParts.push({ text: msg.content });
             }
 
