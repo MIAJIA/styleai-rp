@@ -302,7 +302,6 @@ Your response should include BOTH text description AND generated images.`;
                 console.log(`[Chat API] 🖼️ Loading ${msg.images.length} image(s) from history...`);
                 for (const img of msg.images) {
                     // 只包含用户上传的图片作为上下文，不包含AI生成的图片
-                    if (img.type === 'uploaded') {
                         try {
                             if (img.isCompressed) {
                                 messageParts.push({
@@ -311,6 +310,7 @@ Your response should include BOTH text description AND generated images.`;
                                         data: img.context
                                     }
                                 });
+                                console.log(`[Chat API]    ✅ Added compressed image: ${img.name}`);
                             } else {
                                 console.log(`[Chat API]    Compressing ${img.name}...`);
                                 const imageBase64 = await urlToFile(img.url, img.name || 'image.jpg', img.mimeType || 'image/jpeg')
@@ -322,12 +322,12 @@ Your response should include BOTH text description AND generated images.`;
                                         data: compressedImage
                                     }
                                 });
+                                console.log(`[Chat API]    ✅ Added compressed image: ${img.name}`);
                             }
                             console.log(`[Chat API]    ✅ Added historical image: ${img.name}`);
                         } catch (error) {
                             console.error(`[Chat API]    ❌ Failed to load image ${img.name}:`, error);
                         }
-                    }
                 }
             }
 
