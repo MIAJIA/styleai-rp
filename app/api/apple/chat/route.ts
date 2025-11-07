@@ -4,6 +4,7 @@ import { Job } from '@/lib/types';
 import { generateChatCompletionWithGemini, GeminiChatMessage, GeminiChatResult } from '@/lib/apple/gemini';
 import { fileToBase64, urlToFile } from '@/lib/utils';
 import { checkAndIncrementLimit } from '@/lib/apple/checkLimit';
+import sharp from 'sharp';
 
 interface ImageInfo {
     isCompressed?: boolean;
@@ -298,36 +299,36 @@ Your response should include BOTH text description AND generated images.`;
             }
 
             // Add images from history (only uploaded images)
-            if (msg.images && msg.images.length > 0 && msg.role === 'user') {
+            if (msg.images && msg.images.length > 0) {
                 console.log(`[Chat API] 🖼️ Loading ${msg.images.length} image(s) from history...`);
                 for (const img of msg.images) {
                     // 只包含用户上传的图片作为上下文，不包含AI生成的图片
-                        try {
-                            if (img.isCompressed) {
-                                messageParts.push({
-                                    inline_data: {
-                                        mime_type: img.mimeType || 'image/jpeg',
-                                        data: img.context
-                                    }
-                                });
-                                console.log(`[Chat API]    ✅ Added compressed image: ${img.name}`);
-                            } else {
-                                console.log(`[Chat API]    Compressing ${img.name}...`);
-                                const imageBase64 = await urlToFile(img.url, img.name || 'image.jpg', img.mimeType || 'image/jpeg')
-                                    .then(fileToBase64);
-                                const compressedImage = await compressImage(imageBase64);
-                                messageParts.push({
-                                    inline_data: {
-                                        mime_type: img.mimeType || 'image/jpeg',
-                                        data: compressedImage
-                                    }
-                                });
-                                console.log(`[Chat API]    ✅ Added compressed image: ${img.name}`);
-                            }
-                            console.log(`[Chat API]    ✅ Added historical image: ${img.name}`);
-                        } catch (error) {
-                            console.error(`[Chat API]    ❌ Failed to load image ${img.name}:`, error);
+                    try {
+                        if (img.isCompressed) {
+                            messageParts.push({
+                                inline_data: {
+                                    mime_type: img.mimeType || 'image/jpeg',
+                                    data: img.context
+                                }
+                            });
+                            console.log(`[Chat API]    ✅ Added compressed image: ${img.name}`);
+                        } else {
+                            console.log(`[Chat API]    Compressing ${img.name}...`);
+                            const imageBase64 = await urlToFile(img.url, img.name || 'image.jpg', img.mimeType || 'image/jpeg')
+                                .then(fileToBase64);
+                            const compressedImage = await compressImage(imageBase64);
+                            messageParts.push({
+                                inline_data: {
+                                    mime_type: img.mimeType || 'image/jpeg',
+                                    data: compressedImage
+                                }
+                            });
+                            console.log(`[Chat API]    ✅ Added compressed image: ${img.name}`);
                         }
+                        console.log(`[Chat API]    ✅ Added historical image: ${img.name}`);
+                    } catch (error) {
+                        console.error(`[Chat API]    ❌ Failed to load image ${img.name}:`, error);
+                    }
                 }
             }
 
@@ -587,9 +588,6 @@ export async function DELETE(request: NextRequest) {
 // 服务器端图片压缩函数 - 使用 Sharp 进行压缩
 async function compressImage(imageBase64: string): Promise<string> {
     try {
-        // 动态导入 sharp（服务器端库）
-        const sharp = (await import('sharp')).default;
-
         // 移除 data URL 前缀（如果有的话，如 "data:image/jpeg;base64,"）
         const base64Content = imageBase64.includes(',')
             ? imageBase64.split(',')[1]
@@ -599,7 +597,7 @@ async function compressImage(imageBase64: string): Promise<string> {
         const imageBuffer = Buffer.from(base64Content, 'base64');
 
         // 使用 Sharp 压缩图片
-        // 配置：最大尺寸 1024x1024，质量 80%，JPEG 格式
+        // 配置：最大尺寸 512x512，质量 80%，JPEG 格式
         let compressedBuffer = await sharp(imageBuffer)
             .resize(512, 512, {
                 fit: 'inside',
@@ -630,6 +628,7 @@ async function compressImage(imageBase64: string): Promise<string> {
     } catch (error) {
         console.error('[compressImage] Compression failed:', error);
         // 如果压缩失败，返回原始 base64（移除 data URL 前缀）
+        // 这样即使压缩失败，API 仍然可以工作
         return imageBase64.includes(',')
             ? imageBase64.split(',')[1]
             : imageBase64;
