@@ -333,6 +333,10 @@ async function handleInitialPurchase(webhookData: RevenueCatWebhookData) {
             subscription_credits_reset_date: nextResetDate.toISOString(),
         })
         .eq('user_id', userId);
+        supabase.from('action_history').insert({
+            user_id: userId,
+            action:  `Webhook: ${webhookData.event.type}`,
+        }).select().single();
 }
 
 /**
@@ -343,7 +347,10 @@ async function handleRenewal(webhookData: any) {
     const userId = await getUserId(webhookData);
     const { data: user_credits } = await supabase.from('user_credits').select('subscription_credits_monthly,subscription_credits_used').eq('user_id', userId).single();
     console.log("user_credits:", user_credits);
-
+    supabase.from('action_history').insert({
+        user_id: userId,
+        action:  `Webhook: ${webhookData.event.type}`,
+    }).select().single();
     // 1. 扣除用户剩余积分
     if (user_credits?.subscription_credits_monthly > 0 && 1000 - (user_credits?.subscription_credits_used || 0) > 0) {
         const result = await supabase.rpc('use_credits', {
@@ -397,6 +404,12 @@ async function handleCancellation(webhookData: any) {
     //     throw new Error("Error canceling subscription credits:" + result.error.message);
     // }
     // return result.data;
+    const userId = await getUserId(webhookData);
+    supabase.from('action_history').insert({
+        user_id: userId,
+        action:  `Webhook: ${webhookData.event.type} - ${webhookData.event.cancel_reason}`,
+    }).select().single();
+
     if (webhookData.event.cancel_reason === "CUSTOMER_SUPPORT") {
         handleSubscriptionExpired(webhookData);
     }
@@ -407,7 +420,11 @@ async function handleCancellation(webhookData: any) {
  */
 async function handleUncancellation(webhookData: any) {
     console.log("✅ Handling uncancellation...");
-
+    const userId = await getUserId(webhookData);
+    supabase.from('action_history').insert({
+        user_id: userId,
+        action:  `Webhook: ${webhookData.event.type}`,
+    }).select().single();
 }
 
 /**
@@ -438,6 +455,12 @@ async function handleSubscriptionExpired(webhookData: any) {
             subscription_credits_reset_date: null,
         }).eq('user_id', userId);
     }
+
+    supabase.from('action_history').insert({
+        user_id: userId,
+        action:  `Webhook: ${webhookData.event.type}`,
+    }).select().single();
+    
 }
 
 /**
@@ -445,6 +468,10 @@ async function handleSubscriptionExpired(webhookData: any) {
  */
 async function handleBillingIssue(webhookData: any) {
     console.log("💳 Handling billing issue...");
+        supabase.from('action_history').insert({
+        user_id: await getUserId(webhookData),
+        action:  `Webhook: ${webhookData.event.type}`,
+    }).select().single();
 
     const subscription = await parseSubscriptionData(webhookData);
     if (!subscription) {
@@ -476,6 +503,10 @@ async function handleBillingIssue(webhookData: any) {
  */
 async function handleProductChange(webhookData: any) {
     console.log("🔄 Handling product change...");
+    supabase.from('action_history').insert({
+        user_id: await getUserId(webhookData),
+        action:  `Webhook: ${webhookData.event.type}`,
+    }).select().single();
 
     const subscription = await parseSubscriptionData(webhookData);
     if (!subscription) {
@@ -510,6 +541,10 @@ async function handleProductChange(webhookData: any) {
  */
 async function handleNonRenewingPurchase(webhookData: any) {
     console.log("🛍️ Handling non-renewing purchase...");
+    supabase.from('action_history').insert({
+        user_id: await getUserId(webhookData),
+        action:  `Webhook: ${webhookData.event.type}`,
+    }).select().single();
 
     const subscription = await parseSubscriptionData(webhookData);
     if (!subscription) {

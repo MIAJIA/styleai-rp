@@ -6,6 +6,8 @@ import { fileToBase64, urlToFile } from '@/lib/utils';
 import { checkAndIncrementLimit } from '@/lib/apple/checkLimit';
 
 interface ImageInfo {
+    isCompressed?: boolean;
+    context?: string;
     url: string;
     type: 'uploaded' | 'generated'; // 区分用户上传和AI生成的图片
     mimeType?: string;
@@ -172,7 +174,7 @@ export async function POST(request: NextRequest) {
 
     try {
         const body: ChatRequest = await request.json();
-        const { userId, message, imageUrl, sessionId, bodyShape, skinTone:skincolor, bodySize, stylePreferences } = body;
+        const { userId, message, imageUrl, sessionId, bodyShape, skinTone: skincolor, bodySize, stylePreferences } = body;
 
         console.log(`[Chat API] Processing chat request for user: ${userId}`);
         console.log(`[Chat API] User message: ${message}`);
@@ -302,15 +304,25 @@ Your response should include BOTH text description AND generated images.`;
                     // 只包含用户上传的图片作为上下文，不包含AI生成的图片
                     if (img.type === 'uploaded') {
                         try {
-                            console.log(`[Chat API]    Converting ${img.name} to base64...`);
-                            const imageBase64 = await urlToFile(img.url, img.name || 'image.jpg', img.mimeType || 'image/jpeg')
-                                .then(fileToBase64);
-                            messageParts.push({
-                                inline_data: {
-                                    mime_type: img.mimeType || 'image/jpeg',
-                                    data: imageBase64
-                                }
-                            });
+                            if (img.isCompressed) {
+                                messageParts.push({
+                                    inline_data: {
+                                        mime_type: img.mimeType || 'image/jpeg',
+                                        data: img.context
+                                    }
+                                });
+                            } else {
+                                console.log(`[Chat API]    Compressing ${img.name}...`);
+                                const imageBase64 = await urlToFile(img.url, img.name || 'image.jpg', img.mimeType || 'image/jpeg')
+                                    .then(fileToBase64);
+                                const compressedImage = await compressImage(imageBase64);
+                                messageParts.push({
+                                    inline_data: {
+                                        mime_type: img.mimeType || 'image/jpeg',
+                                        data: compressedImage
+                                    }
+                                });
+                            }
                             console.log(`[Chat API]    ✅ Added historical image: ${img.name}`);
                         } catch (error) {
                             console.error(`[Chat API]    ❌ Failed to load image ${img.name}:`, error);
@@ -351,14 +363,14 @@ Your response should include BOTH text description AND generated images.`;
         // });
         // // Call Gemini API
 
-        //  禁止生成图片，在一般的情况
-        if (messages.length < 2) {
-            messages.push({
-                role: 'system',
-                parts: [{ text: 'Don\'t generate any images. Just provide text response.' }]
-            });
-            console.log(`[Chat API] 🔞 No historical messages, adding system prompt to disable image generation`);
-        }
+        // //  禁止生成图片，在一般的情况
+        // if (imageUrl && imageUrl.length < 2) {
+        //     messages.push({
+        //         role: 'system',
+        //         parts: [{ text: 'Don\'t generate any images. Just provide text response.' }]
+        //     });
+        //     console.log(`[Chat API] 🔞 No historical messages, adding system prompt to disable image generation`);
+        // }
 
         const aiResponse = await generateChatCompletionWithGemini(userId, {
             messages: messages,
@@ -389,14 +401,33 @@ Your response should include BOTH text description AND generated images.`;
         try {
             // 尝试从响应中提取图片URL（如果AI响应包含图片链接）
             const foundUrls = aiResponse.images;
-            if (foundUrls) {
-                foundUrls.forEach((url, index) => {
-                    generatedImages.push({
-                        url: url,
-                        type: 'generated',
-                        name: `Generated Image ${index + 1}`,
-                    });
-                });
+            if (foundUrls && foundUrls.length > 0) {
+                // 使用 Promise.all 并行处理所有图片，而不是 forEach
+                await Promise.all(
+                    foundUrls.map(async (url, index) => {
+                        try {
+                            const imageBase64 = await urlToFile(url, `Generated Image ${index + 1}`, 'image/jpeg')
+                                .then(fileToBase64);
+                            const compressedImage = await compressImage(imageBase64);
+                            console.log(`[Chat API] Compressed generated image ${index + 1} size: ${compressedImage.length} chars`);
+                            generatedImages.push({
+                                isCompressed: true,
+                                context: compressedImage,
+                                url: url,
+                                type: 'generated',
+                                name: `Generated Image ${index + 1}`,
+                            });
+                        } catch (error) {
+                            console.error(`[Chat API] Failed to compress generated image ${index + 1}:`, error);
+                            // 即使压缩失败，也添加图片信息
+                            generatedImages.push({
+                                url: url,
+                                type: 'generated',
+                                name: `Generated Image ${index + 1}`,
+                            });
+                        }
+                    })
+                );
             }
         } catch (error) {
             console.error('[Chat API] Error extracting generated images:', error);
@@ -553,3 +584,55 @@ export async function DELETE(request: NextRequest) {
         }, { status: 500 });
     }
 }
+// 服务器端图片压缩函数 - 使用 Sharp 进行压缩
+async function compressImage(imageBase64: string): Promise<string> {
+    try {
+        // 动态导入 sharp（服务器端库）
+        const sharp = (await import('sharp')).default;
+
+        // 移除 data URL 前缀（如果有的话，如 "data:image/jpeg;base64,"）
+        const base64Content = imageBase64.includes(',')
+            ? imageBase64.split(',')[1]
+            : imageBase64;
+
+        // 将 base64 转换为 Buffer
+        const imageBuffer = Buffer.from(base64Content, 'base64');
+
+        // 使用 Sharp 压缩图片
+        // 配置：最大尺寸 1024x1024，质量 80%，JPEG 格式
+        let compressedBuffer = await sharp(imageBuffer)
+            .resize(512, 512, {
+                fit: 'inside',
+                withoutEnlargement: true, // 不放大图片
+            })
+            .jpeg({ quality: 80 })
+            .toBuffer();
+
+        // 如果仍然太大（> 200KB），逐步降低质量
+        let currentQuality = 80;
+        const maxSizeKB = 200;
+        while (compressedBuffer.length / 1024 > maxSizeKB && currentQuality > 40) {
+            currentQuality -= 10;
+            compressedBuffer = await sharp(imageBuffer)
+                .resize(512, 512, {
+                    fit: 'inside',
+                    withoutEnlargement: true,
+                })
+                .jpeg({ quality: currentQuality })
+                .toBuffer();
+        }
+
+        // 转换回 base64 字符串
+        const compressedBase64 = compressedBuffer.toString('base64');
+        console.log(`[compressImage] Compressed: ${(imageBuffer.length / 1024).toFixed(2)}KB -> ${(compressedBuffer.length / 1024).toFixed(2)}KB`);
+
+        return compressedBase64;
+    } catch (error) {
+        console.error('[compressImage] Compression failed:', error);
+        // 如果压缩失败，返回原始 base64（移除 data URL 前缀）
+        return imageBase64.includes(',')
+            ? imageBase64.split(',')[1]
+            : imageBase64;
+    }
+}
+
