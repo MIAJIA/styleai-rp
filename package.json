@@ -96,7 +96,6 @@
     "typescript": "^5"
   },
   "engines": {
-    "node": "18.x",
-    "pnpm": "10.12.3"
+    "node": "18.x"
   }
 }
