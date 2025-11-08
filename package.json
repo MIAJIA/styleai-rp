@@ -13,8 +13,8 @@
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
     "@langchain/community": "^0.3.47",
-    "@langchain/core": "latest",
-    "@langchain/openai": "latest",
+    "@langchain/core": "^0.3.60",
+    "@langchain/openai": "^0.3.8",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
     "@radix-ui/react-aspect-ratio": "latest",
@@ -79,7 +79,8 @@
     "vaul": "latest",
     "ws": "latest",
     "zod": "^3.24.1",
-    "zod-to-json-schema": "^3.24.6"
+    "zod-to-json-schema": "^3.24.6",
+    "sharp": "^0.34.2"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
@@ -90,13 +91,11 @@
     "dotenv-cli": "^8.0.0",
     "postcss": "^8.5",
     "prettier": "^3.5.3",
-    "sharp": "^0.34.2",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.3",
     "typescript": "^5"
   },
   "engines": {
-    "node": "18.x",
-    "pnpm": "10.12.3"
+    "node": "18.x"
   }
 }
