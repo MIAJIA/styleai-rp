@@ -13,8 +13,8 @@
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
     "@langchain/community": "^0.3.47",
-    "@langchain/core": "latest",
-    "@langchain/openai": "latest",
+    "@langchain/core": "^0.3.60",
+    "@langchain/openai": "^0.3.8",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
     "@radix-ui/react-aspect-ratio": "latest",
