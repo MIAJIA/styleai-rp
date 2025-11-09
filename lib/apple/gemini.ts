@@ -164,7 +164,7 @@ export async function generateChatCompletionWithGemini(userId: string, params: G
     const imageData = responseImages[i];
     const base64Data = imageData.split(',')[1]; // Remove data:image/...;base64, prefix
     const buffer = Buffer.from(base64Data, 'base64');
-    const fileName = `gemini_${Date.now()}_${i}.png`;
+    const fileName = `Stylai_look_${Date.now()}_${i}.png`;
     console.log(`🤖 [GEMINI_SERVICE] 💾 Image file name: app/users/${userId}/${fileName}`);
     try {
       const blob = await put(`app/users/${userId}/${fileName}`, buffer, {

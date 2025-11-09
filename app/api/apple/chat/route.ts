@@ -42,58 +42,6 @@ interface ChatRequest {
     stylePreferences?: string;
 }
 
-// Build system prompt with JOB context
-function buildSystemPromptWithJobContext(job: Job): string {
-    const { input, suggestions } = job;
-    const { userProfile, occasion, generationMode, customPrompt, stylePrompt } = input;
-
-    let contextPrompt = `You are a professional fashion consultant AI assistant. The current conversation is related to a fashion styling task. Here is the task context information:
-
-## Task Basic Information
-- Occasion: ${occasion}
-- Generation Mode: ${generationMode}
-- Custom Requirements: ${customPrompt || 'None'}
-- Style Prompt: ${stylePrompt || 'None'}
-
-## User Profile Information
-- Body Type: ${userProfile?.bodyType || 'Not provided'}
-- Skin Tone: ${userProfile?.skinTone || 'Not provided'}
-- Body Structure: ${userProfile?.bodyStructure || 'Not provided'}
-- Face Shape: ${userProfile?.faceShape || 'Not provided'}
-- Style Preferences: ${userProfile?.stylePreferences?.join(', ') || 'Not provided'}
-
-## Generated Style Suggestions
-${suggestions.length > 0 ? suggestions.map((suggestion, index) => {
-        const outfit = suggestion.styleSuggestion?.outfit_suggestion;
-        return `Suggestion ${index + 1}: ${outfit?.outfit_title || 'No title'}
-- Styling Description: ${outfit?.explanation || 'No description'}
-- Status: ${suggestion.status}`;
-    }).join('\n') : 'No style suggestions yet'}
-
-## Your Role
-Based on the above context information, please provide professional fashion advice and styling guidance to users. You can:
-1. Analyze current style suggestions
-2. Provide personalized styling advice
-3. Answer questions about fashion and styling
-4. Adjust styling plans according to user needs
-
-Please communicate with users in English with a friendly and professional tone, and provide practical and specific advice.`;
-
-    return contextPrompt;
-}
-
-// Get JOB information
-async function getJobContext(jobId: string): Promise<Job | null> {
-    try {
-        const job = await kv.get(jobId) as Job;
-        return job;
-    } catch (error) {
-        console.error('[Chat API] Error fetching job context:', error);
-        return null;
-    }
-}
-
-// Save chat history (optional)
 async function saveChatMessage(sessionId: string, message: ChatMessage): Promise<void> {
     try {
         const messageKey = `chat:message:${sessionId}:${Date.now()}`;
@@ -150,26 +98,6 @@ async function getSessionImages(sessionId: string): Promise<ImageInfo[]> {
     }
 }
 
-// 统计会话图片信息
-async function getSessionImageStats(sessionId: string): Promise<{
-    total: number;
-    uploaded: number;
-    generated: number;
-}> {
-    try {
-        const images = await getSessionImages(sessionId);
-        return {
-            total: images.length,
-            uploaded: images.filter(img => img.type === 'uploaded').length,
-            generated: images.filter(img => img.type === 'generated').length
-        };
-    } catch (error) {
-        console.error('[Chat API] Error getting image stats:', error);
-        return { total: 0, uploaded: 0, generated: 0 };
-    }
-}
-
-
 export async function POST(request: NextRequest) {
 
 
@@ -184,19 +112,7 @@ export async function POST(request: NextRequest) {
         console.log(`[Chat API] Body Size: ${bodySize}`);
         console.log(`[Chat API] Style Preference: ${stylePreferences}`);
 
-        // 检测用户是否要求生成图片
-        const imageGenerationKeywords = [
-            '生成', 'generate', '创建', 'create', '设计', 'design',
-            '图片', 'image', '照片', 'photo', '搭配', 'outfit',
-            '造型', 'look', '穿搭', 'style', '展示', 'show', '再次'
-        ];
-        const requiresImageGeneration = imageGenerationKeywords.some(keyword =>
-            message.toLowerCase().includes(keyword.toLowerCase())
-        );
 
-        console.log(`[Chat API] 🎨 Image generation required: ${requiresImageGeneration}`);
-
-        // Get JOB context information
         let systemPrompt = `You are Styla, a fashion stylist and personal image consultant. Your goal is to help the user with outfit ideas, styling logic, color pairing, occasion dressing, shopping guidance, and fashion education. 
 You have knowledge of silhouettes, color theory, fabrics, proportions, layering, hairstyle, accessories, seasonal trends, and occasion-based outfits. Avoid negative judgment about body, age, or skin. Always respond in a friendly, concise, and encouraging tone. 
 The user has ${bodyShape} body shape, ${skincolor} skin, ${bodySize} body-size, prefers ${stylePreferences} style. When asked for outfit advice, consider user’s characteristics and give personalized feedback.
@@ -211,21 +127,6 @@ For previews: generate high-quality fashion-editorial full-body images with cons
 Avoid unrealistic body modification or sexualization by default.
 If the user chats casually, respond naturally while adding helpful style insight when relevant.
 Keep your response short and concise. End each response with 1–2 short follow-up questions to continue the conversation. ;`;
-
-        // 如果需要生成图片，增强系统提示
-        if (requiresImageGeneration) {
-            systemPrompt = `You are Styla, a professional AI fashion consultant and visual designer. 
-When users ask you to generate, create, or show outfit images, you MUST generate visual previews using image generation capabilities.
-
-IMPORTANT: For ANY request to generate outfits or styling images:
-1. Generate 1 high-quality fashion photography images showing the complete outfit
-2. Each image should be a full-body fashion editorial shot with professional lighting
-3. Use a stunning, cinematic background that matches the occasion
-4. Keep the styling modern, trendy, and visually appealing
-5. After generating images, provide a brief text description
-
-Your response should include BOTH text description AND generated images.`;
-        }
 
         // Get chat history
         const chatHistory = await getChatHistory(sessionId || '');
@@ -271,7 +172,6 @@ Your response should include BOTH text description AND generated images.`;
                 }
             }
         }
-
 
         // Build message parts: text first, then all images
         const parts: any[] = [...imageParts];
@@ -350,28 +250,6 @@ Your response should include BOTH text description AND generated images.`;
         console.log(`[Chat API] ✅ Built ${messages.length} messages for Gemini (including system prompt)`);
 
         console.log(`[Chat API] Sending request to Gemini with ${messages.length} messages`);
-        // messages.forEach(message => {
-        //     console.log(`[Chat API] Message: ${message.role}`);
-        //     message.parts.forEach(part => {
-        //         if (part.text) {
-        //             console.log(`[Chat API] Part: ${part.text}`);
-        //         }
-        //         if (part.inline_data) {
-        //             console.log(`[Chat API] Part: ${part.inline_data.mime_type} - ${part.inline_data.data} chars`);
-        //         }
-
-        //     });
-        // });
-        // // Call Gemini API
-
-        // //  禁止生成图片，在一般的情况
-        // if (imageUrl && imageUrl.length < 2) {
-        //     messages.push({
-        //         role: 'system',
-        //         parts: [{ text: 'Don\'t generate any images. Just provide text response.' }]
-        //     });
-        //     console.log(`[Chat API] 🔞 No historical messages, adding system prompt to disable image generation`);
-        // }
 
         const aiResponse = await generateChatCompletionWithGemini(userId, {
             messages: messages,
@@ -457,18 +335,6 @@ Your response should include BOTH text description AND generated images.`;
 
         console.log(`[Chat API] 💾 Saving chat messages to history...`);
         console.log(`[Chat API] 💾 User message with ${uploadedImages.length} uploaded image(s):`);
-        // if (uploadedImages.length > 0) {
-        //     uploadedImages.forEach((img, idx) => {
-        //         console.log(`[Chat API]    [${idx + 1}] ${img.name} (${img.type}): ${img.url.substring(0, 80)}...`);
-        //     });
-        // }
-        // console.log(`[Chat API] 💾 Assistant message with ${generatedImages.length} generated image(s):`);
-        // if (generatedImages.length > 0) {
-        //     generatedImages.forEach((img, idx) => {
-        //         console.log(`[Chat API]    [${idx + 1}] ${img.name} (${img.type}): ${img.url.substring(0, 80)}...`);
-        //     });
-        // }
-        // console.log(`[Chat API] 💾 Assistant text: ${assistantMessage.content.substring(0, 100)}...`);
 
         await saveChatMessage(sessionId || '', userMessage);
         await saveChatMessage(sessionId || '', assistantMessage);
@@ -490,101 +356,6 @@ Your response should include BOTH text description AND generated images.`;
     }
 }
 
-// GET - Get chat history with image statistics
-export async function GET(request: NextRequest) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const sessionId = searchParams.get('sessionId');
-        const includeImages = searchParams.get('includeImages') === 'true';
-        const imagesOnly = searchParams.get('imagesOnly') === 'true';
-
-        if (!sessionId) {
-            return NextResponse.json({
-                error: 'sessionId is required'
-            }, { status: 400 });
-        }
-
-        // 如果只需要图片信息
-        if (imagesOnly) {
-            const images = await getSessionImages(sessionId);
-            const stats = await getSessionImageStats(sessionId);
-
-            return NextResponse.json({
-                success: true,
-                images,
-                stats,
-                sessionId
-            });
-        }
-
-        const chatHistory = await getChatHistory(sessionId, 20);
-
-        // 默认包含图片统计
-        const imageStats = await getSessionImageStats(sessionId);
-
-        const response: any = {
-            success: true,
-            messages: chatHistory,
-            sessionId: sessionId,
-            imageStats
-        };
-
-        // 如果需要完整的图片列表
-        if (includeImages) {
-            response.allImages = await getSessionImages(sessionId);
-        }
-
-        return NextResponse.json(response);
-
-    } catch (error) {
-        console.error('[Chat API] Error fetching chat history:', error);
-        return NextResponse.json({
-            success: false,
-            error: 'Failed to fetch chat history'
-        }, { status: 500 });
-    }
-}
-
-// DELETE - Clear chat history
-export async function DELETE(request: NextRequest) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const sessionId = searchParams.get('sessionId');
-
-        if (!sessionId) {
-            return NextResponse.json({
-                error: 'sessionId is required'
-            }, { status: 400 });
-        }
-
-        // Get all message keys
-        const messagesListKey = `chat:messages:${sessionId}`;
-        const messageKeys = await kv.lrange(messagesListKey, 0, -1);
-
-        // Delete all messages
-        if (messageKeys.length > 0) {
-            const deletePromises = messageKeys.map(key => kv.del(key));
-            await Promise.all(deletePromises);
-        }
-
-        // Clear message list
-        await kv.del(messagesListKey);
-
-        console.log(`[Chat API] Chat history cleared for session: ${sessionId}`);
-
-        return NextResponse.json({
-            success: true,
-            message: 'Chat history cleared successfully'
-        });
-
-    } catch (error) {
-        console.error('[Chat API] Error clearing chat history:', error);
-        return NextResponse.json({
-            success: false,
-            error: 'Failed to clear chat history'
-        }, { status: 500 });
-    }
-}
 // 服务器端图片压缩函数 - 使用 Sharp 进行压缩
 async function compressImage(imageBase64: string): Promise<string> {
     try {
