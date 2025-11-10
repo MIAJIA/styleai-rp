@@ -102,12 +102,15 @@ async function getSessionImages(sessionId: string): Promise<ImageInfo[]> {
 export async function POST(request: NextRequest) {
 
 
+    const body: ChatRequest = await request.json();
+    const { userId, message, imageUrl, sessionId, bodyShape, skinTone: skincolor, bodySize, stylePreferences, trycount } = body;
     try {
-        const body: ChatRequest = await request.json();
-        const { userId, message, imageUrl, sessionId, bodyShape, skinTone: skincolor, bodySize, stylePreferences, trycount } = body;
 
         console.log(`[Chat API] Try count: ${trycount}`);
-
+        kv.set(sessionId||"" + "_request", {
+            userId,
+            timestamp: new Date().toISOString()
+        });
         // 提供重试，直接返回有效结果
         const messageKey = `chat:message:${sessionId}:temp_message`;
         if (trycount == 0) {
@@ -116,6 +119,10 @@ export async function POST(request: NextRequest) {
             const tempMessage = await kv.get(messageKey);
             console.log(`[Chat API] have Temp message `);
             if (tempMessage) {
+                kv.set(sessionId||"" + "_temp_message", {
+                    userId,
+                    timestamp: new Date().toISOString()
+                });
                 return NextResponse.json({
                     success: true,
                     message: tempMessage,
@@ -357,7 +364,11 @@ Keep your response short and concise. End each response with 1–2 short follow-
 
         await saveChatMessage(sessionId || '', userMessage);
         await saveChatMessage(sessionId || '', assistantMessage);
-
+        kv.set(sessionId||"" + "_response", {
+            userId,
+            status: "success",
+            timestamp: new Date().toISOString()
+        });
         // Return response
         return NextResponse.json({
             success: true,
@@ -367,6 +378,12 @@ Keep your response short and concise. End each response with 1–2 short follow-
 
     } catch (error) {
         console.error('[Chat API] Error processing chat request:', error);
+        kv.set(sessionId||"" + "_response", {
+            userId,
+            status: "error",
+            error: error ,
+            timestamp: new Date().toISOString()
+        });
         return NextResponse.json({
             success: false,
             error: 'Failed to process chat request',

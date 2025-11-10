@@ -15,13 +15,13 @@ interface ImageGenerationRequest {
 }
 
 export async function POST(request: NextRequest) {
-    const limitCheck = await checkAndIncrementLimit();
-    if (!limitCheck.allowed) {
-        return NextResponse.json({
-            success: false,
-            error: limitCheck.message
-        }, { status: 429 });
-    }
+    // const limitCheck = await checkAndIncrementLimit();
+    // if (!limitCheck.allowed) {
+    //     return NextResponse.json({
+    //         success: false,
+    //         error: limitCheck.message
+    //     }, { status: 429 });
+    // }
 
     try {
         const body: ImageGenerationRequest = await request.json();
@@ -33,7 +33,10 @@ export async function POST(request: NextRequest) {
             maxTokens = 2000,
             temperature = 0.8
         } = body;
-
+        kv.set(requestId + "_request", {
+            userId,
+            timestamp: new Date().toISOString()
+        });
         console.log(`[NewGen API] Request ID: ${requestId}`);
         console.log(`[NewGen API] User ID: ${userId}`);
         console.log(`[NewGen API] Image URL: ${imageUrl.length}...`);
@@ -92,7 +95,7 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        kv.expire(requestId, 86400 * 7); // 86400秒 = 24小时
+        // kv.expire(requestId, 86400 * 7); // 86400秒 = 24小时
 
         return NextResponse.json({
             success: true,
