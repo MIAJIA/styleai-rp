@@ -40,6 +40,7 @@ interface ChatRequest {
     skinTone?: string;
     bodySize?: string;
     stylePreferences?: string;
+    trycount: number;
 }
 
 async function saveChatMessage(sessionId: string, message: ChatMessage): Promise<void> {
@@ -103,7 +104,25 @@ export async function POST(request: NextRequest) {
 
     try {
         const body: ChatRequest = await request.json();
-        const { userId, message, imageUrl, sessionId, bodyShape, skinTone: skincolor, bodySize, stylePreferences } = body;
+        const { userId, message, imageUrl, sessionId, bodyShape, skinTone: skincolor, bodySize, stylePreferences, trycount } = body;
+
+        console.log(`[Chat API] Try count: ${trycount}`);
+
+        // 提供重试，直接返回有效结果
+        const messageKey = `chat:message:${sessionId}:temp_message`;
+        if (trycount == 0) {
+            await kv.del(messageKey);
+        } else {
+            const tempMessage = await kv.get(messageKey);
+            console.log(`[Chat API] have Temp message `);
+            if (tempMessage) {
+                return NextResponse.json({
+                    success: true,
+                    message: tempMessage,
+                    sessionId: sessionId,
+                });
+            }
+        }
 
         console.log(`[Chat API] Processing chat request for user: ${userId}`);
         console.log(`[Chat API] User message: ${message}`);
