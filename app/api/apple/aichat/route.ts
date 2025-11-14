@@ -4,6 +4,13 @@ import { Job } from '@/lib/types';
 import { generateChatCompletionWithGemini, GeminiChatMessage } from '@/lib/apple/gemini';
 import { fileToBase64, urlToFile } from '@/lib/utils';
 import { checkAndIncrementLimit } from '@/lib/apple/checkLimit';
+import { fetchWithTimeout } from '@/lib/ai/utils';
+
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_API_VERSION = process.env.GEMINI_API_VERSION || 'v1beta';
+const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL;
+
 
 
 
@@ -22,40 +29,42 @@ interface TestChatRequest {
 export async function POST(request: NextRequest) {
 
     console.log('[AI Chat API] ===== REQUEST RECEIVED =====');
-    
+
     try {
         console.log('[AI Chat API] Parsing request body...');
-        const body: TestChatRequest = await request.json();
-        const { userId,messages,sessionId } = body;
-
-        console.log('[AI Chat API] Request parsed successfully');
-        console.log(`[AI Chat API] UserId: ${userId}`);
-        console.log(`[AI Chat API] SessionId: ${sessionId}`);
-        console.log(`[AI Chat API] Messages count: ${messages?.length || 0}`);
-        console.log(`[AI Chat API] Sending request to Gemini with ${messages.length} messages`);
-
-        messages.forEach(message => {
-            console.log(`[AI Chat API] Message: ${message.role} - ${message.parts.map(part => part.text).join(' ')}`);
-        });
-        
+        const body = await request.json();
         // Call Gemini API
-        console.log('[AI Chat API] Calling Gemini API...');
-        const aiResponse = await generateChatCompletionWithGemini(userId, {
-            messages: messages,
-            maxOutputTokens: 1000,
-            temperature: 0.7,
+        // console.log('[AI Chat API] Calling Gemini API...');
+        // const aiResponse = await generateChatCompletionWithGemini(userId, {
+        //     messages: messages,
+        //     maxOutputTokens: 1000,
+        //     temperature: 0.7,
+        // });
+
+
+        const endpoint = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+        console.log('🤖 [GEMINI_CHAT] 🌐 API Endpoint:', endpoint.replace(GEMINI_API_KEY, '[REDACTED_KEY]'));
+
+        const resp = await fetchWithTimeout(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+            timeout: 30000,
         });
 
-        console.log('[AI Chat API] Gemini response received');
-        console.log('[AI Chat API] Response text length:', aiResponse.text?.length || 0);
-        console.log('[AI Chat API] Response images count:', aiResponse.images?.length || 0);
+        if (!resp.ok) {
+            const text = await resp.text();
+            console.error('🤖 [GEMINI_CHAT] ❌ API Error:', resp.status, text);
+            throw new Error(`Gemini Chat API error: ${resp.status} ${text}`);
+        }
+
+        // const data = await resp.json();
+
 
         // Return response
-        return NextResponse.json({
-            success: true,
-            message: aiResponse,
-            sessionId: sessionId,
-        });
+        return resp
 
     } catch (error) {
         console.error('[AI Chat API] ❌ ERROR:', error);
