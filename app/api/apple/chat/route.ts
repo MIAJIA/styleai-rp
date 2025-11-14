@@ -45,15 +45,20 @@ interface ChatRequest {
 
 async function saveChatMessage(sessionId: string, message: ChatMessage): Promise<void> {
     try {
-        const messageKey = `chat:message:${sessionId}:${Date.now()}`;
+        // 使用更精确的时间戳 + 随机数确保唯一性
+        const timestamp = Date.now();
+        const randomSuffix = Math.random().toString(36).substring(2, 9);
+        const messageKey = `chat:message:${sessionId}:${timestamp}:${randomSuffix}`;
+        
         await kv.set(messageKey, message);
 
         // Add to session message list
         const messagesListKey = `chat:messages:${sessionId}`;
         await kv.lpush(messagesListKey, messageKey);
 
-        // Limit history length
-        await kv.ltrim(messagesListKey, 0, 99);
+        // Limit history length (保留最新的 99 条消息)
+        // ltrim 保留索引 0 到 98 的元素（共 99 个）
+        await kv.ltrim(messagesListKey, 0, 98);
     } catch (error) {
         console.error('[Chat API] Error saving chat message:', error);
     }
@@ -63,17 +68,28 @@ async function saveChatMessage(sessionId: string, message: ChatMessage): Promise
 async function getChatHistory(sessionId: string, limit: number = 10): Promise<ChatMessage[]> {
     try {
         const messagesListKey = `chat:messages:${sessionId}`;
+        // 获取最新的 limit 条消息的 key（lrange 从 0 开始，获取最新的 limit 条）
         const messageKeys = await kv.lrange(messagesListKey, 0, limit - 1);
 
+        if (!messageKeys || messageKeys.length === 0) {
+            return [];
+        }
+
         const messages: ChatMessage[] = [];
-        for (const key of messageKeys) {
-            const message = await kv.get(key) as ChatMessage;
+        // 并行获取所有消息以提高性能
+        const messagePromises = messageKeys.map(key => kv.get(key) as Promise<ChatMessage | null>);
+        const messageResults = await Promise.all(messagePromises);
+
+        // 过滤掉 null 值并按时间戳排序（最新的在前）
+        for (const message of messageResults) {
             if (message) {
                 messages.push(message);
             }
         }
 
-        return messages.reverse(); // Sort in chronological order
+        // 由于 lpush 是最新的在列表前面，需要反转顺序以按时间顺序返回（旧的在前）
+        // 这样构建对话上下文时，消息会按正确的时间顺序排列
+        return messages.reverse();
     } catch (error) {
         console.error('[Chat API] Error fetching chat history:', error);
         return [];
