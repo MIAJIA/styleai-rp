@@ -1,5 +1,6 @@
 import { checkAndIncrementLimit } from "@/lib/apple/checkLimit";
 import { GeminiChatMessage, generateChatCompletionWithGemini, generateStyledImagesWithGemini } from "@/lib/apple/gemini";
+import { supabase } from "@/lib/supabase";
 import { fileToBase64, sleep, urlToFile } from "@/lib/utils";
 import { kv } from "@vercel/kv";
 import { NextRequest, NextResponse } from 'next/server';
@@ -94,7 +95,22 @@ export async function POST(request: NextRequest) {
                 timestamp: new Date().toISOString()
             }
         });
-
+        // 
+        // if (generatedImages.images?.[0] && requestId) {
+        //     const { error, data } = await supabase.from('user_images').update({
+        //         image_url: generatedImages.images?.[0] || '',
+        //         metadata: {
+        //             server: "nextjs",
+        //             state: 'success',
+        //         },
+        //         updated_at: new Date().toLocaleString()
+        //     }).eq('request_id', requestId).select();
+        //     if (error) {
+        //         console.error('[NewGen API] Error updating user images:', error);
+        //     } else {
+        //         console.log('[NewGen API] User images updated successfully:', data);
+        //     }
+        // }
         // kv.expire(requestId, 86400 * 7); // 86400秒 = 24小时
 
         return NextResponse.json({
