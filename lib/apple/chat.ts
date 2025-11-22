@@ -68,24 +68,35 @@ export async function getChatHistory(sessionId: string, limit: number = 10): Pro
         const messageKeys = await kv.lrange(messagesListKey, 0, limit - 1);
 
         if (!messageKeys || messageKeys.length === 0) {
+            console.log(`[getChatHistory] No messages found for sessionId: ${sessionId}`);
             return [];
         }
+
+        console.log(`[getChatHistory] Found ${messageKeys.length} message keys for sessionId: ${sessionId}`);
 
         const messages: ChatMessage[] = [];
         // 并行获取所有消息以提高性能
         const messagePromises = messageKeys.map(key => kv.get(key) as Promise<ChatMessage | null>);
         const messageResults = await Promise.all(messagePromises);
 
-        // 过滤掉 null 值并按时间戳排序（最新的在前）
+        // 过滤掉 null 值并按时间戳排序
         for (const message of messageResults) {
             if (message) {
                 messages.push(message);
+            } else {
+                console.warn(`[getChatHistory] Message not found for key, may have been deleted`);
             }
         }
 
-        // 由于 lpush 是最新的在列表前面，需要反转顺序以按时间顺序返回（旧的在前）
-        // 这样构建对话上下文时，消息会按正确的时间顺序排列
-        return messages.reverse();
+        // 按时间戳排序（旧的在前，新的在后），确保对话顺序正确
+        messages.sort((a, b) => {
+            const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+            return timeA - timeB;
+        });
+
+        console.log(`[getChatHistory] Returning ${messages.length} messages in chronological order`);
+        return messages;
     } catch (error) {
         console.error('[Chat API] Error fetching chat history:', error);
         return [];
