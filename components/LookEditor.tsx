@@ -49,8 +49,18 @@ export const LookEditor: React.FC<LookEditorProps> = ({ look, lookbookTitle, onU
     setLoadingMessage('Composing your fashion flatlay...');
     try {
       const b64s = look.uploadedImages.map(img => img.base64);
-      const result = await generateCollage(b64s);
-      updateLook({ collageImage: result, step: AppStep.COLLAGE });
+      const result = await fetch('/api/apple/web/collage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ urls: b64s }),
+      });
+      if (!result.ok) {
+        throw new Error('Failed to generate collage');
+      }
+      const data = await result.json();
+      updateLook({ collageImage: data.url, step: AppStep.COLLAGE });
     } catch (e: any) {
       handleAPIError(e, 'Collage generation');
     } finally {
@@ -92,12 +102,18 @@ export const LookEditor: React.FC<LookEditorProps> = ({ look, lookbookTitle, onU
     }
 
     try {
-      const result = await generateVirtualTryOn(
-        look.collageImage, 
-        modelPrompt, 
-        scenePrompt
-      );
-      updateLook({ lookImage: result, step: AppStep.TRY_ON });
+      const result = await fetch('/api/apple/web/tryon', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ collage: look.collageImage, modelPrompt: modelPrompt, scenePrompt: scenePrompt }),
+      });
+      if (!result.ok) {
+        throw new Error('Failed to generate virtual try-on');
+      }
+      const data = await result.json();
+      updateLook({ lookImage: data.url, step: AppStep.TRY_ON });
     } catch (e: any) {
       handleAPIError(e, 'Virtual Try-On');
     } finally {
