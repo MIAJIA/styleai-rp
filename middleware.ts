@@ -24,6 +24,7 @@ const publicRoutes = [
   "/terms.html",
   "/privacy.html",
   "/api/apple",
+  "/gemini",
 ];
 
 const AppAppApiRoutes = [
