@@ -1,3 +1,5 @@
+import { fileToBase64, urlToFile } from "@/lib/ai/utils";
+import { ChatMessage, saveChatMessage } from "@/lib/apple/chat";
 import { checkAndIncrementLimit } from "@/lib/apple/checkLimit";
 import { analyzeImageWithGemini } from "@/lib/apple/gemini";
 import { put } from "@vercel/blob";
@@ -21,6 +23,7 @@ export async function POST(request: NextRequest) {
         const contentType = request.headers.get('content-type') || '';
         const fileName = request.headers.get('file-name') || '';
         const userId = request.headers.get('user-id') || '';
+        const sessionId = request.headers.get('session-id') || '';
         const analysisType = request.headers.get('analysisType') || 'fashion';
         console.log('Content-Type:', contentType);
         console.log('File name from header:', fileName);
@@ -33,7 +36,6 @@ export async function POST(request: NextRequest) {
         // 将buffer转换为base64字符串
         const imageBase64 = buffer.toString('base64');
         console.log('Image converted to base64, length:', imageBase64.length);
-        
         
         // 验证图片数据
         if (!imageBase64 || imageBase64.length < 100) {
@@ -51,6 +53,22 @@ export async function POST(request: NextRequest) {
             access: 'public',
             addRandomSuffix: false
         });
+
+        // const responseImageBase64 = await urlToFile(blob.url, fileName, 'image/jpeg').then(fileToBase64);
+        
+        const chatMessage: ChatMessage = {
+            role: 'assistant',
+            content: analysisResult.texts[0],
+            images: analysisResult.images.map(image => ({
+                url: image,
+                name: fileName,
+                mimeType: 'image/jpeg',
+                type: 'uploaded'
+            })),
+        };
+
+        await saveChatMessage(sessionId, chatMessage);
+
         return NextResponse.json({
             success: true,
             message: analysisResult.texts[0],

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
-import { Job } from '@/lib/types';
-import { generateChatCompletionWithGemini, GeminiChatMessage, GeminiChatResult } from '@/lib/apple/gemini';
-import { fileToBase64, urlToFile } from '@/lib/utils';
-import { checkAndIncrementLimit } from '@/lib/apple/checkLimit';
-import sharp from 'sharp';
-import { saveChatMessage, getChatHistory, ImageInfo, ChatMessage, ChatRequest, compressImage } from '@/lib/apple/chat';
+import { LangChainGeminiChat } from '@/lib/apple/langchain-chat';
+import { saveChatMessage, getChatHistory, ImageInfo, ChatMessage, ChatRequest } from '@/lib/apple/chat';
+
+// 历史消息窗口大小：只保留最近的 N 条消息用于上下文
+// 可以通过环境变量 CHAT_HISTORY_WINDOW 配置，默认值为 10
+const HISTORY_WINDOW_SIZE = 5;
 
 export async function POST(request: NextRequest) {
 
@@ -62,13 +62,10 @@ Avoid unrealistic body modification or sexualization by default.
 If the user chats casually, respond naturally while adding helpful style insight when relevant.
 Keep your response short and concise. End each response with 1–2 short follow-up questions to continue the conversation. ;`;
 
-        // Get chat history (获取所有保存的历史消息，最多99条)
-        const chatHistory = await getChatHistory(sessionId || '', 10);
+        // Initialize LangChain chat handler
+        const langChainChat = new LangChainGeminiChat();
 
-        // Process images
-        const imageParts: any[] = [];
-
-        if (chatHistory.length <= 0) {
+        if ((await getChatHistory(sessionId || '', 1)).length <= 0) {
             // Handle new multi-image format with names and mime types
             if (chatType === 'stylechat' && imageUrl && imageUrl.length > 0) {
                 console.log(`[Chat API] Processing ${imageUrl.length} images (with metadata)...`);
@@ -92,122 +89,23 @@ At the end of each response, suggest the next actions the user might want to tak
             }
         }
 
-        if (imageUrl && imageUrl.length > 1) {
-            for (let i = 0; i < imageUrl.length; i++) {
-                const img = imageUrl[i];
-                if (img.length === 0) {
-                    continue;
-                }
-                const imageName = `Image ${i + 1}`;
-                const mimeType = 'image/jpeg';
-
-                try {
-                    console.log(`[Chat API] Converting ${imageName} (${i + 1}/${imageUrl.length})...`);
-                    const imageBase64 = await urlToFile(img, imageName, mimeType).then(fileToBase64);
-
-                    imageParts.push({
-                        inline_data: {
-                            mime_type: mimeType,
-                            data: imageBase64
-                        }
-                    });
-
-                    console.log(`[Chat API] ✅ ${imageName} converted, size: ${imageBase64?.length} chars`);
-                } catch (error) {
-                    console.error(`[Chat API] ❌ Failed to process ${imageName}:`, error);
-                    // Continue with other images even if one fails
-                }
-            }
-        }
-
-        // Build message parts: text first, then all images
-        const parts: any[] = [...imageParts];
-        parts.push({ text: message });
-
-        console.log(`[Chat API] Message parts: 1 text + ${imageParts.length} image(s)`);
-
-        // Build message array for Gemini with historical images
-        const messages: GeminiChatMessage[] = [
-            {
-                role: 'user',
-                parts: [{ text: systemPrompt }]
-            }
-        ];
-
-        // Add historical conversation WITH images
-        console.log(`[Chat API] 📚 Loading ${chatHistory.length} historical messages...`);
-        for (const msg of chatHistory) {
-            const messageParts: any[] = [];
-
-            // Add text content
-            if (msg.content && msg.content.trim()) {
-                console.log(`[Chat API] 📚 Loading historical message: ${msg.content.length} characters`);
-                messageParts.push({ text: msg.content });
-            }
-
-            // Add images from history (only uploaded images)
-            if (msg.images && msg.images.length > 0) {
-                console.log(`[Chat API] 🖼️ Loading ${msg.images.length} image(s) from history...`);
-                for (const img of msg.images) {
-                    // 只包含用户上传的图片作为上下文，不包含AI生成的图片
-                    try {
-                        if (img.isCompressed) {
-                            messageParts.push({
-                                inline_data: {
-                                    mime_type: img.mimeType || 'image/jpeg',
-                                    data: img.context
-                                }
-                            });
-                            console.log(`[Chat API]    ✅ Added compressed image: ${img.name}`);
-                        } else {
-                            console.log(`[Chat API]    Compressing ${img.name}...`);
-                            const imageBase64 = await urlToFile(img.url, img.name || 'image.jpg', img.mimeType || 'image/jpeg')
-                                .then(fileToBase64);
-                            const compressedImage = await compressImage(imageBase64);
-                            messageParts.push({
-                                inline_data: {
-                                    mime_type: img.mimeType || 'image/jpeg',
-                                    data: compressedImage
-                                }
-                            });
-                            console.log(`[Chat API]    ✅ Added compressed image: ${img.name}`);
-                        }
-                        console.log(`[Chat API]    ✅ Added historical image: ${img.name}`);
-                    } catch (error) {
-                        console.error(`[Chat API]    ❌ Failed to load image ${img.name}:`, error);
-                    }
-                }
-            }
-
-            // Only add message if it has valid parts
-            if (messageParts.length > 0) {
-                messages.push({
-                    role: msg.role === 'assistant' ? 'model' : 'user' as 'user' | 'model',
-                    parts: messageParts
-                });
-            }
-        }
-
-        // Add current user message
-        messages.push({
-            role: 'user',
-            parts: parts
-        });
-
-        console.log(`[Chat API] ✅ Built ${messages.length} messages for Gemini (including system prompt)`);
-
-        console.log(`[Chat API] Sending request to Gemini with ${messages.length} messages`);
-
-        const aiResponse = await generateChatCompletionWithGemini(userId, {
-            messages: messages,
-            maxOutputTokens: 1000,
-            temperature: 0.7,
+        // Use LangChain to process chat with enhanced context and image support
+        console.log(`[Chat API] Using LangChain for enhanced context management...`);
+        console.log(`[Chat API] History window size: ${HISTORY_WINDOW_SIZE} messages`);
+        
+        const aiResponse = await langChainChat.chat({
+            sessionId: sessionId || '',
+            userId: userId,
+            message: message,
+            imageUrls: imageUrl && imageUrl.length > 0 ? imageUrl.filter(url => url.length > 0) : [],
+            systemPrompt: systemPrompt,
+            historyWindow: HISTORY_WINDOW_SIZE, // 使用窗口处理历史消息
         });
 
         console.log(`[Chat API] AI Response text length: ${aiResponse.text?.length || 0}`);
         console.log(`[Chat API] AI Response images: ${aiResponse.images?.length || 0}`);
 
-        // 准备用户上传的图片信息
+        // Prepare user uploaded images info
         const uploadedImages: ImageInfo[] = [];
         if (imageUrl && imageUrl.length > 0) {
             imageUrl.forEach((url, index) => {
@@ -222,41 +120,17 @@ At the end of each response, suggest the next actions the user might want to tak
             });
         }
 
-        // 提取AI生成的图片信息（从响应中解析）
+        // Extract AI generated images from response
         const generatedImages: ImageInfo[] = [];
-        try {
-            // 尝试从响应中提取图片URL（如果AI响应包含图片链接）
-            const foundUrls = aiResponse.images;
-            if (foundUrls && foundUrls.length > 0) {
-                // 使用 Promise.all 并行处理所有图片，而不是 forEach
-                await Promise.all(
-                    foundUrls.map(async (url, index) => {
-                        try {
-                            const imageBase64 = await urlToFile(url, `Generated Image ${index + 1}`, 'image/jpeg')
-                                .then(fileToBase64);
-                            const compressedImage = await compressImage(imageBase64);
-                            console.log(`[Chat API] Compressed generated image ${index + 1} size: ${compressedImage.length} chars`);
-                            generatedImages.push({
-                                isCompressed: true,
-                                context: compressedImage,
-                                url: url,
-                                type: 'generated',
-                                name: `Generated Image ${index + 1}`,
-                            });
-                        } catch (error) {
-                            console.error(`[Chat API] Failed to compress generated image ${index + 1}:`, error);
-                            // 即使压缩失败，也添加图片信息
-                            generatedImages.push({
-                                url: url,
-                                type: 'generated',
-                                name: `Generated Image ${index + 1}`,
-                            });
-                        }
-                    })
-                );
-            }
-        } catch (error) {
-            console.error('[Chat API] Error extracting generated images:', error);
+        if (aiResponse.images && aiResponse.images.length > 0) {
+            // Images are already processed and saved by LangChain handler
+            aiResponse.images.forEach((url, index) => {
+                generatedImages.push({
+                    url: url,
+                    type: 'generated',
+                    name: `Generated Image ${index + 1}`,
+                });
+            });
         }
 
         // Save chat history with image information
@@ -290,10 +164,14 @@ At the end of each response, suggest the next actions the user might want to tak
             status: "success",
             timestamp: new Date().toISOString()
         });
-        // Return response
+        // Return response in expected format
         return NextResponse.json({
             success: true,
-            message: aiResponse,
+            message: {
+                text: aiResponse.text,
+                images: aiResponse.images || [],
+                metadata: aiResponse.metadata
+            },
             sessionId: sessionId,
         });
 
