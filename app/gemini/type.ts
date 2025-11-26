@@ -25,6 +25,18 @@ export interface ModelOption {
 
 export type AspectRatio = '1:1' | '3:4' | '4:3' | '16:9' | '9:16';
 
+// 数据库 style_templates 表对应的类型
+export interface StyleTemplate {
+    id: string; // UUID
+    name: string; // VARCHAR(100) NOT NULL
+    urls: string; // TEXT NOT NULL (JSON 字符串，包含所有图片URL)
+    post: string; // TEXT NOT NULL
+    prompt: string; // TEXT NOT NULL
+    order: number; // INTEGER DEFAULT 0
+    created_at: string; // TIMESTAMPTZ
+}
+
+// Look 接口（用于前端显示，基于数据库数据）
 export interface Look {
     id: string;
     name: string;
@@ -43,15 +55,33 @@ export interface Look {
     customScenePrompt?: string; // New field for custom scene description
 
     lookImage: string | null;
+
+    // 数据库字段
+    urls?: string; // 对应数据库的 urls 字段
+    post?: string; // 对应数据库的 post 字段
+    prompt?: string; // 对应数据库的 prompt 字段
+    order?: number; // 对应数据库的 order 字段
 }
 
+// 数据库 for_you 表对应的类型
+export interface ForYou {
+    id: string; // UUID
+    name: string; // VARCHAR(100) NOT NULL UNIQUE
+    url: string; // TEXT NOT NULL
+    created_at: string; // TIMESTAMPTZ
+    updated_at: string; // TIMESTAMPTZ
+}
+
+// Lookbook 接口（用于前端显示，基于数据库数据）
 export interface Lookbook {
     id: string;
-    title: string;
-    description: string;
-    coverImage?: string;
-    createdAt: number;
-    looks: Look[];
+    name: string; // 对应数据库的 name 字段
+    url: string; // 对应数据库的 url 字段
+    createdAt: number; // 从 created_at 转换而来
+    updatedAt: number; // 从 updated_at 转换而来
+    looks: Look[]; // Looks 数据需要单独存储或从其他地方加载
+    state?: number; // 状态：0=下架，1=上线，2=已删除
+    order?: number; // 排序
 }
 
 
