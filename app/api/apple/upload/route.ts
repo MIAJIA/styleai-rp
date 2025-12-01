@@ -104,7 +104,8 @@ export async function POST(request: Request) {
         // }
         console.log("Uploading image to Vercal Blob ============================================================================= ");
         // 上传到Vercal Blob
-        const blob = await put("app/users/" + userId + "/apple_" + finalFileName, buffer, { access: 'public', addRandomSuffix: false, allowOverwrite: true });
+        const path = userId ? `app/users/${userId}/apple_${finalFileName}` : `app/users/resource-manager/apple_${finalFileName}`;
+        const blob = await put(path, buffer, { access: 'public', addRandomSuffix: false, allowOverwrite: true });
 
         console.log('Blob URL:', blob.url);
         console.log('Blob Download URL:', blob.downloadUrl);
@@ -124,6 +125,7 @@ export async function POST(request: Request) {
             fileName: finalFileName,
             fileSize: buffer.length,
             ImageType: contentType,
+            url: blob.url,
             blobUrl: blob.url,
             blobDownloadUrl: blob.downloadUrl
         }), {
