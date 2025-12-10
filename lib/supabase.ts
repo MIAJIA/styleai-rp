@@ -19,18 +19,6 @@ if (!supabaseUrl || !supabaseServiceKey) {
     const urlValid = supabaseUrl.startsWith('https://') && supabaseUrl.includes('.supabase.co');
     const keyValid = supabaseServiceKey.startsWith('eyJ') && supabaseServiceKey.length > 100;
     
-    if (!urlValid) {
-        console.error('❌ NEXT_PUBLIC_SUPABASE_URL 格式错误');
-        console.error(`   当前值: ${supabaseUrl.substring(0, 30)}...`);
-        console.error('   应该是: https://xxxxx.supabase.co');
-    }
-    
-    if (!keyValid) {
-        console.error('❌ SUPABASE_SERVICE_ROLE_KEY 格式错误');
-        console.error(`   当前值前10字符: ${supabaseServiceKey.substring(0, 10)}...`);
-        console.error('   应该以 "eyJ" 开头（JWT token 格式）');
-        console.error('   ⚠️ 确保使用的是 service_role key，不是 anon key');
-    }
     
     if (urlValid && keyValid) {
         console.log('✅ Supabase 配置检查通过');

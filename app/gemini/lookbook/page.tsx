@@ -37,6 +37,11 @@ const App: React.FC = () => {
   const [isLookActionModalOpen, setIsLookActionModalOpen] = useState(false);
   const [selectedLook, setSelectedLook] = useState<Look | null>(null);
 
+  // 编辑 Prompt 对话框状态
+  const [isEditPromptModalOpen, setIsEditPromptModalOpen] = useState(false);
+  const [editingPrompt, setEditingPrompt] = useState<string>('');
+  const [isSavingPrompt, setIsSavingPrompt] = useState(false);
+
   // 排序模式状态
   const [isSortMode, setIsSortMode] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -283,6 +288,57 @@ const App: React.FC = () => {
     e.stopPropagation();
     setSelectedLook(look);
     setIsLookActionModalOpen(true);
+  };
+
+  // 打开编辑 Prompt 对话框
+  const handleEditPrompt = (look: Look) => {
+    setSelectedLook(look);
+    setEditingPrompt(look.prompt || '');
+    setIsLookActionModalOpen(false);
+    setIsEditPromptModalOpen(true);
+  };
+
+  // 保存 Prompt
+  const handleSavePrompt = async () => {
+    if (!selectedLook) return;
+
+    setIsSavingPrompt(true);
+    try {
+      const response = await fetch('/api/apple/web/style-templates', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedLook.id, prompt: editingPrompt.trim() }),
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        alert(result.error || '保存失败');
+        return;
+      }
+
+      // 更新本地状态
+      setCurrentLookbook(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          looks: prev.looks.map(l => 
+            l.id === selectedLook.id 
+              ? { ...l, prompt: editingPrompt.trim() }
+              : l
+          )
+        };
+      });
+
+      setIsEditPromptModalOpen(false);
+      setSelectedLook(null);
+      setEditingPrompt('');
+      alert('Prompt 保存成功');
+    } catch (error) {
+      console.error('Error saving prompt:', error);
+      alert('保存失败，请稍后重试');
+    } finally {
+      setIsSavingPrompt(false);
+    }
   };
 
   // 拖拽排序处理
@@ -558,6 +614,12 @@ const App: React.FC = () => {
               <div className="space-y-3">
                 <div className="text-sm text-gray-600 mb-4">选择要执行的操作：</div>
                 <button
+                  onClick={() => selectedLook && handleEditPrompt(selectedLook)}
+                  className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  编辑 Prompt
+                </button>
+                <button
                   onClick={() => selectedLook && setLookAsPreview(selectedLook)}
                   className="w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
                 >
@@ -578,6 +640,59 @@ const App: React.FC = () => {
               className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
             >
               取消
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 编辑 Prompt 对话框 */}
+      <Dialog open={isEditPromptModalOpen} onOpenChange={setIsEditPromptModalOpen}>
+        <DialogContent className="bg-white border-gray-200 text-gray-900 [&>button]:text-gray-400 [&>button]:hover:text-gray-900 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-gray-900">编辑 Prompt</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedLook && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Look 名称: {selectedLook.name}
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Prompt
+                  </label>
+                  <textarea
+                    value={editingPrompt}
+                    onChange={(e) => setEditingPrompt(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                    rows={8}
+                    placeholder="输入 prompt 内容..."
+                    disabled={isSavingPrompt}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => {
+                setIsEditPromptModalOpen(false);
+                setSelectedLook(null);
+                setEditingPrompt('');
+              }}
+              className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
+              disabled={isSavingPrompt}
+            >
+              取消
+            </button>
+            <button
+              onClick={handleSavePrompt}
+              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSavingPrompt}
+            >
+              {isSavingPrompt ? '保存中...' : '保存'}
             </button>
           </DialogFooter>
         </DialogContent>
