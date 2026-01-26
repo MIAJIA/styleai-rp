@@ -17,8 +17,8 @@ StyleAI-RP/
 ├── 🎨 前端应用 (Next.js App Router)
 ├── 🔌 API 接口 (Next.js API Routes)
 ├── 🧩 组件库 (Radix UI + Tailwind CSS)
-├── 💾 数据存储 (Vercel KV + Blob)
-├── 🤖 AI 集成 (OpenAI API)
+├── 💾 数据存储 (Vercel KV + Blob + Supabase)
+├── 🤖 AI 集成 (OpenAI, Google GenAI, Kling AI, LangChain)
 └── 📚 文档系统 (Markdown)
 \`\`\`
 
@@ -30,27 +30,51 @@ StyleAI-RP/
 app/
 ├── 🏠 Root & Layout
 ├── 📄 Pages
-│   ├── about/           # 关于页面
-│   ├── account/         # 用户账户管理
 │   ├── chat/           # AI对话聊天室
+│   ├── chat1/          # 聊天室备用版本
+│   ├── gemini/         # Gemini AI 功能
+│   │   ├── lookbook/   # Lookbook 功能
+│   │   └── resource/   # 资源管理
+│   ├── login/          # 登录页面
 │   ├── my-style/       # 个人风格管理
 │   ├── onboarding/     # 用户引导流程
-│   ├── result/         # 结果展示页面
 │   ├── results/        # 历史结果列表
-│   ├── settings/       # 设置页面
+│   ├── test-chat-kv/   # 聊天KV测试页
 │   └── welcome/        # 欢迎页面
 ├── 🔌 API Routes
-│   ├── account/
-│   │   └── balance/    # 账户余额管理
 │   ├── analyze-photos/ # 照片分析
+│   ├── apple/          # Apple平台API
+│   │   ├── aichat/     # AI聊天
+│   │   ├── chat/       # 聊天消息
+│   │   ├── foryou/     # 个性化推荐
+│   │   ├── gemini/     # Gemini AI
+│   │   ├── generate/   # 图像生成
+│   │   ├── kling/      # Kling AI
+│   │   ├── lookbook/   # Lookbook
+│   │   ├── openai/     # OpenAI
+│   │   ├── suggest/    # 建议推荐
+│   │   ├── upload/     # 文件上传
+│   │   ├── web/        # Web端API
+│   │   └── webhook/    # Webhook处理
+│   ├── auth/           # NextAuth认证
+│   ├── blob/upload/    # Blob存储上传
+│   ├── chat/           # 聊天API
+│   │   ├── messages/   # 消息管理
+│   │   └── simple/     # 简单聊天
 │   ├── generate/       # 通用生成
-│   ├── generate-style/ # 风格生成
+│   ├── generate-insight/ # 洞察生成
 │   ├── generation/     # 生成任务管理
+│   │   ├── cancel/     # 取消任务
+│   │   ├── new/        # 新建任务
 │   │   ├── start/      # 开始生成
+│   │   ├── start-image-task/ # 图像任务
 │   │   └── status/     # 生成状态
+│   ├── image-vote/     # 图像投票
 │   ├── looks/          # 搭配建议
 │   │   └── migrate/    # 数据迁移
-│   └── tryon/          # 虚拟试穿
+│   └── user/           # 用户管理
+│       ├── job-count/  # 任务计数
+│       └── profile/    # 用户资料
 └── 🧩 Components
     └── onboarding/     # 引导流程组件
 \`\`\`
@@ -71,17 +95,26 @@ components/
 public/
 ├── cloth/              # 服装图片资源
 ├── examples/           # 示例图片
-└── idols/             # 明星/模特图片
+├── idols/              # 明星/模特图片
+└── onboarding/         # 引导流程图片
 \`\`\`
 
-### 数据与配置
+### 工具函数库
 
 \`\`\`
-data/
-└── cloth/             # 服装数据
+lib/
+├── ai/                 # AI服务模块
+│   ├── pipelines/      # AI处理流水线
+│   ├── providers/      # AI服务提供者
+│   └── services/       # AI服务封装
+├── apple/              # Apple平台服务
+├── db/                 # 数据库操作
+├── geminiService/      # Gemini服务
+├── hooks/              # React Hooks
+├── types/              # 类型定义
+└── *.ts                # 通用工具函数
 
-lib/                   # 工具函数库
-styles/               # 全局样式
+styles/                 # 全局样式
 \`\`\`
 
 ### 开发与部署
@@ -110,17 +143,19 @@ devnote/              # 开发笔记
 | 技术 | 版本 | 用途 |
 |------|------|------|
 | **Next.js API Routes** | 15.2.4 | 后端API |
-| **Vercel KV** | 3.0.0 | Redis数据库 |
-| **Vercel Blob** | 1.1.1 | 文件存储 |
-| **OpenAI API** | Latest | AI模型接入 |
+| **Vercel KV** | Latest | Redis数据库 |
+| **Vercel Blob** | Latest | 文件存储 |
+| **Supabase** | 2.50.0 | 数据库服务 |
+| **NextAuth** | 4.24.11 | 用户认证 |
 
 ### AI & 机器学习
 
-| 技术 | 用途 |
-|------|------|
-| **OpenAI GPT** | 对话和内容生成 |
-| **计算机视觉** | 图片分析和风格识别 |
-| **推荐算法** | 个性化穿搭建议 |
+| 技术 | 用途 | 状态 |
+|------|------|------|
+| **Google GenAI (Gemini)** | 图像生成、风格分析、Lookbook | ✅ 主要使用 |
+| **OpenAI GPT** | 对话和内容生成 | ✅ 主要使用 |
+| **LangChain** | AI工作流编排 | ✅ 主要使用 |
+| **Kling AI** | 虚拟试穿 (旧版 pipeline) | ⚠️ Legacy，逐步弃用 |
 
 ### 开发工具
 
@@ -307,6 +342,6 @@ npm run build
 
 ---
 
-**最后更新**: 2024年12月
+**最后更新**: 2026年1月
 **维护者**: StyleAI Team
 **联系方式**: [项目Issues](https://github.com/your-repo/issues)

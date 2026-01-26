@@ -1,0 +1,18 @@
+{
+  "system": [
+    "README.md",
+    "docs/README.md",
+    "docs/ai-rules.md"
+  ],
+  "docs": [
+    "docs/project-structure-overview.md",
+    "docs/deployment-guide.md"
+  ],
+  "code": [
+    "package.json"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/.next/**"
+  ]
+}

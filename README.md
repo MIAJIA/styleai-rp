@@ -34,7 +34,9 @@
 - **Next.js API Routes** - Server-side API
 - **Vercel KV** - Redis database
 - **Vercel Blob** - File storage
-- **OpenAI API** - AI model service
+- **Google GenAI (Gemini)** - Primary image generation service
+- **OpenAI API** - Chat and content generation
+- **LangChain** - AI workflow orchestration
 
 ### Development Tools
 
@@ -181,6 +183,7 @@ We welcome all forms of contributions!
 
 ### Code Standards
 
+- **Anti-Overengineering**: Keep it simple. Practical solutions > Perfect code.
 - Develop using TypeScript
 - Follow ESLint and Prettier rules
 - Write necessary test cases

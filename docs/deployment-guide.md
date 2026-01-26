@@ -17,11 +17,26 @@ KV_REST_API_READ_ONLY_TOKEN=your-kv-read-only-token
 # 从 Vercel Dashboard > Storage > Blob 获取
 BLOB_READ_WRITE_TOKEN=your-blob-read-write-token
 
-# AI API Keys
+# Supabase Database
+# 从 Supabase Dashboard 获取
+SUPABASE_URL=your-supabase-url
+SUPABASE_ANON_KEY=your-supabase-anon-key
+
+# AI API Keys (主要)
 OPENAI_API_KEY=your-openai-api-key
-KLING_AI_ACCESS_KEY=your-kling-access-key
-KLING_AI_SECRET_KEY=your-kling-secret-key
-RAPIDAPI_KEY=your-rapidapi-key-for-face-swap
+GOOGLE_GENAI_API_KEY=your-google-genai-api-key  # 主要图像生成服务
+
+# AI API Keys (Legacy - 旧版 pipeline，可选)
+# KLING_AI_ACCESS_KEY=your-kling-access-key
+# KLING_AI_SECRET_KEY=your-kling-secret-key
+# RAPIDAPI_KEY=your-rapidapi-key-for-face-swap
+
+# Image Provider 选择 (默认使用 gemini)
+IMAGE_PROVIDER=gemini  # 可选值: gemini, kling
+
+# NextAuth Configuration
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-nextauth-secret
 \`\`\`
 
 ### 生产环境 (Vercel)
@@ -244,12 +259,13 @@ Error [UpstashError]: Command failed: ERR null args are not supported
 
 \`\`\`json
 {
+  "regions": ["hnd1"],
   "functions": {
     "app/api/generation/status/route.ts": {
       "maxDuration": 300
     },
     "app/api/generation/start/route.ts": {
-      "maxDuration": 60
+      "maxDuration": 300
     },
     "app/api/generate/route.ts": {
       "maxDuration": 300
@@ -260,6 +276,8 @@ Error [UpstashError]: Command failed: ERR null args are not supported
   }
 }
 \`\`\`
+
+> **注意**: Heroku 部署时有 30 秒硬性超时限制，`maxDuration` 配置在 Heroku 上不生效。建议在代码中添加适当的超时处理机制。
 
 ### 超时处理改进
 - **Face Swap API**: 超时从 90 秒增加到 180 秒，添加重试机制
