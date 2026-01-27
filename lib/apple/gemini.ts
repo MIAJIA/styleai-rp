@@ -151,8 +151,9 @@ export async function generateChatCompletionWithGemini(userId: string, params: G
       const inlineData = part?.inlineData || part?.inline_data;
       if (inlineData?.data) {
         const mimeType = inlineData.mimeType || inlineData.mime_type || 'image/jpeg';
-        const imageData = `data:${mimeType};base64,${inlineData.data}`;
-        responseImages.push(imageData);
+        // const imageData = `data:${mimeType};base64,${inlineData.data}`;
+        const compressedImage = await compressImage(inlineData.data);
+        responseImages.push(compressedImage);
         console.log('🤖 [GEMINI_CHAT] 🖼️ Found image in response');
       }
     }
@@ -162,8 +163,8 @@ export async function generateChatCompletionWithGemini(userId: string, params: G
 
   for (let i = 0; i < responseImages.length; i++) {
     const imageData = responseImages[i];
-    const base64Data = imageData.split(',')[1]; // Remove data:image/...;base64, prefix
-    const buffer = Buffer.from(base64Data, 'base64');
+    // const base64Data = imageData.split(',')[1]; // Remove data:image/...;base64, prefix
+    const buffer = Buffer.from(imageData, 'base64');
     const fileName = `Stylai_look_${Date.now()}_${i}.png`;
     console.log(`🤖 [GEMINI_SERVICE] 💾 Image file name: app/users/${userId}/${fileName}`);
     try {
