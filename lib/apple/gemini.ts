@@ -90,6 +90,10 @@ export async function generateChatCompletionWithGemini(userId: string, params: G
       responseModalities: ["TEXT", "IMAGE"],
       maxOutputTokens: params.maxOutputTokens || 2000, // 增加token限制
       temperature: params.temperature || 0.7,
+      imageConfig: {
+        aspectRatio: '9:16',
+        imageSize: '1K',
+      }
     }
   };
 
@@ -138,7 +142,7 @@ export async function generateChatCompletionWithGemini(userId: string, params: G
   // 解析文本和图片响应
   const candidates = data?.candidates || [];
   let responseText = '';
-  const responseImages: string[] = [];
+  const responseImages: Array<{ data: string; mimeType: string }> = [];
 
   // 提取文本内容
   for (const candidate of candidates) {
@@ -150,11 +154,9 @@ export async function generateChatCompletionWithGemini(userId: string, params: G
       // 提取图片内容
       const inlineData = part?.inlineData || part?.inline_data;
       if (inlineData?.data) {
-        const mimeType = inlineData.mimeType || inlineData.mime_type || 'image/jpeg';
-        // const imageData = `data:${mimeType};base64,${inlineData.data}`;
-        const compressedImage = await compressImage(inlineData.data);
-        responseImages.push(compressedImage);
-        console.log('🤖 [GEMINI_CHAT] 🖼️ Found image in response');
+        const mimeType = inlineData?.mimeType || inlineData?.mime_type || 'image/png';
+        responseImages.push({ data: inlineData.data, mimeType });
+        console.log('🤖 [GEMINI_CHAT] 🖼️ Found image in response:', mimeType);
       }
     }
   }
@@ -162,15 +164,20 @@ export async function generateChatCompletionWithGemini(userId: string, params: G
   const imagesUrls: string[] = [];
 
   for (let i = 0; i < responseImages.length; i++) {
-    const imageData = responseImages[i];
-    // const base64Data = imageData.split(',')[1]; // Remove data:image/...;base64, prefix
-    const buffer = Buffer.from(imageData, 'base64');
-    const fileName = `Stylai_look_${Date.now()}_${i}.png`;
+    const { data: imageData, mimeType } = responseImages[i];
+    const ext =
+      mimeType === 'image/png' ? 'png' :
+      (mimeType === 'image/jpeg' || mimeType === 'image/jpg') ? 'jpg' :
+      mimeType === 'image/webp' ? 'webp' :
+      'png';
+
+    const fileName = `Stylai_look_${Date.now()}_${i}.${ext}`;
     console.log(`🤖 [GEMINI_SERVICE] 💾 Image file name: app/users/${userId}/${fileName}`);
     try {
-      const blob = await put(`app/users/${userId}/${fileName}`, buffer, {
+      const blob = await put(`app/users/${userId}/${fileName}`, Buffer.from(imageData, 'base64'), {
         access: 'public',
-        addRandomSuffix: false
+        addRandomSuffix: false,
+        contentType: mimeType,
       });
 
       imagesUrls.push(blob.url);
